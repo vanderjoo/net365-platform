@@ -1,0 +1,3737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Net365 Scheduler Pro - Enterprise Grade Scheduling</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    /* =========================================================
+       NET365 SCHEDULER PRO - Complete Styles
+       ========================================================= */
+    :root {
+      --bg-primary: #f0f4f8;
+      --bg-secondary: #ffffff;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border-color: #e2e8f0;
+      --card-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+      --transition: all 0.3s ease;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --primary: #4f46e5;
+      --purple: #7c3aed;
+      --pink: #ec4899;
+      --teal: #14b8a6;
+      --radius: 12px;
+    }
+
+    body.dark-mode {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --border-color: #334155;
+      --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      transition: var(--transition);
+    }
+
+    /* ========== SCROLLBAR ========== */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+    /* ========== NAVIGATION ========== */
+    .scheduler-nav {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: var(--transition);
+      flex-wrap: wrap;
+      gap: 8px;
+      backdrop-filter: blur(10px);
+    }
+
+    .scheduler-nav .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .scheduler-nav .logo i {
+      color: var(--primary);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-primary);
+      border-radius: var(--radius);
+      padding: 4px;
+      flex-wrap: wrap;
+    }
+
+    .nav-tab {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .nav-tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+
+    .nav-tab.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .nav-tab .badge {
+      background: var(--danger);
+      color: white;
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      margin-left: 4px;
+    }
+
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+
+    .theme-toggle:hover {
+      background: var(--border-color);
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 8px;
+      transition: var(--transition);
+    }
+
+    .back-btn:hover {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .analytics-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 8px;
+      transition: var(--transition);
+    }
+
+    .analytics-link:hover {
+      background: var(--bg-primary);
+    }
+
+    /* ========== RATE DISPLAY ========== */
+    .rate-display {
+      font-size: 12px;
+      color: var(--text-secondary);
+      padding: 4px 12px;
+      background: var(--bg-primary);
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+
+    .rate-display:hover {
+      border-color: var(--primary);
+      color: var(--text-primary);
+    }
+
+    .rate-display .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .rate-display .dot.live {
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    .rate-display .dot.fallback {
+      background: var(--warning);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ========== AUTH REQUIRED ========== */
+    .auth-required {
+      text-align: center;
+      padding: 80px 20px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .auth-required .icon { font-size: 72px; margin-bottom: 20px; }
+    .auth-required h2 { color: var(--text-primary); margin-bottom: 12px; }
+    .auth-required p { color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; }
+    .auth-required .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* ========== MAIN CONTAINER ========== */
+    .scheduler-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* ========== TAB CONTENT ========== */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .tab-content.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ========== STATS CARDS ========== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--card-shadow);
+    }
+
+    .stat-card .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-card .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 4px 0;
+    }
+
+    .stat-card .stat-change {
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .stat-card .stat-change.up { color: var(--success); }
+    .stat-card .stat-change.down { color: var(--danger); }
+    .stat-card .stat-change.neutral { color: var(--text-secondary); }
+
+    /* ========== TOOLBAR ========== */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+
+    .toolbar .search-box {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+
+    .toolbar .search-box input {
+      width: 100%;
+      padding: 10px 16px 10px 40px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .toolbar .search-box input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .toolbar .search-box i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+    }
+
+    /* ========== BUTTONS ========== */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #4338ca; transform: translateY(-1px); }
+
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { background: #16a34a; transform: translateY(-1px); }
+
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
+
+    .btn-warning { background: var(--warning); color: white; }
+    .btn-warning:hover { background: #d97706; transform: translateY(-1px); }
+
+    .btn-purple { background: var(--purple); color: white; }
+    .btn-purple:hover { background: #6d28d9; transform: translateY(-1px); }
+
+    .btn-pink { background: var(--pink); color: white; }
+    .btn-pink:hover { background: #db2777; transform: translateY(-1px); }
+
+    .btn-teal { background: var(--teal); color: white; }
+    .btn-teal:hover { background: #0d9488; transform: translateY(-1px); }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+    .btn-outline:hover { background: var(--bg-primary); }
+
+    .btn-sm { padding: 6px 14px; font-size: 12px; }
+    .btn-xs { padding: 4px 10px; font-size: 11px; }
+
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+    /* ========== TABLE ========== */
+    .table-container {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .table-container .table-header {
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .table-container .table-header h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .table-container .table-header .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .table-scroll {
+      overflow-x: auto;
+      padding: 0 4px 4px 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    table th {
+      text-align: left;
+      padding: 12px 16px;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+
+    table tr:hover td {
+      background: var(--bg-primary);
+    }
+
+    /* ========== STATUS BADGES ========== */
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .status-badge.active { background: #dcfce7; color: #166534; }
+    .status-badge.paused { background: #fef3c7; color: #92400e; }
+    .status-badge.completed { background: #dbeafe; color: #1e40af; }
+    .status-badge.failed { background: #fef2f2; color: #991b1b; }
+    .status-badge.pending { background: #f3e8ff; color: #6d28d9; }
+    .status-badge.queued { background: #e0f2fe; color: #075985; }
+    .status-badge.running { background: #fce7f3; color: #9d174d; }
+    .status-badge.needs_review { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+
+    body.dark-mode .status-badge.active { background: #064e3b; color: #86efac; }
+    body.dark-mode .status-badge.paused { background: #78350f; color: #fcd34d; }
+    body.dark-mode .status-badge.completed { background: #1e3a5f; color: #93c5fd; }
+    body.dark-mode .status-badge.failed { background: #7f1d1d; color: #fca5a5; }
+    body.dark-mode .status-badge.pending { background: #3b1e6e; color: #c4b5fd; }
+    body.dark-mode .status-badge.queued { background: #0c4a6e; color: #7dd3fc; }
+    body.dark-mode .status-badge.running { background: #6b1d3f; color: #f9a8d4; }
+    body.dark-mode .status-badge.needs_review { background: #78350f; color: #fcd34d; border-color: #f59e0b; }
+
+    .schedule-type-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .schedule-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .schedule-actions button {
+      border: none;
+      background: var(--bg-primary);
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition);
+      font-size: 12px;
+    }
+
+    .schedule-actions button:hover {
+      background: var(--border-color);
+      color: var(--text-primary);
+    }
+    .schedule-actions button.danger:hover { color: var(--danger); background: #fef2f2; }
+    .schedule-actions button.success:hover { color: var(--success); background: #dcfce7; }
+    .schedule-actions button.warning:hover { color: var(--warning); background: #fef3c7; }
+
+    /* ========== MODAL ========== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal-content {
+      background: var(--bg-secondary);
+      border-radius: 24px;
+      max-width: 800px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 32px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+      animation: modalPop 0.3s ease;
+    }
+
+    @keyframes modalPop {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-content .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .modal-content .modal-header h2 {
+      font-size: 22px;
+      color: var(--text-primary);
+    }
+
+    .modal-content .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: var(--transition);
+    }
+
+    .modal-content .modal-close:hover {
+      background: var(--bg-primary);
+    }
+
+    /* ========== FORM ========== */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-grid .full-width { grid-column: 1 / -1; }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-group .hint {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .form-group .error-text {
+      font-size: 11px;
+      color: var(--danger);
+      display: none;
+    }
+
+    .form-group.has-error input,
+    .form-group.has-error select {
+      border-color: var(--danger);
+    }
+
+    .form-group.has-error .error-text {
+      display: block;
+    }
+
+    /* ========== WALLET CURRENCY SELECTOR ========== */
+    .wallet-selector {
+      background: var(--bg-primary);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .wallet-selector .label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .wallet-selector .currency-badge {
+      background: var(--primary);
+      color: white;
+      padding: 2px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .wallet-selector .match-indicator {
+      font-size: 12px;
+      color: var(--success);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .wallet-selector .match-indicator.mismatch {
+      color: var(--warning);
+    }
+
+    /* ========== EVENT TYPE CARDS ========== */
+    .event-type-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .event-type-card {
+      padding: 12px 14px;
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius);
+      background: var(--bg-primary);
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .event-type-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .event-type-card.selected {
+      border-color: var(--primary);
+      background: #eef2ff;
+    }
+
+    body.dark-mode .event-type-card.selected {
+      background: #1e293b;
+    }
+
+    .event-type-card .icon { font-size: 24px; display: block; margin-bottom: 4px; }
+    .event-type-card .label { display: block; }
+
+    /* ========== IMPORT AREA ========== */
+    .import-area {
+      border: 2px dashed var(--border-color);
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      transition: var(--transition);
+      margin: 16px 0;
+    }
+
+    .import-area:hover {
+      border-color: var(--primary);
+      background: var(--bg-primary);
+    }
+
+    .import-area .icon {
+      font-size: 48px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .import-area h4 {
+      font-size: 16px;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .import-area p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .import-area .btn { margin: 4px; }
+    .import-area input[type="file"] { display: none; }
+
+    .import-progress {
+      display: none;
+      margin-top: 16px;
+    }
+
+    .import-progress .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--border-color);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .import-progress .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--purple));
+      border-radius: 3px;
+      transition: width 0.5s ease;
+      width: 0%;
+    }
+
+    .import-progress .stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    /* ========== TOAST ========== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 16px 24px;
+      border-radius: var(--radius);
+      color: white;
+      font-weight: 500;
+      z-index: 99999;
+      animation: slideIn 0.3s ease;
+      max-width: 420px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+    .toast-success { background: var(--success); }
+    .toast-error { background: var(--danger); }
+    .toast-info { background: var(--info); }
+    .toast-warning { background: var(--warning); }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ========== EMPTY STATE ========== */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state h3 { color: var(--text-primary); margin-bottom: 8px; }
+    .empty-state p { max-width: 400px; margin: 0 auto 16px; }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+      .scheduler-nav {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px 16px;
+      }
+      .scheduler-nav .logo { justify-content: center; }
+      .nav-tabs { justify-content: center; flex-wrap: wrap; }
+      .nav-tab {
+        flex: 1;
+        text-align: center;
+        font-size: 12px;
+        padding: 6px 12px;
+        min-width: 60px;
+      }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-grid .full-width { grid-column: auto; }
+      .modal-content { padding: 20px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .event-type-grid { grid-template-columns: repeat(3, 1fr); }
+      .toolbar { flex-direction: column; }
+      .toolbar .search-box { width: 100%; }
+      .toolbar .btn { width: 100%; justify-content: center; }
+      table { font-size: 12px; }
+      table th, table td { padding: 8px 10px; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .event-type-grid { grid-template-columns: repeat(2, 1fr); }
+      .import-area { padding: 20px; }
+      .nav-tab { font-size: 11px; padding: 4px 10px; }
+    }
+
+    /* ========== LOADING SPINNER ========== */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border-color);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ========== BADGE COUNT ========== */
+    .badge-count {
+      background: var(--danger);
+      color: white;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      margin-left: 4px;
+    }
+
+    /* ========== PHONE FORMAT HINT ========== */
+    .phone-format-hint {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+
+    .phone-format-hint .example {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .phone-format-hint .badge-scheduled {
+      background: var(--warning);
+      color: white;
+      padding: 1px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-right: 6px;
+    }
+
+    .phone-format-hint .badge-topup {
+      background: var(--success);
+      color: white;
+      padding: 1px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-right: 6px;
+    }
+
+    .phone-format-hint .country-format {
+      font-weight: 600;
+      color: var(--primary);
+      font-size: 12px;
+    }
+
+    /* ========== RATE TOOLTIP ========== */
+    .rate-tooltip {
+      display: none;
+      position: absolute;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      box-shadow: var(--card-shadow);
+      z-index: 1000;
+      min-width: 220px;
+      font-size: 12px;
+      color: var(--text-primary);
+    }
+
+    .rate-tooltip.active {
+      display: block;
+    }
+
+    .rate-tooltip .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+    }
+
+    .rate-tooltip .row .label {
+      color: var(--text-secondary);
+    }
+
+    .rate-tooltip .row .value {
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== NAVIGATION ========== -->
+  <nav class="scheduler-nav">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <a href="/" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </a>
+      <a href="#" class="logo">
+        <i class="fas fa-calendar-check"></i>
+        <span>Net365 Scheduler</span>
+      </a>
+      <a href="/analytics" class="analytics-link">
+        <i class="fas fa-chart-pie"></i> Analytics
+      </a>
+    </div>
+
+    <div class="nav-tabs" id="navTabs">
+      <button class="nav-tab active" data-tab="individual" onclick="switchTab('individual')">
+        <i class="fas fa-user"></i> Individual
+      </button>
+      <button class="nav-tab" data-tab="sme" onclick="switchTab('sme')">
+        <i class="fas fa-building"></i> SME <span class="badge">Pro</span>
+      </button>
+      <button class="nav-tab" data-tab="enterprise" onclick="switchTab('enterprise')">
+        <i class="fas fa-crown"></i> Enterprise <span class="badge">2M+</span>
+      </button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;">
+      <!-- Rate Display -->
+      <div class="rate-display" id="rateDisplay" onclick="toggleRateTooltip()" title="Click for details">
+        <span class="dot live" id="rateDot"></span>
+        <span id="rateText">Loading...</span>
+      </div>
+      <!-- Rate Tooltip -->
+      <div class="rate-tooltip" id="rateTooltip">
+        <div class="row"><span class="label">💵 USD/NGN</span><span class="value" id="tooltipNGN">—</span></div>
+        <div class="row"><span class="label">💷 USD/GBP</span><span class="value" id="tooltipGBP">—</span></div>
+        <div class="row"><span class="label">💶 USD/EUR</span><span class="value" id="tooltipEUR">—</span></div>
+        <div class="row" style="border-top:1px solid var(--border-color);padding-top:4px;margin-top:4px;">
+          <span class="label">🔄 Source</span>
+          <span class="value" id="tooltipSource">—</span>
+        </div>
+        <div class="row">
+          <span class="label">📅 Updated</span>
+          <span class="value" id="tooltipTime">—</span>
+        </div>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+        <i class="fas fa-moon"></i>
+      </button>
+      <button class="btn btn-primary btn-sm" onclick="openCreateSchedule()">
+        <i class="fas fa-plus"></i> New Schedule
+      </button>
+    </div>
+  </nav>
+
+  <!-- ========== MAIN CONTAINER ========== -->
+  <div class="scheduler-container" id="schedulerContent">
+
+    <!-- ========================================================= -->
+    <!-- INDIVIDUAL TAB -->
+    <!-- ========================================================= -->
+    <div class="tab-content active" id="tab-individual">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">My Schedules</div>
+          <div class="stat-value" id="indTotalSchedules">0</div>
+          <div class="stat-change neutral">Personal</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Upcoming</div>
+          <div class="stat-value" id="indUpcoming">0</div>
+          <div class="stat-change up">Next: <span id="indNextDate">—</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value" id="indCompleted">0</div>
+          <div class="stat-change up">✅ Done</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Spent</div>
+          <div class="stat-value" id="indTotalSpent">₦0.00</div>
+          <div class="stat-change neutral">All time</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Search personal schedules..." id="indSearch" oninput="filterSchedules('individual')" />
+        </div>
+        <button class="btn btn-success btn-sm" onclick="openCreateSchedule('individual')">
+          <i class="fas fa-plus"></i> Create
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="exportSchedules('individual')">
+          <i class="fas fa-download"></i> Export
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('indImportInput').click()">
+          <i class="fas fa-upload"></i> Import
+        </button>
+        <input id="indImportInput" type="file" accept=".csv,.json" style="display:none" onchange="importSchedules(this.files[0], 'individual')" />
+      </div>
+
+      <div class="table-container">
+        <div class="table-header">
+          <h3><i class="fas fa-list"></i> My Scheduled Payments</h3>
+          <div class="actions">
+            <button class="btn btn-sm btn-outline" onclick="runAllSchedules('individual')">
+              <i class="fas fa-play"></i> Run All
+            </button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Name / Type</th>
+                <th>Details</th>
+                <th>Amount</th>
+                <th>Frequency</th>
+                <th>Next Run</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="indScheduleTable">
+              <tr><td colspan="7"><div class="empty-state"><div class="icon">📅</div><h3>No schedules yet</h3><p>Create your first scheduled payment to get started.</p><button class="btn btn-primary" onclick="openCreateSchedule('individual')">Create Schedule</button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- SME TAB -->
+    <!-- ========================================================= -->
+    <div class="tab-content" id="tab-sme">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Team Schedules</div>
+          <div class="stat-value" id="smeTotalSchedules">0</div>
+          <div class="stat-change neutral">All teams</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Employees</div>
+          <div class="stat-value" id="smeEmployees">0</div>
+          <div class="stat-change up">+<span id="smeNewEmployees">0</span> this month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Monthly Budget</div>
+          <div class="stat-value" id="smeBudget">₦0.00</div>
+          <div class="stat-change" id="smeBudgetChange">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Departments</div>
+          <div class="stat-value" id="smeDepartments">0</div>
+          <div class="stat-change neutral">Teams</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Search team schedules..." id="smeSearch" oninput="filterSchedules('sme')" />
+        </div>
+        <button class="btn btn-purple btn-sm" onclick="openCreateSchedule('sme')">
+          <i class="fas fa-plus"></i> Team Schedule
+        </button>
+        <button class="btn btn-success btn-sm" onclick="openBulkImport('sme')">
+          <i class="fas fa-users"></i> Bulk Import
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="exportSchedules('sme')">
+          <i class="fas fa-download"></i> Export
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('smeImportInput').click()">
+          <i class="fas fa-upload"></i> Import
+        </button>
+        <input id="smeImportInput" type="file" accept=".csv,.json" style="display:none" onchange="importSchedules(this.files[0], 'sme')" />
+      </div>
+
+      <div class="table-container">
+        <div class="table-header">
+          <h3><i class="fas fa-users"></i> Team Schedules</h3>
+          <div class="actions">
+            <button class="btn btn-sm btn-warning" onclick="runDepartmentSchedules()">
+              <i class="fas fa-play"></i> Run Department
+            </button>
+            <button class="btn btn-sm btn-success" onclick="runAllSchedules('sme')">
+              <i class="fas fa-play-circle"></i> Run All
+            </button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Name / Type</th>
+                <th>Department</th>
+                <th>Details</th>
+                <th>Amount</th>
+                <th>Frequency</th>
+                <th>Next Run</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="smeScheduleTable">
+              <tr><td colspan="8"><div class="empty-state"><div class="icon">👥</div><h3>No team schedules</h3><p>Import or create team schedules to manage your team's airtime.</p><button class="btn btn-purple" onclick="openCreateSchedule('sme')">Create Team Schedule</button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- ENTERPRISE TAB -->
+    <!-- ========================================================= -->
+    <div class="tab-content" id="tab-enterprise">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Employees</div>
+          <div class="stat-value" id="entEmployees">0</div>
+          <div class="stat-change up">+<span id="entNewEmployees">0</span> this quarter</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Schedules</div>
+          <div class="stat-value" id="entTotalSchedules">0</div>
+          <div class="stat-change neutral">Enterprise wide</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Monthly Recharge</div>
+          <div class="stat-value" id="entMonthlyVolume">₦0.00</div>
+          <div class="stat-change up" id="entVolumeChange">+0% vs last month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Success Rate</div>
+          <div class="stat-value" id="entSuccessRate">0%</div>
+          <div class="stat-change up">99.9% uptime</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <button class="btn btn-primary" onclick="openCreateSchedule('enterprise')">
+          <i class="fas fa-plus"></i> New Enterprise Schedule
+        </button>
+        <button class="btn btn-purple" onclick="openBulkImport('enterprise')">
+          <i class="fas fa-file-import"></i> Import 2M+ Records
+        </button>
+        <button class="btn btn-success" onclick="runAllSchedules('enterprise')">
+          <i class="fas fa-play"></i> Execute All
+        </button>
+        <button class="btn btn-warning" onclick="exportSchedules('enterprise')">
+          <i class="fas fa-download"></i> Export Reports
+        </button>
+        <button class="btn btn-pink" onclick="showEnterpriseDashboard()">
+          <i class="fas fa-chart-pie"></i> Dashboard
+        </button>
+      </div>
+
+      <div class="table-container">
+        <div class="table-header">
+          <h3><i class="fas fa-crown"></i> Enterprise Schedules</h3>
+          <div class="actions">
+            <button class="btn btn-sm btn-outline" onclick="filterEnterpriseBy('all')">All</button>
+            <button class="btn btn-sm btn-outline" onclick="filterEnterpriseBy('active')">Active</button>
+            <button class="btn btn-sm btn-outline" onclick="filterEnterpriseBy('queued')">Queued</button>
+            <button class="btn btn-sm btn-outline" onclick="filterEnterpriseBy('completed')">Completed</button>
+            <button class="btn btn-sm btn-outline" onclick="filterEnterpriseBy('needs_review')">⚠️ Review</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Details</th>
+                <th>Amount</th>
+                <th>Frequency</th>
+                <th>Next Run</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="entScheduleTable">
+              <tr><td colspan="9"><div class="empty-state"><div class="icon">🏢</div><h3>No enterprise data</h3><p>Import enterprise data to manage thousands of employees.</p><button class="btn btn-purple" onclick="openBulkImport('enterprise')">Import Data</button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="import-area" id="entImportArea">
+        <div class="icon"><i class="fas fa-cloud-upload-alt"></i></div>
+        <h4>Enterprise Data Import</h4>
+        <p>Import up to <strong>10 million</strong> employee records. Supports CSV, Excel, and JSON formats.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+          <button class="btn btn-primary" onclick="document.getElementById('entImportFile').click()">
+            <i class="fas fa-file-csv"></i> Import CSV
+          </button>
+          <button class="btn btn-purple" onclick="document.getElementById('entImportFile').click()">
+            <i class="fas fa-file-excel"></i> Import Excel
+          </button>
+          <button class="btn btn-teal" onclick="document.getElementById('entImportFile').click()">
+            <i class="fas fa-file-code"></i> Import JSON
+          </button>
+          <button class="btn btn-outline" onclick="downloadEnterpriseTemplate()">
+            <i class="fas fa-download"></i> Download Template
+          </button>
+        </div>
+        <input id="entImportFile" type="file" accept=".csv,.xlsx,.xls,.json" style="display:none" onchange="importEnterpriseData(this.files[0])" />
+        <div class="import-progress" id="entImportProgress">
+          <div class="progress-bar"><div class="progress-fill" id="entImportFill"></div></div>
+          <div class="stats">
+            <span id="entImportStats">0 / 0 processed</span>
+            <span id="entImportResults">✅ 0 ❌ 0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CREATE / EDIT SCHEDULE MODAL ========== -->
+  <div class="modal-overlay" id="scheduleModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="scheduleModalTitle">Create New Schedule</h2>
+        <button class="modal-close" onclick="closeModal('scheduleModal')">✕</button>
+      </div>
+
+      <form id="scheduleForm" onsubmit="saveSchedule(event)">
+        <input type="hidden" id="editScheduleId" value="" />
+        <input type="hidden" id="scheduleTab" value="individual" />
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Schedule Name *</label>
+            <input type="text" id="schName" placeholder="e.g., Monthly Staff Airtime" required />
+          </div>
+
+          <div class="form-group">
+            <label>Recipient Type</label>
+            <select id="schRecipientType" onchange="toggleRecipientFields()">
+              <option value="individual">Individual</option>
+              <option value="team">Team / Department</option>
+              <option value="enterprise">Enterprise (Bulk)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Service Type</label>
+            <select id="schServiceType" onchange="toggleServiceTypeFields()">
+              <option value="airtime">📱 Airtime Top-up</option>
+              <option value="data">📶 Data Bundle</option>
+              <option value="utility">⚡ Utility Bill Payment</option>
+              <option value="gift">🎁 Gift Card</option>
+              <option value="transfer">💸 Wallet Transfer</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="recipientField">
+            <label>Recipient Phone / Email</label>
+            <input type="text" id="schRecipient" placeholder="08012345678 or email@example.com" />
+          </div>
+
+          <div class="form-group" id="teamField" style="display:none;">
+            <label>Team / Department Name</label>
+            <input type="text" id="schTeam" placeholder="e.g., Engineering, Sales" />
+          </div>
+
+          <!-- AIRTIME FIELDS -->
+          <div class="form-group full-width" id="airtimeFields">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group">
+                <label>🌍 Country *</label>
+                <select id="schCountry" onchange="loadScheduleOperators(); updatePhoneFormatHint();">
+                  <option value="">Select country</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>📶 Operator *</label>
+                <select id="schOperator">
+                  <option value="">Select operator</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:8px;">
+              <label>📱 Phone Number *</label>
+              <input type="tel" id="schPhone" placeholder="Enter recipient mobile number" />
+              <div class="phone-format-hint" id="phoneFormatHint">
+                <span class="badge-scheduled">📅 Scheduled</span>
+                <span id="phoneFormatText">International format with country code</span>
+                <br>
+                <span class="badge-topup">⚡ One-Time</span>
+                Any format accepted
+              </div>
+              <span class="error-text" id="phoneError">Invalid phone number format</span>
+            </div>
+          </div>
+
+          <!-- UTILITY FIELDS - ENABLED -->
+          <div class="form-group full-width" id="utilityFields" style="display:none;">
+            <div class="form-group">
+              <label>⚡ Utility Biller *</label>
+              <select id="schBiller" onchange="loadSelectedScheduleBiller()">
+                <option value="">Select biller</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>📋 Subscriber / Account Number *</label>
+              <input type="text" id="schSubscriberAccount" placeholder="Enter utility account / meter / smartcard number" />
+              <div id="utilityAccountHint" style="font-size:12px;color:var(--text-secondary);margin-top:5px;"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Amount *</label>
+            <input type="number" id="schAmount" placeholder="1000" min="1" step="1" required />
+          </div>
+
+          <div class="form-group">
+            <label>Currency *</label>
+            <select id="schCurrency" onchange="updateWalletCurrency()">
+              <option value="NGN">🇳🇬 NGN — Nigerian Naira</option>
+              <option value="USD">🇺🇸 USD — US Dollar</option>
+              <option value="GBP">🇬🇧 GBP — Pound Sterling</option>
+              <option value="EUR">🇪🇺 EUR — Euro</option>
+            </select>
+          </div>
+
+          <!-- WALLET CURRENCY SELECTOR - Always matches payment currency -->
+          <div class="form-group full-width">
+            <label>💰 Wallet to Debit</label>
+            <div class="wallet-selector">
+              <span class="label">Wallet Currency:</span>
+              <span class="currency-badge" id="walletCurrencyBadge">NGN</span>
+              <span class="match-indicator" id="walletMatchIndicator">
+                <i class="fas fa-check-circle"></i> Matches payment currency
+              </span>
+              <span style="font-size:12px;color:var(--text-secondary);margin-left:auto;">
+                <i class="fas fa-info-circle"></i> For safety, wallet currency must match payment currency
+              </span>
+            </div>
+            <input type="hidden" id="schWalletCurrency" value="NGN" />
+          </div>
+
+          <div class="form-group">
+            <label>Frequency *</label>
+            <select id="schFrequency" onchange="toggleFrequencyFields()">
+              <option value="once">🔄 Once</option>
+              <option value="daily">📅 Daily</option>
+              <option value="weekly">📅 Weekly</option>
+              <option value="monthly" selected>📅 Monthly</option>
+              <option value="quarterly">📅 Quarterly</option>
+              <option value="yearly">📅 Yearly</option>
+              <option value="event">🎯 Event Based</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="eventTypeField" style="display:none;">
+            <label>Event Type</label>
+            <select id="schEventType">
+              <option value="birthday">🎂 Birthday</option>
+              <option value="anniversary">💍 Anniversary</option>
+              <option value="naming">👶 Naming Ceremony</option>
+              <option value="graduation">🎓 Graduation</option>
+              <option value="promotion">🚀 Promotion</option>
+              <option value="holiday">🎄 Holiday</option>
+              <option value="wedding">💒 Wedding</option>
+              <option value="retirement">🏖️ Retirement</option>
+              <option value="bonus">💰 Bonus Day</option>
+              <option value="team_building">🤝 Team Building</option>
+              <option value="charity">🤲 Charity Drive</option>
+              <option value="custom">✨ Custom Event</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="eventDateField" style="display:none;">
+            <label>Event Date *</label>
+            <input type="date" id="schEventDate" />
+          </div>
+
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" id="schStartDate" />
+          </div>
+
+          <div class="form-group">
+            <label>End Date (optional)</label>
+            <input type="date" id="schEndDate" />
+          </div>
+
+          <div class="form-group" id="dayOfMonthField">
+            <label>Day of Month</label>
+            <input type="number" id="schDayOfMonth" min="1" max="31" value="1" />
+          </div>
+
+          <div class="form-group" id="dayOfWeekField" style="display:none;">
+            <label>Day of Week</label>
+            <select id="schDayOfWeek">
+              <option value="0">Monday</option>
+              <option value="1">Tuesday</option>
+              <option value="2">Wednesday</option>
+              <option value="3">Thursday</option>
+              <option value="4">Friday</option>
+              <option value="5">Saturday</option>
+              <option value="6">Sunday</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="monthField" style="display:none;">
+            <label>Month</label>
+            <select id="schMonth">
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Time</label>
+            <input type="time" id="schTime" value="09:00" />
+          </div>
+
+          <div class="form-group" id="timezoneField">
+            <label>Timezone</label>
+            <select id="schTimezone">
+              <option value="Africa/Lagos">Africa/Lagos (WAT)</option>
+              <option value="Africa/Cairo">Africa/Cairo (EET)</option>
+              <option value="Africa/Johannesburg">Africa/Johannesburg (SAST)</option>
+              <option value="America/New_York">America/New_York (EST)</option>
+              <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+              <option value="Europe/London">Europe/London (GMT)</option>
+              <option value="Europe/Paris">Europe/Paris (CET)</option>
+              <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+              <option value="Asia/Shanghai">Asia/Shanghai (CST)</option>
+              <option value="Australia/Sydney">Australia/Sydney (AEDT)</option>
+              <option value="Pacific/Auckland">Pacific/Auckland (NZDT)</option>
+              <option value="UTC">UTC</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Notify Days Before</label>
+            <input type="number" id="schNotifyDays" min="0" max="30" value="3" />
+          </div>
+
+          <div class="form-group full-width">
+            <label>Description</label>
+            <textarea id="schDescription" placeholder="Additional notes about this schedule..."></textarea>
+          </div>
+
+          <!-- Event Type Cards -->
+          <div class="form-group full-width">
+            <label>🎯 Creative Event Ideas</label>
+            <div class="event-type-grid" id="eventTypeGrid">
+              <div class="event-type-card" onclick="selectEventType(this, 'birthday')">
+                <span class="icon">🎂</span><span class="label">Birthday</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'anniversary')">
+                <span class="icon">💍</span><span class="label">Anniversary</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'naming')">
+                <span class="icon">👶</span><span class="label">Naming Ceremony</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'graduation')">
+                <span class="icon">🎓</span><span class="label">Graduation</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'promotion')">
+                <span class="icon">🚀</span><span class="label">Promotion</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'holiday')">
+                <span class="icon">🎄</span><span class="label">Holiday</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'wedding')">
+                <span class="icon">💒</span><span class="label">Wedding</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'retirement')">
+                <span class="icon">🏖️</span><span class="label">Retirement</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'bonus')">
+                <span class="icon">💰</span><span class="label">Bonus Day</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'team_building')">
+                <span class="icon">🤝</span><span class="label">Team Building</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'charity')">
+                <span class="icon">🤲</span><span class="label">Charity Drive</span>
+              </div>
+              <div class="event-type-card" onclick="selectEventType(this, 'custom')">
+                <span class="icon">✨</span><span class="label">Custom Event</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('scheduleModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="scheduleSubmitBtn">
+            <i class="fas fa-save"></i> Save Schedule
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== RUN CONFIRMATION MODAL ========== -->
+  <div class="modal-overlay" id="runModal">
+    <div class="modal-content" style="max-width:500px;">
+      <div class="modal-header">
+        <h2>🚀 Execute Schedule</h2>
+        <button class="modal-close" onclick="closeModal('runModal')">✕</button>
+      </div>
+      <div id="runModalContent">
+        <p style="margin-bottom:16px;color:var(--text-secondary);">
+          Are you sure you want to execute <strong id="runScheduleName">this schedule</strong> now?
+          <br><span style="font-size:13px;color:var(--text-secondary);">This will deduct from your <strong id="runWalletCurrency">NGN</strong> wallet.</span>
+        </p>
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button class="btn btn-outline" onclick="closeModal('runModal')">Cancel</button>
+          <button class="btn btn-success" id="runConfirmBtn" onclick="executeNow()">
+            <i class="fas fa-play"></i> Execute Now
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== TOAST CONTAINER ========== -->
+  <div id="toastContainer"></div>
+
+  <!-- ========== JAVASCRIPT ========== -->
+  <script>
+    // ================================================
+    // AUTHENTICATION STATE
+    // ================================================
+    let isAuthenticated = false;
+    let currentUser = null;
+    let userId = null;
+
+    // ================================================
+    // STATE
+    // ================================================
+    let currentTab = 'individual';
+    let schedules = {
+      individual: [],
+      sme: [],
+      enterprise: []
+    };
+    let editingId = null;
+    let runTargetId = null;
+    let runTargetTab = 'individual';
+    let importProgress = { processed: 0, total: 0, successful: 0, failed: 0 };
+    let isRunningBatch = false;
+    let rateTooltipVisible = false;
+
+    // ================================================
+    // EXCHANGE RATES - REAL-TIME
+    // ================================================
+    let exchangeRates = {
+      NGN: 1900.0,
+      USD: 1.0,
+      GBP: 1.25,
+      EUR: 1.08,
+      timestamp: null,
+      last_update: null,
+      source: 'fallback',
+      update_count: 0,
+      update_interval: 300
+    };
+    let rateUpdateTimer = null;
+
+    // ================================================
+    // COUNTRY PHONE FORMATS
+    // ================================================
+    const COUNTRY_PHONE_FORMATS = {
+      'NG': { code: '234', digits: 13, label: '+234 + 10-digit number (13 digits total)' },
+      'US': { code: '1', digits: 11, label: '+1 + 10-digit number (11 digits total)' },
+      'CA': { code: '1', digits: 11, label: '+1 + 10-digit number (11 digits total)' },
+      'GB': { code: '44', digits: 12, label: '+44 + 10-digit number (12 digits total)' },
+      'FR': { code: '33', digits: 11, label: '+33 + 9-digit number (11 digits total)' },
+      'DE': { code: '49', digits: 11, label: '+49 + 9-10 digit number (11-12 digits total)' },
+      'IT': { code: '39', digits: 11, label: '+39 + 9-10 digit number (11-12 digits total)' },
+      'ES': { code: '34', digits: 11, label: '+34 + 9-digit number (11 digits total)' },
+      'GH': { code: '233', digits: 12, label: '+233 + 9-digit number (12 digits total)' },
+      'KE': { code: '254', digits: 12, label: '+254 + 9-digit number (12 digits total)' },
+      'ZA': { code: '27', digits: 11, label: '+27 + 9-digit number (11 digits total)' },
+      'IN': { code: '91', digits: 12, label: '+91 + 10-digit number (12 digits total)' },
+      'AU': { code: '61', digits: 11, label: '+61 + 9-digit number (11 digits total)' },
+      'NZ': { code: '64', digits: 11, label: '+64 + 8-10 digit number (10-12 digits total)' },
+      'SG': { code: '65', digits: 11, label: '+65 + 8-digit number (11 digits total)' },
+      'MY': { code: '60', digits: 11, label: '+60 + 9-10 digit number (11-12 digits total)' },
+      'PH': { code: '63', digits: 12, label: '+63 + 10-digit number (12 digits total)' },
+      'ID': { code: '62', digits: 12, label: '+62 + 10-11 digit number (12-13 digits total)' },
+      'TR': { code: '90', digits: 12, label: '+90 + 10-digit number (12 digits total)' },
+      'AE': { code: '971', digits: 12, label: '+971 + 9-digit number (12 digits total)' },
+      'SA': { code: '966', digits: 12, label: '+966 + 9-digit number (12 digits total)' },
+      'EG': { code: '20', digits: 12, label: '+20 + 10-digit number (12 digits total)' },
+      'PK': { code: '92', digits: 12, label: '+92 + 10-digit number (12 digits total)' },
+      'BD': { code: '880', digits: 13, label: '+880 + 10-digit number (13 digits total)' },
+      'BR': { code: '55', digits: 12, label: '+55 + 10-11 digit number (12-13 digits total)' },
+      'MX': { code: '52', digits: 12, label: '+52 + 10-digit number (12 digits total)' },
+      'AR': { code: '54', digits: 12, label: '+54 + 10-digit number (12 digits total)' },
+      'CL': { code: '56', digits: 11, label: '+56 + 9-digit number (11 digits total)' },
+      'CO': { code: '57', digits: 12, label: '+57 + 10-digit number (12 digits total)' },
+      'PE': { code: '51', digits: 11, label: '+51 + 9-digit number (11 digits total)' },
+      'JP': { code: '81', digits: 12, label: '+81 + 10-digit number (12 digits total)' },
+      'CN': { code: '86', digits: 13, label: '+86 + 11-digit number (13 digits total)' },
+      'HK': { code: '852', digits: 11, label: '+852 + 8-digit number (11 digits total)' },
+      'KR': { code: '82', digits: 12, label: '+82 + 10-digit number (12 digits total)' },
+      'IL': { code: '972', digits: 11, label: '+972 + 9-digit number (11 digits total)' },
+      'CH': { code: '41', digits: 12, label: '+41 + 9-digit number (12 digits total)' },
+      'SE': { code: '46', digits: 11, label: '+46 + 9-digit number (11 digits total)' },
+      'NO': { code: '47', digits: 11, label: '+47 + 8-digit number (11 digits total)' },
+      'DK': { code: '45', digits: 11, label: '+45 + 8-digit number (11 digits total)' },
+      'FI': { code: '358', digits: 12, label: '+358 + 9-digit number (12 digits total)' },
+      'PL': { code: '48', digits: 11, label: '+48 + 9-digit number (11 digits total)' },
+      'CZ': { code: '420', digits: 12, label: '+420 + 9-digit number (12 digits total)' },
+      'HU': { code: '36', digits: 11, label: '+36 + 9-digit number (11 digits total)' },
+      'AT': { code: '43', digits: 12, label: '+43 + 10-digit number (12 digits total)' },
+      'GR': { code: '30', digits: 12, label: '+30 + 10-digit number (12 digits total)' },
+      'PT': { code: '351', digits: 12, label: '+351 + 9-digit number (12 digits total)' },
+      'IE': { code: '353', digits: 12, label: '+353 + 9-digit number (12 digits total)' },
+      'NL': { code: '31', digits: 12, label: '+31 + 9-digit number (12 digits total)' },
+      'BE': { code: '32', digits: 12, label: '+32 + 9-digit number (12 digits total)' }
+    };
+
+    // ================================================
+    // COUNTRY & OPERATOR DATA
+    // ================================================
+    const COUNTRY_DATA = {
+      'NG': { name: 'Nigeria', currency: 'NGN', symbol: '₦', countryCode: '+234', flag: '🇳🇬' },
+      'US': { name: 'United States', currency: 'USD', symbol: '$', countryCode: '+1', flag: '🇺🇸' },
+      'GB': { name: 'United Kingdom', currency: 'GBP', symbol: '£', countryCode: '+44', flag: '🇬🇧' },
+      'GH': { name: 'Ghana', currency: 'GHS', symbol: '₵', countryCode: '+233', flag: '🇬🇭' },
+      'KE': { name: 'Kenya', currency: 'KES', symbol: 'KSh', countryCode: '+254', flag: '🇰🇪' },
+      'ZA': { name: 'South Africa', currency: 'ZAR', symbol: 'R', countryCode: '+27', flag: '🇿🇦' },
+      'IN': { name: 'India', currency: 'INR', symbol: '₹', countryCode: '+91', flag: '🇮🇳' },
+      'CA': { name: 'Canada', currency: 'CAD', symbol: 'C$', countryCode: '+1', flag: '🇨🇦' },
+      'AU': { name: 'Australia', currency: 'AUD', symbol: 'A$', countryCode: '+61', flag: '🇦🇺' },
+      'FR': { name: 'France', currency: 'EUR', symbol: '€', countryCode: '+33', flag: '🇫🇷' },
+      'DE': { name: 'Germany', currency: 'EUR', symbol: '€', countryCode: '+49', flag: '🇩🇪' },
+      'IT': { name: 'Italy', currency: 'EUR', symbol: '€', countryCode: '+39', flag: '🇮🇹' },
+      'ES': { name: 'Spain', currency: 'EUR', symbol: '€', countryCode: '+34', flag: '🇪🇸' },
+      'BR': { name: 'Brazil', currency: 'BRL', symbol: 'R$', countryCode: '+55', flag: '🇧🇷' },
+      'MX': { name: 'Mexico', currency: 'MXN', symbol: '$', countryCode: '+52', flag: '🇲🇽' },
+      'JP': { name: 'Japan', currency: 'JPY', symbol: '¥', countryCode: '+81', flag: '🇯🇵' },
+      'AE': { name: 'UAE', currency: 'AED', symbol: 'د.إ', countryCode: '+971', flag: '🇦🇪' },
+      'SA': { name: 'Saudi Arabia', currency: 'SAR', symbol: '﷼', countryCode: '+966', flag: '🇸🇦' },
+      'EG': { name: 'Egypt', currency: 'EGP', symbol: 'E£', countryCode: '+20', flag: '🇪🇬' },
+      'PK': { name: 'Pakistan', currency: 'PKR', symbol: 'Rs', countryCode: '+92', flag: '🇵🇰' },
+      'BD': { name: 'Bangladesh', currency: 'BDT', symbol: '৳', countryCode: '+880', flag: '🇧🇩' },
+      'ID': { name: 'Indonesia', currency: 'IDR', symbol: 'Rp', countryCode: '+62', flag: '🇮🇩' },
+      'TR': { name: 'Turkey', currency: 'TRY', symbol: '₺', countryCode: '+90', flag: '🇹🇷' },
+      'PH': { name: 'Philippines', currency: 'PHP', symbol: '₱', countryCode: '+63', flag: '🇵🇭' },
+      'MY': { name: 'Malaysia', currency: 'MYR', symbol: 'RM', countryCode: '+60', flag: '🇲🇾' },
+      'SG': { name: 'Singapore', currency: 'SGD', symbol: 'S$', countryCode: '+65', flag: '🇸🇬' },
+      'NZ': { name: 'New Zealand', currency: 'NZD', symbol: 'NZ$', countryCode: '+64', flag: '🇳🇿' },
+      'IE': { name: 'Ireland', currency: 'EUR', symbol: '€', countryCode: '+353', flag: '🇮🇪' },
+      'NL': { name: 'Netherlands', currency: 'EUR', symbol: '€', countryCode: '+31', flag: '🇳🇱' },
+      'BE': { name: 'Belgium', currency: 'EUR', symbol: '€', countryCode: '+32', flag: '🇧🇪' },
+      'CH': { name: 'Switzerland', currency: 'CHF', symbol: 'CHF', countryCode: '+41', flag: '🇨🇭' },
+      'SE': { name: 'Sweden', currency: 'SEK', symbol: 'kr', countryCode: '+46', flag: '🇸🇪' },
+      'NO': { name: 'Norway', currency: 'NOK', symbol: 'kr', countryCode: '+47', flag: '🇳🇴' },
+      'DK': { name: 'Denmark', currency: 'DKK', symbol: 'kr', countryCode: '+45', flag: '🇩🇰' },
+      'FI': { name: 'Finland', currency: 'EUR', symbol: '€', countryCode: '+358', flag: '🇫🇮' },
+      'PL': { name: 'Poland', currency: 'PLN', symbol: 'zł', countryCode: '+48', flag: '🇵🇱' },
+      'CZ': { name: 'Czech Republic', currency: 'CZK', symbol: 'Kč', countryCode: '+420', flag: '🇨🇿' },
+      'HU': { name: 'Hungary', currency: 'HUF', symbol: 'Ft', countryCode: '+36', flag: '🇭🇺' },
+      'AT': { name: 'Austria', currency: 'EUR', symbol: '€', countryCode: '+43', flag: '🇦🇹' },
+      'GR': { name: 'Greece', currency: 'EUR', symbol: '€', countryCode: '+30', flag: '🇬🇷' },
+      'PT': { name: 'Portugal', currency: 'EUR', symbol: '€', countryCode: '+351', flag: '🇵🇹' },
+      'IL': { name: 'Israel', currency: 'ILS', symbol: '₪', countryCode: '+972', flag: '🇮🇱' },
+      'AR': { name: 'Argentina', currency: 'ARS', symbol: '$', countryCode: '+54', flag: '🇦🇷' },
+      'CL': { name: 'Chile', currency: 'CLP', symbol: '$', countryCode: '+56', flag: '🇨🇱' },
+      'CO': { name: 'Colombia', currency: 'COP', symbol: '$', countryCode: '+57', flag: '🇨🇴' },
+      'PE': { name: 'Peru', currency: 'PEN', symbol: 'S/', countryCode: '+51', flag: '🇵🇪' }
+    };
+
+    let operatorCache = {};
+
+    // ================================================
+    // PHONE NUMBER VALIDATION - INTERNATIONAL
+    // ================================================
+    function validateScheduledPhone(phone, countryCode) {
+      if (!phone) {
+        return { valid: false, value: '', error: 'Phone number is required for scheduled payments' };
+      }
+
+      const cleaned = phone.replace(/[^0-9]/g, '');
+      if (!cleaned) {
+        return { valid: false, value: '', error: 'Phone number contains only digits' };
+      }
+
+      const format = COUNTRY_PHONE_FORMATS[countryCode];
+      if (!format) {
+        return {
+          valid: false,
+          value: cleaned,
+          error: `Scheduled payments not supported for ${countryCode}`
+        };
+      }
+
+      // Check if the number already starts with the country code
+      let full = cleaned.startsWith(format.code) ? cleaned : format.code + cleaned;
+
+      // US/Canada specific validation
+      if (countryCode === 'US' || countryCode === 'CA') {
+        if (full.length !== 11) {
+          return {
+            valid: false,
+            value: full,
+            error: `US/Canada numbers must be 11 digits (1 + 10-digit number). Got: ${full.length} digits`
+          };
+        }
+        if (!full.startsWith('1')) {
+          return { valid: false, value: full, error: 'US/Canada numbers must start with 1' };
+        }
+        // Area code cannot start with 0 or 1
+        const areaCode = full.substring(1, 4);
+        if (areaCode[0] === '0' || areaCode[0] === '1') {
+          return { valid: false, value: full, error: 'US/Canada area code cannot start with 0 or 1' };
+        }
+        return { valid: true, value: full };
+      }
+
+      // Nigeria validation
+      if (countryCode === 'NG') {
+        if (full.length !== 13) {
+          return {
+            valid: false,
+            value: full,
+            error: `Nigeria numbers must be 13 digits (234 + 10-digit number). Got: ${full.length} digits`
+          };
+        }
+        if (!full.startsWith('234')) {
+          return { valid: false, value: full, error: 'Nigeria numbers must start with 234' };
+        }
+        return { valid: true, value: full };
+      }
+
+      // UK validation
+      if (countryCode === 'GB') {
+        if (full.length !== 12) {
+          return {
+            valid: false,
+            value: full,
+            error: `UK numbers must be 12 digits (44 + 10-digit number). Got: ${full.length} digits`
+          };
+        }
+        if (!full.startsWith('44')) {
+          return { valid: false, value: full, error: 'UK numbers must start with 44' };
+        }
+        return { valid: true, value: full };
+      }
+
+      // Generic validation for other countries
+      const minLen = format.code.length + 8;
+      const maxLen = format.code.length + 12;
+      if (full.length < minLen || full.length > maxLen) {
+        return {
+          valid: false,
+          value: full,
+          error: `Must be ${minLen}-${maxLen} digits (including ${format.code}). Got: ${full.length} digits`
+        };
+      }
+      if (!full.startsWith(format.code)) {
+        return { valid: false, value: full, error: `Must start with ${format.code}` };
+      }
+      return { valid: true, value: full };
+    }
+
+    function validatePhoneNumber(phone, countryCode) {
+      if (!phone) {
+        return { valid: false, value: '', error: 'Phone number is required' };
+      }
+
+      const cleaned = phone.replace(/[^0-9]/g, '');
+      if (!cleaned) {
+        return { valid: false, value: '', error: 'Phone number contains only digits' };
+      }
+
+      const format = COUNTRY_PHONE_FORMATS[countryCode];
+      if (!format) {
+        return { valid: false, value: cleaned, error: `Country not supported: ${countryCode}` };
+      }
+
+      let full = cleaned.startsWith(format.code) ? cleaned : format.code + cleaned;
+
+      // Basic length check
+      if (full.length < 8 || full.length > 15) {
+        return { valid: false, value: full, error: 'Phone number must be 8-15 digits' };
+      }
+
+      return { valid: true, value: full };
+    }
+
+    function updatePhoneFormatHint() {
+      const country = document.getElementById('schCountry').value;
+      const hintText = document.getElementById('phoneFormatText');
+      const format = COUNTRY_PHONE_FORMATS[country];
+
+      if (format) {
+        hintText.textContent = format.label;
+        hintText.style.color = 'var(--primary)';
+      } else {
+        hintText.textContent = 'International format with country code';
+        hintText.style.color = 'var(--text-secondary)';
+      }
+    }
+
+    // ================================================
+    // EXCHANGE RATES FUNCTIONS
+    // ================================================
+    async function loadExchangeRates() {
+      try {
+        const response = await fetch('/api/exchange-rates', {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        if (data.success) {
+          exchangeRates = data.rates;
+          exchangeRates.timestamp = data.timestamp;
+          exchangeRates.last_update = data.last_update;
+          exchangeRates.source = data.source;
+          exchangeRates.update_count = data.update_count || 0;
+          exchangeRates.update_interval = data.update_interval || 300;
+
+          console.log('✅ Exchange rates loaded:', exchangeRates);
+          console.log(`   Source: ${exchangeRates.source}`);
+          console.log(`   Last update: ${exchangeRates.last_update}`);
+          console.log(`   NGN: ₦${exchangeRates.NGN.toFixed(2)} = $1`);
+
+          updateRateDisplay();
+          return true;
+        } else {
+          console.warn('Exchange rates API returned error, using fallback');
+        }
+      } catch (e) {
+        console.warn('Failed to load exchange rates:', e);
+      }
+      exchangeRates.source = 'fallback';
+      updateRateDisplay();
+      return false;
+    }
+
+    function updateRateDisplay() {
+      const ngnRate = exchangeRates.NGN || 1900.0;
+      const gbpRate = exchangeRates.GBP || 1.25;
+      const eurRate = exchangeRates.EUR || 1.08;
+
+      const rateText = document.getElementById('rateText');
+      if (rateText) {
+        rateText.textContent = `₦${ngnRate.toFixed(2)} = $1`;
+      }
+
+      const dot = document.getElementById('rateDot');
+      if (dot) {
+        dot.className = 'dot';
+        if (exchangeRates.source === 'live') {
+          dot.classList.add('live');
+        } else {
+          dot.classList.add('fallback');
+        }
+      }
+
+      document.getElementById('tooltipNGN').textContent = `₦${ngnRate.toFixed(2)}`;
+      document.getElementById('tooltipGBP').textContent = `$${gbpRate.toFixed(4)}`;
+      document.getElementById('tooltipEUR').textContent = `$${eurRate.toFixed(4)}`;
+      document.getElementById('tooltipSource').textContent = exchangeRates.source || 'fallback';
+      document.getElementById('tooltipTime').textContent = exchangeRates.last_update ? new Date(exchangeRates.last_update).toLocaleString() : 'N/A';
+    }
+
+    function toggleRateTooltip() {
+      const tooltip = document.getElementById('rateTooltip');
+      rateTooltipVisible = !rateTooltipVisible;
+      tooltip.classList.toggle('active');
+    }
+
+    document.addEventListener('click', function(e) {
+      if (rateTooltipVisible && !e.target.closest('.rate-display') && !e.target.closest('.rate-tooltip')) {
+        document.getElementById('rateTooltip').classList.remove('active');
+        rateTooltipVisible = false;
+      }
+    });
+
+    function startRateAutoUpdate() {
+      if (rateUpdateTimer) {
+        clearInterval(rateUpdateTimer);
+      }
+
+      const interval = (exchangeRates.update_interval || 300) * 1000;
+
+      rateUpdateTimer = setInterval(async () => {
+        console.log('🔄 Auto-updating exchange rates...');
+        const success = await loadExchangeRates();
+        if (success) {
+          showToast(`💱 Exchange rates updated (${exchangeRates.source})`, 'info');
+        }
+      }, interval);
+
+      console.log(`✅ Rate auto-update started (interval: ${interval/1000}s)`);
+    }
+
+    // ================================================
+    // PHONE NUMBER FORMATTING
+    // ================================================
+    function formatPhoneNumber(phone, countryCode) {
+      if (!phone) return '';
+
+      let cleaned = phone.replace(/[^0-9]/g, '');
+      if (!cleaned) return '';
+
+      const format = COUNTRY_PHONE_FORMATS[countryCode];
+      if (!format) return cleaned;
+
+      // If it starts with 0, remove it
+      if (cleaned.startsWith('0')) {
+        cleaned = cleaned.substring(1);
+      }
+
+      // If it doesn't start with the country code, prepend it
+      if (!cleaned.startsWith(format.code)) {
+        cleaned = format.code + cleaned;
+      }
+
+      // Truncate to the expected length
+      if (cleaned.length > format.digits) {
+        cleaned = cleaned.substring(0, format.digits);
+      }
+
+      return cleaned;
+    }
+
+    // ================================================
+    // UTILITY FUNCTIONS
+    // ================================================
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      try {
+        let d;
+        if (typeof dateStr === 'string') {
+          const cleanDate = dateStr.replace('Z', '').replace('+00:00', '');
+          d = new Date(cleanDate);
+        } else {
+          d = new Date(dateStr);
+        }
+        if (isNaN(d.getTime())) {
+          return dateStr;
+        }
+        return d.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch (e) {
+        return dateStr;
+      }
+    }
+
+    function formatCurrency(amount, currency = 'NGN') {
+      const symbols = { NGN: '₦', USD: '$', GBP: '£', EUR: '€', GHS: '₵', KES: 'KSh', ZAR: 'R' };
+      const num = Number(amount || 0);
+      const symbol = symbols[currency] || '₦';
+      return `${symbol}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+    }
+
+    function getStatusBadge(status) {
+      const map = {
+        'active': '<span class="status-badge active">🟢 Active</span>',
+        'paused': '<span class="status-badge paused">⏸️ Paused</span>',
+        'completed': '<span class="status-badge completed">✅ Completed</span>',
+        'failed': '<span class="status-badge failed">❌ Failed</span>',
+        'pending': '<span class="status-badge pending">⏳ Pending</span>',
+        'queued': '<span class="status-badge queued">📋 Queued</span>',
+        'running': '<span class="status-badge running">🔄 Running</span>',
+        'needs_review': '<span class="status-badge needs_review">⚠️ Review</span>',
+      };
+      return map[status] || map.pending;
+    }
+
+    function getServiceIcon(type) {
+      const map = { 'airtime': '📱', 'data': '📶', 'utility': '⚡', 'gift': '🎁', 'transfer': '💸' };
+      return map[type] || '📌';
+    }
+
+    function escapeHtml(v) {
+      return String(v ?? '').replace(/[&<>'"]/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[c]));
+    }
+
+    function getOperatorName(operatorId) {
+      for (const code in operatorCache) {
+        const ops = operatorCache[code] || [];
+        const found = ops.find(op => op.id === operatorId);
+        if (found) return found.name;
+      }
+      return operatorId || 'Unknown';
+    }
+
+    // ================================================
+    // AUTHENTICATION FUNCTIONS
+    // ================================================
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/auth/me', { credentials: 'include' });
+        const data = await response.json();
+        if (data.success && data.user) {
+          isAuthenticated = true;
+          currentUser = data.user;
+          userId = data.user.id;
+          return true;
+        }
+      } catch (e) {
+        console.warn('Auth check failed:', e);
+      }
+      isAuthenticated = false;
+      currentUser = null;
+      userId = null;
+      return false;
+    }
+
+    function showAuthRequired() {
+      const container = document.getElementById('schedulerContent');
+      container.innerHTML = `
+        <div class="auth-required">
+          <div class="icon">🔐</div>
+          <h2>Authentication Required</h2>
+          <p>Please sign in to manage your scheduled payments. Schedules are tied to your account and use your wallet balance.</p>
+          <div class="btn-group">
+            <button class="btn btn-primary" onclick="window.location.href='/'"><i class="fas fa-home"></i> Back to Home</button>
+            <button class="btn btn-success" onclick="window.location.href='/?login=true'"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+          </div>
+          <p style="margin-top:20px;font-size:13px;color:var(--text-secondary);">⚡ Guests can recharge airtime (one-time) without an account.<br>📅 Scheduled payments require an account.</p>
+        </div>
+      `;
+    }
+
+    // ================================================
+    // API FUNCTIONS
+    // ================================================
+    async function apiFetch(url, options = {}) {
+      const opts = { ...options, credentials: 'include' };
+      opts.headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      };
+      try {
+        const response = await fetch(url, opts);
+        if (response.status === 401) {
+          showToast('⚠️ Please sign in to continue', 'warning');
+          const auth = await checkAuth();
+          if (!auth) showAuthRequired();
+          return null;
+        }
+        return response;
+      } catch (e) {
+        console.error('API fetch error:', e);
+        showToast('⚠️ Network error. Please check your connection.', 'error');
+        return null;
+      }
+    }
+
+    // ================================================
+    // LOAD SCHEDULE BILLERS - UTILITY FIXED
+    // ================================================
+    async function loadScheduleBillers(selectedId = '') {
+      const sel = document.getElementById('schBiller');
+      if (!sel) return;
+
+      sel.innerHTML = '<option value="">Loading billers...</option>';
+      sel.disabled = true;
+
+      try {
+        const currency = (document.getElementById('schCurrency')?.value || 'NGN').toUpperCase();
+        const countryMap = { 'NGN': 'NG', 'GBP': 'GB', 'EUR': 'FR', 'USD': 'US' };
+        const country = countryMap[currency] || 'NG';
+
+        const response = await fetch(`/api/utilities/billers?countryISOCode=${encodeURIComponent(country)}&size=100`, {
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+        const list = Array.isArray(data) ? data : (data.billers || data.content || data.data || []);
+
+        // Filter out airtime/data billers - only show utility billers
+        const billers = list.filter(b => {
+          const type = String(b.type || b.billerType || b.serviceType || '').toUpperCase();
+          return !['AIRTIME_TOPUP', 'DATA_BUNDLE'].includes(type) &&
+                 (b.id || b.billerId || b.biller_id);
+        });
+
+        sel.innerHTML = '<option value="">Select biller</option>';
+
+        if (billers.length === 0) {
+          // Add fallback billers
+          const fallbackBillers = [
+            { id: 38, name: 'Eko Electric' },
+            { id: 39, name: 'Ikeja Electric' },
+            { id: 40, name: 'Kaduna Electric' },
+            { id: 41, name: 'Kano Electric' },
+            { id: 42, name: 'Abuja Electric' },
+            { id: 43, name: 'Port Harcourt Electric' },
+            { id: 44, name: 'Benin Electric' },
+            { id: 45, name: 'Enugu Electric' },
+            { id: 46, name: 'Ibadan Electric' },
+            { id: 47, name: 'Jos Electric' },
+            { id: 53, name: 'DSTV' },
+            { id: 54, name: 'GOtv' },
+            { id: 55, name: 'Startimes' },
+          ];
+
+          fallbackBillers.forEach(b => {
+            const option = document.createElement('option');
+            option.value = String(b.id);
+            option.textContent = b.name;
+            option.dataset.billerName = b.name;
+            sel.appendChild(option);
+          });
+
+          sel.disabled = false;
+          return;
+        }
+
+        billers.forEach(b => {
+          const id = b.id ?? b.billerId ?? b.biller_id;
+          if (id == null) return;
+
+          const option = document.createElement('option');
+          option.value = String(id);
+          const name = b.name || b.billerName || `Biller ${id}`;
+          option.textContent = name;
+          option.dataset.billerName = name;
+          sel.appendChild(option);
+        });
+
+        sel.disabled = false;
+
+        // Select the previously selected biller if it exists
+        if (selectedId && selectedId !== '') {
+          const options = sel.querySelectorAll('option');
+          for (const opt of options) {
+            if (opt.value === String(selectedId)) {
+              opt.selected = true;
+              break;
+            }
+          }
+          if (sel.value) {
+            await loadSelectedScheduleBiller();
+          }
+        }
+
+      } catch (e) {
+        console.error('Failed to load schedule billers:', e);
+        sel.innerHTML = '<option value="">Unable to load billers</option>';
+        sel.disabled = true;
+        showToast('Could not load utility billers. Please try again.', 'warning');
+      }
+    }
+
+    async function loadSelectedScheduleBiller() {
+      const id = document.getElementById('schBiller')?.value;
+      const hint = document.getElementById('utilityAccountHint');
+
+      if (!id) {
+        if (hint) hint.textContent = '';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/utilities/billers/${encodeURIComponent(id)}`, {
+          credentials: 'include'
+        });
+        const data = await response.json();
+
+        const details = [];
+        if (data.minAmount != null) details.push(`Min: ${data.minAmount}`);
+        if (data.maxAmount != null) details.push(`Max: ${data.maxAmount}`);
+        if (data.currency) details.push(`Currency: ${data.currency}`);
+
+        if (hint) {
+          hint.textContent = details.join(' • ');
+        }
+      } catch (e) {
+        console.warn('Biller details unavailable:', e);
+        if (hint) hint.textContent = 'Select a biller to see limits';
+      }
+    }
+
+    // ================================================
+    // LOAD SCHEDULE OPERATORS
+    // ================================================
+    async function loadScheduleOperators() {
+      const country = document.getElementById('schCountry').value;
+      const sel = document.getElementById('schOperator');
+      if (!country) {
+        sel.innerHTML = '<option value="">Select operator</option>';
+        return;
+      }
+
+      sel.innerHTML = '<option value="">Loading networks...</option>';
+      sel.disabled = true;
+
+      try {
+        const response = await fetch(`/api/operators/country/${country}`, { credentials: 'include' });
+        const data = await response.json();
+        const list = Array.isArray(data) ? data : (data.content || []);
+
+        if (!list || !list.length) {
+          sel.innerHTML = '<option value="">No operators found</option>';
+          sel.disabled = true;
+          return;
+        }
+
+        const mapped = list
+          .filter(op => op && op.operatorId)
+          .map(op => ({
+            id: String(op.operatorId),
+            name: op.name || 'Network operator',
+            currency: op.currencyCode || op.localCurrencyCode || getCountryData(country).currency,
+          }));
+
+        if (!mapped.length) {
+          sel.innerHTML = '<option value="">No usable operators</option>';
+          sel.disabled = true;
+          return;
+        }
+
+        operatorCache[country] = mapped;
+
+        sel.innerHTML = '<option value="">Select operator</option>';
+        mapped.forEach(op => {
+          const option = document.createElement('option');
+          option.value = op.id;
+          option.textContent = op.name;
+          sel.appendChild(option);
+        });
+        sel.disabled = false;
+
+      } catch (e) {
+        console.error('Failed to load operators:', e);
+        sel.innerHTML = '<option value="">⚠️ Could not load operators</option>';
+        sel.disabled = true;
+        showToast('Could not load operators for this country', 'warning');
+      }
+    }
+
+    // ================================================
+    // WALLET CURRENCY - Always matches payment currency
+    // ================================================
+    function updateWalletCurrency() {
+      const currency = document.getElementById('schCurrency').value;
+      document.getElementById('schWalletCurrency').value = currency;
+      document.getElementById('walletCurrencyBadge').textContent = currency;
+
+      const indicator = document.getElementById('walletMatchIndicator');
+      indicator.innerHTML = '<i class="fas fa-check-circle"></i> Matches payment currency';
+      indicator.className = 'match-indicator';
+
+      const runWalletDisplay = document.getElementById('runWalletCurrency');
+      if (runWalletDisplay) runWalletDisplay.textContent = currency;
+    }
+
+    // ================================================
+    // TOGGLE FUNCTIONS
+    // ================================================
+    function toggleRecipientFields() {
+      const type = document.getElementById('schRecipientType').value;
+      document.getElementById('recipientField').style.display = type === 'individual' ? 'block' : 'none';
+      document.getElementById('teamField').style.display = type === 'team' ? 'block' : 'none';
+    }
+
+    function toggleServiceTypeFields() {
+      const service = document.getElementById('schServiceType').value;
+      const airtimeFields = document.getElementById('airtimeFields');
+      const utilityFields = document.getElementById('utilityFields');
+
+      // Hide all first
+      if (airtimeFields) airtimeFields.style.display = 'none';
+      if (utilityFields) utilityFields.style.display = 'none';
+
+      // Show the selected one
+      if (service === 'airtime') {
+        if (airtimeFields) airtimeFields.style.display = 'block';
+        // Update phone format hint
+        updatePhoneFormatHint();
+      } else if (service === 'utility') {
+        if (utilityFields) utilityFields.style.display = 'block';
+        loadScheduleBillers(document.getElementById('schBiller')?.value || '');
+      }
+    }
+
+    function toggleFrequencyFields() {
+      const freq = document.getElementById('schFrequency').value;
+      const isEvent = freq === 'event';
+      document.getElementById('eventTypeField').style.display = isEvent ? 'block' : 'none';
+      document.getElementById('eventDateField').style.display = isEvent ? 'block' : 'none';
+      document.getElementById('dayOfMonthField').style.display = (freq === 'monthly' || freq === 'quarterly' || freq === 'yearly') ? 'block' : 'none';
+      document.getElementById('dayOfWeekField').style.display = freq === 'weekly' ? 'block' : 'none';
+      document.getElementById('monthField').style.display = freq === 'yearly' ? 'block' : 'none';
+      document.getElementById('timezoneField').style.display = 'block';
+    }
+
+    function selectEventType(el, type) {
+      document.querySelectorAll('.event-type-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('schEventType').value = type;
+
+      const names = {
+        'birthday': `🎂 Birthday Gift for `,
+        'anniversary': `💍 Anniversary Gift for `,
+        'naming': `👶 Naming Ceremony Gift for `,
+        'graduation': `🎓 Graduation Gift for `,
+        'promotion': `🚀 Promotion Bonus for `,
+        'holiday': `🎄 Holiday Gift for `,
+        'wedding': `💒 Wedding Gift for `,
+        'retirement': `🏖️ Retirement Gift for `,
+        'bonus': `💰 Bonus Payment for `,
+        'team_building': `🤝 Team Building Recharge for `,
+        'charity': `🤲 Charity Donation for `,
+        'custom': `✨ Custom Event for `
+      };
+
+      const nameInput = document.getElementById('schName');
+      if (names[type] && !nameInput.value) {
+        nameInput.value = names[type] + (document.getElementById('schRecipient').value || 'Team');
+      }
+
+      document.getElementById('schFrequency').value = 'event';
+      toggleFrequencyFields();
+
+      showToast(`🎯 ${el.querySelector('.label').textContent} event selected!`, 'info');
+    }
+
+    // ================================================
+    // SCHEDULE CRUD
+    // ================================================
+    function openCreateSchedule(tab = null) {
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to create schedules', 'warning');
+        return;
+      }
+      const targetTab = tab || currentTab;
+      document.getElementById('scheduleTab').value = targetTab;
+      document.getElementById('scheduleModalTitle').textContent = 'Create New Schedule';
+      document.getElementById('scheduleForm').reset();
+      document.getElementById('editScheduleId').value = '';
+      editingId = null;
+      document.getElementById('scheduleSubmitBtn').innerHTML = '<i class="fas fa-save"></i> Save Schedule';
+      document.getElementById('schCurrency').value = 'NGN';
+      updateWalletCurrency();
+
+      populateCountrySelect('schCountry');
+      document.getElementById('schOperator').innerHTML = '<option value="">Select operator</option>';
+      document.getElementById('schOperator').disabled = true;
+      document.getElementById('schBiller').innerHTML = '<option value="">Select biller</option>';
+      document.getElementById('schSubscriberAccount').value = '';
+      loadScheduleBillers();
+
+      toggleRecipientFields();
+      toggleFrequencyFields();
+      toggleServiceTypeFields();
+      updatePhoneFormatHint();
+      openModal('scheduleModal');
+    }
+
+    async function editSchedule(id, tab) {
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to edit schedules', 'warning');
+        return;
+      }
+      const list = schedules[tab] || [];
+      const schedule = list.find(s => s.id === id);
+      if (!schedule) { showToast('Schedule not found', 'error'); return; }
+
+      editingId = id;
+      document.getElementById('scheduleTab').value = tab;
+      document.getElementById('scheduleModalTitle').textContent = 'Edit Schedule';
+      document.getElementById('editScheduleId').value = id;
+      document.getElementById('scheduleSubmitBtn').innerHTML = '<i class="fas fa-save"></i> Update Schedule';
+
+      document.getElementById('schName').value = schedule.name || '';
+      document.getElementById('schRecipientType').value = schedule.recipient_type || 'individual';
+      document.getElementById('schServiceType').value = schedule.service_type || 'airtime';
+      document.getElementById('schRecipient').value = schedule.recipient || schedule.phone || '';
+      document.getElementById('schTeam').value = schedule.department || schedule.team || '';
+      document.getElementById('schAmount').value = schedule.amount || '';
+      document.getElementById('schCurrency').value = schedule.currency || 'NGN';
+      updateWalletCurrency();
+      document.getElementById('schFrequency').value = schedule.frequency || 'monthly';
+      document.getElementById('schDayOfMonth').value = schedule.day_of_month || 1;
+      document.getElementById('schDayOfWeek').value = schedule.day_of_week || 0;
+      document.getElementById('schMonth').value = schedule.month || 1;
+      document.getElementById('schTime').value = schedule.time || '09:00';
+      document.getElementById('schTimezone').value = schedule.timezone || 'Africa/Lagos';
+      document.getElementById('schNotifyDays').value = schedule.notify_days || 3;
+      document.getElementById('schDescription').value = schedule.description || '';
+      if (schedule.startDate) document.getElementById('schStartDate').value = schedule.startDate;
+      if (schedule.endDate) document.getElementById('schEndDate').value = schedule.endDate;
+      if (schedule.eventType) document.getElementById('schEventType').value = schedule.eventType;
+      if (schedule.eventDate) document.getElementById('schEventDate').value = schedule.eventDate;
+
+      if (schedule.country_code) {
+        document.getElementById('schCountry').value = schedule.country_code;
+        updatePhoneFormatHint();
+        loadScheduleOperators().then(() => {
+          if (schedule.operator_id) {
+            document.getElementById('schOperator').value = schedule.operator_id;
+          }
+        });
+      }
+      if (schedule.phone) {
+        document.getElementById('schPhone').value = schedule.phone;
+      }
+      if (schedule.service_type === 'utility') {
+        document.getElementById('schSubscriberAccount').value = schedule.subscriber_account || schedule.subscriberAccount || '';
+        await loadScheduleBillers(schedule.biller_id || schedule.billerId || '');
+      }
+
+      toggleRecipientFields();
+      toggleFrequencyFields();
+      toggleServiceTypeFields();
+      openModal('scheduleModal');
+    }
+
+    function deleteSchedule(id, tab) {
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to delete schedules', 'warning');
+        return;
+      }
+      if (!confirm('Are you sure you want to delete this schedule?')) return;
+
+      deleteScheduleFromAPI(id).then(success => {
+        if (success) {
+          schedules[tab] = (schedules[tab] || []).filter(s => s.id !== id);
+          renderAllTables();
+          saveToLocalStorage();
+          showToast('🗑️ Schedule deleted successfully', 'success');
+        } else {
+          showToast('❌ Failed to delete schedule', 'error');
+        }
+      });
+    }
+
+    // ================================================
+    // SAVE SCHEDULE - WITH UTILITY SUPPORT
+    // ================================================
+    async function saveSchedule(event) {
+      event.preventDefault();
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to save schedules', 'warning');
+        return;
+      }
+
+      const tab = document.getElementById('scheduleTab').value;
+      const isEdit = document.getElementById('editScheduleId').value !== '';
+      const id = isEdit ? document.getElementById('editScheduleId').value : generateId();
+
+      const serviceType = document.getElementById('schServiceType').value;
+      const frequency = document.getElementById('schFrequency').value;
+      const currency = document.getElementById('schCurrency').value || 'NGN';
+
+      const schedule = {
+        id: id,
+        name: document.getElementById('schName').value.trim(),
+        recipient_type: document.getElementById('schRecipientType').value || 'individual',
+        service_type: serviceType,
+        recipient: document.getElementById('schRecipient').value.trim() || '',
+        department: document.getElementById('schTeam').value.trim() || '',
+        amount: parseFloat(document.getElementById('schAmount').value) || 0,
+        currency: currency,
+        wallet_currency: currency,
+        frequency: frequency,
+        day_of_month: parseInt(document.getElementById('schDayOfMonth').value) || 1,
+        day_of_week: parseInt(document.getElementById('schDayOfWeek').value) || 0,
+        month: parseInt(document.getElementById('schMonth').value) || 1,
+        time: document.getElementById('schTime').value || '09:00',
+        timezone: document.getElementById('schTimezone').value || 'Africa/Lagos',
+        notify_days: parseInt(document.getElementById('schNotifyDays').value) || 3,
+        description: document.getElementById('schDescription').value.trim() || '',
+        startDate: document.getElementById('schStartDate').value || null,
+        endDate: document.getElementById('schEndDate').value || null,
+        eventType: document.getElementById('schEventType').value || null,
+        eventDate: document.getElementById('schEventDate').value || null,
+        status: 'active',
+        created_at: isEdit ? (schedules[tab]?.find(s => s.id === id)?.created_at || new Date().toISOString()) : new Date().toISOString(),
+      };
+
+      // ============ UTILITY FIELDS - FIXED ============
+      if (serviceType === 'utility') {
+        const billerSelect = document.getElementById('schBiller');
+        const selectedOption = billerSelect?.options[billerSelect.selectedIndex];
+        const billerId = billerSelect?.value || '';
+        const billerName = selectedOption?.dataset?.billerName || selectedOption?.textContent || '';
+
+        if (!billerId) {
+          showToast('Please select a utility biller.', 'warning');
+          return;
+        }
+
+        const subscriberAccount = document.getElementById('schSubscriberAccount')?.value.trim() || '';
+        if (!subscriberAccount) {
+          showToast('Please enter the subscriber/account number.', 'warning');
+          return;
+        }
+
+        schedule.biller_id = billerId;
+        schedule.biller_name = billerName;
+        schedule.subscriber_account = subscriberAccount;
+        schedule.country_code = 'NG';
+        schedule.operator_id = '';
+        schedule.operator_name = '';
+        schedule.phone = '';
+      }
+
+      // ============ AIRTIME FIELDS ============
+      if (serviceType === 'airtime') {
+        schedule.country_code = document.getElementById('schCountry').value || '';
+        schedule.operator_id = document.getElementById('schOperator').value || '';
+        schedule.operator_name = getOperatorName(schedule.operator_id) || '';
+        let phone = document.getElementById('schPhone').value.trim() || '';
+
+        if (!schedule.country_code || !schedule.operator_id || !phone) {
+          showToast('Please select country, operator and enter a valid phone number.', 'warning');
+          return;
+        }
+
+        // Validate using the international validator
+        const validation = validateScheduledPhone(phone, schedule.country_code);
+        if (!validation.valid) {
+          showToast(`⚠️ ${validation.error}`, 'warning');
+          document.getElementById('phoneError').textContent = validation.error;
+          document.getElementById('phoneError').style.display = 'block';
+          document.getElementById('schPhone').parentElement.classList.add('has-error');
+          return;
+        }
+
+        schedule.phone = validation.value;
+        document.getElementById('schPhone').value = validation.value;
+        document.getElementById('phoneError').style.display = 'none';
+        document.getElementById('schPhone').parentElement.classList.remove('has-error');
+      }
+
+      if (!schedule.name) {
+        showToast('Please enter a schedule name', 'warning');
+        return;
+      }
+      if (!schedule.amount || schedule.amount <= 0) {
+        showToast('Please enter a valid amount', 'warning');
+        return;
+      }
+
+      schedule.next_run = calculateNextRun(
+        frequency,
+        schedule.day_of_month,
+        schedule.time,
+        schedule.day_of_week,
+        schedule.month,
+        schedule.eventDate,
+        schedule.startDate
+      );
+
+      console.log('Saving schedule:', schedule);
+
+      const success = await saveScheduleToAPI(schedule);
+
+      if (success) {
+        if (!schedules[tab]) schedules[tab] = [];
+        if (isEdit) {
+          const idx = schedules[tab].findIndex(s => s.id === id);
+          if (idx !== -1) schedules[tab][idx] = { ...schedules[tab][idx], ...schedule };
+        } else {
+          schedules[tab].push(schedule);
+        }
+        saveToLocalStorage();
+        renderAllTables();
+        closeModal('scheduleModal');
+        showToast(isEdit ? '✅ Schedule updated successfully' : '✅ Schedule created successfully', 'success');
+      } else {
+        showToast('❌ Failed to save schedule', 'error');
+      }
+    }
+
+    function calculateNextRun(frequency, dayOfMonth, time, dayOfWeek, month, eventDate, startDate) {
+      const now = new Date();
+      const [h, m] = (time || '09:00').split(':').map(Number);
+      let next = new Date(now);
+      next.setHours(h || 9, m || 0, 0, 0);
+
+      const freq = String(frequency || 'monthly').toLowerCase();
+
+      if (freq === 'once') {
+        const base = startDate || eventDate;
+        if (!base) return null;
+        next = new Date(`${base}T${time || '09:00'}`);
+        return next > now ? next.toISOString() : null;
+      } else if (freq === 'daily') {
+        if (next <= now) next.setDate(next.getDate() + 1);
+      } else if (freq === 'weekly') {
+        const target = parseInt(dayOfWeek) || 0;
+        const diff = (target - now.getDay() + 7) % 7;
+        next.setDate(next.getDate() + diff);
+        if (next <= now) next.setDate(next.getDate() + 7);
+      } else if (freq === 'monthly') {
+        const day = parseInt(dayOfMonth) || 1;
+        next.setDate(day);
+        if (next <= now) {
+          next.setMonth(next.getMonth() + 1);
+          const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+          next.setDate(Math.min(day, lastDay));
+        }
+      } else if (freq === 'quarterly') {
+        const qMonth = Math.floor((now.getMonth() + 3) / 3) * 3;
+        next.setMonth(qMonth);
+        next.setDate(parseInt(dayOfMonth) || 1);
+        if (next <= now) next.setMonth(next.getMonth() + 3);
+      } else if (freq === 'yearly') {
+        const targetMonth = parseInt(month) || 1;
+        next.setMonth(targetMonth - 1);
+        next.setDate(parseInt(dayOfMonth) || 1);
+        if (next <= now) next.setFullYear(next.getFullYear() + 1);
+      } else if (freq === 'event' && eventDate) {
+        const event = new Date(eventDate);
+        event.setHours(h || 9, m || 0, 0, 0);
+        next = event;
+        if (next <= now) {
+          next.setFullYear(next.getFullYear() + 1);
+        }
+      }
+      return next.toISOString();
+    }
+
+    // ================================================
+    // RENDER TABLES
+    // ================================================
+    function renderAllTables() {
+      renderIndividualTable();
+      renderSMETable();
+      renderEnterpriseTable();
+      updateStats();
+    }
+
+    function renderIndividualTable() {
+      const list = schedules.individual || [];
+      const search = document.getElementById('indSearch')?.value?.toLowerCase() || '';
+      const filtered = list.filter(s =>
+        s.name?.toLowerCase().includes(search) ||
+        s.recipient?.toLowerCase().includes(search) ||
+        s.phone?.toLowerCase().includes(search) ||
+        s.description?.toLowerCase().includes(search)
+      );
+      const tbody = document.getElementById('indScheduleTable');
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📅</div><h3>No personal schedules found</h3><button class="btn btn-primary" onclick="openCreateSchedule('individual')">Create Schedule</button></div></td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(s => {
+        let details = '';
+        if (s.service_type === 'utility') {
+          details = `${s.biller_name || 'Utility Biller'} | ${s.subscriber_account || 'N/A'}`;
+        } else {
+          details = s.recipient || s.phone || '—';
+        }
+        return `
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="schedule-type-icon" style="background:#eef2ff;color:#4f46e5;">${getServiceIcon(s.service_type)}</span>
+                <div>
+                  <div style="font-weight:600;">${escapeHtml(s.name)}</div>
+                  <div style="font-size:11px;color:var(--text-secondary);">${s.service_type || 'airtime'}</div>
+                </div>
+              </div>
+            </td>
+            <td style="font-size:13px;">${escapeHtml(details)}</td>
+            <td><strong>${formatCurrency(s.amount, s.currency)}</strong></td>
+            <td>${s.frequency || 'monthly'}</td>
+            <td style="font-size:13px;">${formatDate(s.next_run)}</td>
+            <td>${getStatusBadge(s.status)}</td>
+            <td>
+              <div class="schedule-actions">
+                <button onclick="runSchedule('${s.id}','individual')" title="Run Now"><i class="fas fa-play" style="color:var(--success);"></i></button>
+                ${s.status === 'paused' ?
+                  `<button onclick="resumeSchedule('${s.id}','individual')" title="Resume"><i class="fas fa-play-circle" style="color:var(--warning);"></i></button>` :
+                  `<button onclick="pauseSchedule('${s.id}','individual')" title="Pause"><i class="fas fa-pause" style="color:var(--warning);"></i></button>`
+                }
+                <button onclick="editSchedule('${s.id}','individual')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteSchedule('${s.id}','individual')" class="danger" title="Delete"><i class="fas fa-trash"></i></button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderSMETable() {
+      const list = schedules.sme || [];
+      const search = document.getElementById('smeSearch')?.value?.toLowerCase() || '';
+      const filtered = list.filter(s =>
+        s.name?.toLowerCase().includes(search) ||
+        s.department?.toLowerCase().includes(search) ||
+        s.recipient?.toLowerCase().includes(search) ||
+        s.phone?.toLowerCase().includes(search)
+      );
+      const tbody = document.getElementById('smeScheduleTable');
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">👥</div><h3>No team schedules found</h3><button class="btn btn-purple" onclick="openCreateSchedule('sme')">Create Team Schedule</button></div></td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map(s => {
+        let details = '';
+        if (s.service_type === 'utility') {
+          details = `${s.biller_name || 'Utility Biller'} | ${s.subscriber_account || 'N/A'}`;
+        } else {
+          details = s.recipient || s.phone || '—';
+        }
+        return `
+          <tr>
+            <td><strong>${escapeHtml(s.name)}</strong><br><span style="font-size:11px;color:var(--text-secondary);">${s.service_type || 'airtime'}</span></td>
+            <td><span style="font-size:12px;background:var(--bg-primary);padding:2px 10px;border-radius:999px;">${escapeHtml(s.department || 'General')}</span></td>
+            <td style="font-size:13px;">${escapeHtml(details)}</td>
+            <td><strong>${formatCurrency(s.amount, s.currency)}</strong></td>
+            <td>${s.frequency || 'monthly'}</td>
+            <td style="font-size:13px;">${formatDate(s.next_run)}</td>
+            <td>${getStatusBadge(s.status)}</td>
+            <td>
+              <div class="schedule-actions">
+                <button onclick="runSchedule('${s.id}','sme')" title="Run Now"><i class="fas fa-play" style="color:var(--success);"></i></button>
+                ${s.status === 'paused' ?
+                  `<button onclick="resumeSchedule('${s.id}','sme')" title="Resume"><i class="fas fa-play-circle" style="color:var(--warning);"></i></button>` :
+                  `<button onclick="pauseSchedule('${s.id}','sme')" title="Pause"><i class="fas fa-pause" style="color:var(--warning);"></i></button>`
+                }
+                <button onclick="editSchedule('${s.id}','sme')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteSchedule('${s.id}','sme')" class="danger" title="Delete"><i class="fas fa-trash"></i></button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderEnterpriseTable() {
+      const list = schedules.enterprise || [];
+      const tbody = document.getElementById('entScheduleTable');
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="icon">🏢</div><h3>No enterprise data</h3><p>Import enterprise data to manage thousands of employees.</p><button class="btn btn-purple" onclick="openBulkImport('enterprise')">Import Data</button></div></td></tr>`;
+        return;
+      }
+      tbody.innerHTML = list.slice(0, 100).map(s => {
+        let details = '';
+        if (s.service_type === 'utility') {
+          details = `${s.biller_name || 'Utility Biller'} | ${s.subscriber_account || 'N/A'}`;
+        } else {
+          details = s.phone || '—';
+        }
+        return `
+          <tr>
+            <td style="font-weight:600;font-size:12px;">${escapeHtml(s.employeeId || '—')}</td>
+            <td><strong>${escapeHtml(s.name)}</strong></td>
+            <td><span style="font-size:12px;background:var(--bg-primary);padding:2px 10px;border-radius:999px;">${escapeHtml(s.department || 'General')}</span></td>
+            <td style="font-size:13px;">${escapeHtml(details)}</td>
+            <td><strong>${formatCurrency(s.amount, s.currency)}</strong></td>
+            <td>${s.frequency || 'monthly'}</td>
+            <td style="font-size:13px;">${formatDate(s.next_run)}</td>
+            <td>${getStatusBadge(s.status)}</td>
+            <td>
+              <div class="schedule-actions">
+                <button onclick="runSchedule('${s.id}','enterprise')" title="Run Now"><i class="fas fa-play" style="color:var(--success);"></i></button>
+                ${s.status === 'paused' ?
+                  `<button onclick="resumeSchedule('${s.id}','enterprise')" title="Resume"><i class="fas fa-play-circle" style="color:var(--warning);"></i></button>` :
+                  `<button onclick="pauseSchedule('${s.id}','enterprise')" title="Pause"><i class="fas fa-pause" style="color:var(--warning);"></i></button>`
+                }
+                <button onclick="editSchedule('${s.id}','enterprise')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteSchedule('${s.id}','enterprise')" class="danger" title="Delete"><i class="fas fa-trash"></i></button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ================================================
+    // STATS
+    // ================================================
+    function updateStats() {
+      const ind = schedules.individual || [];
+      document.getElementById('indTotalSchedules').textContent = ind.length;
+      const indActive = ind.filter(s => s.status === 'active');
+      document.getElementById('indUpcoming').textContent = indActive.length;
+      const indCompleted = ind.filter(s => s.status === 'completed');
+      document.getElementById('indCompleted').textContent = indCompleted.length;
+      const totalSpent = ind.reduce((sum, s) => sum + (s.amount || 0), 0);
+      document.getElementById('indTotalSpent').textContent = formatCurrency(totalSpent);
+      const next = indActive.sort((a, b) => new Date(a.next_run) - new Date(b.next_run))[0];
+      document.getElementById('indNextDate').textContent = next ? formatDate(next.next_run) : '—';
+
+      const sme = schedules.sme || [];
+      document.getElementById('smeTotalSchedules').textContent = sme.length;
+      const depts = new Set(sme.map(s => s.department).filter(Boolean));
+      document.getElementById('smeDepartments').textContent = depts.size;
+      const smeBudget = sme.reduce((sum, s) => sum + (s.amount || 0), 0);
+      document.getElementById('smeBudget').textContent = formatCurrency(smeBudget);
+      document.getElementById('smeEmployees').textContent = sme.length;
+
+      const ent = schedules.enterprise || [];
+      document.getElementById('entEmployees').textContent = ent.length.toLocaleString();
+      document.getElementById('entTotalSchedules').textContent = ent.length;
+      const entVolume = ent.reduce((sum, s) => sum + (s.amount || 0), 0);
+      document.getElementById('entMonthlyVolume').textContent = formatCurrency(entVolume);
+      const entSuccess = ent.filter(s => s.status === 'completed').length;
+      document.getElementById('entSuccessRate').textContent = ent.length ? Math.round((entSuccess / ent.length) * 100) + '%' : '0%';
+    }
+
+    // ================================================
+    // API FUNCTIONS
+    // ================================================
+    async function saveScheduleToAPI(schedule) {
+      try {
+        const isEdit = schedule.id && schedules[document.getElementById('scheduleTab').value]?.find(s => s.id === schedule.id);
+        const method = isEdit ? 'PUT' : 'POST';
+        const url = method === 'POST' ? '/api/scheduler/schedules' : `/api/scheduler/schedules/${schedule.id}`;
+
+        console.log('Sending schedule to API:', schedule);
+
+        const response = await apiFetch(url, {
+          method: method,
+          body: JSON.stringify(schedule)
+        });
+
+        if (!response) return false;
+        const data = await response.json();
+        console.log('API response:', data);
+        return data.success;
+      } catch (e) {
+        console.error('Failed to save schedule:', e);
+        return false;
+      }
+    }
+
+    async function deleteScheduleFromAPI(id) {
+      try {
+        const response = await apiFetch(`/api/scheduler/schedules/${id}`, { method: 'DELETE' });
+        if (!response) return false;
+        const data = await response.json();
+        return data.success;
+      } catch (e) {
+        console.error('Failed to delete schedule:', e);
+        return false;
+      }
+    }
+
+    async function runScheduleFromAPI(id) {
+      try {
+        const response = await apiFetch(`/api/scheduler/schedules/${id}/run`, { method: 'POST' });
+        if (!response) return false;
+        const data = await response.json();
+        if (data.success) {
+          showToast('✅ Schedule executed successfully!', 'success');
+          return true;
+        } else if (data.needs_review) {
+          showToast(`⚠️ Schedule requires review: ${data.error || 'Provider response uncertain'}`, 'warning');
+          return false;
+        } else {
+          showToast(`❌ ${data.error || 'Execution failed'}`, 'error');
+          return false;
+        }
+      } catch (e) {
+        console.error('Failed to run schedule:', e);
+        showToast('❌ Failed to execute schedule', 'error');
+        return false;
+      }
+    }
+
+    // ================================================
+    // PAUSE / RESUME SCHEDULE
+    // ================================================
+    async function pauseSchedule(id, tab) {
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to pause schedules', 'warning');
+        return;
+      }
+      if (!confirm('Pause this schedule? It will not run until resumed.')) return;
+
+      try {
+        const response = await apiFetch(`/api/scheduler/schedules/${id}/pause`, {
+          method: 'POST'
+        });
+        if (!response) return;
+        const data = await response.json();
+        if (data.success) {
+          showToast('⏸️ Schedule paused successfully', 'success');
+          await loadSchedulesFromAPI();
+        } else {
+          showToast(`❌ ${data.error}`, 'error');
+        }
+      } catch (e) {
+        showToast('❌ Failed to pause schedule', 'error');
+      }
+    }
+
+    async function resumeSchedule(id, tab) {
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to resume schedules', 'warning');
+        return;
+      }
+
+      try {
+        const response = await apiFetch(`/api/scheduler/schedules/${id}/resume`, {
+          method: 'POST'
+        });
+        if (!response) return;
+        const data = await response.json();
+        if (data.success) {
+          showToast('▶️ Schedule resumed successfully', 'success');
+          await loadSchedulesFromAPI();
+        } else {
+          showToast(`❌ ${data.error}`, 'error');
+        }
+      } catch (e) {
+        showToast('❌ Failed to resume schedule', 'error');
+      }
+    }
+
+    // ================================================
+    // TAB SWITCHING
+    // ================================================
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+      document.querySelector(`.nav-tab[data-tab="${tab}"]`).classList.add('active');
+      renderAllTables();
+    }
+
+    // ================================================
+    // THEME
+    // ================================================
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+      localStorage.setItem('net365_scheduler_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+      const icon = document.querySelector('.theme-toggle i');
+      icon.className = document.body.classList.contains('dark-mode') ? 'fas fa-sun' : 'fas fa-moon';
+    }
+
+    function loadTheme() {
+      if (localStorage.getItem('net365_scheduler_theme') === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+      }
+    }
+
+    // ================================================
+    // MODAL HELPERS
+    // ================================================
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('active');
+      });
+    });
+
+    // ================================================
+    // TOAST
+    // ================================================
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // ================================================
+    // COUNTRY & OPERATOR DATA HELPERS
+    // ================================================
+    function getCountryData(countryCode) {
+      const code = String(countryCode || '').toUpperCase();
+      if (COUNTRY_DATA[code]) {
+        return { ...COUNTRY_DATA[code], code };
+      }
+      return { name: code, currency: 'USD', symbol: '$', flag: '🌍', code };
+    }
+
+    function populateCountrySelect(selectId) {
+      const sel = document.getElementById(selectId);
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Select country</option>';
+      Object.keys(COUNTRY_DATA).sort().forEach(code => {
+        const country = COUNTRY_DATA[code];
+        const option = document.createElement('option');
+        option.value = code;
+        option.textContent = `${country.flag} ${country.name}`;
+        sel.appendChild(option);
+      });
+    }
+
+    // ================================================
+    // LOAD SCHEDULES FROM API
+    // ================================================
+    async function loadSchedulesFromAPI() {
+      try {
+        const response = await apiFetch('/api/scheduler/schedules');
+        if (!response) return false;
+        const data = await response.json();
+        if (data.success) {
+          const parsed = data.schedules.map(s => {
+            let metadata = {};
+            if (s.metadata) {
+              try { metadata = typeof s.metadata === 'string' ? JSON.parse(s.metadata) : s.metadata; } catch { metadata = {}; }
+            }
+            return {
+              ...s,
+              metadata: metadata,
+              description: s.description || metadata.description || '',
+              startDate: s.startDate || metadata.start_date || null,
+              endDate: s.endDate || metadata.end_date || null,
+              eventType: s.eventType || metadata.event_type || null,
+              eventDate: s.eventDate || metadata.event_date || null,
+              wallet_currency: s.wallet_currency || s.currency || 'NGN'
+            };
+          });
+
+          schedules.individual = parsed.filter(s => s.recipient_type === 'individual' || !s.department);
+          schedules.sme = parsed.filter(s => s.recipient_type === 'team' || (s.department && s.department !== 'General'));
+          schedules.enterprise = parsed.filter(s => s.recipient_type === 'enterprise');
+
+          saveToLocalStorage();
+          renderAllTables();
+          return true;
+        }
+      } catch (e) {
+        console.error('Failed to load schedules:', e);
+      }
+      return false;
+    }
+
+    // ================================================
+    // RUN SCHEDULE
+    // ================================================
+    function runSchedule(id, tab) {
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to execute schedules', 'warning');
+        return;
+      }
+      const list = schedules[tab] || [];
+      const schedule = list.find(s => s.id === id);
+      if (!schedule) { showToast('Schedule not found', 'error'); return; }
+
+      runTargetId = id;
+      runTargetTab = tab;
+      document.getElementById('runScheduleName').textContent = schedule.name || 'this schedule';
+      document.getElementById('runWalletCurrency').textContent = schedule.wallet_currency || schedule.currency || 'NGN';
+      openModal('runModal');
+    }
+
+    async function executeNow() {
+      if (!runTargetId) { showToast('No schedule selected', 'error'); return; }
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to execute schedules', 'warning');
+        closeModal('runModal');
+        return;
+      }
+
+      const list = schedules[runTargetTab] || [];
+      const schedule = list.find(s => s.id === runTargetId);
+      if (!schedule) { showToast('Schedule not found', 'error'); return; }
+
+      if (schedule.service_type === 'airtime') {
+        if (!schedule.country_code || !schedule.operator_id || !schedule.phone) {
+          showToast(`⚠️ "${schedule.name}" is missing country, operator, or phone number.`, 'error');
+          closeModal('runModal');
+          return;
+        }
+
+        const validation = validateScheduledPhone(schedule.phone, schedule.country_code);
+        if (!validation.valid) {
+          showToast(`⚠️ ${validation.error}`, 'warning');
+          closeModal('runModal');
+          return;
+        }
+        schedule.phone = validation.value;
+      }
+
+      const currency = schedule.currency || 'NGN';
+      const walletCurrency = schedule.wallet_currency || currency;
+      if (walletCurrency !== currency) {
+        showToast(`⚠️ Wallet currency ${walletCurrency} does not match payment currency ${currency}. Please edit the schedule.`, 'error');
+        closeModal('runModal');
+        return;
+      }
+
+      closeModal('runModal');
+
+      const btn = document.getElementById('runConfirmBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Executing...';
+
+      try {
+        const success = await runScheduleFromAPI(runTargetId);
+        if (success) {
+          await loadSchedulesFromAPI();
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play"></i> Execute Now';
+      }
+    }
+
+    // ================================================
+    // RUN ALL SCHEDULES
+    // ================================================
+    async function runDepartmentSchedules() {
+      const sme = schedules.sme || [];
+      const depts = [...new Set(sme.map(s => s.department).filter(Boolean))];
+      if (!depts.length) {
+        showToast('No departments found — set a department on your team schedules first', 'warning');
+        return;
+      }
+      const dept = prompt(`Run schedules for which department?\n\nAvailable: ${depts.join(', ')}`, depts[0]);
+      if (!dept) return;
+      if (!depts.includes(dept)) {
+        showToast(`No department named "${dept}" — available: ${depts.join(', ')}`, 'warning');
+        return;
+      }
+      await runAllSchedules('sme', dept);
+    }
+
+    async function runAllSchedules(tab, departmentFilter = null) {
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to execute schedules', 'warning');
+        return;
+      }
+      if (isRunningBatch) {
+        showToast('⚠️ Batch execution already in progress', 'warning');
+        return;
+      }
+
+      const list = (schedules[tab] || []).filter(s => !departmentFilter || s.department === departmentFilter);
+      const active = list.filter(s => s.status === 'active' || s.status === 'queued');
+      if (!active.length) {
+        showToast(departmentFilter ? `No active schedules for "${departmentFilter}"` : 'No active schedules to run', 'warning');
+        return;
+      }
+
+      const incomplete = active.filter(s =>
+        s.service_type === 'airtime' && (!s.country_code || !s.operator_id || !s.phone)
+      );
+      if (incomplete.length) {
+        const names = incomplete.slice(0, 10).map(s => s.name).join(', ');
+        const suffix = incomplete.length > 10 ? ` and ${incomplete.length - 10} more` : '';
+        if (!confirm(`${incomplete.length} schedule(s) are missing country, operator, or phone number:\n${names}${suffix}\n\nContinue anyway?`)) {
+          return;
+        }
+      }
+
+      const confirmLabel = departmentFilter ? `${active.length} active schedules in "${departmentFilter}"` : `all ${active.length} active schedules`;
+      if (!confirm(`Run ${confirmLabel}? Each schedule will debit its matching wallet currency.`)) return;
+
+      isRunningBatch = true;
+      showToast(`🚀 Starting execution of ${active.length} schedules...`, 'info');
+
+      let completed = 0;
+      let failed = 0;
+      let needsReview = 0;
+
+      for (let i = 0; i < active.length; i++) {
+        const s = active[i];
+        if (s.service_type === 'airtime' && s.phone && s.country_code) {
+          const validation = validateScheduledPhone(s.phone, s.country_code);
+          if (!validation.valid) {
+            failed++;
+            showToast(`⚠️ ${s.name}: ${validation.error}`, 'warning');
+            continue;
+          }
+          s.phone = validation.value;
+        }
+
+        const success = await runScheduleFromAPI(s.id);
+        if (success) {
+          completed++;
+        } else {
+          const response = await apiFetch(`/api/scheduler/schedules/${s.id}/run`, { method: 'POST' });
+          if (response) {
+            const data = await response.json();
+            if (data.needs_review) needsReview++;
+          }
+          failed++;
+        }
+
+        showToast(`⏳ Progress: ${i + 1}/${active.length} - ✅ ${completed} ❌ ${failed}`, 'info');
+
+        if (i < active.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+
+      isRunningBatch = false;
+      await loadSchedulesFromAPI();
+
+      let message = `✅ Batch execution completed!\n✅ ${completed} succeeded, ❌ ${failed} failed`;
+      if (needsReview > 0) message += `, ⚠️ ${needsReview} need review`;
+      showToast(message, completed > 0 ? 'success' : 'error');
+    }
+
+    // ================================================
+    // FILTERS
+    // ================================================
+    function filterSchedules(tab) {
+      renderAllTables();
+    }
+
+    function filterEnterpriseBy(filter) {
+      const list = schedules.enterprise || [];
+      const filtered = filter === 'all' ? list : list.filter(s => s.status === filter);
+      const tbody = document.getElementById('entScheduleTable');
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="icon">🔍</div><h3>No ${filter} schedules found</h3></div></td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.slice(0, 100).map(s => {
+        let details = '';
+        if (s.service_type === 'utility') {
+          details = `${s.biller_name || 'Utility Biller'} | ${s.subscriber_account || 'N/A'}`;
+        } else {
+          details = s.phone || '—';
+        }
+        return `
+          <tr>
+            <td style="font-weight:600;font-size:12px;">${escapeHtml(s.employeeId || '—')}</td>
+            <td><strong>${escapeHtml(s.name)}</strong></td>
+            <td><span style="font-size:12px;background:var(--bg-primary);padding:2px 10px;border-radius:999px;">${escapeHtml(s.department || 'General')}</span></td>
+            <td style="font-size:13px;">${escapeHtml(details)}</td>
+            <td><strong>${formatCurrency(s.amount, s.currency)}</strong></td>
+            <td>${s.frequency || 'monthly'}</td>
+            <td style="font-size:13px;">${formatDate(s.next_run)}</td>
+            <td>${getStatusBadge(s.status)}</td>
+            <td>
+              <div class="schedule-actions">
+                <button onclick="runSchedule('${s.id}','enterprise')" title="Run Now"><i class="fas fa-play" style="color:var(--success);"></i></button>
+                ${s.status === 'paused' ?
+                  `<button onclick="resumeSchedule('${s.id}','enterprise')" title="Resume"><i class="fas fa-play-circle" style="color:var(--warning);"></i></button>` :
+                  `<button onclick="pauseSchedule('${s.id}','enterprise')" title="Pause"><i class="fas fa-pause" style="color:var(--warning);"></i></button>`
+                }
+                <button onclick="editSchedule('${s.id}','enterprise')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteSchedule('${s.id}','enterprise')" class="danger" title="Delete"><i class="fas fa-trash"></i></button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ================================================
+    // EXPORT / IMPORT
+    // ================================================
+    function exportSchedules(tab) {
+      const list = schedules[tab] || [];
+      if (!list.length) { showToast('No schedules to export', 'warning'); return; }
+
+      const data = JSON.stringify(list, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `schedules_${tab}_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`📥 Exported ${list.length} schedules`, 'success');
+    }
+
+    async function importSchedules(file, tab) {
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to import schedules', 'warning');
+        return;
+      }
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) throw new Error('Invalid format: expected a JSON array.');
+
+        if (!schedules[tab]) schedules[tab] = [];
+        let imported = 0;
+        let failed = 0;
+
+        for (const raw of data) {
+          const s = { ...raw };
+          if (!s.id) s.id = generateId();
+          s.user_id = userId;
+          s.currency = (s.currency || 'NGN').toUpperCase();
+          s.wallet_currency = s.currency;
+
+          if (s.service_type === 'airtime' && s.phone && s.country_code) {
+            const validation = validateScheduledPhone(s.phone, s.country_code);
+            if (!validation.valid) {
+              failed++;
+              continue;
+            }
+            s.phone = validation.value;
+          }
+
+          const success = await saveScheduleToAPI(s);
+          if (success) {
+            schedules[tab].push(s);
+            imported++;
+          } else {
+            failed++;
+          }
+        }
+
+        saveToLocalStorage();
+        renderAllTables();
+        showToast(`📥 Imported ${imported} schedule(s)${failed ? `, ${failed} failed` : ''}.`, failed ? 'warning' : 'success');
+      } catch (err) {
+        showToast(`❌ Import failed: ${err.message}`, 'error');
+      }
+    }
+
+    // ================================================
+    // ENTERPRISE BULK IMPORT
+    // ================================================
+    function openBulkImport(tab) {
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to import data', 'warning');
+        return;
+      }
+      if (tab === 'enterprise') {
+        document.getElementById('entImportArea').scrollIntoView({ behavior: 'smooth' });
+      } else {
+        showToast('📤 Use the import button in the toolbar above', 'info');
+      }
+    }
+
+    function parseCSVLine(line) {
+      const values = [];
+      let value = '';
+      let quoted = false;
+
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (quoted && line[i + 1] === '"') {
+            value += '"';
+            i++;
+          } else {
+            quoted = !quoted;
+          }
+        } else if (ch === ',' && !quoted) {
+          values.push(value.trim());
+          value = '';
+        } else {
+          value += ch;
+        }
+      }
+      values.push(value.trim());
+      return values;
+    }
+
+    async function importEnterpriseData(file) {
+      if (!isAuthenticated) {
+        showToast('⚠️ Please sign in to import enterprise data', 'warning');
+        return;
+      }
+      if (!file) return;
+
+      const progress = document.getElementById('entImportProgress');
+      progress.style.display = 'block';
+      const fill = document.getElementById('entImportFill');
+      const stats = document.getElementById('entImportStats');
+      const results = document.getElementById('entImportResults');
+
+      try {
+        const content = await file.text();
+        let records = [];
+
+        if (file.name.toLowerCase().endsWith('.json')) {
+          records = JSON.parse(content);
+          if (!Array.isArray(records)) records = [records];
+        } else if (file.name.toLowerCase().endsWith('.csv')) {
+          const lines = content.split(/\r?\n/).filter(line => line.trim());
+          if (!lines.length) throw new Error('CSV file is empty.');
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+          for (let i = 1; i < lines.length; i++) {
+            const values = parseCSVLine(lines[i]);
+            const record = {};
+            headers.forEach((h, idx) => { record[h] = values[idx] ?? ''; });
+            records.push(record);
+          }
+        } else {
+          throw new Error('Unsupported file format. Use CSV or JSON.');
+        }
+
+        const total = records.length;
+        let processed = 0;
+        let successful = 0;
+        let failed = 0;
+        const entList = schedules.enterprise || [];
+
+        for (let idx = 0; idx < records.length; idx++) {
+          const r = records[idx] || {};
+          try {
+            const countryCode = String(r.country_code || r.country || 'NG').toUpperCase();
+            const rawPhone = r.phone || r.mobile || r.phone_number || r.recipient || '';
+
+            let phone = rawPhone;
+            if (phone) {
+              const validation = validateScheduledPhone(phone, countryCode);
+              if (!validation.valid) {
+                throw new Error(validation.error);
+              }
+              phone = validation.value;
+            }
+
+            const schedule = {
+              id: generateId(),
+              employeeId: r.employee_id || r.employeeId || r.id || `EMP${String(idx + 1).padStart(4, '0')}`,
+              name: r.name || r.full_name || r.employee_name || `Employee ${idx + 1}`,
+              department: r.department || r.team || r.dept || 'General',
+              phone: phone,
+              amount: parseFloat(r.amount || r.recharge_amount || r.value || 1000),
+              currency: String(r.currency || 'NGN').toUpperCase(),
+              wallet_currency: String(r.currency || 'NGN').toUpperCase(),
+              frequency: String(r.frequency || 'monthly').toLowerCase(),
+              day_of_month: parseInt(r.day_of_month || r.dayOfMonth || 1, 10) || 1,
+              day_of_week: parseInt(r.day_of_week || r.dayOfWeek || 0, 10) || 0,
+              month: parseInt(r.month || 1, 10) || 1,
+              time: r.time || r.run_time || '09:00',
+              timezone: r.timezone || 'Africa/Lagos',
+              notify_days: parseInt(r.notify_days || 3, 10) || 3,
+              country_code: countryCode,
+              operator_id: r.operator_id || r.operator || '',
+              operator_name: r.operator_name || '',
+              status: 'active',
+              service_type: r.service_type || 'airtime',
+              recipient_type: 'enterprise',
+              next_run: calculateNextRun(
+                r.frequency || 'monthly',
+                parseInt(r.day_of_month || r.dayOfMonth || 1, 10) || 1,
+                r.time || '09:00',
+                parseInt(r.day_of_week || r.dayOfWeek || 0, 10) || 0,
+                parseInt(r.month || 1, 10) || 1,
+                r.event_date || r.eventDate || null,
+                r.start_date || r.startDate || null
+              ),
+              metadata: {
+                employee_id: r.employee_id || r.employeeId || r.id || null,
+                description: r.description || '',
+                event_type: r.event_type || r.eventType || null,
+                event_date: r.event_date || r.eventDate || null,
+                start_date: r.start_date || r.startDate || null,
+                end_date: r.end_date || r.endDate || null
+              },
+              created_at: new Date().toISOString()
+            };
+
+            if (!schedule.amount || schedule.amount <= 0) throw new Error('Invalid amount.');
+            if (!schedule.operator_id && schedule.service_type === 'airtime') {
+              throw new Error('Missing operator.');
+            }
+
+            const saved = await saveScheduleToAPI(schedule);
+            if (!saved) throw new Error('Server rejected the schedule.');
+
+            entList.push(schedule);
+            successful++;
+          } catch (err) {
+            failed++;
+            console.warn('Enterprise row failed:', idx + 1, err);
+          }
+
+          processed++;
+          const percent = total ? (processed / total) * 100 : 100;
+          fill.style.width = `${Math.min(percent, 100)}%`;
+          stats.textContent = `${processed} / ${total} processed`;
+          results.textContent = `✅ ${successful} ❌ ${failed}`;
+
+          if (processed % 10 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
+        }
+
+        schedules.enterprise = entList;
+        saveToLocalStorage();
+        renderAllTables();
+        showToast(`✅ Imported ${successful} records, ${failed} failed`, failed ? 'warning' : 'success');
+      } catch (err) {
+        showToast(`❌ Import failed: ${err.message}`, 'error');
+      } finally {
+        setTimeout(() => { progress.style.display = 'none'; }, 700);
+      }
+    }
+
+    function downloadEnterpriseTemplate() {
+      const template = [
+        'employee_id,name,department,phone,amount,currency,frequency,day_of_month,time,country_code,operator_id,operator_name,service_type',
+        'EMP001,John Doe,Engineering,2348012345678,1000,NGN,monthly,1,09:00,NG,49,MTN Nigeria,airtime',
+        'EMP002,Jane Smith,Sales,2348023456789,1500,NGN,monthly,1,09:00,NG,50,Glo Nigeria,airtime',
+        'EMP003,Bob Johnson,HR,2348034567890,800,NGN,monthly,15,12:00,NG,51,Airtel Nigeria,airtime',
+        'EMP004,Alice Brown,Engineering,2348045678901,2000,NGN,monthly,1,09:00,NG,52,9mobile Nigeria,airtime'
+      ].join('\n');
+
+      const blob = new Blob([template], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'enterprise_schedule_template.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('📥 Template downloaded', 'success');
+    }
+
+    function showEnterpriseDashboard() {
+      const ent = schedules.enterprise || [];
+      const total = ent.length;
+      const active = ent.filter(s => s.status === 'active').length;
+      const completed = ent.filter(s => s.status === 'completed').length;
+      const totalAmount = ent.reduce((sum, s) => sum + (s.amount || 0), 0);
+      const depts = new Set(ent.map(s => s.department).filter(Boolean));
+
+      showToast(`
+        📊 Enterprise Dashboard
+        👥 Employees: ${total.toLocaleString()}
+        🟢 Active: ${active}
+        ✅ Completed: ${completed}
+        💰 Total Volume: ${formatCurrency(totalAmount)}
+        🏢 Departments: ${depts.size}
+      `, 'info');
+    }
+
+    // ================================================
+    // LOCAL STORAGE
+    // ================================================
+    function saveToLocalStorage() {
+      try {
+        localStorage.setItem('net365_scheduler_data', JSON.stringify(schedules));
+      } catch (e) { console.warn('Failed to save to localStorage:', e); }
+    }
+
+    function loadFromLocalStorage() {
+      try {
+        const data = localStorage.getItem('net365_scheduler_data');
+        if (data) {
+          const parsed = JSON.parse(data);
+          schedules.individual = parsed.individual || [];
+          schedules.sme = parsed.sme || [];
+          schedules.enterprise = parsed.enterprise || [];
+        }
+      } catch (e) {
+        console.warn('Failed to load from localStorage:', e);
+      }
+    }
+
+    // ================================================
+    // KEYBOARD SHORTCUTS
+    // ================================================
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        openCreateSchedule();
+      }
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(el => el.classList.remove('active'));
+      }
+    });
+
+    // ================================================
+    // INIT
+    // ================================================
+    document.addEventListener('DOMContentLoaded', async function() {
+      loadTheme();
+
+      const phoneInput = document.getElementById('schPhone');
+      if (phoneInput) {
+        phoneInput.addEventListener('blur', function() {
+          const country = document.getElementById('schCountry').value;
+          const serviceType = document.getElementById('schServiceType').value;
+          if (country && this.value) {
+            if (serviceType === 'airtime') {
+              const validation = validateScheduledPhone(this.value, country);
+              if (validation.valid) {
+                this.value = validation.value;
+                document.getElementById('phoneError').style.display = 'none';
+                this.parentElement.classList.remove('has-error');
+                showToast(`📱 Formatted: ${validation.value}`, 'info');
+              } else {
+                document.getElementById('phoneError').textContent = validation.error;
+                document.getElementById('phoneError').style.display = 'block';
+                this.parentElement.classList.add('has-error');
+              }
+            } else {
+              const validation = validatePhoneNumber(this.value, country);
+              if (validation.valid) {
+                this.value = validation.value;
+                document.getElementById('phoneError').style.display = 'none';
+                this.parentElement.classList.remove('has-error');
+              } else {
+                document.getElementById('phoneError').textContent = validation.error;
+                document.getElementById('phoneError').style.display = 'block';
+                this.parentElement.classList.add('has-error');
+              }
+            }
+          }
+        });
+
+        phoneInput.addEventListener('input', function() {
+          document.getElementById('phoneError').style.display = 'none';
+          this.parentElement.classList.remove('has-error');
+        });
+      }
+
+      const auth = await checkAuth();
+
+      if (!auth) {
+        showAuthRequired();
+        return;
+      }
+
+      // Load exchange rates first
+      await loadExchangeRates();
+      startRateAutoUpdate();
+
+      loadFromLocalStorage();
+
+      const loaded = await loadSchedulesFromAPI();
+
+      if (!loaded) {
+        const hasLocal = schedules.individual.length > 0 || schedules.sme.length > 0 || schedules.enterprise.length > 0;
+        if (!hasLocal) {
+          renderAllTables();
+        }
+      }
+
+      populateCountrySelect('schCountry');
+      updateWalletCurrency();
+      updatePhoneFormatHint();
+
+      showToast('📅 Scheduler Pro loaded successfully!', 'success');
+      console.log('📅 Scheduler Pro initialized');
+      console.log(`👤 User: ${currentUser?.full_name || currentUser?.email}`);
+      console.log(`📊 Individual: ${schedules.individual.length}, SME: ${schedules.sme.length}, Enterprise: ${schedules.enterprise.length}`);
+      console.log(`💱 Exchange rate source: ${exchangeRates.source}, NGN: ₦${exchangeRates.NGN.toFixed(2)} = $1`);
+      console.log(`🌍 International phone validation enabled for ${Object.keys(COUNTRY_PHONE_FORMATS).length} countries`);
+    });
+  </script>
+</body>
+</html>

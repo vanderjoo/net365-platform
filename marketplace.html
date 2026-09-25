@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Net365 Ad Marketplace</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        /* =========================================================
+           MARKETPLACE STYLES (same as business page, plus hero)
+           ========================================================= */
+        :root {
+            --bg-primary: #f0f4f8;
+            --bg-secondary: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --card-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+            --transition: all 0.3s ease;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --primary: #4f46e5;
+            --purple: #7c3aed;
+            --radius: 12px;
+        }
+
+        body.dark-mode {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; transition: var(--transition); }
+
+        /* Navigation */
+        .nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav .logo { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; color: var(--text-primary); text-decoration: none; }
+        .nav .logo i { color: var(--primary); }
+        .back-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 8px; transition: var(--transition); }
+        .back-btn:hover { background: var(--bg-primary); color: var(--text-primary); }
+        .theme-toggle { background: none; border: 1px solid var(--border-color); border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); transition: var(--transition); }
+        .theme-toggle:hover { background: var(--border-color); }
+
+        .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+
+        /* Marketplace Hero */
+        .marketplace-hero {
+            background: linear-gradient(145deg, #1e3a8a, #312e81);
+            border-radius: 24px;
+            padding: 40px 48px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(79, 70, 229, 0.25);
+        }
+        .marketplace-hero::after {
+            content: '📈';
+            position: absolute;
+            right: 40px;
+            bottom: 20px;
+            font-size: 90px;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .marketplace-hero .badge {
+            background: #f59e0b;
+            color: #78350f;
+            padding: 4px 14px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            align-self: flex-start;
+        }
+        .marketplace-hero h1 { font-size: 32px; font-weight: 800; max-width: 600px; }
+        .marketplace-hero h1 i { color: #fbbf24; margin-right: 8px; }
+        .marketplace-hero p { font-size: 16px; opacity: 0.85; max-width: 540px; line-height: 1.6; }
+        .marketplace-hero .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+        .btn-primary {
+            background: white; color: #1e3a8a; border: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; transition: var(--transition);
+        }
+        .btn-primary:hover { transform: scale(1.02); box-shadow: 0 4px 20px rgba(255,255,255,0.25); }
+        .btn-outline-light {
+            background: transparent; color: white; border: 1.5px solid rgba(255,255,255,0.4); padding: 12px 28px; border-radius: 999px; font-weight: 600; font-size: 14px; cursor: pointer; transition: var(--transition);
+        }
+        .btn-outline-light:hover { background: rgba(255,255,255,0.1); border-color: white; }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: var(--transition);
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow); }
+        .stat-card .number { font-size: 28px; font-weight: 800; color: var(--text-primary); }
+        .stat-card .label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-top: 2px; }
+        .stat-card .icon { font-size: 20px; color: var(--primary); margin-bottom: 4px; }
+
+        /* Pricing */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+        .pricing-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            padding: 24px 20px;
+            transition: var(--transition);
+            position: relative;
+        }
+        .pricing-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow); }
+        .pricing-card.popular { border-color: var(--primary); }
+        .pricing-card.popular::before {
+            content: 'POPULAR';
+            position: absolute;
+            top: -10px;
+            right: 16px;
+            background: var(--primary);
+            color: white;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 12px;
+            border-radius: 999px;
+            letter-spacing: 0.5px;
+        }
+        .pricing-card .plan-name { font-weight: 700; font-size: 18px; color: var(--text-primary); }
+        .pricing-card .plan-price { font-size: 28px; font-weight: 800; color: var(--text-primary); margin: 8px 0 4px; }
+        .pricing-card .plan-price small { font-size: 14px; font-weight: 400; color: var(--text-secondary); }
+        .pricing-card .plan-features { list-style: none; padding: 0; margin: 16px 0; }
+        .pricing-card .plan-features li { padding: 6px 0; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+        .pricing-card .plan-features li i { color: var(--success); font-size: 12px; width: 16px; }
+        .btn-plan { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 999px; background: transparent; color: var(--text-primary); font-weight: 600; cursor: pointer; transition: var(--transition); }
+        .btn-plan:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-plan.primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-plan.primary:hover { opacity: 0.85; }
+
+        /* Steps */
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .step-item { text-align: center; padding: 20px; }
+        .step-item .step-num { width: 48px; height: 48px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; margin: 0 auto 12px; }
+        .step-item h4 { color: var(--text-primary); margin-bottom: 4px; }
+        .step-item p { color: var(--text-secondary); font-size: 13px; }
+
+        /* Campaign Form (copied from business.html) */
+        .campaign-form {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            margin-top: 24px;
+        }
+        .campaign-form .form-group { margin-bottom: 16px; }
+        .campaign-form .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+        .campaign-form .form-group input,
+        .campaign-form .form-group select,
+        .campaign-form .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+        }
+        .campaign-form .form-group input:focus,
+        .campaign-form .form-group select:focus,
+        .campaign-form .form-group textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+        }
+        .campaign-form .form-group textarea { min-height: 120px; resize: vertical; }
+        .campaign-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .btn { padding: 10px 20px; border: none; border-radius: var(--radius); font-weight: 600; font-size: 13px; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary-bg { background: var(--primary); color: white; }
+        .btn-primary-bg:hover { background: #4338ca; transform: translateY(-1px); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #16a34a; transform: translateY(-1px); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: var(--radius);
+            color: white;
+            font-weight: 500;
+            z-index: 99999;
+            animation: slideIn 0.3s ease;
+            max-width: 420px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        .toast-info { background: var(--info); }
+        .toast-warning { background: var(--warning); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        @media (max-width: 768px) {
+            .marketplace-hero { padding: 28px 20px; }
+            .marketplace-hero h1 { font-size: 24px; }
+            .marketplace-hero::after { font-size: 60px; right: 20px; bottom: 10px; }
+            .campaign-form .form-row { grid-template-columns: 1fr; }
+            .pricing-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 480px) {
+            .pricing-grid { grid-template-columns: 1fr; }
+            .marketplace-hero .actions { flex-direction: column; }
+            .btn-primary, .btn-outline-light { text-align: center; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <a href="/business" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Business</a>
+            <a href="#" class="logo"><i class="fas fa-store-alt"></i> Net365 Ad Marketplace</a>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
+            <a href="/admin" class="btn" style="text-decoration:none;"><i class="fas fa-shield-halved"></i> Admin</a>
+            <button class="btn btn-primary-bg" onclick="document.getElementById('campaignForm').scrollIntoView({behavior:'smooth'})">
+                <i class="fas fa-rocket"></i> Launch Campaign
+            </button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Hero -->
+        <div class="marketplace-hero">
+            <span class="badge"><i class="fas fa-store-alt"></i> Marketplace</span>
+            <h1><i class="fas fa-bullhorn"></i> Turn Receipts into Revenue</h1>
+            <p>
+                Reach thousands of verified Net365 users directly on their transaction receipts.
+                <br />Target by transaction type, amount, and customer behavior.
+            </p>
+            <div class="actions">
+                <button class="btn-primary" onclick="document.getElementById('campaignForm').scrollIntoView({behavior:'smooth'})">
+                    <i class="fas fa-rocket"></i> Launch Campaign
+                </button>
+                <button class="btn-outline-light" onclick="window.location.href='/admin'">
+                    <i class="fas fa-chart-line"></i> View Dashboard
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-eye"></i></div>
+                <div class="number">10,000+</div>
+                <div class="label">Daily Receipt Views</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-users"></i></div>
+                <div class="number">150+</div>
+                <div class="label">Active Advertisers</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-percent"></i></div>
+                <div class="number">4.8%</div>
+                <div class="label">Avg. Click-through Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-globe"></i></div>
+                <div class="number">190+</div>
+                <div class="label">Countries Reached</div>
+            </div>
+        </div>
+
+        <!-- Pricing -->
+        <div style="display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+            <div>
+                <h2 style="font-size: 22px; font-weight: 700; color: var(--text-primary);">📋 Ad Campaign Tiers</h2>
+                <p style="color: var(--text-secondary); font-size: 14px;">Choose the plan that fits your marketing budget.</p>
+            </div>
+            <span style="font-size: 12px; color: var(--text-secondary); background: var(--bg-secondary); padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border-color);">
+                <i class="fas fa-lock" style="color: var(--success);"></i> Secure PCI-DSS Level 1
+            </span>
+        </div>
+
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <div class="plan-name">Basic</div>
+                <div class="plan-price">₦100,000 <small>/campaign</small></div>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check-circle"></i> 100,000 Impressions</li>
+                    <li><i class="fas fa-check-circle"></i> Standard rotation</li>
+                    <li><i class="fas fa-check-circle"></i> No targeting</li>
+                    <li><i class="fas fa-check-circle"></i> Basic reporting</li>
+                </ul>
+                <button class="btn-plan" onclick="selectTier('basic')">Get Started</button>
+            </div>
+            <div class="pricing-card popular">
+                <div class="plan-name">Premium</div>
+                <div class="plan-price">₦250k – ₦500k</div>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check-circle"></i> Flexible impressions</li>
+                    <li><i class="fas fa-check-circle"></i> 🎯 Advanced Targeting</li>
+                    <li><i class="fas fa-check-circle"></i> Customer type &amp; hour</li>
+                    <li><i class="fas fa-check-circle"></i> Detailed analytics</li>
+                </ul>
+                <button class="btn-plan primary" onclick="selectTier('premium')">Get Started</button>
+            </div>
+            <div class="pricing-card">
+                <div class="plan-name">Dominant</div>
+                <div class="plan-price">₦1,000,000</div>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check-circle"></i> 200,000 Impressions</li>
+                    <li><i class="fas fa-check-circle"></i> 🏆 Exclusive Slot</li>
+                    <li><i class="fas fa-check-circle"></i> Shows on EVERY receipt</li>
+                    <li><i class="fas fa-check-circle"></i> Premium visibility</li>
+                </ul>
+                <button class="btn-plan" onclick="selectTier('dominant')">Get Started</button>
+            </div>
+            <div class="pricing-card">
+                <div class="plan-name">Performance (CPA) <small style="font-weight:400;">— Coming Soon</small></div>
+                <div class="plan-price">₦200 <small>/click</small></div>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check-circle"></i> Pay-per-click</li>
+                    <li><i class="fas fa-check-circle"></i> Min. 100 clicks</li>
+                    <li><i class="fas fa-check-circle"></i> 📊 Conversion tracking</li>
+                    <li><i class="fas fa-check-circle"></i> Fraud protection</li>
+                </ul>
+                <button class="btn-plan" onclick="showToast('📊 Performance (pay-per-click) campaigns are coming soon — try Basic, Premium, or Dominant for now.', 'info')">Coming Soon</button>
+            </div>
+        </div>
+
+        <!-- How it Works -->
+        <h2 style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin-top: 20px;">⚡ How It Works</h2>
+        <div class="steps-grid">
+            <div class="step-item">
+                <div class="step-num">1</div>
+                <h4>Create Campaign</h4>
+                <p>Write your ad, select a tier, and set your budget.</p>
+            </div>
+            <div class="step-item">
+                <div class="step-num">2</div>
+                <h4>Target &amp; Launch</h4>
+                <p>Define your audience (new users, high spenders, etc.).</p>
+            </div>
+            <div class="step-item">
+                <div class="step-num">3</div>
+                <h4>Monitor &amp; Optimize</h4>
+                <p>Track impressions, clicks, and conversions in real time.</p>
+            </div>
+            <div class="step-item">
+                <div class="step-num">4</div>
+                <h4>Grow Your Brand</h4>
+                <p>Reach engaged users right when they complete a transaction.</p>
+            </div>
+        </div>
+
+        <!-- Campaign Form -->
+        <div id="campaignForm" class="campaign-form">
+            <h3 style="margin-bottom: 4px; color: var(--text-primary);">🧾 Create Your Ad Campaign</h3>
+            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">
+                Your message appears on other Net365 users' transaction receipts.
+                Every campaign is reviewed before it goes live.
+            </p>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label>Campaign Tier</label>
+                <select id="adTier" onchange="onAdTierChange()">
+                    <option value="basic">Basic — Receipt Banner</option>
+                    <option value="premium">Premium — Targeted Receipt Ads</option>
+                    <option value="dominant">Sponsored — Dominant Position</option>
+                    <option value="performance" disabled>Performance — Pay Per Click (coming soon)</option>
+                </select>
+                <small style="color:var(--text-secondary);font-size:12px;display:block;margin-top:4px;" id="adTierDesc"></small>
+            </div>
+
+            <!-- Tier-specific pricing -->
+            <div id="adPricingBasic" class="form-group" style="display:none;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;padding:12px;margin-bottom:16px;">
+                <strong style="color:var(--text-primary);" id="adBasicPriceLine">₦100,000 for 100,000 impressions</strong>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Fixed package — logo, banner, link, and campaign analytics included.</div>
+            </div>
+
+            <div id="adPricingPremium" class="form-group" style="display:none;margin-bottom:16px;">
+                <label>Budget (₦)</label>
+                <input type="number" id="adBudget" placeholder="e.g., 300000" step="1000" />
+                <small style="color:var(--text-secondary);font-size:11px;" id="adPremiumEstimate">Choose a budget between ₦250,000 and ₦500,000</small>
+            </div>
+
+            <div id="adPricingDominant" class="form-group" style="display:none;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;padding:12px;margin-bottom:16px;">
+                <strong style="color:var(--text-primary);" id="adDominantPriceLine">₦1,000,000 for 200,000 impressions</strong>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Exclusive — your ad shows on <em>every</em> receipt until the budget runs out. Only one Sponsored campaign can run at a time.</div>
+                <div id="adDominantAvailability" style="font-size:12px;font-weight:600;margin-top:6px;"></div>
+            </div>
+
+            <div id="adPricingPerformance" class="form-group" style="display:none;margin-bottom:16px;">
+                <label>Clicks to Buy</label>
+                <input type="number" id="adClicks" placeholder="e.g., 1000" min="100" step="50" />
+                <small style="color:var(--text-secondary);font-size:11px;" id="adPerformanceEstimate">Enter clicks to see cost</small>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">
+                    <i class="fas fa-qrcode"></i> Includes a scannable QR code and tracked link on the receipt. You're only billed for verified clicks.
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Ad Title</label>
+                    <input type="text" id="adTitle" placeholder="e.g., Fresh Jollof Delivery" maxlength="80" />
+                </div>
+                <div class="form-group">
+                    <label>Button Text (optional)</label>
+                    <input type="text" id="adCtaText" placeholder="e.g., Order now" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Message</label>
+                <textarea id="adBody" placeholder="What should Net365 users see?" maxlength="400"></textarea>
+                <small style="color:var(--text-secondary);font-size:11px;" id="adCharCount">0 / 400 characters</small>
+            </div>
+            <div class="form-group">
+                <label>Link</label>
+                <input type="text" id="adCtaUrl" placeholder="https://..." />
+            </div>
+
+            <div id="adTargetingSection">
+                <h4 style="font-size:13px;color:var(--text-primary);margin:16px 0 8px;">
+                    🎯 Targeting <span style="color:var(--text-secondary);font-weight:normal;">(optional — leave blank to show to everyone)</span>
+                </h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Only show to customers buying</label>
+                        <select id="adTargetTxType">
+                            <option value="">Any purchase type</option>
+                            <option value="airtime">Airtime</option>
+                            <option value="data">Data</option>
+                            <option value="utility">Utility bills</option>
+                            <option value="topup">Wallet top-up</option>
+                            <option value="giftcard">Gift cards</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Customer type</label>
+                        <select id="adTargetCustomerType">
+                            <option value="">New or returning</option>
+                            <option value="new">New customers only (first transaction)</option>
+                            <option value="returning">Returning customers only</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Min transaction amount (₦, optional)</label>
+                        <input type="number" id="adTargetMinAmount" placeholder="e.g., 1000" min="0" />
+                    </div>
+                    <div class="form-group">
+                        <label>Max transaction amount (₦, optional)</label>
+                        <input type="number" id="adTargetMaxAmount" placeholder="e.g., 50000" min="0" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Show only from this hour (0-23, optional)</label>
+                        <input type="number" id="adTargetHourStart" placeholder="e.g., 8" min="0" max="23" />
+                    </div>
+                    <div class="form-group">
+                        <label>...to this hour (0-23, optional)</label>
+                        <input type="number" id="adTargetHourEnd" placeholder="e.g., 20" min="0" max="23" />
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:16px;">
+                <button class="btn btn-primary-bg" onclick="submitReceiptAdCampaign()">
+                    <i class="fas fa-bullhorn"></i> Submit for Review
+                </button>
+            </div>
+
+            <div id="myReceiptAdsSection" style="margin-top:24px;">
+                <h4 style="font-size:14px;color:var(--text-primary);margin-bottom:10px;">Your Campaigns</h4>
+                <div id="myReceiptAdsList" style="color:var(--text-secondary);font-size:13px;">Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script>
+        // ========== Same as business.html logic ==========
+        let receiptAdPricing = null;
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('business_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            document.querySelector('.theme-toggle i').className = document.body.classList.contains('dark-mode') ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        if (localStorage.getItem('business_theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+        }
+
+        const AD_TIER_DESCRIPTIONS = {
+            basic: 'A fixed package — same banner rotates in with other content. No targeting.',
+            premium: 'Choose your budget and target exactly who sees it — purchase type, amount, customer type, time of day.',
+            dominant: 'Exclusive — your ad is the ONLY ad shown, on every single receipt, until the budget runs out.',
+            performance: 'Coming soon — pay only for verified clicks, with a scannable QR code and tracked link on the receipt.'
+        };
+
+        function onAdTierChange() {
+            const tier = document.getElementById('adTier').value;
+            document.getElementById('adTierDesc').textContent = AD_TIER_DESCRIPTIONS[tier] || '';
+
+            document.getElementById('adPricingBasic').style.display = tier === 'basic' ? '' : 'none';
+            document.getElementById('adPricingPremium').style.display = tier === 'premium' ? '' : 'none';
+            document.getElementById('adPricingDominant').style.display = tier === 'dominant' ? '' : 'none';
+            document.getElementById('adPricingPerformance').style.display = tier === 'performance' ? '' : 'none';
+
+            document.getElementById('adTargetingSection').style.display =
+                (tier === 'premium' || tier === 'performance') ? '' : 'none';
+
+            if (tier === 'dominant' && receiptAdPricing) {
+                const occupied = receiptAdPricing.tiers.dominant.slot_occupied;
+                const el = document.getElementById('adDominantAvailability');
+                el.textContent = occupied ? '⚠️ Currently occupied by another campaign — try again once it completes.' : '✅ Available right now.';
+                el.style.color = occupied ? '#ef4444' : '#10b981';
+            }
+
+            updateAdPriceEstimate();
+        }
+
+        function updateAdPriceEstimate() {
+            if (!receiptAdPricing) return;
+            const tier = document.getElementById('adTier').value;
+            const t = receiptAdPricing.tiers;
+            const currency = receiptAdPricing.currency;
+
+            if (tier === 'premium') {
+                const budget = parseFloat(document.getElementById('adBudget').value);
+                const el = document.getElementById('adPremiumEstimate');
+                if (!budget) {
+                    el.textContent = `Choose a budget between ${currency} ${t.premium.min_budget.toLocaleString()} and ${currency} ${t.premium.max_budget.toLocaleString()}`;
+                    el.style.color = 'var(--text-secondary)';
+                } else if (budget < t.premium.min_budget || budget > t.premium.max_budget) {
+                    el.textContent = `Must be between ${currency} ${t.premium.min_budget.toLocaleString()} and ${currency} ${t.premium.max_budget.toLocaleString()}`;
+                    el.style.color = '#ef4444';
+                } else {
+                    const impressions = Math.floor(budget / t.premium.price_per_impression);
+                    el.textContent = `≈ ${impressions.toLocaleString()} impressions at ${currency} ${t.premium.price_per_impression}/impression`;
+                    el.style.color = 'var(--text-secondary)';
+                }
+            } else if (tier === 'performance') {
+                const clicks = parseInt(document.getElementById('adClicks').value, 10);
+                const el = document.getElementById('adPerformanceEstimate');
+                if (!clicks) {
+                    el.textContent = 'Enter clicks to see cost';
+                    el.style.color = 'var(--text-secondary)';
+                } else if (clicks < t.performance.min_clicks) {
+                    el.textContent = `Minimum is ${t.performance.min_clicks.toLocaleString()} clicks`;
+                    el.style.color = '#ef4444';
+                } else {
+                    const cost = clicks * t.performance.cost_per_click;
+                    el.textContent = `Cost: ${currency} ${cost.toLocaleString()} (${currency} ${t.performance.cost_per_click}/click)`;
+                    el.style.color = 'var(--text-secondary)';
+                }
+            }
+        }
+
+        function updateAdCharCount() {
+            const len = document.getElementById('adBody').value.length;
+            document.getElementById('adCharCount').textContent = `${len} / 400 characters`;
+        }
+
+        async function loadReceiptAdPricing() {
+            try {
+                const res = await fetch('/api/receipt-ads/pricing');
+                const data = await res.json();
+                if (data.success) {
+                    receiptAdPricing = data;
+                    const t = data.tiers;
+                    document.getElementById('adBasicPriceLine').textContent =
+                        `${data.currency} ${t.basic.price.toLocaleString()} for ${t.basic.impressions.toLocaleString()} impressions`;
+                    document.getElementById('adDominantPriceLine').textContent =
+                        `${data.currency} ${t.dominant.price.toLocaleString()} for ${t.dominant.impressions.toLocaleString()} impressions`;
+                    document.getElementById('adPremiumEstimate').textContent =
+                        `Choose a budget between ${data.currency} ${t.premium.min_budget.toLocaleString()} and ${data.currency} ${t.premium.max_budget.toLocaleString()} (${data.currency} ${t.premium.price_per_impression}/impression)`;
+                    document.getElementById('adBudget').min = t.premium.min_budget;
+                    document.getElementById('adBudget').max = t.premium.max_budget;
+                    document.getElementById('adClicks').min = t.performance.min_clicks;
+                    document.getElementById('adClicks').max = t.performance.max_clicks;
+                    onAdTierChange();
+                }
+            } catch (e) {
+                document.getElementById('adBasicPriceLine').textContent = 'Pricing unavailable right now.';
+            }
+        }
+
+        function selectTier(tier) {
+            document.getElementById('adTier').value = tier;
+            onAdTierChange();
+            document.getElementById('campaignForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        document.getElementById('adBudget').addEventListener('input', updateAdPriceEstimate);
+        document.getElementById('adClicks').addEventListener('input', updateAdPriceEstimate);
+        document.getElementById('adBody').addEventListener('input', updateAdCharCount);
+
+        function receiptAdStatusBadge(status) {
+            const map = {
+                pending_review: ['Pending Review', '#f59e0b'],
+                approved: ['Live', '#10b981'],
+                rejected: ['Rejected', '#ef4444'],
+                paused: ['Paused', '#6b7280'],
+                completed: ['Completed', '#4f46e5'],
+            };
+            const [label, color] = map[status] || [status, '#6b7280'];
+            return `<span style="background:${color};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">${label}</span>`;
+        }
+
+        const AD_TIER_BADGES = {
+            dominant: ['👑 Sponsored', '#7c3aed'],
+            performance: ['🎯 Performance', '#0891b2'],
+            premium: ['⭐ Premium', '#f59e0b'],
+        };
+
+        async function loadMyReceiptAds() {
+            const list = document.getElementById('myReceiptAdsList');
+            try {
+                const res = await fetch('/api/receipt-ads/campaigns');
+                const data = await res.json();
+                if (!data.success || !Array.isArray(data.campaigns) || data.campaigns.length === 0) {
+                    list.innerHTML = '<p>No campaigns yet — your first one will show up here.</p>';
+                    return;
+                }
+                list.innerHTML = data.campaigns.map(c => {
+                    const isPerformance = c.campaign_tier === 'performance';
+                    const pct = isPerformance
+                        ? (c.clicks_purchased ? Math.round(100 * c.clicks_delivered / c.clicks_purchased) : 0)
+                        : (c.impressions_purchased ? Math.round(100 * c.impressions_delivered / c.impressions_purchased) : 0);
+                    const canPause = c.status === 'approved';
+                    const isPremiumLike = c.campaign_tier === 'basic' && (c.target_tx_type || c.target_customer_type || c.target_min_amount || c.target_max_amount || c.target_hour_start !== null);
+                    const badgeKey = c.campaign_tier === 'basic' && isPremiumLike ? 'premium' : c.campaign_tier;
+                    const [badgeLabel, badgeColor] = AD_TIER_BADGES[badgeKey] || [null, null];
+                    const tierBadge = badgeLabel
+                        ? `<span style="background:${badgeColor};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-right:6px;">${badgeLabel}</span>`
+                        : '';
+                    const progressLine = isPerformance
+                        ? `${(c.clicks_delivered || 0).toLocaleString()} / ${(c.clicks_purchased || 0).toLocaleString()} clicks delivered (${pct}%)`
+                        + (c.conversions_delivered ? ` &middot; ${c.conversions_delivered} conversions` : '')
+                        : `${c.impressions_delivered.toLocaleString()} / ${c.impressions_purchased.toLocaleString()} impressions delivered (${pct}%)`;
+                    return `
+                        <div style="border:1px solid var(--border-color);border-radius:10px;padding:12px;margin-bottom:10px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <strong style="color:var(--text-primary);">${escapeHtml(c.title)}</strong>
+                                <span>${tierBadge}${receiptAdStatusBadge(c.status)}</span>
+                            </div>
+                            <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">
+                                ${progressLine} &middot; ${c.price_currency} ${Number(c.price_paid).toLocaleString()}
+                            </div>
+                            ${c.status === 'rejected' && c.rejection_reason ? `<div style="font-size:12px;color:#ef4444;margin-top:6px;">Reason: ${escapeHtml(c.rejection_reason)}</div>` : ''}
+                            ${canPause ? `<button class="btn" style="margin-top:8px;font-size:12px;padding:4px 10px;" onclick="pauseReceiptAd(${c.id})">Pause Campaign</button>` : ''}
+                        </div>`;
+                }).join('');
+            } catch (e) {
+                list.innerHTML = '<p>Could not load your campaigns right now.</p>';
+            }
+        }
+
+        async function pauseReceiptAd(campaignId) {
+            try {
+                const res = await fetch(`/api/receipt-ads/campaigns/${campaignId}/pause`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Campaign paused.', 'info');
+                    loadMyReceiptAds();
+                } else {
+                    showToast(data.error || 'Could not pause campaign.', 'error');
+                }
+            } catch (e) {
+                showToast('Network error — please try again.', 'error');
+            }
+        }
+
+        async function submitReceiptAdCampaign() {
+            const tier = document.getElementById('adTier').value;
+            const title = document.getElementById('adTitle').value.trim();
+            const body = document.getElementById('adBody').value.trim();
+            const cta_text = document.getElementById('adCtaText').value.trim();
+            const cta_url = document.getElementById('adCtaUrl').value.trim();
+
+            if (!title || !body) {
+                showToast('Please fill in the ad title and message.', 'warning');
+                return;
+            }
+            if (!cta_url) {
+                showToast('Please provide a link for your ad.', 'warning');
+                return;
+            }
+
+            const payload = { title, body, cta_text, cta_url, campaign_tier: tier };
+
+            if (tier === 'premium') {
+                const budget = parseFloat(document.getElementById('adBudget').value);
+                if (!budget || budget < receiptAdPricing.tiers.premium.min_budget || budget > receiptAdPricing.tiers.premium.max_budget) {
+                    showToast(`Premium budget must be between ${receiptAdPricing.currency} ${receiptAdPricing.tiers.premium.min_budget.toLocaleString()} and ${receiptAdPricing.tiers.premium.max_budget.toLocaleString()}.`, 'warning');
+                    return;
+                }
+                payload.budget = budget;
+            } else if (tier === 'performance') {
+                const clicks = parseInt(document.getElementById('adClicks').value, 10);
+                if (!clicks || clicks < receiptAdPricing.tiers.performance.min_clicks) {
+                    showToast(`Minimum is ${receiptAdPricing.tiers.performance.min_clicks.toLocaleString()} clicks.`, 'warning');
+                    return;
+                }
+                payload.clicks = clicks;
+            } else if (tier === 'dominant' && receiptAdPricing.tiers.dominant.slot_occupied) {
+                showToast('The Sponsored slot is currently occupied by another campaign.', 'warning');
+                return;
+            }
+
+            if (tier === 'premium' || tier === 'performance') {
+                const targetTxType = document.getElementById('adTargetTxType').value;
+                const targetCustomerType = document.getElementById('adTargetCustomerType').value;
+                const targetMinAmount = document.getElementById('adTargetMinAmount').value;
+                const targetMaxAmount = document.getElementById('adTargetMaxAmount').value;
+                const targetHourStart = document.getElementById('adTargetHourStart').value;
+                const targetHourEnd = document.getElementById('adTargetHourEnd').value;
+                if (targetTxType) payload.target_tx_type = targetTxType;
+                if (targetCustomerType) payload.target_customer_type = targetCustomerType;
+                if (targetMinAmount) payload.target_min_amount = parseFloat(targetMinAmount);
+                if (targetMaxAmount) payload.target_max_amount = parseFloat(targetMaxAmount);
+                if (targetHourStart !== '') payload.target_hour_start = parseInt(targetHourStart, 10);
+                if (targetHourEnd !== '') payload.target_hour_end = parseInt(targetHourEnd, 10);
+            }
+
+            try {
+                const res = await fetch('/api/receipt-ads/campaigns', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || 'Campaign submitted for review!', 'success');
+                    document.getElementById('adTitle').value = '';
+                    document.getElementById('adBody').value = '';
+                    document.getElementById('adCtaText').value = '';
+                    document.getElementById('adCtaUrl').value = '';
+                    document.getElementById('adBudget').value = '';
+                    document.getElementById('adClicks').value = '';
+                    document.getElementById('adTargetTxType').value = '';
+                    document.getElementById('adTargetCustomerType').value = '';
+                    document.getElementById('adTargetMinAmount').value = '';
+                    document.getElementById('adTargetMaxAmount').value = '';
+                    document.getElementById('adTargetHourStart').value = '';
+                    document.getElementById('adTargetHourEnd').value = '';
+                    updateAdCharCount();
+                    loadMyReceiptAds();
+                    loadReceiptAdPricing();
+                } else {
+                    showToast(data.error || 'Could not submit campaign.', 'error');
+                }
+            } catch (e) {
+                showToast('Network error — please try again.', 'error');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str == null ? '' : String(str);
+            return div.innerHTML;
+        }
+
+        // Initial load
+        loadReceiptAdPricing();
+        loadMyReceiptAds();
+    </script>
+</body>
+</html>

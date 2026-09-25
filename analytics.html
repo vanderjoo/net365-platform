@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Net365 Analytics Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Same styles as scheduler.html */
+        :root {
+            --bg-primary: #f0f4f8;
+            --bg-secondary: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --primary: #4f46e5;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        /* ... (copy styles from scheduler.html) ... */
+        .chart-container {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .chart-container h3 {
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .metric-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+        .metric-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .metric-card .label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            height: 200px;
+            padding: 10px 0;
+        }
+        .bar {
+            flex: 1;
+            background: var(--primary);
+            border-radius: 4px 4px 0 0;
+            min-height: 10px;
+            transition: height 0.5s ease;
+            position: relative;
+        }
+        .bar .label {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .bar .value {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="scheduler-nav">
+        <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
+        <a href="#" class="logo"><i class="fas fa-chart-pie"></i> Analytics Dashboard</a>
+        <div style="display:flex;gap:8px;">
+            <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
+            <button class="btn btn-primary btn-sm" onclick="refreshData()"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
+    </nav>
+
+    <div class="scheduler-container">
+        <!-- Summary Metrics -->
+        <div class="metric-grid" id="summaryMetrics">
+            <div class="metric-card">
+                <div class="value" id="totalSchedules">0</div>
+                <div class="label">Total Schedules</div>
+            </div>
+            <div class="metric-card">
+                <div class="value" id="activeSchedules">0</div>
+                <div class="label">Active</div>
+            </div>
+            <div class="metric-card">
+                <div class="value" id="completedSchedules">0</div>
+                <div class="label">Completed</div>
+            </div>
+            <div class="metric-card">
+                <div class="value" id="totalSpent">₦0</div>
+                <div class="label">Total Spent</div>
+            </div>
+            <div class="metric-card">
+                <div class="value" id="monthlySpent">₦0</div>
+                <div class="label">This Month</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="chart-container">
+            <h3><i class="fas fa-building"></i> Top Departments</h3>
+            <div class="bar-chart" id="departmentChart"></div>
+        </div>
+
+        <div class="chart-container">
+            <h3><i class="fas fa-signal"></i> Top Operators</h3>
+            <div class="bar-chart" id="operatorChart"></div>
+        </div>
+
+        <!-- Wallets -->
+        <div class="chart-container">
+            <h3><i class="fas fa-wallet"></i> Wallet Balances</h3>
+            <div id="walletBalances"></div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="chart-container">
+            <h3><i class="fas fa-clock"></i> Recent Transactions</h3>
+            <div id="recentTransactions"></div>
+        </div>
+    </div>
+
+    <script>
+        let analyticsData = null;
+
+        async function loadAnalytics() {
+            try {
+                const response = await fetch('/api/analytics/dashboard', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    analyticsData = data.data;
+                    renderDashboard();
+                } else {
+                    showToast('❌ Failed to load analytics', 'error');
+                }
+            } catch (e) {
+                showToast('❌ Network error', 'error');
+            }
+        }
+
+        function renderDashboard() {
+            const data = analyticsData;
+            if (!data) return;
+
+            // Summary
+            document.getElementById('totalSchedules').textContent = data.summary.total_schedules;
+            document.getElementById('activeSchedules').textContent = data.summary.active_schedules;
+            document.getElementById('completedSchedules').textContent = data.summary.completed_schedules;
+            document.getElementById('totalSpent').textContent = formatCurrency(data.summary.total_spent);
+            document.getElementById('monthlySpent').textContent = formatCurrency(data.summary.monthly_spent);
+
+            // Department Chart
+            renderBarChart('departmentChart', data.top_departments, 'name', 'count');
+
+            // Operator Chart
+            renderBarChart('operatorChart', data.top_operators, 'name', 'count');
+
+            // Wallets
+            renderWallets(data.wallets);
+
+            // Transactions
+            renderTransactions(data.recent_transactions);
+        }
+
+        function renderBarChart(containerId, data, labelKey, valueKey) {
+            const container = document.getElementById(containerId);
+            if (!data || !data.length) {
+                container.innerHTML = '<p style="color:var(--text-secondary);">No data available</p>';
+                return;
+            }
+
+            const maxValue = Math.max(...data.map(d => d[valueKey]));
+            container.innerHTML = data.map(d => `
+                <div class="bar" style="height: ${(d[valueKey] / maxValue) * 180 + 20}px;">
+                    <span class="value">${d[valueKey]}</span>
+                    <span class="label">${d[labelKey]}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderWallets(wallets) {
+            const container = document.getElementById('walletBalances');
+            if (!wallets || !wallets.length) {
+                container.innerHTML = '<p style="color:var(--text-secondary);">No wallets found</p>';
+                return;
+            }
+
+            container.innerHTML = wallets.map(w => `
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                    <span><strong>${w.currency}</strong> Wallet</span>
+                    <span style="font-weight:700;">${formatCurrency(w.balance, w.currency)}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderTransactions(transactions) {
+            const container = document.getElementById('recentTransactions');
+            if (!transactions || !transactions.length) {
+                container.innerHTML = '<p style="color:var(--text-secondary);">No recent transactions</p>';
+                return;
+            }
+
+            container.innerHTML = transactions.slice(0, 10).map(tx => `
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                    <span>${tx.tx_type || 'Transaction'}</span>
+                    <span style="color:${tx.status === 'fulfilled' ? 'var(--success)' : 'var(--warning)'};">
+                        ${formatCurrency(tx.amount, tx.currency)}
+                    </span>
+                    <span style="font-size:12px;color:var(--text-secondary);">${new Date(tx.created_at).toLocaleDateString()}</span>
+                </div>
+            `).join('');
+        }
+
+        function formatCurrency(amount, currency = 'NGN') {
+            const symbols = { NGN: '₦', USD: '$', GBP: '£', EUR: '€' };
+            return `${symbols[currency] || '₦'}${Number(amount || 0).toLocaleString()}`;
+        }
+
+        function refreshData() {
+            showToast('🔄 Refreshing data...', 'info');
+            loadAnalytics();
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        }
+
+        function showToast(message, type = 'info') {
+            // Simple toast implementation
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed; bottom: 20px; right: 20px;
+                padding: 12px 20px; border-radius: 8px;
+                color: white; font-weight: 500;
+                background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6'};
+                z-index: 9999; animation: slideIn 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Load theme
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadAnalytics);
+    </script>
+</body>
+</html>

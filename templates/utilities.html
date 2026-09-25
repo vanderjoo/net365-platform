@@ -1,0 +1,2948 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pay Utilities - Net365</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: #1e2937;
+            line-height: 1.6;
+            transition: background 0.3s, color 0.3s;
+            min-height: 100vh;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .sidebar {
+            background: #1e293b;
+            border-right-color: #334155;
+        }
+
+        body.dark-mode .logo {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .nav-item {
+            color: #94a3b8;
+        }
+
+        body.dark-mode .nav-item:hover {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .nav-item.active {
+            background: #4f46e5;
+            color: white;
+        }
+
+        body.dark-mode .invite-card {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        }
+
+        body.dark-mode .card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        body.dark-mode .card h2 {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .form-group input,
+        body.dark-mode .form-group select,
+        body.dark-mode .search-box {
+            background: #334155;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .form-group input::placeholder,
+        body.dark-mode .search-box::placeholder {
+            color: #94a3b8;
+        }
+
+        body.dark-mode .payment-option {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        body.dark-mode .payment-option.selected {
+            background: #334155;
+            border-color: #6366f1;
+        }
+
+        body.dark-mode .payment-option.wallet-option {
+            border-color: #22c55e;
+        }
+
+        body.dark-mode .payment-option.wallet-option.selected {
+            background: #064e3b;
+            border-color: #22c55e;
+        }
+
+        body.dark-mode .biller-card {
+            background: #1e293b;
+        }
+
+        body.dark-mode .biller-card:hover {
+            background: #334155;
+        }
+
+        body.dark-mode .biller-card .name {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .biller-card.selected {
+            background: #334155;
+            border-color: #6366f1;
+        }
+
+        body.dark-mode .transaction-item:hover {
+            background: #1e293b;
+        }
+
+        body.dark-mode .utility-form {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        body.dark-mode .form-group label {
+            color: #cbd5e1;
+        }
+
+        body.dark-mode .filter-group select {
+            background: #334155;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .status.info {
+            background: #1e3a5f;
+            color: #93c5fd;
+        }
+
+        body.dark-mode .status.success {
+            background: #064e3b;
+            color: #6ee7b7;
+        }
+
+        body.dark-mode .status.error {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+
+        body.dark-mode .status.warning {
+            background: #78350f;
+            color: #fcd34d;
+        }
+
+        body.dark-mode .analytics-item {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        body.dark-mode .analytics-item .value {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .transaction-amount {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .loading {
+            color: #94a3b8;
+        }
+
+        body.dark-mode #mobileNav {
+            background: #1e293b;
+            border-top-color: #334155;
+        }
+
+        body.dark-mode #mobileNav a,
+        body.dark-mode #mobileNav button {
+            color: #94a3b8;
+        }
+
+        body.dark-mode #mobileNav .nav-center {
+            background: #4f46e5;
+        }
+
+        body.dark-mode .toast {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+        }
+
+        body.dark-mode .toast-success {
+            border-color: #10b981;
+        }
+        body.dark-mode .toast-error {
+            border-color: #ef4444;
+        }
+        body.dark-mode .toast-warning {
+            border-color: #f59e0b;
+        }
+        body.dark-mode .toast-info {
+            border-color: #3b82f6;
+        }
+
+        body.dark-mode .modal-content {
+            background: #1e293b;
+        }
+
+        body.dark-mode .modal h2 {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .modal .payment-details {
+            background: #334155;
+            border-color: #475569;
+        }
+
+        body.dark-mode .payment-redirect-info {
+            background: #334155;
+            border-color: #475569;
+        }
+
+        body.dark-mode .validation-badge.valid {
+            background: #064e3b;
+            color: #6ee7b7;
+        }
+
+        body.dark-mode .validation-badge.invalid {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+
+        body.dark-mode .validation-badge.loading {
+            background: #78350f;
+            color: #fcd34d;
+        }
+
+        body.dark-mode #notificationDropdown {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        body.dark-mode #notificationDropdown h4 {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .notification-item {
+            border-color: #334155;
+        }
+
+        body.dark-mode .notification-item:hover {
+            background: #334155;
+        }
+
+        body.dark-mode .notification-item .message {
+            color: #e2e8f0;
+        }
+
+        /* ========== SIDEBAR ========== */
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: #fff;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            padding: 16px 12px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px 20px;
+            font-size: 22px;
+            font-weight: 700;
+            color: #0f172a;
+            transition: color 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .logo:hover {
+            opacity: 0.8;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+
+        .nav-item.active {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        .invite-card {
+            margin-top: auto;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-radius: 16px;
+            padding: 18px;
+            color: white;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .invite-card:hover {
+            transform: scale(1.02);
+        }
+
+        .invite-card h4 {
+            font-size: 15px;
+            margin-bottom: 6px;
+        }
+
+        .invite-card p {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 14px;
+            line-height: 1.4;
+        }
+
+        .invite-card button {
+            background: white;
+            color: #4f46e5;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+
+        .invite-card button:hover {
+            transform: scale(1.05);
+        }
+
+        .invite-card .gift {
+            font-size: 40px;
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+
+        /* ========== MAIN CONTENT ========== */
+        .main {
+            margin-left: 240px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Topbar */
+        .topbar {
+            background: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        body.dark-mode .topbar {
+            background: #1e293b;
+            border-bottom-color: #334155;
+        }
+
+        .search-box-top {
+            flex: 1;
+            max-width: 480px;
+            position: relative;
+        }
+
+        .search-box-top input {
+            width: 100%;
+            padding: 10px 16px 10px 42px;
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            font-size: 14px;
+            background: #f8fafc;
+            outline: none;
+            transition: background 0.3s, border-color 0.3s, color 0.3s;
+        }
+
+        body.dark-mode .search-box-top input {
+            background: #334155;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+
+        .search-box-top i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .top-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .icon-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            color: #64748b;
+            cursor: pointer;
+            position: relative;
+            transition: background 0.3s;
+        }
+
+        body.dark-mode .icon-btn {
+            background: #334155;
+            color: #94a3b8;
+        }
+
+        .icon-btn .badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            position: relative;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .user-profile:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        body.dark-mode .user-profile:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #3b82f6;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            line-height: 1.2;
+        }
+
+        .user-info .name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        body.dark-mode .user-info .name {
+            color: #e2e8f0;
+        }
+
+        .user-info .status {
+            font-size: 11px;
+            color: #22c55e;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* User Dropdown */
+        .user-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 8px 0;
+            min-width: 200px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            margin-top: 8px;
+            animation: slideDown 0.2s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        body.dark-mode .user-dropdown {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .user-dropdown .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            color: #64748b;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .user-dropdown .dropdown-item:hover {
+            background: #f1f5f9;
+        }
+
+        body.dark-mode .user-dropdown .dropdown-item:hover {
+            background: #334155;
+        }
+
+        .user-dropdown .dropdown-item i {
+            width: 18px;
+            text-align: center;
+        }
+
+        .user-dropdown .dropdown-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 4px 12px;
+        }
+
+        body.dark-mode .user-dropdown .dropdown-divider {
+            background: #334155;
+        }
+
+        .user-dropdown .dropdown-item.logout-item {
+            color: #ef4444;
+        }
+
+        .user-dropdown .dropdown-item.logout-item:hover {
+            background: #fef2f2;
+        }
+
+        body.dark-mode .user-dropdown .dropdown-item.logout-item:hover {
+            background: #7f1d1d;
+        }
+
+        .container {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 24px;
+            width: 100%;
+        }
+
+        /* Header Controls */
+        .header-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .header-controls button {
+            background: rgba(79, 70, 229, 0.1);
+            border: none;
+            color: #4f46e5;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .header-controls button:hover {
+            background: rgba(79, 70, 229, 0.2);
+            transform: scale(1.05);
+        }
+
+        body.dark-mode .header-controls button {
+            background: rgba(79, 70, 229, 0.2);
+            color: #818cf8;
+        }
+
+        body.dark-mode .header-controls button:hover {
+            background: rgba(79, 70, 229, 0.3);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 10px;
+            min-width: 18px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05),
+                        0 4px 6px -4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            border: 1px solid #f1f5f9;
+            margin-bottom: 28px;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+                        0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1e2937;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Search Box */
+        .search-box {
+            width: 100%;
+            padding: 14px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .search-box::placeholder {
+            color: #94a3b8;
+        }
+
+        /* Filter Group */
+        .filter-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group select {
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 150px;
+            background: white;
+            transition: all 0.3s;
+            color: #1e2937;
+            cursor: pointer;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Utility Grid */
+        .utility-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+            margin-top: 8px;
+        }
+
+        .biller-card {
+            background: #f8fafc;
+            border-radius: 14px;
+            padding: 24px 20px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .biller-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.15);
+            border-color: #6366f1;
+            background: white;
+        }
+
+        .biller-card.selected {
+            border-color: #4f46e5;
+            background: #eef2ff;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        body.dark-mode .biller-card.selected {
+            background: #334155;
+            border-color: #6366f1;
+        }
+
+        .biller-card .icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .biller-card .name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1e2937;
+            margin-bottom: 4px;
+        }
+
+        .biller-card .type {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .biller-card .country {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .biller-card .favorite-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            padding: 4px;
+        }
+
+        .biller-card .favorite-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .biller-card .select-badge {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: #4f46e5;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .biller-card.selected .select-badge {
+            opacity: 1;
+        }
+
+        /* Utility Form */
+        .utility-form {
+            background: #f8fafc;
+            padding: 28px;
+            border-radius: 14px;
+            margin-top: 16px;
+            border: 1px solid #e2e8f0;
+            animation: slideDown 0.4s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .utility-form .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .utility-form .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Form Groups */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #334155;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-group .input-hint {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        /* Buttons */
+        .btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            box-shadow: 0 10px 15px -3px rgba(100, 116, 139, 0.3);
+            width: auto;
+            padding: 10px 24px;
+            font-size: 14px;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+            box-shadow: 0 20px 25px -5px rgba(100, 116, 139, 0.4);
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 13px;
+            width: auto;
+        }
+
+        .btn-wallet {
+            background: linear-gradient(135deg, #0f766e, #115e59);
+            box-shadow: 0 10px 15px -3px rgba(15, 118, 110, 0.3);
+        }
+
+        .btn-wallet:hover {
+            background: linear-gradient(135deg, #115e59, #0d9488);
+        }
+
+        .btn-paystack {
+            background: linear-gradient(135deg, #2293e6 0%, #1a7cc4 100%);
+            box-shadow: 0 10px 15px -3px rgba(34, 147, 230, 0.3);
+        }
+
+        .btn-paystack:hover {
+            background: linear-gradient(135deg, #1a7cc4 0%, #1565a8 100%);
+        }
+
+        .btn-flutterwave {
+            background: linear-gradient(135deg, #f5a623 0%, #d4890f 100%);
+            box-shadow: 0 10px 15px -3px rgba(245, 166, 35, 0.3);
+        }
+
+        .btn-flutterwave:hover {
+            background: linear-gradient(135deg, #d4890f 0%, #b8750c 100%);
+        }
+
+        .btn-stripe {
+            background: linear-gradient(135deg, #635bff 0%, #4a42cc 100%);
+            box-shadow: 0 10px 15px -3px rgba(99, 91, 255, 0.3);
+        }
+
+        .btn-stripe:hover {
+            background: linear-gradient(135deg, #4a42cc 0%, #3b35a8 100%);
+        }
+
+        .btn-mock {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            box-shadow: 0 10px 15px -3px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-mock:hover {
+            background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+        }
+
+        /* Payment Options */
+        .payment-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .payment-option {
+            padding: 16px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .payment-option:hover {
+            border-color: #6366f1;
+            transform: scale(1.03);
+        }
+
+        .payment-option.selected {
+            border-color: #6366f1;
+            background: #f8fafc;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .payment-option.wallet-option {
+            border-color: #22c55e;
+        }
+
+        .payment-option.wallet-option.selected {
+            border-color: #16a34a;
+            background: #f0fdf4;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+        }
+
+        .payment-option .label {
+            font-size: 12px;
+            color: #64748b;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .payment-option .balance-display {
+            font-size: 10px;
+            color: #22c55e;
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* Status */
+        .status {
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin: 16px 0;
+            font-weight: 500;
+            border-left: 5px solid;
+        }
+
+        .status.success {
+            background: #ecfdf5;
+            color: #065f46;
+            border-color: #10b981;
+        }
+        .status.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border-color: #ef4444;
+        }
+        .status.info {
+            background: #f0f9ff;
+            color: #0c4a6e;
+            border-color: #22d3ee;
+        }
+        .status.warning {
+            background: #fefce8;
+            color: #854d0e;
+            border-color: #eab308;
+        }
+
+        /* Transactions */
+        .transaction-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .transaction-item {
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 10px;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .transaction-item:hover {
+            background: #f8fafc;
+        }
+
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+
+        .transaction-amount {
+            font-weight: 600;
+            color: #1e2937;
+        }
+
+        .transaction-status {
+            padding: 4px 14px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .transaction-status.COMPLETED {
+            background: #ecfdf5;
+            color: #065f46;
+        }
+        .transaction-status.PENDING {
+            background: #fefce8;
+            color: #854d0e;
+        }
+        .transaction-status.FAILED {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+        .transaction-status.PROCESSING {
+            background: #f0f9ff;
+            color: #0c4a6e;
+        }
+
+        /* Validation Badge */
+        .validation-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .validation-badge.valid {
+            background: #ecfdf5;
+            color: #065f46;
+        }
+
+        .validation-badge.invalid {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+
+        .validation-badge.loading {
+            background: #fefce8;
+            color: #854d0e;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 32px;
+            color: #94a3b8;
+            font-size: 15px;
+        }
+
+        /* Analytics */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .analytics-item {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 14px;
+            text-align: center;
+            border: 1px solid #f1f5f9;
+            transition: all 0.3s;
+        }
+
+        .analytics-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .analytics-item .label {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .analytics-item .value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: 4px;
+            color: #1e2937;
+        }
+
+        /* Toast Notifications */
+        #toastContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 400px;
+        }
+
+        .toast {
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-weight: 500;
+            animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            border: 1px solid #f1f5f9;
+        }
+
+        .toast-success {
+            border-left: 5px solid #10b981;
+        }
+        .toast-error {
+            border-left: 5px solid #ef4444;
+        }
+        .toast-warning {
+            border-left: 5px solid #f59e0b;
+        }
+        .toast-info {
+            border-left: 5px solid #3b82f6;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Notification Dropdown */
+        #notificationDropdown {
+            display: none;
+            position: absolute;
+            top: 60px;
+            right: 0;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            width: 380px;
+            max-height: 420px;
+            overflow-y: auto;
+            padding: 16px;
+            z-index: 1000;
+            border: 1px solid #f1f5f9;
+        }
+
+        #notificationDropdown h4 {
+            margin-bottom: 12px;
+            color: #1e2937;
+        }
+
+        .notification-item {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-radius: 8px;
+        }
+
+        .notification-item:hover {
+            background: #f8fafc;
+        }
+
+        .notification-item.unread {
+            background: #f0f9ff;
+        }
+
+        .notification-item .message {
+            font-size: 14px;
+            color: #1e2937;
+        }
+
+        .notification-item .time {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            overflow: auto;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 6% auto;
+            padding: 40px;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 520px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        @keyframes modalPop {
+            from {
+                transform: scale(0.8) translateY(-40px);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            right: 24px;
+            top: 20px;
+            font-size: 32px;
+            font-weight: 300;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #1e2937;
+        }
+
+        .modal h2 {
+            font-size: 26px;
+            font-weight: 600;
+            color: #1e2937;
+            margin-bottom: 24px;
+        }
+
+        .modal .payment-details {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 16px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .modal .payment-details p {
+            margin: 6px 0;
+            font-size: 14px;
+        }
+
+        .modal .payment-details .amount {
+            font-size: 28px;
+            font-weight: 700;
+            color: #4f46e5;
+        }
+
+        .payment-redirect-info {
+            text-align: center;
+            padding: 24px;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin: 16px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .payment-redirect-info .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .payment-redirect-info .provider-name {
+            font-weight: 700;
+            color: #4f46e5;
+        }
+
+        #paymentButtonContainer {
+            margin: 16px 0;
+        }
+
+        /* Mobile Bottom Navigation */
+        #mobileNav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 8px 0;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        #mobileNav .nav-items {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        #mobileNav a,
+        #mobileNav button {
+            text-decoration: none;
+            color: #94a3b8;
+            text-align: center;
+            padding: 4px 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 10px;
+            font-family: 'Inter', sans-serif;
+            transition: color 0.2s;
+        }
+
+        #mobileNav a:hover,
+        #mobileNav button:hover {
+            color: #4f46e5;
+        }
+
+        #mobileNav .nav-icon {
+            font-size: 24px;
+            display: block;
+        }
+
+        #mobileNav .nav-label {
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        #mobileNav .nav-center {
+            background: #4f46e5;
+            border: none;
+            color: white;
+            padding: 14px 20px;
+            border-radius: 50%;
+            margin-top: -20px;
+            cursor: pointer;
+            font-size: 24px;
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+            transition: transform 0.2s;
+        }
+
+        #mobileNav .nav-center:hover {
+            transform: scale(1.1);
+        }
+
+        /* Voice Command Button */
+        #voiceCommandBtn {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
+            z-index: 999;
+            transition: all 0.3s;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #voiceCommandBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 35px rgba(79, 70, 229, 0.5);
+        }
+
+        #voiceCommandBtn.listening {
+            background: #ef4444;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 60px;
+                padding: 12px 8px;
+            }
+            .sidebar .logo span,
+            .sidebar .nav-item span,
+            .sidebar .invite-card {
+                display: none;
+            }
+            .sidebar .logo {
+                justify-content: center;
+                padding: 8px 0 16px;
+            }
+            .sidebar .nav-item {
+                justify-content: center;
+                padding: 12px;
+            }
+            .sidebar .nav-item i {
+                font-size: 18px;
+            }
+            .main {
+                margin-left: 60px;
+            }
+            .container {
+                padding: 16px;
+                padding-bottom: 100px;
+            }
+            .card {
+                padding: 24px;
+            }
+            .utility-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }
+            .payment-options {
+                grid-template-columns: 1fr 1fr;
+            }
+            .filter-group {
+                flex-direction: column;
+            }
+            .filter-group select {
+                min-width: auto;
+            }
+            .utility-form {
+                padding: 20px;
+            }
+            #mobileNav {
+                display: block !important;
+            }
+            #notificationDropdown {
+                right: 10px;
+                width: calc(100% - 20px);
+            }
+            #voiceCommandBtn {
+                bottom: 80px;
+                right: 16px;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            .analytics-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .topbar {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .search-box-top {
+                max-width: 100%;
+                order: 3;
+                flex-basis: 100%;
+            }
+            .user-info .name {
+                font-size: 12px;
+            }
+            .user-info .status {
+                font-size: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .utility-grid {
+                grid-template-columns: 1fr;
+            }
+            .payment-options {
+                grid-template-columns: 1fr 1fr;
+            }
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        body.dark-mode ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        body.dark-mode ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <a href="/" class="logo">
+                <div class="logo-icon"><i class="fas fa-globe"></i></div>
+                <span>Net365</span>
+            </a>
+
+            <!-- Home Link Added -->
+            <a href="/" class="nav-item"><i class="fas fa-home"></i><span>Home</span></a>
+            <a href="/#transactions" class="nav-item"><i class="fas fa-exchange-alt"></i><span>Transactions</span></a>
+            <a href="/#wallet" class="nav-item"><i class="fas fa-wallet"></i><span>Wallet</span></a>
+            <a href="/#rewards" class="nav-item"><i class="fas fa-star"></i><span>Rewards</span></a>
+            <a href="/#contacts" class="nav-item"><i class="fas fa-address-book"></i><span>Contacts</span></a>
+            <a href="/#send-money" class="nav-item"><i class="fas fa-paper-plane"></i><span>Send Money</span></a>
+            <a href="/utilities" class="nav-item active"><i class="fas fa-bolt"></i><span>Utilities</span></a>
+            <a href="/?section=business" class="nav-item"><i class="fas fa-briefcase"></i><span>Business</span></a>
+            <a href="/?section=settings" class="nav-item"><i class="fas fa-cog"></i><span>Settings</span></a>
+            <a href="/?section=help" class="nav-item"><i class="fas fa-question-circle"></i><span>Help Center</span></a>
+            <div class="invite-card" onclick="window.location.href='/?invite=1'">
+                <h4>Invite & Earn</h4>
+                <p>Invite friends and earn rewards as they recharge.</p>
+                <button onclick="event.stopPropagation(); window.location.href='/?invite=1'">Invite Now</button>
+                <div class="gift">🎁</div>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <div class="main">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="search-box-top">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search services, contacts, countries..." id="searchInput">
+                </div>
+                <div class="top-right">
+                    <div class="icon-btn" onclick="showToast('No new notifications', 'info')">
+                        <i class="fas fa-bell"></i>
+                        <span class="badge"></span>
+                    </div>
+                    <div class="header-controls">
+                        <button onclick="toggleDarkMode()" id="darkModeBtn" title="Toggle Dark Mode">
+                            🌙
+                        </button>
+                    </div>
+                    <!-- Dynamic User Profile -->
+                    <div class="user-profile" onclick="toggleUserMenu()">
+                        <div class="user-avatar" id="utilityUserAvatar">U</div>
+                        <div class="user-info">
+                            <div class="name" id="utilityUserName">Guest</div>
+                            <div class="status" id="utilityUserStatus">
+                                <i class="fas fa-circle" style="color:#94a3b8;"></i>
+                                <span id="utilityUserStatusText">Not Logged In</span>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-down" style="color:#94a3b8;font-size:12px;"></i>
+                    </div>
+                    <!-- User Dropdown -->
+                    <div class="user-dropdown" id="utilityUserDropdown">
+                        <a href="/" class="dropdown-item">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                        <a href="/utilities" class="dropdown-item">
+                            <i class="fas fa-bolt"></i> Utilities
+                        </a>
+                        <a href="/#wallet" class="dropdown-item">
+                            <i class="fas fa-wallet"></i> Wallet
+                        </a>
+                        <a href="/#rewards" class="dropdown-item">
+                            <i class="fas fa-star"></i> Rewards
+                        </a>
+                        <a href="/#transactions" class="dropdown-item">
+                            <i class="fas fa-exchange-alt"></i> Transactions
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item logout-item" onclick="handleUtilityLogout()">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="container">
+                <!-- Search and Filter -->
+                <div class="card">
+                    <input type="text" class="search-box" id="searchBiller" placeholder="🔍 Search for a biller..." onkeyup="searchBillers()">
+
+                    <div class="filter-group">
+                        <select id="filterType" onchange="filterBillers()">
+                            <option value="">All Types</option>
+                            <option value="ELECTRICITY_BILL_PAYMENT">⚡ Electricity</option>
+                            <option value="WATER_BILL_PAYMENT">💧 Water</option>
+                            <option value="INTERNET_BILL_PAYMENT">🌐 Internet</option>
+                            <option value="CABLE_BILL_PAYMENT">📺 Cable TV</option>
+                            <option value="GAS_BILL_PAYMENT">🔥 Gas</option>
+                        </select>
+                        <select id="filterCountry" onchange="filterBillers()">
+                            <option value="">All Countries</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Billers Grid -->
+                <div class="card">
+                    <h2>📋 Available Billers</h2>
+                    <div id="billersContainer" class="utility-grid">
+                        <div class="loading">Loading billers...</div>
+                    </div>
+                </div>
+
+                <!-- Payment Form -->
+                <div class="card" id="paymentForm" style="display: none;">
+                    <h2>💳 Pay Bill</h2>
+                    <div class="utility-form">
+                        <div id="selectedBillerInfo"></div>
+                        <div class="form-group">
+                            <label>Subscriber Account Number *</label>
+                            <input type="text" id="subscriberAccount" placeholder="Enter your account number" />
+                            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                <button class="btn btn-secondary btn-sm" onclick="validateAccount()">
+                                    🔍 Validate Account
+                                </button>
+                            </div>
+                            <div id="validationResult"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Amount *</label>
+                                <input type="number" id="utilityAmount" placeholder="Enter amount" step="0.01" min="0.01" />
+                                <div id="billerLimitsDisplay" style="font-size:12px;color:#94a3b8;margin-top:4px;"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Email *</label>
+                                <input type="email" id="utilityEmail" placeholder="recipient@example.com" required />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Payment Method</label>
+                            <div class="payment-options">
+                                <div class="payment-option wallet-option selected" data-provider="wallet" onclick="selectUtilityPayment('wallet')">
+                                    <span style="font-size: 24px;">💰</span>
+                                    <span class="label">Net365 Wallet</span>
+                                    <span class="balance-display" id="walletBalanceDisplay">Balance: ₦0.00</span>
+                                </div>
+                                <div class="payment-option" data-provider="paystack" onclick="selectUtilityPayment('paystack')">
+                                    <span style="font-size: 24px;">💳</span>
+                                    <span class="label">Paystack</span>
+                                </div>
+                                <div class="payment-option" data-provider="flutterwave" onclick="selectUtilityPayment('flutterwave')">
+                                    <span style="font-size: 24px;">🌊</span>
+                                    <span class="label">Flutterwave</span>
+                                </div>
+                                <div class="payment-option" data-provider="stripe" onclick="selectUtilityPayment('stripe')">
+                                    <span style="font-size: 24px;">💳</span>
+                                    <span class="label">Stripe</span>
+                                </div>
+                                <div class="payment-option" data-provider="mock" onclick="selectUtilityPayment('mock')">
+                                    <span style="font-size: 24px;">🧪</span>
+                                    <span class="label">Test Mode</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn" id="payUtilityBtn" onclick="payUtilityBill()">
+                            💸 Pay Bill
+                        </button>
+                        <div id="paymentStatus" style="margin-top: 15px;"></div>
+                    </div>
+                </div>
+
+                <!-- Analytics -->
+                <div class="card">
+                    <h2>📊 Utility Analytics</h2>
+                    <div class="analytics-grid">
+                        <div class="analytics-item">
+                            <div class="label">Total Spent</div>
+                            <div class="value" style="color: #4f46e5;" id="totalUtilitySpent">$0.00</div>
+                        </div>
+                        <div class="analytics-item">
+                            <div class="label">Payments</div>
+                            <div class="value" style="color: #7c3aed;" id="utilityPaymentCount">0</div>
+                        </div>
+                        <div class="analytics-item">
+                            <div class="label">Success Rate</div>
+                            <div class="value" style="color: #10b981;" id="utilitySuccessRate">0%</div>
+                        </div>
+                        <div class="analytics-item">
+                            <div class="label">Avg. Payment</div>
+                            <div class="value" style="color: #f59e0b;" id="avgUtilityAmount">$0.00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions -->
+                <div class="card">
+                    <h2>📊 Recent Utility Transactions</h2>
+                    <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary btn-sm" onclick="exportUtilityCSV()">
+                            📥 CSV
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="exportUtilityJSON()">
+                            📄 JSON
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadUtilityTransactions()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                    <div id="utilityTransactions">
+                        <div class="loading">Loading transactions...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeUtilityPaymentModal()">&times;</span>
+            <h2>💳 Complete Payment</h2>
+            <div id="utilityPaymentModalContent">
+                <div class="payment-details">
+                    <p><strong>Biller:</strong> <span id="modalUtilityBiller"></span></p>
+                    <p><strong>Account:</strong> <span id="modalUtilityAccount"></span></p>
+                    <p><strong>Amount:</strong> <span class="amount" id="modalUtilityAmount"></span></p>
+                    <p><strong>Payment Method:</strong> <span id="modalUtilityProvider"></span></p>
+                    <p><strong>Reference:</strong> <span id="modalUtilityReference" style="font-size: 12px; color: #94a3b8;"></span></p>
+                </div>
+
+                <div class="payment-redirect-info" id="utilityPaymentRedirectInfo">
+                    <span class="icon" id="utilityPaymentIcon">🔒</span>
+                    <p>You will be redirected to <span class="provider-name" id="utilityProviderName">Paystack</span> to complete your payment.</p>
+                    <p style="font-size: 12px; color: #94a3b8; margin-top: 5px;">Please complete the payment in the new window.</p>
+                </div>
+
+                <div id="utilityPaymentButtonContainer">
+                    <button type="button" class="btn" onclick="payUtilityFromWallet()" style="margin-bottom:8px;background:#0f766e;color:white;">💰 Pay from Net365 Wallet</button>
+                    <button class="btn" id="utilityPayNowBtn" onclick="processUtilityPayment()">
+                        🔒 Continue to Payment
+                    </button>
+                </div>
+                <div id="utilityPaymentStatus" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Mobile Bottom Navigation -->
+    <div id="mobileNav">
+        <div class="nav-items">
+            <a href="/">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Home</span>
+            </a>
+            <a href="/utilities">
+                <span class="nav-icon">⚡</span>
+                <span class="nav-label">Utilities</span>
+            </a>
+            <button class="nav-center" onclick="document.getElementById('paymentForm').scrollIntoView({behavior:'smooth'})">
+                <span>➕</span>
+            </button>
+            <button onclick="document.getElementById('utilityTransactions').scrollIntoView({behavior:'smooth'})">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">History</span>
+            </button>
+            <button onclick="document.getElementById('billersContainer').scrollIntoView({behavior:'smooth'})">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Billers</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Voice Command Button -->
+    <button id="voiceCommandBtn" onclick="startVoiceCommand()" title="Voice Command">
+        🎤
+    </button>
+
+    <script>
+        const API_BASE = '/api';
+        let selectedBillerId = null;
+        let selectedBillerData = null;
+        let selectedUtilityProvider = 'wallet';
+        let allBillers = [];
+        let currentUtilityTransactions = [];
+        let pendingUtilityPayment = null;
+        let utilityPaymentInterval = null;
+        let utilityFavorites = JSON.parse(localStorage.getItem('utilityFavorites') || '[]');
+        let utilityNotifications = JSON.parse(localStorage.getItem('utilityNotifications') || '[]');
+        let currentUtilityUser = null;
+
+        // ============ USER SESSION ============
+        async function loadUtilityUserSession() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.success && data.user) {
+                    currentUtilityUser = data.user;
+                    updateUtilityUserUI(data.user);
+                } else {
+                    currentUtilityUser = null;
+                    updateUtilityUserUI(null);
+                }
+            } catch (error) {
+                console.error('Failed to load user session:', error);
+                updateUtilityUserUI(null);
+            }
+        }
+
+        function updateUtilityUserUI(user) {
+            const avatar = document.getElementById('utilityUserAvatar');
+            const nameEl = document.getElementById('utilityUserName');
+            const statusText = document.getElementById('utilityUserStatusText');
+            const statusIcon = document.querySelector('#utilityUserStatus i');
+            
+            if (user) {
+                const initials = (user.full_name || user.name || 'U')
+                    .split(' ')
+                    .map(n => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2);
+                
+                avatar.textContent = initials || 'U';
+                nameEl.textContent = user.full_name || user.name || 'User';
+                statusText.textContent = user.email_verified ? 'Verified Account' : 'Not Verified';
+                statusIcon.style.color = user.email_verified ? '#22c55e' : '#f59e0b';
+                
+                // Update avatar background color
+                avatar.style.background = user.email_verified ? '#3b82f6' : '#64748b';
+            } else {
+                avatar.textContent = '👤';
+                nameEl.textContent = 'Guest';
+                statusText.textContent = 'Not Logged In';
+                statusIcon.style.color = '#94a3b8';
+                avatar.style.background = '#94a3b8';
+            }
+        }
+
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('utilityUserDropdown');
+            if (dropdown) {
+                dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+            }
+        }
+
+        async function handleUtilityLogout() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUtilityUser = null;
+                    updateUtilityUserUI(null);
+                    showToast('👋 Logged out successfully!', 'success');
+                    
+                    document.getElementById('utilityUserDropdown').style.display = 'none';
+                    
+                    // Redirect to home page after a moment
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    showToast('❌ ' + (data.error || 'Logout failed'), 'error');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                showToast('❌ Failed to logout', 'error');
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const profile = document.querySelector('.user-profile');
+            const dropdown = document.getElementById('utilityUserDropdown');
+            if (profile && !profile.contains(event.target) && dropdown) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        // ============ TOAST NOTIFICATIONS ============
+        function showToast(message, type = 'info') {
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            toast.innerHTML = `${icons[type] || 'ℹ️'} ${message}`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // ============ DARK MODE ============
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            document.getElementById('darkModeBtn').textContent = isDark ? '☀️' : '🌙';
+            showToast(isDark ? '🌙 Dark mode enabled' : '☀️ Light mode enabled', 'info');
+        }
+
+        // ============ LOAD BILLERS ============
+        async function loadBillers() {
+            try {
+                const response = await fetch(`${API_BASE}/utilities/billers?size=50`);
+                const data = await response.json();
+                allBillers = Array.isArray(data) ? data : (data.content || []);
+                displayBillers(allBillers);
+            } catch (error) {
+                console.error('Error loading billers:', error);
+                document.getElementById('billersContainer').innerHTML =
+                    '<div class="status error">Error loading billers</div>';
+            }
+        }
+
+        function displayBillers(billers) {
+            const container = document.getElementById('billersContainer');
+            if (!billers || billers.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 20px; color: #94a3b8;">No billers found</p>';
+                return;
+            }
+
+            const icons = {
+                'ELECTRICITY_BILL_PAYMENT': '⚡',
+                'WATER_BILL_PAYMENT': '💧',
+                'INTERNET_BILL_PAYMENT': '🌐',
+                'CABLE_BILL_PAYMENT': '📺',
+                'GAS_BILL_PAYMENT': '🔥'
+            };
+
+            let html = '';
+            billers.forEach(biller => {
+                const icon = icons[biller.type] || '📄';
+                const isFav = utilityFavorites.includes(biller.id) ? '⭐' : '☆';
+                const isSelected = selectedBillerId === biller.id;
+                html += `
+                    <div class="biller-card ${isSelected ? 'selected' : ''}" data-biller-id="${biller.id}" onclick="selectBiller(${biller.id})">
+                        <button class="favorite-btn" onclick="event.stopPropagation(); toggleUtilityFavorite(${biller.id})">
+                            ${isFav}
+                        </button>
+                        <span class="icon">${icon}</span>
+                        <div class="name">${biller.name}</div>
+                        <div class="type">${biller.type || 'Unknown'}</div>
+                        <div class="country">📍 ${biller.countryISOCode || 'N/A'}</div>
+                        <div class="select-badge">✓ Selected</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function searchBillers() {
+            const search = document.getElementById('searchBiller').value.toLowerCase();
+            const filtered = allBillers.filter(b =>
+                b.name.toLowerCase().includes(search) ||
+                (b.type && b.type.toLowerCase().includes(search))
+            );
+            displayBillers(filtered);
+        }
+
+        function filterBillers() {
+            const type = document.getElementById('filterType').value;
+            const country = document.getElementById('filterCountry').value;
+
+            let filtered = allBillers;
+            if (type) {
+                filtered = filtered.filter(b => b.type === type);
+            }
+            if (country) {
+                filtered = filtered.filter(b => b.countryISOCode === country);
+            }
+            displayBillers(filtered);
+        }
+
+        async function loadCountries() {
+            try {
+                const response = await fetch(`${API_BASE}/countries`);
+                const countries = await response.json();
+                const select = document.getElementById('filterCountry');
+                select.innerHTML = '<option value="">All Countries</option>';
+                if (Array.isArray(countries)) {
+                    countries.forEach(country => {
+                        const option = document.createElement('option');
+                        option.value = country.isoCode || country.code || country.id;
+                        option.textContent = country.name || country.countryName || 'Unknown';
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading countries:', error);
+            }
+        }
+
+        function toggleUtilityFavorite(billerId) {
+            const index = utilityFavorites.indexOf(billerId);
+            if (index > -1) {
+                utilityFavorites.splice(index, 1);
+                showToast('Removed from favorites', 'info');
+            } else {
+                utilityFavorites.push(billerId);
+                const biller = allBillers.find(b => b.id === billerId);
+                showToast(`⭐ Added ${biller?.name || 'biller'} to favorites`, 'success');
+            }
+            localStorage.setItem('utilityFavorites', JSON.stringify(utilityFavorites));
+            loadBillers();
+        }
+
+        // ============ WALLET BALANCE ============
+        async function updateWalletBalanceDisplay() {
+            try {
+                const response = await fetch(`${API_BASE}/wallet`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.success && data.wallets) {
+                    const currency = selectedBillerData?.countryISOCode === 'NG' ? 'NGN' : 'USD';
+                    const wallet = data.wallets.find(w => w.currency === currency);
+                    if (wallet) {
+                        const balance = parseFloat(wallet.balance || 0);
+                        const symbol = currency === 'NGN' ? '₦' : '$';
+                        document.getElementById('walletBalanceDisplay').textContent = 
+                            `Balance: ${symbol}${balance.toFixed(2)}`;
+                        
+                        const payBtn = document.getElementById('payUtilityBtn');
+                        if (payBtn && selectedUtilityProvider === 'wallet') {
+                            payBtn.innerHTML = `💰 Pay with Wallet (${symbol}${balance.toFixed(2)})`;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to update wallet balance:', e);
+            }
+        }
+
+        // ============ SELECT BILLER ============
+        function selectBiller(billerId) {
+            const biller = allBillers.find(b => b.id === billerId);
+            if (!biller) return;
+
+            selectedBillerId = billerId;
+            selectedBillerData = biller;
+
+            document.querySelectorAll('.biller-card').forEach(card => {
+                card.classList.toggle('selected', parseInt(card.dataset.billerId) === billerId);
+            });
+
+            const form = document.getElementById('paymentForm');
+            form.style.display = 'block';
+
+            const icons = {
+                'ELECTRICITY_BILL_PAYMENT': '⚡',
+                'WATER_BILL_PAYMENT': '💧',
+                'INTERNET_BILL_PAYMENT': '🌐',
+                'CABLE_BILL_PAYMENT': '📺',
+                'GAS_BILL_PAYMENT': '🔥'
+            };
+            const icon = icons[biller.type] || '📄';
+            const isFav = utilityFavorites.includes(biller.id) ? '⭐' : '';
+
+            document.getElementById('selectedBillerInfo').innerHTML = `
+                <div class="status info" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <span>
+                        <strong>Selected Biller:</strong> ${icon} ${biller.name} ${isFav}
+                        <span style="font-size: 12px; color: #64748b; margin-left: 8px;">${biller.type || 'Unknown'} • ${biller.countryISOCode || 'N/A'}</span>
+                    </span>
+                    <button class="btn btn-secondary btn-sm" onclick="clearBillerSelection()" style="margin: 0;">
+                        ✕ Change Biller
+                    </button>
+                </div>
+            `;
+
+            const limitsDiv = document.getElementById('billerLimitsDisplay');
+            if (biller.minAmount || biller.maxAmount) {
+                limitsDiv.innerHTML = `💰 Min: ${biller.minAmount || 'N/A'} • Max: ${biller.maxAmount || 'N/A'}`;
+            } else {
+                limitsDiv.innerHTML = '';
+            }
+
+            updateWalletBalanceDisplay();
+
+            form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('subscriberAccount').focus();
+
+            showToast(`Selected: ${biller.name}`, 'success');
+        }
+
+        function clearBillerSelection() {
+            selectedBillerId = null;
+            selectedBillerData = null;
+            document.getElementById('paymentForm').style.display = 'none';
+            document.querySelectorAll('.biller-card').forEach(card => card.classList.remove('selected'));
+            showToast('Biller selection cleared', 'info');
+        }
+
+        function selectUtilityPayment(provider) {
+            selectedUtilityProvider = provider;
+            document.querySelectorAll('.payment-option').forEach(el => {
+                el.classList.remove('selected');
+                if (el.dataset.provider === provider) {
+                    el.classList.add('selected');
+                }
+            });
+            
+            const payBtn = document.getElementById('payUtilityBtn');
+            const labels = {
+                'wallet': '💰 Pay with Wallet',
+                'paystack': '💳 Pay with Paystack',
+                'flutterwave': '🌊 Pay with Flutterwave',
+                'stripe': '💳 Pay with Stripe',
+                'mock': '🧪 Test Payment'
+            };
+            
+            if (provider === 'wallet') {
+                updateWalletBalanceDisplay();
+                const balanceText = document.getElementById('walletBalanceDisplay').textContent;
+                payBtn.innerHTML = `💰 Pay with Wallet (${balanceText.replace('Balance: ', '')})`;
+            } else {
+                payBtn.innerHTML = labels[provider] || '💸 Pay Bill';
+            }
+            
+            showToast(`Payment method: ${labels[provider] || provider}`, 'info');
+        }
+
+        // ============ VALIDATE ACCOUNT ============
+        async function validateAccount() {
+            const account = document.getElementById('subscriberAccount').value.trim();
+            if (!account || !selectedBillerId) {
+                showUtilityStatus('Please enter account number and select a biller', 'error');
+                return;
+            }
+
+            const resultDiv = document.getElementById('validationResult');
+            resultDiv.innerHTML = `<span class="validation-badge loading">⏳ Validating...</span>`;
+
+            try {
+                const response = await fetch(`${API_BASE}/utilities/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        biller_id: selectedBillerId,
+                        subscriber_account: account
+                    })
+                });
+                const result = await response.json();
+
+                if (response.ok && result.valid !== false) {
+                    const customerName = result.customerName || result.name || result.accountName || account;
+                    resultDiv.innerHTML = `<span class="validation-badge valid">✅ Account Valid: ${customerName}</span>`;
+                    showToast(`✅ Account validated: ${customerName}`, 'success');
+                } else {
+                    const errorMsg = result.error || result.message || 'Invalid account number';
+                    resultDiv.innerHTML = `<span class="validation-badge invalid">❌ ${errorMsg}</span>`;
+                    showToast(`❌ ${errorMsg}`, 'error');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="validation-badge invalid">❌ Error validating account</span>`;
+                showToast('❌ Error validating account', 'error');
+            }
+        }
+
+        // ============ PAY UTILITY BILL ============
+        async function payUtilityFromWallet() {
+            const account = document.getElementById('subscriberAccount').value.trim();
+            const amount = parseFloat(document.getElementById('utilityAmount').value);
+            if (!selectedBillerId || !account || !amount || amount <= 0) {
+                showUtilityStatus('⚠️ Select a biller and enter a valid amount', 'error');
+                return;
+            }
+            try {
+                const r = await fetch(`${API_BASE}/wallet/utility`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        biller_id: selectedBillerId,
+                        subscriber_account: account,
+                        amount: amount,
+                        currency: (selectedBillerData?.countryISOCode || 'NG') === 'NG' ? 'NGN' : 'USD'
+                    })
+                });
+                const d = await r.json();
+                if (r.ok && d.success) {
+                    showUtilityStatus(`✅ Paid from wallet. Remaining: ${d.currency || ''} ${Number(d.wallet_balance || 0).toFixed(2)}`, 'success');
+                    loadUtilityTransactions();
+                    updateUtilityAnalytics();
+                    updateWalletBalanceDisplay();
+                } else {
+                    showUtilityStatus(`❌ ${d.error || 'Wallet payment failed'}`, 'error');
+                }
+            } catch (e) {
+                showUtilityStatus(`❌ ${e.message}`, 'error');
+            }
+        }
+
+        async function payUtilityBill() {
+            const account = document.getElementById('subscriberAccount').value.trim();
+            const amount = document.getElementById('utilityAmount').value;
+            const email = document.getElementById('utilityEmail').value.trim();
+
+            if (!selectedBillerId || !account || !amount || !email) {
+                showUtilityStatus('⚠️ Please fill in all required fields', 'error');
+                return;
+            }
+
+            if (parseFloat(amount) <= 0) {
+                showUtilityStatus('⚠️ Please enter a valid amount', 'error');
+                return;
+            }
+
+            if (selectedUtilityProvider === 'wallet') {
+                try {
+                    const walletResp = await fetch(`${API_BASE}/wallet`, { credentials: 'include' });
+                    const walletData = await walletResp.json();
+                    if (walletData.success && walletData.wallets) {
+                        const currency = (selectedBillerData?.countryISOCode || 'NG') === 'NG' ? 'NGN' : 'USD';
+                        const wallet = walletData.wallets.find(w => w.currency === currency);
+                        if (wallet && parseFloat(wallet.balance || 0) < parseFloat(amount)) {
+                            showUtilityStatus(`⚠️ Insufficient ${currency} wallet balance. Available: ${currency} ${parseFloat(wallet.balance || 0).toFixed(2)}`, 'error');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to check wallet balance:', e);
+                }
+            }
+
+            showUtilityStatus('⏳ Processing payment...', 'info');
+
+            try {
+                const payload = {
+                    biller_id: selectedBillerId,
+                    subscriber_account: account,
+                    amount: parseFloat(amount),
+                    reference_id: `util-${Date.now()}`,
+                    currency: (selectedBillerData?.countryISOCode || 'NG') === 'NG' ? 'NGN' : (selectedUtilityProvider === 'stripe' ? 'USD' : 'NGN'),
+                    email: email,
+                    country_code: selectedBillerData?.countryISOCode || 'NG',
+                    provider: selectedUtilityProvider === 'mock' ? null : selectedUtilityProvider,
+                    return_url: `${window.location.origin}/payment/success`
+                };
+
+                if (selectedUtilityProvider === 'wallet') {
+                    payload.provider = 'wallet';
+                }
+
+                const response = await fetch(`${API_BASE}/utilities/pay`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.authorization_url) {
+                    const paymentWindow = window.open(result.authorization_url, '_blank');
+                    if (!paymentWindow || paymentWindow.closed) {
+                        window.location.href = result.authorization_url;
+                    }
+                    showUtilityStatus(`✅ Redirecting to payment gateway...`, 'info');
+                    return;
+                }
+
+                if (result.success && result.payment_method === 'wallet' && result.status === 'completed') {
+                    showUtilityStatus(`✅ Bill paid successfully from wallet! Reference: ${result.reference}`, 'success');
+                    loadUtilityTransactions();
+                    updateUtilityAnalytics();
+                    updateWalletBalanceDisplay();
+                    document.getElementById('subscriberAccount').value = '';
+                    document.getElementById('utilityAmount').value = '';
+                    
+                    if (result.wallet_balance !== undefined) {
+                        showToast(`💰 New wallet balance: ${result.currency} ${result.wallet_balance.toFixed(2)}`, 'success');
+                    }
+                    return;
+                }
+
+                if (result.requires_payment && result.payment) {
+                    pendingUtilityPayment = {
+                        ...result,
+                        billerName: selectedBillerData?.name || 'Unknown',
+                        account: account,
+                        amount: amount,
+                        email: email,
+                        reference: result.payment.reference || result.payment.session_id || `util-${Date.now()}`
+                    };
+                    openUtilityPaymentModal(result.payment);
+                    return;
+                }
+
+                if (result.transactionId || result.id) {
+                    const txId = result.transactionId || result.id;
+                    showUtilityStatus(`✅ Bill paid successfully! Transaction ID: ${txId}`, 'success');
+                    loadUtilityTransactions();
+                    updateUtilityAnalytics();
+                    updateWalletBalanceDisplay();
+                    document.getElementById('subscriberAccount').value = '';
+                    document.getElementById('utilityAmount').value = '';
+                } else {
+                    showUtilityStatus(`❌ ${result.error || 'Payment failed'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error paying bill:', error);
+                showUtilityStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function showUtilityStatus(message, type) {
+            const div = document.getElementById('paymentStatus');
+            div.innerHTML = `<div class="status ${type}">${message}</div>`;
+            if (type !== 'info') {
+                setTimeout(() => { div.innerHTML = ''; }, 10000);
+            }
+        }
+
+        // ============ UTILITY PAYMENT MODAL ============
+        function openUtilityPaymentModal(paymentData) {
+            const biller = selectedBillerData || allBillers.find(b => b.id === selectedBillerId);
+
+            document.getElementById('modalUtilityBiller').textContent = biller?.name || 'Unknown';
+            document.getElementById('modalUtilityAccount').textContent = document.getElementById('subscriberAccount').value;
+            const amount = document.getElementById('utilityAmount').value;
+            const currency = paymentData.currency || (selectedUtilityProvider === 'stripe' ? 'USD' : 'NGN');
+            document.getElementById('modalUtilityAmount').textContent = `${currency} ${amount}`;
+
+            const providerNames = {
+                'wallet': 'Net365 Wallet',
+                'paystack': 'Paystack',
+                'flutterwave': 'Flutterwave',
+                'stripe': 'Stripe',
+                'mock': 'Test Mode'
+            };
+            document.getElementById('modalUtilityProvider').textContent = providerNames[selectedUtilityProvider] || selectedUtilityProvider;
+            document.getElementById('modalUtilityReference').textContent = `Ref: ${paymentData.reference || paymentData.session_id || 'N/A'}`;
+
+            const icons = {
+                'wallet': '💰',
+                'paystack': '💳',
+                'flutterwave': '🌊',
+                'stripe': '💳',
+                'mock': '🧪'
+            };
+            document.getElementById('utilityPaymentIcon').textContent = icons[selectedUtilityProvider] || '🔒';
+            document.getElementById('utilityProviderName').textContent = providerNames[selectedUtilityProvider] || selectedUtilityProvider;
+
+            const btnContainer = document.getElementById('utilityPaymentButtonContainer');
+            const payBtn = document.getElementById('utilityPayNowBtn');
+            const statusDiv = document.getElementById('utilityPaymentStatus');
+
+            if (selectedUtilityProvider === 'wallet') {
+                btnContainer.querySelector('button[onclick="payUtilityFromWallet()"]').style.display = 'block';
+                payBtn.textContent = '💰 Pay with Wallet';
+                payBtn.className = 'btn btn-wallet';
+                btnContainer.style.display = 'block';
+                document.getElementById('utilityPaymentRedirectInfo').style.display = 'none';
+                
+                updateWalletBalanceDisplay();
+            } else {
+                btnContainer.querySelector('button[onclick="payUtilityFromWallet()"]').style.display = 'none';
+                const authUrl = paymentData.authorization_url || paymentData.checkout_url || paymentData.link;
+                if (authUrl) {
+                    if (selectedUtilityProvider === 'paystack') {
+                        payBtn.textContent = '💰 Pay with Paystack';
+                        payBtn.className = 'btn btn-paystack';
+                    } else if (selectedUtilityProvider === 'flutterwave') {
+                        payBtn.textContent = '🌊 Pay with Flutterwave';
+                        payBtn.className = 'btn btn-flutterwave';
+                    } else if (selectedUtilityProvider === 'stripe') {
+                        payBtn.textContent = '💳 Pay with Stripe';
+                        payBtn.className = 'btn btn-stripe';
+                    } else {
+                        payBtn.textContent = '🔒 Continue to Payment';
+                        payBtn.className = 'btn';
+                    }
+                    btnContainer.style.display = 'block';
+                    document.getElementById('utilityPaymentRedirectInfo').style.display = 'block';
+                } else if (selectedUtilityProvider === 'mock') {
+                    payBtn.textContent = '🧪 Complete Test Payment';
+                    payBtn.className = 'btn btn-mock';
+                    btnContainer.style.display = 'block';
+                    document.getElementById('utilityPaymentRedirectInfo').style.display = 'block';
+                } else {
+                    btnContainer.style.display = 'none';
+                    document.getElementById('utilityPaymentRedirectInfo').style.display = 'none';
+                    statusDiv.innerHTML = `<div class="status error">❌ Payment method not configured properly.</div>`;
+                }
+            }
+
+            document.getElementById('paymentModal').style.display = 'block';
+        }
+
+        function closeUtilityPaymentModal() {
+            document.getElementById('paymentModal').style.display = 'none';
+            if (utilityPaymentInterval) {
+                clearInterval(utilityPaymentInterval);
+                utilityPaymentInterval = null;
+            }
+        }
+
+        // ============ PROCESS UTILITY PAYMENT ============
+        async function processUtilityPayment() {
+            if (!pendingUtilityPayment) {
+                showToast('No pending payment found', 'error');
+                return;
+            }
+
+            const payBtn = document.getElementById('utilityPayNowBtn');
+            const statusDiv = document.getElementById('utilityPaymentStatus');
+
+            payBtn.disabled = true;
+            payBtn.textContent = '⏳ Processing...';
+            statusDiv.innerHTML = '';
+
+            try {
+                const paymentData = pendingUtilityPayment;
+                const authUrl = paymentData.authorization_url || paymentData.checkout_url || paymentData.link;
+
+                if (selectedUtilityProvider === 'mock') {
+                    statusDiv.innerHTML = `<div class="status info">⏳ Processing test payment...</div>`;
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    await completeUtilityPayment(paymentData);
+                    return;
+                }
+
+                if (authUrl) {
+                    statusDiv.innerHTML = `<div class="status info">⏳ Redirecting to ${selectedUtilityProvider}...</div>`;
+                    window.location.href = authUrl;
+                    setTimeout(() => {
+                        closeUtilityPaymentModal();
+                    }, 1000);
+                } else {
+                    statusDiv.innerHTML = `<div class="status warning">⚠️ No payment URL available.</div>`;
+                    payBtn.disabled = false;
+                    payBtn.textContent = '🔄 Try Again';
+                }
+            } catch (error) {
+                console.error('Payment error:', error);
+                statusDiv.innerHTML = `<div class="status error">❌ Payment error: ${error.message}</div>`;
+                payBtn.disabled = false;
+                payBtn.textContent = '🔄 Retry';
+            }
+        }
+
+        // ============ COMPLETE UTILITY PAYMENT ============
+        async function completeUtilityPayment(paymentData) {
+            try {
+                const statusDiv = document.getElementById('utilityPaymentStatus');
+                statusDiv.innerHTML = `<div class="status info">⏳ Processing bill payment...</div>`;
+
+                const account = document.getElementById('subscriberAccount').value.trim();
+                const amount = document.getElementById('utilityAmount').value;
+                const email = document.getElementById('utilityEmail').value.trim();
+
+                const payload = {
+                    biller_id: selectedBillerId,
+                    subscriber_account: account,
+                    amount: parseFloat(amount),
+                    reference_id: `util-${Date.now()}`,
+                    currency: (selectedBillerData?.countryISOCode || 'NG') === 'NG' ? 'NGN' : (selectedUtilityProvider === 'stripe' ? 'USD' : 'NGN'),
+                    email: email,
+                    country_code: selectedBillerData?.countryISOCode || 'NG',
+                    provider: selectedUtilityProvider === 'mock' ? null : selectedUtilityProvider,
+                    payment_reference: paymentData.reference || paymentData.session_id
+                };
+
+                const response = await fetch(`${API_BASE}/utilities/confirm`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && (result.transactionId || result.id)) {
+                    statusDiv.innerHTML = `
+                        <div class="status success">
+                            ✅ Bill paid successfully! Transaction ID: ${result.transactionId || result.id || 'N/A'}
+                        </div>
+                    `;
+                    setTimeout(() => {
+                        closeUtilityPaymentModal();
+                        loadUtilityTransactions();
+                        updateUtilityAnalytics();
+                        updateWalletBalanceDisplay();
+                        document.getElementById('subscriberAccount').value = '';
+                        document.getElementById('utilityAmount').value = '';
+                    }, 2000);
+                } else {
+                    statusDiv.innerHTML = `<div class="status error">❌ ${result.error || 'Payment confirmation failed'}</div>`;
+                }
+            } catch (error) {
+                console.error('Payment completion error:', error);
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // ============ UTILITY TRANSACTIONS ============
+        async function loadUtilityTransactions() {
+            try {
+                const response = await fetch(`${API_BASE}/utilities/transactions?size=20`);
+                const data = await response.json();
+                currentUtilityTransactions = Array.isArray(data) ? data : (data.content || []);
+                const container = document.getElementById('utilityTransactions');
+
+                if (!currentUtilityTransactions || currentUtilityTransactions.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; padding: 20px; color: #94a3b8;">No utility transactions found</p>';
+                    updateUtilityAnalytics([]);
+                    return;
+                }
+
+                updateUtilityAnalytics(currentUtilityTransactions);
+
+                let html = '<div class="transaction-list">';
+                currentUtilityTransactions.forEach(tx => {
+                    const statusColor = tx.status === 'COMPLETED' ? 'COMPLETED' :
+                                      tx.status === 'PENDING' ? 'PENDING' : 'FAILED';
+                    const statusIcon = tx.status === 'COMPLETED' ? '✅' :
+                                     tx.status === 'PENDING' ? '⏳' : '❌';
+                    const paymentMethod = tx.payment_method || tx.provider || 'Unknown';
+                    html += `
+                        <div class="transaction-item" onclick="viewUtilityTransaction('${tx.transactionId || tx.id || 'N/A'}')">
+                            <div>
+                                <div style="font-weight: 600; color: #1e2937;">${tx.billerName || 'Unknown Biller'}</div>
+                                <div style="font-size: 12px; color: #94a3b8;">Account: ${tx.subscriberAccountNumber || tx.subscriber_account || 'N/A'}</div>
+                                <div style="font-size: 11px; color: #94a3b8;">${tx.payment_method ? '💳 ' + tx.payment_method : ''}</div>
+                                <div style="font-size: 11px; color: #94a3b8;">${new Date(tx.createdAt || tx.transactionDate || Date.now()).toLocaleString()}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="transaction-amount">${tx.currency || 'NGN'} ${tx.amount || '0.00'}</div>
+                                <span class="transaction-status ${statusColor}">${statusIcon} ${tx.status || 'UNKNOWN'}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading utility transactions:', error);
+                document.getElementById('utilityTransactions').innerHTML =
+                    '<div class="status error">Error loading transactions</div>';
+            }
+        }
+
+        function viewUtilityTransaction(transactionId) {
+            if (!transactionId || transactionId === 'N/A') return;
+            const tx = currentUtilityTransactions.find(t =>
+                (t.transactionId || t.id) === transactionId
+            );
+            if (tx) {
+                const isDark = document.body.classList.contains('dark-mode');
+                const bgColor = isDark ? '#1e293b' : 'white';
+                const textColor = isDark ? '#e2e8f0' : '#1e2937';
+
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;';
+                modal.innerHTML = `
+                    <div style="background: ${bgColor}; padding: 32px; border-radius: 20px; max-width: 500px; width: 90%; max-height: 80%; overflow-y: auto; position: relative; color: ${textColor};">
+                        <button onclick="this.parentElement.parentElement.remove()" style="position: absolute; right: 16px; top: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8;">&times;</button>
+                        <h3 style="margin-bottom: 16px;">📋 Transaction Details</h3>
+                        <p><strong>Biller:</strong> ${tx.billerName || 'Unknown'}</p>
+                        <p><strong>Account:</strong> ${tx.subscriberAccountNumber || tx.subscriber_account || 'N/A'}</p>
+                        <p><strong>Amount:</strong> ${tx.currency || 'NGN'} ${tx.amount || '0.00'}</p>
+                        <p><strong>Status:</strong> ${tx.status || 'UNKNOWN'}</p>
+                        <p><strong>Payment Method:</strong> ${tx.payment_method || tx.provider || 'Unknown'}</p>
+                        <p><strong>Date:</strong> ${tx.createdAt || tx.transactionDate || 'N/A'}</p>
+                        <p><strong>Reference:</strong> ${tx.reference || tx.transactionId || tx.id || 'N/A'}</p>
+                        <button onclick="this.parentElement.parentElement.remove()" class="btn" style="margin-top: 16px;">Close</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } else {
+                showToast('❌ Transaction details not found', 'error');
+            }
+        }
+
+        // ============ UTILITY ANALYTICS ============
+        function updateUtilityAnalytics(transactions) {
+            const tx = transactions || currentUtilityTransactions;
+            if (!tx || tx.length === 0) {
+                document.getElementById('totalUtilitySpent').textContent = '$0.00';
+                document.getElementById('utilityPaymentCount').textContent = '0';
+                document.getElementById('utilitySuccessRate').textContent = '0%';
+                document.getElementById('avgUtilityAmount').textContent = '$0.00';
+                return;
+            }
+
+            let total = 0;
+            let successCount = 0;
+            let amounts = [];
+
+            tx.forEach(t => {
+                const amount = parseFloat(t.amount || 0);
+                total += amount;
+                amounts.push(amount);
+                if (t.status === 'COMPLETED') {
+                    successCount++;
+                }
+            });
+
+            const avg = amounts.length > 0 ? total / amounts.length : 0;
+            const rate = tx.length > 0 ? (successCount / tx.length) * 100 : 0;
+
+            document.getElementById('totalUtilitySpent').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('utilityPaymentCount').textContent = tx.length;
+            document.getElementById('utilitySuccessRate').textContent = `${Math.round(rate)}%`;
+            document.getElementById('avgUtilityAmount').textContent = `$${avg.toFixed(2)}`;
+        }
+
+        // ============ EXPORT UTILITY TRANSACTIONS ============
+        function exportUtilityCSV() {
+            if (!currentUtilityTransactions || currentUtilityTransactions.length === 0) {
+                showToast('No transactions to export', 'warning');
+                return;
+            }
+
+            let csv = 'Transaction ID,Biller,Account,Amount,Currency,Status,Payment Method,Date\n';
+            currentUtilityTransactions.forEach(tx => {
+                csv += `${tx.transactionId || tx.id || 'N/A'},`;
+                csv += `${tx.billerName || 'Unknown'},`;
+                csv += `${tx.subscriberAccountNumber || tx.subscriber_account || 'N/A'},`;
+                csv += `${tx.amount || '0.00'},`;
+                csv += `${tx.currency || 'NGN'},`;
+                csv += `${tx.status || 'UNKNOWN'},`;
+                csv += `${tx.payment_method || tx.provider || 'Unknown'},`;
+                csv += `${tx.createdAt || tx.transactionDate || ''}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `utility_transactions_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showToast('📥 CSV exported successfully', 'success');
+        }
+
+        function exportUtilityJSON() {
+            if (!currentUtilityTransactions || currentUtilityTransactions.length === 0) {
+                showToast('No transactions to export', 'warning');
+                return;
+            }
+
+            const json = JSON.stringify(currentUtilityTransactions, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `utility_transactions_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showToast('📄 JSON exported successfully', 'success');
+        }
+
+        // ============ VOICE COMMANDS ============
+        let isUtilityListening = false;
+
+        function startVoiceCommand() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                showToast('Voice commands not supported in this browser', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('voiceCommandBtn');
+            if (isUtilityListening) {
+                btn.classList.remove('listening');
+                btn.textContent = '🎤';
+                isUtilityListening = false;
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = true;
+
+            btn.classList.add('listening');
+            btn.textContent = '⏹️';
+            isUtilityListening = true;
+
+            recognition.onresult = function(event) {
+                const result = event.results[0];
+                if (result.isFinal) {
+                    const command = result[0].transcript.toLowerCase();
+                    processUtilityVoiceCommand(command);
+                    btn.classList.remove('listening');
+                    btn.textContent = '🎤';
+                    isUtilityListening = false;
+                }
+            };
+
+            recognition.onerror = function() {
+                btn.classList.remove('listening');
+                btn.textContent = '🎤';
+                isUtilityListening = false;
+                showToast('🎤 Could not recognize voice command', 'error');
+            };
+
+            recognition.start();
+            showToast('🎤 Listening...', 'info');
+        }
+
+        function processUtilityVoiceCommand(command) {
+            showToast(`🗣️ "${command}"`, 'info');
+
+            if (command.includes('pay') || command.includes('bill')) {
+                document.getElementById('paymentForm').scrollIntoView({ behavior: 'smooth' });
+                showToast('💳 Ready to pay bill', 'info');
+            } else if (command.includes('search') || command.includes('find')) {
+                const query = command.replace('search', '').replace('find', '').trim();
+                document.getElementById('searchBiller').value = query;
+                searchBillers();
+                showToast(`🔍 Searching for "${query}"`, 'info');
+            } else if (command.includes('electricity') || command.includes('light')) {
+                document.getElementById('filterType').value = 'ELECTRICITY_BILL_PAYMENT';
+                filterBillers();
+                showToast('⚡ Showing electricity billers', 'info');
+            } else if (command.includes('water')) {
+                document.getElementById('filterType').value = 'WATER_BILL_PAYMENT';
+                filterBillers();
+                showToast('💧 Showing water billers', 'info');
+            } else if (command.includes('internet')) {
+                document.getElementById('filterType').value = 'INTERNET_BILL_PAYMENT';
+                filterBillers();
+                showToast('🌐 Showing internet billers', 'info');
+            } else if (command.includes('transactions') || command.includes('history')) {
+                loadUtilityTransactions();
+                document.getElementById('utilityTransactions').scrollIntoView({ behavior: 'smooth' });
+                showToast('📊 Loading transactions...', 'info');
+            } else if (command.includes('dark mode') || command.includes('dark')) {
+                toggleDarkMode();
+            } else if (command.includes('wallet')) {
+                selectUtilityPayment('wallet');
+                showToast('💰 Selected wallet payment', 'info');
+            } else if (command.includes('home')) {
+                window.location.href = '/';
+            } else {
+                showToast(`🤔 Command not recognized: "${command}"`, 'warning');
+            }
+        }
+
+        // ============ SEARCH ============
+        document.getElementById('searchInput').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter' && this.value.length > 2) {
+                showToast(`🔍 Searching for "${this.value}"...`, 'info');
+            }
+        });
+
+        // ============ INITIALIZATION ============
+        document.addEventListener('DOMContentLoaded', function() {
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.body.classList.add('dark-mode');
+                document.getElementById('darkModeBtn').textContent = '☀️';
+            }
+
+            // Load user session first
+            loadUtilityUserSession();
+            
+            loadBillers();
+            loadUtilityTransactions();
+            loadCountries();
+            updateWalletBalanceDisplay();
+
+            document.addEventListener('click', function(e) {
+                const card = e.target.closest('.biller-card');
+                if (card) {
+                    const billerId = parseInt(card.dataset.billerId);
+                    if (billerId) {
+                        selectBiller(billerId);
+                    }
+                }
+            });
+
+            selectUtilityPayment('wallet');
+
+            setInterval(updateWalletBalanceDisplay, 30000);
+        });
+
+        // ============ AUTO-REFRESH ============
+        setInterval(() => {
+            loadUtilityTransactions();
+        }, 30000);
+
+        console.log('⚡ Utilities page loaded with sidebar and dynamic user profile!');
+        console.log('✨ Features: Sidebar Navigation, Clickable Billers, Dark Mode, Voice Commands, Favorites, Analytics, Export, Validation, Dynamic User Profile');
+        console.log('💳 Default payment: Wallet');
+    </script>
+</body>
+</html>

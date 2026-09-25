@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Net365 Business Services · Invoices, Domains, AI & more</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>" />
+    <style>
+        /* =========================================================
+           NET365 SERVICES PAGE - COMPLETE STYLES
+           ========================================================= */
+        :root {
+            --bg-primary: #f0f4f8;
+            --bg-secondary: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --card-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+            --transition: all 0.3s ease;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --primary: #4f46e5;
+            --purple: #7c3aed;
+            --teal: #14b8a6;
+            --pink: #ec4899;
+            --radius: 12px;
+        }
+
+        body.dark-mode {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; transition: var(--transition); }
+
+        /* Navigation */
+        .services-nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: wrap;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .services-nav .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+        .services-nav .logo i { color: var(--primary); }
+
+        .nav-links {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .nav-links a {
+            padding: 6px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+        .nav-links a:hover { background: var(--bg-primary); color: var(--text-primary); }
+        .nav-links a.active { background: var(--primary); color: white; }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+        .theme-toggle:hover { background: var(--border-color); }
+
+        .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+
+        /* =========================================================
+           HERO SECTION
+           ========================================================= */
+        .services-hero {
+            background: linear-gradient(145deg, #1e3a8a, #312e81);
+            border-radius: 24px;
+            padding: 40px 48px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(79, 70, 229, 0.25);
+        }
+        .services-hero::after {
+            content: '🛠️';
+            position: absolute;
+            right: 40px;
+            bottom: 20px;
+            font-size: 90px;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .services-hero .badge {
+            background: #f59e0b;
+            color: #78350f;
+            padding: 4px 14px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            align-self: flex-start;
+        }
+        .services-hero h1 { font-size: 32px; font-weight: 800; max-width: 600px; }
+        .services-hero h1 i { color: #fbbf24; margin-right: 8px; }
+        .services-hero p { font-size: 16px; opacity: 0.85; max-width: 540px; line-height: 1.6; }
+        .services-hero .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+        .btn-primary {
+            background: white; color: #1e3a8a; border: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; transition: var(--transition);
+        }
+        .btn-primary:hover { transform: scale(1.02); box-shadow: 0 4px 20px rgba(255,255,255,0.25); }
+        .btn-outline-light {
+            background: transparent; color: white; border: 1.5px solid rgba(255,255,255,0.4); padding: 12px 28px; border-radius: 999px; font-weight: 600; font-size: 14px; cursor: pointer; transition: var(--transition);
+        }
+        .btn-outline-light:hover { background: rgba(255,255,255,0.1); border-color: white; }
+
+        /* =========================================================
+           SECTION HEADERS
+           ========================================================= */
+        .section-header {
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .section-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .section-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        .section-header .badge-count {
+            background: var(--primary);
+            color: white;
+            padding: 2px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* =========================================================
+           SERVICE GRID
+           ========================================================= */
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+            margin-bottom: 48px;
+        }
+
+        .service-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .service-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--card-shadow);
+            border-color: var(--primary);
+        }
+        .service-card .card-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .service-card .card-icon .fa-solid, 
+        .service-card .card-icon .fa-regular,
+        .service-card .card-icon .fa-brands { font-size: 36px; }
+        .service-card h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .service-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .service-card .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+        .service-card .badge {
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .badge-live { background: #dcfce7; color: #166534; }
+        .badge-beta { background: #fef3c7; color: #92400e; }
+        .badge-coming { background: #f1f5f9; color: #64748b; }
+        .badge-paid { background: #dbeafe; color: #1e40af; }
+
+        body.dark-mode .badge-live { background: #064e3b; color: #86efac; }
+        body.dark-mode .badge-beta { background: #78350f; color: #fcd34d; }
+        body.dark-mode .badge-coming { background: #334155; color: #94a3b8; }
+        body.dark-mode .badge-paid { background: #1e3a5f; color: #93c5fd; }
+
+        .service-card .price-tag {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        /* =========================================================
+           COMING SOON OVERLAY
+           ========================================================= */
+        .service-card.coming-soon { opacity: 0.7; cursor: default; }
+        .service-card.coming-soon:hover { transform: none; border-color: var(--border-color); }
+        .service-card .coming-soon-banner {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--warning);
+            color: #78350f;
+            padding: 2px 12px;
+            border-radius: 999px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* =========================================================
+           TOAST
+           ========================================================= */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: var(--radius);
+            color: white;
+            font-weight: 500;
+            z-index: 99999;
+            animation: slideIn 0.3s ease;
+            max-width: 420px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        .toast-info { background: var(--info); }
+        .toast-warning { background: var(--warning); }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* =========================================================
+           RESPONSIVE
+           ========================================================= */
+        @media (max-width: 768px) {
+            .services-hero { padding: 28px 20px; }
+            .services-hero h1 { font-size: 24px; }
+            .services-hero::after { font-size: 60px; right: 20px; bottom: 10px; }
+            .service-grid { grid-template-columns: 1fr 1fr; }
+            .services-nav { flex-direction: column; align-items: stretch; }
+            .nav-links { justify-content: center; }
+            .section-header { flex-direction: column; align-items: flex-start; }
+        }
+        @media (max-width: 480px) {
+            .service-grid { grid-template-columns: 1fr; }
+            .services-hero .actions { flex-direction: column; }
+            .btn-primary, .btn-outline-light { text-align: center; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- =========================================================
+    NAVIGATION
+    ========================================================= -->
+    <nav class="services-nav">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <a href="/" class="back-btn" style="display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);text-decoration:none;font-size:13px;font-weight:500;padding:6px 14px;border-radius:8px;transition:var(--transition);">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+            <a href="#" class="logo"><i class="fas fa-toolbox"></i> Net365 Services</a>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <div class="nav-links">
+                <a href="/business">📱 Bulk SMS</a>
+                <a href="/marketplace">📊 Ads</a>
+                <a href="/services" class="active">🛠️ Services</a>
+            </div>
+            <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
+            <a href="/admin" class="btn" style="text-decoration:none;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text-secondary);border:1px solid var(--border-color);background:var(--bg-secondary);transition:var(--transition);">
+                <i class="fas fa-shield-halved"></i> Admin
+            </a>
+        </div>
+    </nav>
+
+    <!-- =========================================================
+    MAIN CONTAINER
+    ========================================================= -->
+    <div class="container">
+
+        <!-- =========================================================
+        HERO
+        ========================================================= -->
+        <div class="services-hero">
+            <span class="badge"><i class="fas fa-rocket"></i> Launching</span>
+            <h1><i class="fas fa-toolbox"></i> Business Services Suite</h1>
+            <p>
+                Everything your business needs to operate, grow, and scale.
+                <br />From invoicing and domains to AI tools and professional email.
+            </p>
+            <div class="actions">
+                <button class="btn-primary" onclick="showToast('🚀 Launching the full suite soon!', 'info')">
+                    <i class="fas fa-star"></i> Explore All
+                </button>
+                <button class="btn-outline-light" onclick="showToast('📋 Early access list opening...', 'info')">
+                    <i class="fas fa-envelope"></i> Get Early Access
+                </button>
+            </div>
+        </div>
+
+        <!-- =========================================================
+        CATEGORY 1: FINANCIAL TOOLS (Invoices + Payment Links)
+        ========================================================= -->
+        <div class="section-header">
+            <div>
+                <h2>💰 Financial Tools</h2>
+                <p>Invoicing, payment links, and collection pages for your business.</p>
+            </div>
+            <span class="badge-count">Live</span>
+        </div>
+
+        <div class="service-grid">
+            <!-- Invoices -->
+            <div class="service-card" onclick="showToast('📄 Invoice builder coming soon!', 'info')">
+                <span class="card-icon"><i class="fas fa-file-invoice"></i></span>
+                <h4>Professional Invoices</h4>
+                <p>Create branded, tax-compliant invoices in seconds. Send via SMS or email.</p>
+                <div class="card-meta">
+                    <span class="badge badge-live">Live</span>
+                    <span class="price-tag">Free</span>
+                </div>
+            </div>
+            <!-- Payment Links -->
+            <div class="service-card" onclick="showToast('🔗 Payment links ready!', 'info')">
+                <span class="card-icon"><i class="fas fa-link"></i></span>
+                <h4>Payment Links</h4>
+                <p>Generate instant payment links and share them with customers anywhere.</p>
+                <div class="card-meta">
+                    <span class="badge badge-live">Live</span>
+                    <span class="price-tag">0.5% fee</span>
+                </div>
+            </div>
+            <!-- Collection Page -->
+            <div class="service-card" onclick="showToast('📋 Collection pages coming soon!', 'info')">
+                <span class="card-icon"><i class="fas fa-credit-card"></i></span>
+                <h4>Collection Pages</h4>
+                <p>A branded payment page for your business. Accept multiple payments at once.</p>
+                <div class="card-meta">
+                    <span class="badge badge-beta">Beta</span>
+                    <span class="price-tag">Free</span>
+                </div>
+            </div>
+            <!-- Recurring Billing -->
+            <div class="service-card" onclick="showToast('🔄 Recurring billing coming soon!', 'info')">
+                <span class="card-icon"><i class="fas fa-sync-alt"></i></span>
+                <h4>Recurring Billing</h4>
+                <p>Set up subscriptions and auto-debit your customers monthly or weekly.</p>
+                <div class="card-meta">
+                    <span class="badge badge-coming">Coming</span>
+                    <span class="price-tag">1% fee</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================
+        CATEGORY 2: DIGITAL INFRASTRUCTURE (Domains, Hosting, Email)
+        ========================================================= -->
+        <div class="section-header">
+            <div>
+                <h2>🌐 Digital Infrastructure</h2>
+                <p>Domains, hosting, and professional email for your brand.</p>
+            </div>
+            <span class="badge-count">Coming Soon</span>
+        </div>
+
+        <div class="service-grid">
+            <!-- Domains -->
+            <div class="service-card coming-soon" onclick="showToast('🌐 Domain registration coming soon!', 'info')">
+                <span class="coming-soon-banner">Coming Soon</span>
+                <span class="card-icon"><i class="fas fa-globe"></i></span>
+                <h4>Domain Registration</h4>
+                <p>Register .com, .ng, .ai, .org, and 500+ TLDs at competitive prices.</p>
+                <div class="card-meta">
+                    <span class="badge badge-coming">Coming</span>
+                    <span class="price-tag">From ₦5,000/yr</span>
+                </div>
+            </div>
+            <!-- Web Hosting -->
+            <div class="service-card coming-soon" onclick="showToast('🖥️ Hosting plans coming soon!', 'info')">
+                <span class="coming-soon-banner">Coming Soon</span>
+                <span class="card-icon"><i class="fas fa-server"></i></span>
+                <h4>Web Hosting</h4>
+                <p>Shared, VPS, and dedicated hosting with 99.9% uptime and local support.</p>
+                <div class="card-meta">
+                    <span class="badge badge-coming">Coming</span>
+                    <span class="price-tag">From ₦2,500/mo</span>
+                </div>
+            </div>
+            <!-- Business Email -->
+            <div class="service-card coming-soon" onclick="showToast('📧 Business email coming soon!', 'info')">
+                <span class="coming-soon-banner">Coming Soon</span>
+                <span class="card-icon"><i class="fas fa-envelope"></i></span>
+                <h4>Business Email</h4>
+                <p>Professional email with your domain (name@yourbusiness.com).</p>
+                <div class="card-meta">
+                    <span class="badge badge-coming">Coming</span>
+                    <span class="price-tag">From ₦1,000/mo</span>
+                </div>
+            </div>
+            <!-- SSL Certificates -->
+            <div class="service-card coming-soon" onclick="showToast('🔒 SSL certificates coming soon!', 'info')">
+                <span class="coming-soon-banner">Coming Soon</span>
+                <span class="card-icon"><i class="fas fa-lock"></i></span>
+                <h4>SSL Certificates</h4>
+                <p>Secure your website with DV, OV, and EV SSL certificates.</p>
+                <div class="card-meta">
+                    <span class="badge badge-coming">Coming</span>
+                    <span class="price-tag">From ₦15,000/yr</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================
+        CATEGORY 3: AI & SAAS (Subscriptions, AI Tools)
+        ========================================================= -->
+        <div class="section-header">
+            <div>
+                <h2>🤖 AI &amp; SaaS Marketplace</h2>
+                <p>Resell premium AI tools and software subscriptions.</p>
+            </div>
+            <span class="badge-count">Beta</span>
+        </div>
+
+        <div class="service-grid">
+            <!-- AI Credits -->
+            <div class="service-card" onclick="showToast('🤖 AI Credits launching soon!', 'info')">
+                <span class="card-icon"><i class="fas fa-brain"></i></span>
+                <h4>AI Credits (ChatGPT, Claude, DALL-E)</h4>
+                <p>Buy prepaid credits for OpenAI, Anthropic, and image generation tools.</p>
+                <div class="card-meta">
+                    <span class="badge badge-beta">Beta</span>
+                    <span class="price-tag">From ₦5,000</span>
+                </div>
+            </div>
+            <!-- Microsoft 365 -->
+            <div class="service-card" onclick="showToast('📄 Microsoft 365 coming soon!', 'info')">
+                <span class="card-icon"><i class="fab fa-microsoft"></i></span>
+                <h4>Microsoft 365</h4>
+                <p>Word, Excel, PowerPoint, Teams, and 1TB OneDrive.</p>
+                <div class="card-meta">
+                    <span class="badge badge-coming">Coming</span>
+                    <span class="price-tag">From ₦4,500/mo</span>
+                </div>
+            </div>
+            <!-- Canva Pro -->
+            <div class="service-card" onclick="showToast('🎨 Canva Pro coming soon!', 'info')">
+                <span class="card-icon"><i class="fas fa-paint-brush"></i></span>
+                <h4>Canva Pro</h4>
+                <p>Professional design tools for businesses and creators.</p>
+                <div class="card-meta">
+                    <span class="badge badge-coming">Coming</span>
+                    <span class="price-tag">From ₦3,500/mo</span>
+                </div>
+            </div>
+            <!-- Spotify / YouTube Premium -->
+            <div class="service-card" onclick="showToast('🎵 Digital subscriptions coming soon!', 'info')">
+                <span class="card-icon"><i class="fas fa-music"></i></span>
+                <h4>Digital Subscriptions</h4>
+                <p>Spotify Premium, YouTube Premium, Netflix, and more.</p>
+                <div class="card-meta">
+                    <span class="badge badge-beta">Beta</span>
+                    <span class="price-tag">From ₦2,000/mo</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================
+        CATEGORY 4: BUSINESS COMMUNICATIONS
+        ========================================================= -->
+        <div class="section-header">
+            <div>
+                <h2>📡 Business Communications</h2>
+                <p>Email marketing, WhatsApp Business API, and Bulk SMS.</p>
+            </div>
+            <span class="badge-count">Live</span>
+        </div>
+
+        <div class="service-grid">
+            <!-- Bulk SMS (Redirect to /business) -->
+            <div class="service-card" onclick="window.location.href='/business'">
+                <span class="card-icon"><i class="fas fa-sms"></i></span>
+                <h4>Bulk SMS</h4>
+                <p>Send SMS campaigns to thousands of contacts instantly.</p>
+                <div class="card-meta">
+                    <span class="badge badge-live">Live</span>
+                    <span class="price-tag">From ₦3/SMS</span>
+                </div>
+            </div>
+            <!-- Email Marketing -->
+            <div class="service-card" onclick="showToast('📧 Email marketing coming soon!', 'info')">
+                <span class="card-icon"><i class="fas fa-envelope-open-text"></i></span>
+                <h4>Email Marketing</h4>
+                <p>Design and send professional email campaigns with analytics.</p>
+                <div class="card-meta">
+                    <span class="badge badge-coming">Coming</span>
+                    <span class="price-tag">From ₦5,000/mo</span>
+                </div>
+            </div>
+            <!-- WhatsApp Business API -->
+            <div class="service-card" onclick="showToast('💬 WhatsApp Business API coming soon!', 'info')">
+                <span class="card-icon"><i class="fab fa-whatsapp"></i></span>
+                <h4>WhatsApp Business API</h4>
+                <p>Send automated notifications and broadcast messages on WhatsApp.</p>
+                <div class="card-meta">
+                    <span class="badge badge-coming">Coming</span>
+                    <span class="price-tag">From ₦10,000/mo</span>
+                </div>
+            </div>
+            <!-- Virtual Phone Numbers -->
+            <div class="service-card" onclick="showToast('📱 Virtual numbers coming soon!', 'info')">
+                <span class="card-icon"><i class="fas fa-phone-alt"></i></span>
+                <h4>Virtual Phone Numbers</h4>
+                <p>Get temporary or permanent numbers for OTP and business lines.</p>
+                <div class="card-meta">
+                    <span class="badge badge-beta">Beta</span>
+                    <span class="price-tag">From ₦500</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================
+        FUTURE: DIGITAL COMMERCE & PHYSICAL MARKETPLACE (Preview)
+        ========================================================= -->
+        <div style="margin-top: 48px; border-top: 2px solid var(--border-color); padding-top: 32px;">
+            <div class="section-header">
+                <div>
+                    <h2>🚀 On the Horizon: Digital & Physical Marketplace</h2>
+                    <p>Coming next — phones, electronics, computers, home products, fashion, and local merchants.</p>
+                </div>
+                <span class="badge-count">Coming 2025</span>
+            </div>
+            <div class="service-grid" style="opacity:0.6; filter: grayscale(0.2);">
+                <div class="service-card coming-soon" onclick="showToast('📱 Marketplace coming 2025!', 'info')">
+                    <span class="coming-soon-banner">Coming</span>
+                    <span class="card-icon"><i class="fas fa-mobile-alt"></i></span>
+                    <h4>Phones &amp; Electronics</h4>
+                    <p>Smartphones, laptops, accessories from verified merchants.</p>
+                </div>
+                <div class="service-card coming-soon" onclick="showToast('🏠 Marketplace coming 2025!', 'info')">
+                    <span class="coming-soon-banner">Coming</span>
+                    <span class="card-icon"><i class="fas fa-home"></i></span>
+                    <h4>Home &amp; Living</h4>
+                    <p>Furniture, appliances, decor, and home essentials.</p>
+                </div>
+                <div class="service-card coming-soon" onclick="showToast('👗 Marketplace coming 2025!', 'info')">
+                    <span class="coming-soon-banner">Coming</span>
+                    <span class="card-icon"><i class="fas fa-tshirt"></i></span>
+                    <h4>Fashion</h4>
+                    <p>Clothing, footwear, accessories from local designers.</p>
+                </div>
+                <div class="service-card coming-soon" onclick="showToast('🏪 Marketplace coming 2025!', 'info')">
+                    <span class="coming-soon-banner">Coming</span>
+                    <span class="card-icon"><i class="fas fa-store"></i></span>
+                    <h4>Local Merchants</h4>
+                    <p>Support local businesses in your area.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="margin-top: 48px; padding: 20px 0; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-secondary); font-size: 13px;">
+            <p>© 2025 Net365. All rights reserved. — <span class="env-badge" style="background:#fbbf24;color:#78350f;padding:2px 12px;border-radius:999px;font-size:10px;font-weight:700;">sandbox</span></p>
+        </div>
+
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script>
+        // =========================================================
+        // THEME TOGGLE
+        // =========================================================
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('services_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            document.querySelector('.theme-toggle i').className = document.body.classList.contains('dark-mode') ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        if (localStorage.getItem('services_theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+        }
+
+        // =========================================================
+        // TOAST SYSTEM
+        // =========================================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const existing = container.querySelector('.toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // =========================================================
+        // ACTIVE NAV HIGHLIGHT
+        // =========================================================
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            if (link.href === window.location.href) link.classList.add('active');
+        });
+
+        console.log('🛠️ Net365 Services Suite loaded.');
+        console.log('📋 Ready for Invoices, Domains, AI & more.');
+    </script>
+</body>
+</html>

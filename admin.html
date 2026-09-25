@@ -1,0 +1,3324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Net365 Admin Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-primary: #f0f4f8;
+            --bg-secondary: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --card-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+            --transition: all 0.3s ease;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --primary: #4f46e5;
+            --radius: 12px;
+        }
+        body.dark-mode {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; transition: var(--transition); }
+
+        .admin-nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .back-btn, .logo { color: var(--text-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .logo { color: var(--primary); font-size: 18px; }
+        .theme-toggle, .btn {
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+        .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .btn-success { background: var(--success); color: #fff; border-color: var(--success); }
+        .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+        .btn-warning { background: var(--warning); color: #fff; border-color: var(--warning); }
+        .btn-sm { padding: 4px 12px; font-size: 12px; }
+        .btn-approve { background: #22c55e; color: white; }
+        .btn-approve:hover { background: #16a34a; }
+        .btn-reject { background: #ef4444; color: white; }
+        .btn-reject:hover { background: #dc2626; }
+        .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+        .gate {
+            max-width: 400px;
+            margin: 80px auto;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 32px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+        }
+        .gate i { font-size: 32px; color: var(--primary); margin-bottom: 12px; }
+        .gate input {
+            width: 100%;
+            padding: 12px;
+            margin: 16px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        .gate .btn-primary { width: 100%; padding: 12px; font-weight: 600; }
+        .gate .error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
+
+        #dashboard { display: none; }
+
+        .admin-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 4px;
+            border: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .admin-tab {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .admin-tab:hover { background: var(--bg-primary); color: var(--text-primary); }
+        .admin-tab.active { background: var(--primary); color: white; }
+        .admin-tab .badge { background: var(--danger); color: white; font-size: 9px; padding: 2px 6px; border-radius: 999px; margin-left: 4px; }
+        .tab-panel { display: none; animation: fadeIn 0.3s ease; }
+        .tab-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .metric-card { background: var(--bg-secondary); border-radius: 12px; padding: 16px; border: 1px solid var(--border-color); text-align: center; }
+        .metric-card .value { font-size: 28px; font-weight: 700; color: var(--text-primary); }
+        .metric-card .label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; margin-top: 4px; }
+
+        .panel { background: var(--bg-secondary); border-radius: 16px; padding: 20px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        .panel h3 { margin-bottom: 16px; display: flex; align-items: center; gap: 8px; font-size: 16px; flex-wrap: wrap; }
+        .panel h3 .badge-count { background: var(--danger); color: white; font-size: 10px; padding: 1px 8px; border-radius: 999px; margin-left: 8px; }
+
+        .device-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color); }
+        .device-row:last-child { border-bottom: none; }
+        .device-bar-bg { flex: 1; height: 8px; background: var(--border-color); border-radius: 4px; margin: 0 12px; overflow: hidden; }
+        .device-bar-fill { height: 100%; background: var(--primary); border-radius: 4px; }
+
+        .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+        .filters select, .filters input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+        th { color: var(--text-secondary); text-transform: uppercase; font-size: 11px; font-weight: 600; }
+        .badge { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+        .badge-mobile { background: rgba(79,70,229,0.12); color: var(--primary); }
+        .badge-desktop { background: rgba(34,197,94,0.12); color: var(--success); }
+        .badge-tablet { background: rgba(245,158,11,0.12); color: var(--warning); }
+        .badge-unknown { background: rgba(100,116,139,0.12); color: var(--text-secondary); }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-danger { background: #fef2f2; color: #991b1b; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+
+        .ad-campaign-item, .promo-item {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+        .ad-campaign-item:hover, .promo-item:hover { box-shadow: var(--card-shadow); }
+        .ad-campaign-item .ad-title, .promo-item .promo-title { font-weight: 700; font-size: 15px; color: var(--text-primary); }
+        .ad-campaign-item .ad-body, .promo-item .promo-body { font-size: 13px; color: var(--text-secondary); margin: 4px 0 8px; }
+        .ad-campaign-item .ad-meta, .promo-item .promo-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .ad-campaign-item .ad-actions, .promo-item .promo-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+        .promo-color-preview { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: middle; margin-right: 4px; }
+
+        .sms-provider-fields .form-group { margin-bottom: 12px; }
+        .sms-provider-fields .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        .sms-provider-fields .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .user-search-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+        .user-search-row input { flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 14px; }
+        .user-status-badge { padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+        .user-status-badge.active { background: #dcfce7; color: #166534; }
+        .user-status-badge.suspended { background: #fef3c7; color: #92400e; }
+        .user-status-badge.blocked { background: #fef2f2; color: #991b1b; }
+        .user-status-badge.deleted { background: #f1f5f9; color: #64748b; }
+
+        .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; align-items: center; }
+        .empty-state { text-align: center; padding: 30px; color: var(--text-secondary); }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: var(--radius);
+            color: white;
+            font-weight: 500;
+            z-index: 99999;
+            animation: slideIn 0.3s ease;
+            max-width: 420px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        .toast-info { background: var(--info); }
+        .toast-warning { background: var(--warning); }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+        .health-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-primary); border-radius: 10px; border-left: 4px solid var(--border-color); }
+        .health-item .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .health-item .status-dot.ok { background: var(--success); }
+        .health-item .status-dot.error { background: var(--danger); }
+        .health-item .status-dot.warning { background: var(--warning); }
+        .health-item .health-name { font-weight: 600; font-size: 13px; color: var(--text-primary); }
+        .health-item .health-status { font-size: 12px; color: var(--text-secondary); }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: 24px;
+            max-width: 700px;
+            width: 100%;
+            padding: 32px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .modal-header h2 { color: var(--text-primary); }
+        .modal-close { border: 0; background: none; font-size: 24px; cursor: pointer; color: var(--text-secondary); }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        .form-group textarea { min-height: 80px; resize: vertical; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-group input[type="color"] { padding: 4px; height: 44px; cursor: pointer; }
+        .form-hint { color: var(--text-secondary); font-size: 11px; margin-top: 4px; }
+
+        /* Bonus Config Grid */
+        .bonus-config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 16px 0;
+        }
+        .bonus-config-item {
+            background: var(--bg-secondary);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        .bonus-config-item label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .bonus-config-item input[type="number"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .bonus-config-item .sub {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            display: inline-block;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--border-color);
+            transition: var(--transition);
+            border-radius: 24px;
+        }
+        .toggle-slider:before {
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            transition: var(--transition);
+            border-radius: 50%;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: var(--success); }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+        @media (max-width: 768px) {
+            .admin-nav { flex-direction: column; align-items: stretch; }
+            .admin-tabs { flex-direction: column; }
+            .admin-tab { text-align: center; }
+            .metric-grid { grid-template-columns: repeat(2, 1fr); }
+            .filters { flex-direction: column; }
+            .filters select, .filters input { width: 100%; }
+            table { font-size: 11px; }
+            th, td { padding: 6px 4px; white-space: normal; }
+            .user-search-row { flex-direction: column; }
+            .form-row { grid-template-columns: 1fr; }
+            .bonus-config-grid { grid-template-columns: 1fr; }
+            .modal-content { max-width: 100%; padding: 20px; }
+        }
+        @media (max-width: 480px) {
+            .metric-grid { grid-template-columns: 1fr; }
+            .health-grid { grid-template-columns: 1fr; }
+            .container { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="admin-nav">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
+            <a href="#" class="logo"><i class="fas fa-shield-halved"></i> Net365 Admin</a>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span id="adminEnvBadge" style="font-size:12px;color:var(--text-secondary);background:var(--bg-primary);padding:4px 12px;border-radius:999px;">sandbox</span>
+            <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
+            <button class="btn" onclick="refreshAll()" id="refreshBtn" style="display:none;"><i class="fas fa-sync"></i> Refresh</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Gate -->
+        <div class="gate" id="gate">
+            <i class="fas fa-lock"></i>
+            <h2>Admin Access</h2>
+            <p style="color:var(--text-secondary); font-size:14px; margin-top:6px;">Enter the admin secret to access the control panel.</p>
+            <input type="password" id="secretInput" placeholder="Admin secret" onkeydown="if(event.key==='Enter')unlock()" />
+            <button class="btn btn-primary" onclick="unlock()">Unlock</button>
+            <div class="error" id="gateError">Incorrect secret or access denied.</div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard">
+            <!-- Tabs -->
+            <div class="admin-tabs" id="adminTabs">
+                <button class="admin-tab active" data-tab="overview" onclick="switchTab('overview')">
+                    <i class="fas fa-chart-pie"></i> Overview
+                </button>
+                <button class="admin-tab" data-tab="referrals" onclick="switchTab('referrals')">
+                    <i class="fas fa-users"></i> Referrals <span class="badge" id="pendingReferralBadge">0</span>
+                </button>
+                <button class="admin-tab" data-tab="bonus" onclick="switchTab('bonus')">
+                    <i class="fas fa-gift"></i> Bonus/Commission
+                </button>
+                <button class="admin-tab" data-tab="ads" onclick="switchTab('ads')">
+                    <i class="fas fa-bullhorn"></i> Receipt Ads <span class="badge" id="pendingAdBadge">0</span>
+                </button>
+                <button class="admin-tab" data-tab="promotions" onclick="switchTab('promotions')">
+                    <i class="fas fa-megaphone"></i> Promotions <span class="badge" id="promoCount">0</span>
+                </button>
+                <button class="admin-tab" data-tab="brands" onclick="switchTab('brands')">
+                    <i class="fas fa-palette"></i> Brand Colors
+                </button>
+                <button class="admin-tab" data-tab="sms" onclick="switchTab('sms')">
+                    <i class="fas fa-sms"></i> SMS Provider
+                </button>
+                <button class="admin-tab" data-tab="users" onclick="switchTab('users')">
+                    <i class="fas fa-users"></i> Users
+                </button>
+                <button class="admin-tab" data-tab="health" onclick="switchTab('health')">
+                    <i class="fas fa-heartbeat"></i> System Health
+                </button>
+                <button class="admin-tab" data-tab="transactions" onclick="switchTab('transactions')">
+                    <i class="fas fa-exchange-alt"></i> Transactions
+                </button>
+                <button class="admin-tab" data-tab="promos" onclick="switchTab('promos')">
+                    <i class="fas fa-ticket"></i> Receipt Promos
+                </button>
+            </div>
+
+            <!-- TAB: OVERVIEW -->
+            <div class="tab-panel active" id="tab-overview">
+                <div class="metric-grid" id="summaryMetrics">
+                    <div class="metric-card"><div class="value" id="mTotalVisits">-</div><div class="label">Total Visits</div></div>
+                    <div class="metric-card"><div class="value" id="mUniqueIps">-</div><div class="label">Unique IPs</div></div>
+                    <div class="metric-card"><div class="value" id="mRegistered">-</div><div class="label">Registered Visitors</div></div>
+                    <div class="metric-card"><div class="value" id="mToday">-</div><div class="label">Today</div></div>
+                    <div class="metric-card"><div class="value" id="mTotalUsers">-</div><div class="label">Total Users</div></div>
+                    <div class="metric-card"><div class="value" id="mTotalTransactions">-</div><div class="label">Transactions</div></div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-mobile-screen-button"></i> Visits by Device</h3>
+                    <div id="deviceBreakdown"><div class="empty-state">No data yet</div></div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-calendar-days"></i> Visits (Last 30 Days)</h3>
+                    <div id="dailyTrend" style="display:flex;align-items:flex-end;gap:4px;height:120px;overflow-x:auto;"></div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-list"></i> Visitor Log</h3>
+                    <div class="filters">
+                        <select id="filterDevice" onchange="loadVisitors(0)">
+                            <option value="">All devices</option>
+                            <option value="Desktop">Desktop</option>
+                            <option value="Mobile">Mobile</option>
+                            <option value="Tablet">Tablet</option>
+                            <option value="Unknown">Unknown</option>
+                        </select>
+                        <input type="date" id="filterStart" onchange="loadVisitors(0)" />
+                        <input type="date" id="filterEnd" onchange="loadVisitors(0)" />
+                        <button class="btn btn-sm btn-primary" onclick="exportVisitorCSV()"><i class="fas fa-download"></i> Export</button>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Visited</th>
+                                    <th>Visitor</th>
+                                    <th>Path</th>
+                                    <th>Device</th>
+                                    <th>OS</th>
+                                    <th>Browser</th>
+                                    <th>IP</th>
+                                    <th>Referrer</th>
+                                </tr>
+                            </thead>
+                            <tbody id="visitorTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <button class="btn btn-sm" onclick="prevPage()" id="prevBtn">← Prev</button>
+                        <span id="pageLabel" style="align-self:center;color:var(--text-secondary);font-size:13px;"></span>
+                        <button class="btn btn-sm" onclick="nextPage()" id="nextBtn">Next →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: REFERRALS -->
+            <div class="tab-panel" id="tab-referrals">
+                <div class="panel">
+                    <h3><i class="fas fa-users"></i> Referral Management</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">Monitor all referrals, bonuses, and commissions across the platform.</p>
+
+                    <div class="filters">
+                        <select id="referralFilterStatus" onchange="loadReferrals()">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="expired">Expired</option>
+                        </select>
+                        <input type="date" id="referralFilterDate" onchange="loadReferrals()" />
+                        <button class="btn btn-primary btn-sm" onclick="loadReferrals()"><i class="fas fa-refresh"></i> Refresh</button>
+                        <button class="btn btn-success btn-sm" onclick="processPendingReferrals()"><i class="fas fa-play"></i> Process Pending</button>
+                        <button class="btn btn-warning btn-sm" onclick="exportReferralData()"><i class="fas fa-download"></i> Export</button>
+                    </div>
+
+                    <div class="metric-grid" style="grid-template-columns:repeat(4,1fr);">
+                        <div class="metric-card"><div class="value" id="rTotal">0</div><div class="label">Total Referrals</div></div>
+                        <div class="metric-card"><div class="value" id="rCompleted">0</div><div class="label">Completed</div></div>
+                        <div class="metric-card"><div class="value" id="rPending">0</div><div class="label">Pending</div></div>
+                        <div class="metric-card"><div class="value" id="rExpired">0</div><div class="label">Expired</div></div>
+                    </div>
+
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Referrer</th>
+                                    <th>Referred</th>
+                                    <th>Status</th>
+                                    <th>Bonus</th>
+                                    <th>Transaction</th>
+                                    <th>%</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="referralTableBody">
+                                <tr><td colspan="8"><div class="empty-state">Loading referrals...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <button class="btn btn-sm" onclick="prevReferralPage()" id="refPrevBtn">← Prev</button>
+                        <span id="refPageLabel" style="align-self:center;color:var(--text-secondary);font-size:13px;"></span>
+                        <button class="btn btn-sm" onclick="nextReferralPage()" id="refNextBtn">Next →</button>
+                    </div>
+                </div>
+
+                <!-- Referral Redemptions (from v1) -->
+                <div class="panel">
+                    <h3><i class="fas fa-user-friends"></i> Referral Redemptions</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">
+                        Look up how many times a specific user's referral code has been used, and what they've earned from it.
+                    </p>
+                    <div class="filters">
+                        <input type="number" id="referrerIdInput" placeholder="User ID" style="max-width:150px;" />
+                        <button class="btn btn-primary" onclick="loadReferralRedemptions()">Look up</button>
+                    </div>
+                    <div id="referralRedemptionsList"></div>
+                </div>
+            </div>
+
+            <!-- TAB: BONUS/COMMISSION -->
+            <div class="tab-panel" id="tab-bonus">
+                <div class="panel">
+                    <h3><i class="fas fa-gift"></i> Bonus & Commission Configuration</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">Configure referral bonuses, commissions, thresholds, and seasonal promotions.</p>
+
+                    <div class="metric-grid" style="grid-template-columns:repeat(4,1fr);">
+                        <div class="metric-card"><div class="value" id="bTotalBonuses">₦0</div><div class="label">Total Bonuses Paid</div></div>
+                        <div class="metric-card"><div class="value" id="bTotalReferrers">0</div><div class="label">Active Referrers</div></div>
+                        <div class="metric-card"><div class="value" id="bAvgBonus">₦0</div><div class="label">Average Bonus</div></div>
+                        <div class="metric-card"><div class="value" id="bThisMonth">₦0</div><div class="label">This Month</div></div>
+                    </div>
+
+                    <div style="background:var(--bg-primary);border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid var(--border-color);">
+                        <h4 style="font-size:14px;margin-bottom:12px;">⚙️ Bonus Settings</h4>
+                        <div class="bonus-config-grid">
+                            <div class="bonus-config-item">
+                                <label>Bonus Percentage</label>
+                                <input type="number" id="bonusPercentage" value="10" min="0" max="100" step="0.5" />
+                                <div class="sub">% of transaction amount</div>
+                            </div>
+                            <div class="bonus-config-item">
+                                <label>Minimum Bonus</label>
+                                <input type="number" id="minBonus" value="50" min="0" step="10" />
+                                <div class="sub">Minimum bonus amount (₦)</div>
+                            </div>
+                            <div class="bonus-config-item">
+                                <label>Maximum Bonus</label>
+                                <input type="number" id="maxBonus" value="5000" min="0" step="100" />
+                                <div class="sub">Maximum bonus amount (₦)</div>
+                            </div>
+                            <div class="bonus-config-item">
+                                <label>Bonus Status</label>
+                                <div style="display:flex;align-items:center;gap:12px;margin-top:8px;">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="bonusEnabled" checked />
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span id="bonusStatusText" style="font-weight:600;">Enabled</span>
+                                </div>
+                                <div class="sub">Enable/disable all referral bonuses</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveBonusConfig()" style="margin-top:12px;">
+                            <i class="fas fa-save"></i> Save Configuration
+                        </button>
+                        <div id="bonusConfigStatus" style="margin-top:12px;"></div>
+                    </div>
+
+                    <div style="background:var(--bg-primary);border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid var(--border-color);">
+                        <h4 style="font-size:14px;margin-bottom:12px;">🎉 Seasonal Promotion</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Promo Name</label>
+                                <input type="text" id="promoNameSeasonal" placeholder="e.g., Holiday Bonus" />
+                            </div>
+                            <div class="form-group">
+                                <label>Bonus Multiplier</label>
+                                <input type="number" id="promoMultiplier" value="1.5" min="1" max="3" step="0.1" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Start Date</label>
+                                <input type="datetime-local" id="promoStartDate" />
+                            </div>
+                            <div class="form-group">
+                                <label>End Date</label>
+                                <input type="datetime-local" id="promoEndDate" />
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button class="btn btn-success" onclick="saveSeasonalPromo()"><i class="fas fa-rocket"></i> Launch Promo</button>
+                            <button class="btn btn-danger" onclick="cancelSeasonalPromo()"><i class="fas fa-stop"></i> Cancel Promo</button>
+                            <button class="btn btn-secondary" onclick="loadSeasonalPromo()"><i class="fas fa-refresh"></i> Load Current</button>
+                        </div>
+                        <div id="seasonalPromoStatus" style="margin-top:12px;"></div>
+                    </div>
+
+                    <h4 style="font-size:14px;margin:16px 0;">📊 Bonus History</h4>
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Referrer</th>
+                                    <th>Referred</th>
+                                    <th>Amount</th>
+                                    <th>%</th>
+                                    <th>Transaction</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bonusHistoryTable">
+                                <tr><td colspan="7"><div class="empty-state">Loading bonus history...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: RECEIPT ADS -->
+            <div class="tab-panel" id="tab-ads">
+                <div class="panel">
+                    <h3><i class="fas fa-clock"></i> Pending Review <span class="badge-count" id="pendingAdCount">0</span></h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">Review and moderate pending ad campaigns submitted by advertisers.</p>
+                    <div id="pendingAdsContainer">
+                        <div class="empty-state">Loading pending campaigns...</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-history"></i> Recent Approved / Rejected / Completed</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">View all previously moderated campaigns.</p>
+                    <div id="moderatedAdsContainer">
+                        <div class="empty-state">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: PROMOTIONS (Enhanced) -->
+            <div class="tab-panel" id="tab-promotions">
+                <div class="panel">
+                    <h3><i class="fas fa-megaphone"></i> Promotion Engine</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                        Create and manage promotions that appear on receipts. Supports percentage discounts, fixed amounts, service targeting, and referral bonuses.
+                    </p>
+                    <button class="btn btn-primary" onclick="showCreatePromoModal()">
+                        <i class="fas fa-plus"></i> Create Promotion
+                    </button>
+                    <div style="margin-top:16px;" id="promotionsList">
+                        <div class="empty-state">Loading promotions...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: BRAND COLORS -->
+            <div class="tab-panel" id="tab-brands">
+                <div class="panel">
+                    <h3><i class="fas fa-palette"></i> Brand Color Management</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                        Configure brand colors for advertisers. These colors appear on receipts when customers transact with specific providers.
+                    </p>
+                    <button class="btn btn-primary" onclick="showCreateBrandModal()">
+                        <i class="fas fa-plus"></i> Add Brand
+                    </button>
+                    <div style="margin-top:16px;" id="brandsList">
+                        <div class="empty-state">Loading brands...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: SMS PROVIDER -->
+            <div class="tab-panel" id="tab-sms">
+                <div class="panel">
+                    <h3><i class="fas fa-sms"></i> SMS Provider Configuration</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">Configure your SMS provider for sending bulk SMS campaigns.</p>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Provider</label>
+                            <select id="smsProviderSelect" onchange="toggleSmsProviderFields()" style="width:100%;padding:10px 14px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:14px;">
+                                <option value="none">None (Disabled)</option>
+                                <option value="termii">Termii</option>
+                                <option value="twilio">Twilio</option>
+                                <option value="africastalking">Africa's Talking</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">Default Sender ID</label>
+                            <input type="text" id="smsSenderId" placeholder="Net365" maxlength="11" style="width:100%;padding:10px 14px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:14px;" />
+                        </div>
+                    </div>
+
+                    <div id="smsProviderFields">
+                        <div class="sms-provider-fields" data-provider="termii">
+                            <div class="form-group"><label>Termii API Key *</label><input type="password" id="termiiApiKey" placeholder="Enter Termii API Key" /></div>
+                            <div class="form-group"><label>Termii Sender ID</label><input type="text" id="termiiSenderId" placeholder="YourBrand" maxlength="11" /><small style="color:var(--text-secondary);font-size:11px;">Optional - defaults to Sender ID above</small></div>
+                        </div>
+                        <div class="sms-provider-fields" data-provider="twilio" style="display:none;">
+                            <div class="form-group"><label>Twilio Account SID *</label><input type="password" id="twilioSid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" /></div>
+                            <div class="form-group"><label>Twilio Auth Token *</label><input type="password" id="twilioToken" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" /></div>
+                            <div class="form-group"><label>Twilio From Number *</label><input type="text" id="twilioFrom" placeholder="+1234567890" /></div>
+                        </div>
+                        <div class="sms-provider-fields" data-provider="africastalking" style="display:none;">
+                            <div class="form-group"><label>Africa's Talking API Key *</label><input type="password" id="atApiKey" placeholder="Enter API Key" /></div>
+                            <div class="form-group"><label>Africa's Talking Username</label><input type="text" id="atUsername" placeholder="sandbox" /></div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="saveSmsConfig()"><i class="fas fa-save"></i> Save Configuration</button>
+                        <button class="btn btn-success" onclick="testSmsConfig()"><i class="fas fa-paper-plane"></i> Test SMS</button>
+                        <button class="btn btn-outline" onclick="loadSmsConfig()"><i class="fas fa-refresh"></i> Load Current</button>
+                        <button class="btn btn-danger" onclick="clearSmsConfig()"><i class="fas fa-trash"></i> Clear Configuration</button>
+                    </div>
+                    <div id="smsConfigStatus" style="margin-top:16px;"></div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-history"></i> SMS Campaign History</h3>
+                    <div id="smsCampaignHistory">
+                        <div class="empty-state">Loading campaigns...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: USERS -->
+            <div class="tab-panel" id="tab-users">
+                <div class="panel">
+                    <h3><i class="fas fa-users"></i> User Management</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">Search, suspend, block, or manage user accounts.</p>
+
+                    <div class="user-search-row">
+                        <input type="text" id="userSearchInput" placeholder="Search by email, phone, or name..." onkeyup="if(event.key==='Enter')searchUsers()" />
+                        <button class="btn btn-primary" onclick="searchUsers()"><i class="fas fa-search"></i> Search</button>
+                        <button class="btn btn-success" onclick="showCreateUserModal()"><i class="fas fa-user-plus"></i> Create User</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('userSearchInput').value='';searchUsers();">Clear</button>
+                    </div>
+                    <div id="userSearchResults">
+                        <div class="empty-state">Search for users to manage their accounts.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: SYSTEM HEALTH -->
+            <div class="tab-panel" id="tab-health">
+                <div class="panel">
+                    <h3><i class="fas fa-heartbeat"></i> System Health Dashboard</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">Real-time status of all system dependencies.</p>
+
+                    <div class="health-grid" id="healthGrid">
+                        <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">Database</div><div class="health-status">Checking...</div></div></div>
+                        <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">Reloadly API</div><div class="health-status">Checking...</div></div></div>
+                        <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">Paystack</div><div class="health-status">Checking...</div></div></div>
+                        <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">Stripe</div><div class="health-status">Checking...</div></div></div>
+                        <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">Flutterwave</div><div class="health-status">Checking...</div></div></div>
+                        <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">Encryption</div><div class="health-status">Checking...</div></div></div>
+                        <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">Exchange Rates</div><div class="health-status">Checking...</div></div></div>
+                        <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">SMS Provider</div><div class="health-status">Checking...</div></div></div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-clock"></i> System Info</h3>
+                    <div id="systemInfo">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div><strong>Version:</strong> <span id="sysVersion">-</span></div>
+                            <div><strong>Environment:</strong> <span id="sysEnv">-</span></div>
+                            <div><strong>Uptime:</strong> <span id="sysUptime">-</span></div>
+                            <div><strong>Last Exchange Rate Update:</strong> <span id="sysExchangeRate">-</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: TRANSACTIONS -->
+            <div class="tab-panel" id="tab-transactions">
+                <div class="panel">
+                    <h3><i class="fas fa-exchange-alt"></i> Transaction Monitoring</h3>
+                    <div class="filters">
+                        <select id="txFilterStatus" onchange="loadAdminTransactions()">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="paid">Paid</option>
+                            <option value="fulfilled">Fulfilled</option>
+                            <option value="failed">Failed</option>
+                            <option value="fulfillment_failed">Fulfillment Failed</option>
+                        </select>
+                        <select id="txFilterType" onchange="loadAdminTransactions()">
+                            <option value="">All Types</option>
+                            <option value="topup">Top-up</option>
+                            <option value="utility">Utility</option>
+                            <option value="wallet_funding">Wallet Funding</option>
+                        </select>
+                        <input type="date" id="txFilterDate" onchange="loadAdminTransactions()" />
+                        <button class="btn btn-primary btn-sm" onclick="loadAdminTransactions()"><i class="fas fa-refresh"></i> Refresh</button>
+                        <button class="btn btn-success btn-sm" onclick="exportTransactionsCSV()"><i class="fas fa-download"></i> Export CSV</button>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Reference</th>
+                                    <th>User</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Provider</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTxTableBody">
+                                <tr><td colspan="8"><div class="empty-state">Loading transactions...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <button class="btn btn-sm" onclick="prevTxPage()" id="txPrevBtn">← Prev</button>
+                        <span id="txPageLabel" style="align-self:center;color:var(--text-secondary);font-size:13px;"></span>
+                        <button class="btn btn-sm" onclick="nextTxPage()" id="txNextBtn">Next →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: RECEIPT PROMOS -->
+            <div class="tab-panel" id="tab-promos">
+                <div class="panel">
+                    <h3><i class="fas fa-ticket"></i> Receipt Promos (House Content)</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">Manage the free promotional content shown on receipts (fallback when no sponsored ads are available).</p>
+                    <button class="btn btn-primary" onclick="showAddPromoModal()"><i class="fas fa-plus"></i> Add Promo</button>
+                    <div style="margin-top:16px;" id="promoListContainer">
+                        <div class="empty-state">Loading promos...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MODALS ========== -->
+
+    <!-- CREATE USER MODAL -->
+    <div class="modal-overlay" id="createUserModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create User Account</h2>
+                <button class="modal-close" onclick="closeModal('createUserModal')">✕</button>
+            </div>
+            <form id="createUserForm" onsubmit="createUser(event)">
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="newUserFullName" required />
+                </div>
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="newUserEmail" required />
+                </div>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="tel" id="newUserPhone" />
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="password" id="newUserPassword" minlength="8" required />
+                    <small style="color:var(--text-secondary);font-size:11px;">Minimum 8 characters</small>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">Create Account</button>
+                <div id="createUserStatus" style="margin-top:12px;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ADD RECEIPT PROMO MODAL -->
+    <div class="modal-overlay" id="addPromoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="promoModalTitle">Add Receipt Promo</h2>
+                <button class="modal-close" onclick="closeModal('addPromoModal')">✕</button>
+            </div>
+            <form id="addPromoForm" onsubmit="savePromo(event)">
+                <input type="hidden" id="editPromoId" value="" />
+                <div class="form-group">
+                    <label>Slot Index *</label>
+                    <input type="number" id="promoSlotIndex" min="0" required placeholder="1, 2, 3..." />
+                    <small style="color:var(--text-secondary);font-size:11px;">Receipts cycle through slots in order (1, 2, 3, 4...)</small>
+                </div>
+                <div class="form-group">
+                    <label>Title *</label>
+                    <input type="text" id="promoTitle" required maxlength="80" placeholder="e.g. Welcome to Net365!" />
+                </div>
+                <div class="form-group">
+                    <label>Body *</label>
+                    <textarea id="promoBody" required maxlength="400" placeholder="Describe your promo message..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>CTA Text</label>
+                        <input type="text" id="promoCtaText" placeholder="e.g. Learn more" />
+                    </div>
+                    <div class="form-group">
+                        <label>CTA URL</label>
+                        <input type="text" id="promoCtaUrl" placeholder="e.g. /business" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="promoActive" checked /> Active
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">Save Promo</button>
+                <div id="promoStatus" style="margin-top:12px;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========== CREATE/EDIT PROMOTION MODAL (Enhanced) ========== -->
+    <div class="modal-overlay" id="promoModal">
+        <div class="modal-content" style="max-width:700px;">
+            <div class="modal-header">
+                <h2 id="promoModalTitle">Create Promotion</h2>
+                <button class="modal-close" onclick="closeModal('promoModal')">✕</button>
+            </div>
+            <form id="promoForm" onsubmit="savePromotion(event)">
+                <input type="hidden" id="editPromoId" value="" />
+
+                <div class="form-group">
+                    <label>Promotion Name *</label>
+                    <input type="text" id="promoName" required placeholder="e.g., Buy Data Bonus" />
+                </div>
+
+                <div class="form-group">
+                    <label>Icon</label>
+                    <input type="text" id="promoIcon" placeholder="🎁" maxlength="2" />
+                </div>
+
+                <div class="form-group">
+                    <label>Title *</label>
+                    <input type="text" id="promoTitle" required maxlength="80" placeholder="e.g., Get 10% Extra Data" />
+                </div>
+
+                <div class="form-group">
+                    <label>Body *</label>
+                    <textarea id="promoBody" required maxlength="400" placeholder="Describe your promotion..."></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>CTA Text</label>
+                        <input type="text" id="promoCtaText" placeholder="e.g., Claim Now" />
+                    </div>
+                    <div class="form-group">
+                        <label>CTA URL</label>
+                        <input type="text" id="promoCtaUrl" placeholder="e.g., https://net365.app/promo" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Brand Color</label>
+                        <input type="color" id="promoBrandColor" value="#4f46e5" />
+                    </div>
+                    <div class="form-group">
+                        <label>Background Color</label>
+                        <input type="color" id="promoBgColor" value="#f5f3ff" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="promoCategory">
+                            <option value="general">General</option>
+                            <option value="airtime">Airtime</option>
+                            <option value="data">Data</option>
+                            <option value="utility">Utility</option>
+                            <option value="referral">Referral</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="subscription">Subscription</option>
+                            <option value="giftcard">Gift Card</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority (higher = more important)</label>
+                        <input type="number" id="promoPriority" value="0" min="0" max="100" />
+                    </div>
+                </div>
+
+                <!-- DISCOUNT CONFIGURATION -->
+                <h4 style="font-size:13px;color:var(--text-primary);margin:16px 0 8px;">💰 Discount Configuration</h4>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Discount Type</label>
+                        <select id="promoDiscountType" onchange="toggleDiscountFields()">
+                            <option value="fixed">Fixed Amount (₦)</option>
+                            <option value="percentage">Percentage (%)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Discount Value *</label>
+                        <input type="number" id="promoDiscountValue" placeholder="e.g., 10" min="0" step="0.01" required />
+                        <span class="form-hint" id="discountValueHint">Amount in NGN</span>
+                    </div>
+                </div>
+
+                <div class="form-row" id="maxDiscountRow" style="display:none;">
+                    <div class="form-group">
+                        <label>Max Discount (for percentage)</label>
+                        <input type="number" id="promoMaxDiscount" placeholder="e.g., 500" min="0" step="0.01" />
+                        <span class="form-hint">Maximum discount amount when using percentage</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Minimum Purchase (₦)</label>
+                        <input type="number" id="promoMinPurchase" placeholder="e.g., 1000" min="0" step="0.01" />
+                        <span class="form-hint">Minimum amount to qualify</span>
+                    </div>
+                </div>
+
+                <!-- SERVICE TARGETING -->
+                <h4 style="font-size:13px;color:var(--text-primary);margin:16px 0 8px;">🎯 Service Targeting</h4>
+
+                <div class="form-group">
+                    <label>Service Types</label>
+                    <select id="promoServiceTypes" multiple style="height:100px;">
+                        <option value="airtime">Airtime Top-up</option>
+                        <option value="utility">Utility Bills</option>
+                        <option value="scheduler">Scheduled Payments</option>
+                        <option value="topup">Wallet Top-up</option>
+                        <option value="wallet_funding">Wallet Funding</option>
+                        <option value="all">All Services</option>
+                    </select>
+                    <span class="form-hint">Hold Ctrl/Cmd to select multiple. Leave empty for "all services".</span>
+                </div>
+
+                <!-- USER TARGETING -->
+                <h4 style="font-size:13px;color:var(--text-primary);margin:16px 0 8px;">👤 User Targeting (Optional)</h4>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Transaction Type</label>
+                        <select id="promoTargetTxType">
+                            <option value="">Any</option>
+                            <option value="airtime">Airtime</option>
+                            <option value="data">Data</option>
+                            <option value="utility">Utility</option>
+                            <option value="topup">Top-up</option>
+                            <option value="giftcard">Gift Card</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Customer Type</label>
+                        <select id="promoTargetCustomer">
+                            <option value="">New or Returning</option>
+                            <option value="new">New Customers Only</option>
+                            <option value="returning">Returning Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Min Amount (₦)</label>
+                        <input type="number" id="promoTargetMin" placeholder="e.g., 1000" min="0" />
+                    </div>
+                    <div class="form-group">
+                        <label>Max Amount (₦)</label>
+                        <input type="number" id="promoTargetMax" placeholder="e.g., 50000" min="0" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Start Hour (0-23)</label>
+                        <input type="number" id="promoTargetHourStart" placeholder="e.g., 8" min="0" max="23" />
+                    </div>
+                    <div class="form-group">
+                        <label>End Hour (0-23)</label>
+                        <input type="number" id="promoTargetHourEnd" placeholder="e.g., 20" min="0" max="23" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Days of Week (0=Sun, 1=Mon, etc.)</label>
+                    <input type="text" id="promoTargetDays" placeholder="e.g., 0,1,2,3,4,5,6" />
+                    <span class="form-hint">Comma-separated: 0=Sun, 1=Mon, 2=Tue, etc.</span>
+                </div>
+
+                <!-- COUPON CODE -->
+                <h4 style="font-size:13px;color:var(--text-primary);margin:16px 0 8px;">🔑 Coupon Code (Optional)</h4>
+
+                <div class="form-group">
+                    <label>Coupon Code</label>
+                    <input type="text" id="promoCouponCode" placeholder="e.g., SAVE10" maxlength="20" />
+                    <span class="form-hint">If set, users must enter this code to activate the promotion</span>
+                </div>
+
+                <!-- REFERRAL CONFIGURATION -->
+                <h4 style="font-size:13px;color:var(--text-primary);margin:16px 0 8px;">👥 Referral Configuration</h4>
+
+                <div class="form-group">
+                    <label>Is Referral Promotion?</label>
+                    <select id="promoIsReferral" onchange="toggleReferralFields()">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                    <span class="form-hint">Referral promotions give bonuses to both referrer and referred user</span>
+                </div>
+
+                <div id="referralFields" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Referrer Bonus Type</label>
+                            <select id="promoReferrerBonusType">
+                                <option value="fixed">Fixed Amount</option>
+                                <option value="percentage">Percentage</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Referrer Bonus Value *</label>
+                            <input type="number" id="promoReferrerBonusValue" placeholder="e.g., 50" min="0" step="0.01" />
+                            <span class="form-hint">Amount or percentage</span>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Referred Bonus Type</label>
+                            <select id="promoReferredBonusType">
+                                <option value="fixed">Fixed Amount</option>
+                                <option value="percentage">Percentage</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Referred Bonus Value *</label>
+                            <input type="number" id="promoReferredBonusValue" placeholder="e.g., 25" min="0" step="0.01" />
+                            <span class="form-hint">Amount or percentage</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIMITS -->
+                <h4 style="font-size:13px;color:var(--text-primary);margin:16px 0 8px;">📊 Limits</h4>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Max Impressions</label>
+                        <input type="number" id="promoMaxImpressions" placeholder="e.g., 10000" min="0" />
+                    </div>
+                    <div class="form-group">
+                        <label>Max Clicks</label>
+                        <input type="number" id="promoMaxClicks" placeholder="e.g., 1000" min="0" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Usage Limit Per User</label>
+                    <input type="number" id="promoUsageLimit" placeholder="e.g., 3" min="0" />
+                    <span class="form-hint">Leave empty for unlimited</span>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="datetime-local" id="promoStartDate" />
+                    </div>
+                    <div class="form-group">
+                        <label>End Date</label>
+                        <input type="datetime-local" id="promoEndDate" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="promoActive" checked /> Active
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">
+                    <i class="fas fa-save"></i> Save Promotion
+                </button>
+                <div id="promoStatus" style="margin-top:12px;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- BRAND MODAL -->
+    <div class="modal-overlay" id="brandModal">
+        <div class="modal-content" style="max-width:550px;">
+            <div class="modal-header">
+                <h2 id="brandModalTitle">Add Brand</h2>
+                <button class="modal-close" onclick="closeModal('brandModal')">✕</button>
+            </div>
+            <form id="brandForm" onsubmit="saveBrand(event)">
+                <input type="hidden" id="editBrandId" value="" />
+
+                <div class="form-group">
+                    <label>Brand ID *</label>
+                    <input type="text" id="brandAdvertiserId" required placeholder="e.g., mtn, glo, airtel" />
+                    <small style="color:var(--text-secondary);font-size:11px;">Must match the provider name in transactions</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Brand Name *</label>
+                    <input type="text" id="brandName" required placeholder="e.g., MTN Nigeria" />
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Primary Color *</label>
+                        <input type="color" id="brandPrimaryColor" value="#4f46e5" />
+                    </div>
+                    <div class="form-group">
+                        <label>Secondary Color</label>
+                        <input type="color" id="brandSecondaryColor" value="#7c3aed" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Accent Color</label>
+                        <input type="color" id="brandAccentColor" value="#06b6d4" />
+                    </div>
+                    <div class="form-group">
+                        <label>Text Color</label>
+                        <input type="color" id="brandTextColor" value="#ffffff" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Background Color</label>
+                    <input type="color" id="brandBgColor" value="#f8fafc" />
+                </div>
+
+                <div class="form-group">
+                    <label>Logo URL</label>
+                    <input type="text" id="brandLogoUrl" placeholder="https://example.com/logo.png" />
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">
+                    <i class="fas fa-save"></i> Save Brand
+                </button>
+                <div id="brandStatus" style="margin-top:12px;"></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script>
+        // ============================================
+        // STATE
+        // ============================================
+        let adminSecret = '';
+        let currentOffset = 0;
+        const pageSize = 50;
+        let lastPageCount = 0;
+        let currentTxOffset = 0;
+        const txPageSize = 20;
+        let lastTxCount = 0;
+        let allTransactions = [];
+        let currentTab = 'overview';
+        let referralOffset = 0;
+        const referralPageSize = 20;
+        let referralTotal = 0;
+
+        // ============================================
+        // THEME
+        // ============================================
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            document.querySelector('.theme-toggle i').className = document.body.classList.contains('dark-mode') ? 'fas fa-sun' : 'fas fa-moon';
+        }
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+        }
+
+        // ============================================
+        // TOAST
+        // ============================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ============================================
+        // MODAL HELPERS
+        // ============================================
+        function openModal(id) {
+            document.getElementById(id).classList.add('show');
+            document.getElementById(id).style.display = 'flex';
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // ============================================
+        // ADMIN FETCH
+        // ============================================
+        async function adminFetch(path, options = {}) {
+            // Sends the admin secret as a header, not a URL query param — query
+            // strings end up in server access logs, proxy/CDN logs, and browser
+            // history, all of which is unnecessary exposure for a credential. The
+            // backend's admin_required already checks the X-Admin-Secret header
+            // first (see app.py), so this is a pure client-side fix.
+            const opts = {
+                ...options,
+                credentials: 'include',
+                headers: {
+                    ...(options.headers || {}),
+                    'X-Admin-Secret': adminSecret,
+                },
+            };
+            const res = await fetch(path, opts);
+            if (res.status === 401) throw new Error('unauthorized');
+            return res.json();
+        }
+
+        // ============================================
+        // UNLOCK
+        // ============================================
+        async function unlock() {
+            const input = document.getElementById('secretInput');
+            adminSecret = input.value.trim();
+            document.getElementById('gateError').style.display = 'none';
+            try {
+                await adminFetch('/api/admin/visitors/stats');
+                sessionStorage.setItem('net365_admin_secret', adminSecret);
+                document.getElementById('gate').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                document.getElementById('refreshBtn').style.display = 'inline-block';
+                document.getElementById('adminEnvBadge').textContent = 'sandbox';
+                refreshAll();
+            } catch (e) {
+                document.getElementById('gateError').style.display = 'block';
+                document.getElementById('gateError').textContent = 'Incorrect secret or access denied.';
+            }
+        }
+
+        // ============================================
+        // TABS
+        // ============================================
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+            const panel = document.getElementById(`tab-${tab}`);
+            if (panel) panel.classList.add('active');
+            document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('active'));
+            const tabBtn = document.querySelector(`.admin-tab[data-tab="${tab}"]`);
+            if (tabBtn) tabBtn.classList.add('active');
+
+            if (tab === 'referrals') { loadReferrals(); }
+            if (tab === 'bonus') { loadBonusConfig(); loadBonusHistory(); loadSeasonalPromo(); }
+            if (tab === 'ads') { loadPendingAds(); loadModeratedAds(); }
+            if (tab === 'promotions') loadPromotions();
+            if (tab === 'brands') loadBrands();
+            if (tab === 'sms') loadSmsConfig();
+            if (tab === 'users') searchUsers();
+            if (tab === 'health') loadSystemHealth();
+            if (tab === 'transactions') loadAdminTransactions();
+            if (tab === 'promos') loadPromos();
+        }
+
+        // ============================================
+        // REFRESH ALL
+        // ============================================
+        function refreshAll() {
+            loadStats();
+            loadVisitors(0);
+            loadReferrals();
+            loadBonusConfig();
+            loadBonusHistory();
+            loadSeasonalPromo();
+            loadPendingAds();
+            loadModeratedAds();
+            loadPromotions();
+            loadBrands();
+            loadSmsConfig();
+            loadSystemHealth();
+            loadAdminTransactions();
+            loadPromos();
+            showToast('Admin panel refreshed!', 'success');
+        }
+
+        // ============================================
+        // OVERVIEW - STATS
+        // ============================================
+        async function loadStats() {
+            try {
+                const data = await adminFetch('/api/admin/visitors/stats');
+                if (!data.success) return;
+                const s = data.stats;
+                document.getElementById('mTotalVisits').textContent = (s.total_visits || 0).toLocaleString();
+                document.getElementById('mUniqueIps').textContent = (s.unique_ips || 0).toLocaleString();
+                document.getElementById('mRegistered').textContent = (s.registered_visitors || 0).toLocaleString();
+                const today = (s.by_day || []).find(d => d.day === new Date().toISOString().slice(0, 10));
+                document.getElementById('mToday').textContent = today ? today.count.toLocaleString() : '0';
+
+                const usersRes = await fetch('/api/admin/users?q=', { headers: { 'X-Admin-Secret': adminSecret } });
+                const usersData = await usersRes.json();
+                if (usersData.success) {
+                    document.getElementById('mTotalUsers').textContent = (usersData.total || 0).toLocaleString();
+                }
+
+                const txRes = await fetch('/api/admin/transactions?limit=1', { headers: { 'X-Admin-Secret': adminSecret } });
+                const txData = await txRes.json();
+                if (txData.success) {
+                    document.getElementById('mTotalTransactions').textContent = (txData.total || 0).toLocaleString();
+                }
+
+                renderDeviceBreakdown(s.by_device || [], s.total_visits || 0);
+                renderDailyTrend(s.by_day || []);
+            } catch (e) {
+                if (e.message === 'unauthorized') showGateAgain();
+            }
+        }
+
+        function renderDeviceBreakdown(byDevice, total) {
+            const el = document.getElementById('deviceBreakdown');
+            if (!byDevice.length) { el.innerHTML = '<div class="empty-state">No data yet</div>'; return; }
+            const icons = { Desktop: 'fa-desktop', Mobile: 'fa-mobile-screen-button', Tablet: 'fa-tablet-screen-button', Unknown: 'fa-question' };
+            el.innerHTML = byDevice.map(d => {
+                const pct = total ? Math.round((d.count / total) * 100) : 0;
+                const icon = icons[d.device_type] || 'fa-question';
+                return `<div class="device-row">
+                    <span style="width:110px;"><i class="fas ${icon}"></i> ${d.device_type || 'Unknown'}</span>
+                    <div class="device-bar-bg"><div class="device-bar-fill" style="width:${pct}%;"></div></div>
+                    <span style="width:70px;text-align:right;">${d.count.toLocaleString()} (${pct}%)</span>
+                </div>`;
+            }).join('');
+        }
+
+        function renderDailyTrend(byDay) {
+            const el = document.getElementById('dailyTrend');
+            if (!byDay.length) { el.innerHTML = '<div class="empty-state">No data yet</div>'; return; }
+            const sorted = [...byDay].sort((a, b) => a.day.localeCompare(b.day));
+            const max = Math.max(...sorted.map(d => d.count), 1);
+            el.innerHTML = sorted.map(d => `
+                <div style="flex:0 0 auto;width:20px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;" title="${d.day}: ${d.count}">
+                    <div style="width:14px;background:var(--primary);border-radius:3px 3px 0 0;height:${Math.max((d.count / max) * 90, 3)}px;"></div>
+                </div>
+            `).join('');
+        }
+
+        // ============================================
+        // OVERVIEW - VISITORS
+        // ============================================
+        async function loadVisitors(offset) {
+            currentOffset = Math.max(offset, 0);
+            try {
+                const device = document.getElementById('filterDevice').value;
+                const start = document.getElementById('filterStart').value;
+                const end = document.getElementById('filterEnd').value;
+                let path = `/api/admin/visitors?limit=${pageSize}&offset=${currentOffset}`;
+                if (device) path += `&device_type=${encodeURIComponent(device)}`;
+                if (start) path += `&start_date=${encodeURIComponent(start)}`;
+                if (end) path += `&end_date=${encodeURIComponent(end)}T23:59:59`;
+
+                const data = await adminFetch(path);
+                if (!data.success) return;
+                lastPageCount = data.count || 0;
+                renderVisitorTable(data.visitors || []);
+                document.getElementById('pageLabel').textContent = `Showing ${currentOffset + 1}–${currentOffset + lastPageCount}`;
+                document.getElementById('prevBtn').disabled = currentOffset === 0;
+                document.getElementById('nextBtn').disabled = lastPageCount < pageSize;
+            } catch (e) {
+                if (e.message === 'unauthorized') showGateAgain();
+            }
+        }
+
+        function renderVisitorTable(visitors) {
+            const tbody = document.getElementById('visitorTableBody');
+            if (!visitors.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No visits recorded for this filter</td></tr>';
+                return;
+            }
+            const badgeClass = { Desktop: 'badge-desktop', Mobile: 'badge-mobile', Tablet: 'badge-tablet' };
+            tbody.innerHTML = visitors.map(v => `
+                <tr>
+                    <td>${formatDate(v.visited_at)}</td>
+                    <td>${v.visitor_name ? escapeHtml(v.visitor_name) : '<span style="color:var(--text-secondary)">Guest</span>'}</td>
+                    <td>${escapeHtml(v.path || '')}</td>
+                    <td><span class="badge ${badgeClass[v.device_type] || 'badge-unknown'}">${v.device_type || 'Unknown'}</span></td>
+                    <td>${escapeHtml(v.os_name || v.os || '')}</td>
+                    <td>${escapeHtml(v.browser || '')}</td>
+                    <td style="color:var(--text-secondary);">${escapeHtml(v.ip_address || '')}</td>
+                    <td style="color:var(--text-secondary);max-width:180px;overflow:hidden;text-overflow:ellipsis;">${v.referrer ? escapeHtml(v.referrer) : '—'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function prevPage() { if (currentOffset > 0) loadVisitors(currentOffset - pageSize); }
+        function nextPage() { if (lastPageCount >= pageSize) loadVisitors(currentOffset + pageSize); }
+
+        function formatDate(iso) {
+            if (!iso) return '—';
+            try {
+                return new Intl.DateTimeFormat('en-GB', {
+                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos'
+                }).format(new Date(iso + (iso.endsWith('Z') ? '' : 'Z')));
+            } catch (e) { return iso; }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function showGateAgain() {
+            sessionStorage.removeItem('net365_admin_secret');
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('refreshBtn').style.display = 'none';
+            document.getElementById('gate').style.display = 'block';
+            document.getElementById('gateError').textContent = 'Session expired or access denied. Enter the secret again.';
+            document.getElementById('gateError').style.display = 'block';
+        }
+
+        // ============================================
+        // EXPORT VISITOR CSV
+        // ============================================
+        function exportVisitorCSV() {
+            showToast('Exporting visitor data...', 'info');
+        }
+
+        // ============================================
+        // REFERRALS MANAGEMENT
+        // ============================================
+        async function loadReferrals() {
+            const tbody = document.getElementById('referralTableBody');
+            tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">Loading referrals...</div></td></tr>';
+
+            try {
+                const status = document.getElementById('referralFilterStatus').value;
+                const date = document.getElementById('referralFilterDate').value;
+
+                let url = `/api/admin/referrals/all?limit=${referralPageSize}&offset=${referralOffset}`;
+                if (status) url += `&status=${encodeURIComponent(status)}`;
+                if (date) url += `&date=${encodeURIComponent(date)}`;
+
+                const data = await adminFetch(url);
+                if (!data.success) {
+                    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">Failed to load referrals</div></td></tr>';
+                    return;
+                }
+
+                const referrals = data.referrals || [];
+                referralTotal = data.total || referrals.length;
+
+                document.getElementById('rTotal').textContent = referralTotal;
+                document.getElementById('rCompleted').textContent = data.completed || 0;
+                document.getElementById('rPending').textContent = data.pending || 0;
+                document.getElementById('rExpired').textContent = data.expired || 0;
+                document.getElementById('pendingReferralBadge').textContent = data.pending || 0;
+
+                if (referrals.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No referrals found</div></td></tr>';
+                    document.getElementById('refPrevBtn').disabled = true;
+                    document.getElementById('refNextBtn').disabled = true;
+                    return;
+                }
+
+                tbody.innerHTML = referrals.map(ref => {
+                    const statusBadge = {
+                        'pending': 'badge-warning',
+                        'completed': 'badge-success',
+                        'expired': 'badge-danger'
+                    }[ref.status] || 'badge-info';
+
+                    return `
+                        <tr>
+                            <td>${formatDate(ref.created_at)}</td>
+                            <td>${escapeHtml(ref.referrer_name || 'User #' + ref.referrer_id)}</td>
+                            <td>${escapeHtml(ref.referred_name || 'User #' + ref.referred_id)}</td>
+                            <td><span class="badge ${statusBadge}">${ref.status}</span></td>
+                            <td>${ref.reward_currency || 'NGN'} ${Number(ref.reward_amount || 0).toFixed(2)}</td>
+                            <td>${ref.reward_currency || 'NGN'} ${Number(ref.transaction_amount || 0).toFixed(2)}</td>
+                            <td>${ref.bonus_percentage || '0'}%</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="viewReferralDetail(${ref.id})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                ${ref.status === 'pending' ? 
+                                    `<button class="btn btn-sm btn-success" onclick="completeReferral(${ref.id})">
+                                        <i class="fas fa-check"></i>
+                                    </button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('refPageLabel').textContent = 
+                    `Showing ${referralOffset + 1}–${referralOffset + referrals.length} of ${referralTotal}`;
+                document.getElementById('refPrevBtn').disabled = referralOffset === 0;
+                document.getElementById('refNextBtn').disabled = referrals.length < referralPageSize;
+
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">${e.message}</div></td></tr>`;
+                console.error(e);
+            }
+        }
+
+        function prevReferralPage() {
+            if (referralOffset > 0) {
+                referralOffset -= referralPageSize;
+                loadReferrals();
+            }
+        }
+
+        function nextReferralPage() {
+            if (referralTotal > referralOffset + referralPageSize) {
+                referralOffset += referralPageSize;
+                loadReferrals();
+            }
+        }
+
+        async function viewReferralDetail(referralId) {
+            try {
+                const data = await adminFetch(`/api/admin/referrals/${referralId}`);
+                if (!data.success) {
+                    showToast('Failed to load referral details', 'error');
+                    return;
+                }
+                const r = data.referral;
+                alert(`
+Referral Details
+================
+ID: ${r.id}
+Status: ${r.status}
+Referrer: ${r.referrer_name || 'N/A'}
+Referred: ${r.referred_name || 'N/A'}
+Bonus: ${r.reward_currency || 'NGN'} ${Number(r.reward_amount || 0).toFixed(2)}
+Percentage: ${r.bonus_percentage || 0}%
+Transaction: ${r.transaction_currency || 'NGN'} ${Number(r.transaction_amount || 0).toFixed(2)}
+Created: ${formatDate(r.created_at)}
+Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
+                `);
+            } catch (e) {
+                showToast('Failed to load referral details', 'error');
+            }
+        }
+
+        async function completeReferral(referralId) {
+            if (!confirm('Mark this referral as completed?')) return;
+            try {
+                const res = await fetch(`/api/admin/referrals/${referralId}/complete`, { headers: { 'X-Admin-Secret': adminSecret },
+                    method: 'POST'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Referral marked as completed', 'success');
+                    loadReferrals();
+                } else {
+                    showToast(data.error || 'Failed to complete referral', 'error');
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function processPendingReferrals() {
+            if (!confirm('Process all pending referrals with completed transactions?')) return;
+            try {
+                const res = await fetch(`/api/admin/process-referrals`, { headers: { 'X-Admin-Secret': adminSecret },
+                    method: 'POST'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || `Processed ${data.processed} referrals`, 'success');
+                    loadReferrals();
+                    loadBonusHistory();
+                } else {
+                    showToast(data.error || 'Failed to process referrals', 'error');
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        function exportReferralData() {
+            showToast('Export started...', 'info');
+        }
+
+        // ============================================
+        // REFERRAL REDEMPTIONS (from v1)
+        // ============================================
+        async function loadReferralRedemptions() {
+            const referrerId = document.getElementById('referrerIdInput').value.trim();
+            const container = document.getElementById('referralRedemptionsList');
+            if (!referrerId) {
+                container.innerHTML = '<div class="empty-state">Enter a user ID to look up redemptions.</div>';
+                return;
+            }
+            container.innerHTML = '<div class="empty-state">Loading...</div>';
+            try {
+                const data = await adminFetch(`/api/admin/referral-redemptions?referrer_id=${encodeURIComponent(referrerId)}`);
+                if (!data.success || !data.redemptions || data.redemptions.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No redemptions found for this user.</div>';
+                    return;
+                }
+                const totalReward = data.redemptions.reduce((sum, r) => sum + (r.reward_amount || 0), 0);
+                container.innerHTML = `
+                    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">
+                        ${data.redemptions.length} redemption(s) — total earned: ${totalReward.toFixed(2)} ${data.redemptions[0].reward_currency || ''}
+                    </p>
+                ` + data.redemptions.map(r => `
+                    <div style="border-bottom:1px solid var(--border-color);padding:8px 0;font-size:13px;">
+                        <strong>${escapeHtml(r.service_type || '')}</strong> — 
+                        discount: ${r.discount_amount} ${r.currency}, 
+                        earned: ${r.reward_amount || 0} ${r.reward_currency || ''} 
+                        <span style="color:var(--text-secondary);">(${new Date(r.created_at).toLocaleString()})</span>
+                    </div>
+                `).join('');
+            } catch (e) {
+                if (e.message === 'unauthorized') { showGateAgain(); return; }
+                container.innerHTML = '<div class="empty-state">Failed to load redemptions</div>';
+            }
+        }
+
+        // ============================================
+        // BONUS/CONFIGURATION
+        // ============================================
+        async function loadBonusConfig() {
+            try {
+                const data = await adminFetch('/api/admin/referral-bonus/config');
+                if (data.success && data.config) {
+                    const c = data.config;
+                    document.getElementById('bonusPercentage').value = c.bonus_percentage || 10;
+                    document.getElementById('minBonus').value = c.min_bonus || 50;
+                    document.getElementById('maxBonus').value = c.max_bonus || 5000;
+                    document.getElementById('bonusEnabled').checked = c.enabled !== false;
+                    document.getElementById('bonusStatusText').textContent = c.enabled !== false ? 'Enabled' : 'Disabled';
+                    document.getElementById('bonusConfigStatus').innerHTML = 
+                        `<span style="color:var(--success);">✅ Config loaded: ${c.bonus_percentage}% (min ₦${c.min_bonus}, max ₦${c.max_bonus})</span>`;
+                }
+            } catch (e) {
+                document.getElementById('bonusConfigStatus').innerHTML = 
+                    `<span style="color:var(--text-secondary);">Using default configuration</span>`;
+            }
+        }
+
+        async function saveBonusConfig() {
+            const status = document.getElementById('bonusConfigStatus');
+            status.innerHTML = '<span style="color:var(--text-secondary);">Saving...</span>';
+
+            const data = {
+                bonus_percentage: parseFloat(document.getElementById('bonusPercentage').value) || 10,
+                min_bonus: parseFloat(document.getElementById('minBonus').value) || 50,
+                max_bonus: parseFloat(document.getElementById('maxBonus').value) || 5000,
+                enabled: document.getElementById('bonusEnabled').checked
+            };
+
+            try {
+                const res = await fetch(`/api/admin/referral-bonus/config`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    status.innerHTML = `<span style="color:var(--success);">✅ ${result.message || 'Configuration saved!'}</span>`;
+                    showToast('Bonus configuration saved!', 'success');
+                    document.getElementById('bonusStatusText').textContent = data.enabled ? 'Enabled' : 'Disabled';
+                } else {
+                    status.innerHTML = `<span style="color:var(--danger);">❌ ${result.error || 'Failed to save'}</span>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:var(--danger);">❌ ${e.message}</span>`;
+            }
+        }
+
+        // ============================================
+        // BONUS HISTORY
+        // ============================================
+        async function loadBonusHistory() {
+            const tbody = document.getElementById('bonusHistoryTable');
+            tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Loading bonus history...</div></td></tr>';
+
+            try {
+                const data = await adminFetch('/api/admin/bonus/history?limit=50');
+                if (!data.success || !data.bonuses || data.bonuses.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">No bonus history found</div></td></tr>';
+                    return;
+                }
+
+                const totalBonuses = data.bonuses.reduce((sum, b) => sum + (b.amount || 0), 0);
+                const avgBonus = data.bonuses.length > 0 ? totalBonuses / data.bonuses.length : 0;
+                const thisMonth = data.bonuses.filter(b => {
+                    const d = new Date(b.created_at);
+                    const now = new Date();
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                });
+                const thisMonthTotal = thisMonth.reduce((sum, b) => sum + (b.amount || 0), 0);
+                const uniqueReferrers = new Set(data.bonuses.map(b => b.referrer_id)).size;
+
+                document.getElementById('bTotalBonuses').textContent = `₦${totalBonuses.toFixed(2)}`;
+                document.getElementById('bTotalReferrers').textContent = uniqueReferrers;
+                document.getElementById('bAvgBonus').textContent = `₦${avgBonus.toFixed(2)}`;
+                document.getElementById('bThisMonth').textContent = `₦${thisMonthTotal.toFixed(2)}`;
+
+                tbody.innerHTML = data.bonuses.map(b => `
+                    <tr>
+                        <td>${formatDate(b.created_at)}</td>
+                        <td>${escapeHtml(b.referrer_name || 'User #' + b.referrer_id)}</td>
+                        <td>${escapeHtml(b.referred_name || 'User #' + b.referred_id)}</td>
+                        <td><strong>${b.currency || 'NGN'} ${Number(b.amount || 0).toFixed(2)}</strong></td>
+                        <td>${b.bonus_percentage || '10'}%</td>
+                        <td>${b.currency || 'NGN'} ${Number(b.transaction_amount || 0).toFixed(2)}</td>
+                        <td><span class="badge ${b.status === 'completed' ? 'badge-success' : 'badge-warning'}">${b.status || 'pending'}</span></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">${e.message}</div></td></tr>`;
+            }
+        }
+
+        // ============================================
+        // SEASONAL PROMO
+        // ============================================
+        async function loadSeasonalPromo() {
+            try {
+                const data = await adminFetch('/api/admin/seasonal-promo');
+                if (data.success && data.promo) {
+                    const p = data.promo;
+                    document.getElementById('promoNameSeasonal').value = p.name || '';
+                    document.getElementById('promoMultiplier').value = p.multiplier || 1.5;
+                    document.getElementById('promoStartDate').value = p.start_date || '';
+                    document.getElementById('promoEndDate').value = p.end_date || '';
+                    document.getElementById('seasonalPromoStatus').innerHTML = 
+                        p.active ? `<span style="color:var(--success);">✅ Active: ${p.name} (${p.multiplier}x)</span>` 
+                                 : `<span style="color:var(--text-secondary);">No active seasonal promo</span>`;
+                }
+            } catch (e) {
+                document.getElementById('seasonalPromoStatus').innerHTML = 
+                    `<span style="color:var(--text-secondary);">No seasonal promo configured</span>`;
+            }
+        }
+
+        async function saveSeasonalPromo() {
+            const status = document.getElementById('seasonalPromoStatus');
+            const data = {
+                name: document.getElementById('promoNameSeasonal').value.trim(),
+                multiplier: parseFloat(document.getElementById('promoMultiplier').value) || 1.5,
+                start_date: document.getElementById('promoStartDate').value || null,
+                end_date: document.getElementById('promoEndDate').value || null
+            };
+
+            if (!data.name) {
+                status.innerHTML = '<span style="color:var(--danger);">Please enter a promo name</span>';
+                return;
+            }
+
+            status.innerHTML = '<span style="color:var(--text-secondary);">Saving...</span>';
+
+            try {
+                const res = await fetch(`/api/admin/seasonal-promo`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    status.innerHTML = `<span style="color:var(--success);">✅ ${result.message || 'Seasonal promo launched!'}</span>`;
+                    showToast('Seasonal promo launched!', 'success');
+                } else {
+                    status.innerHTML = `<span style="color:var(--danger);">❌ ${result.error || 'Failed to save'}</span>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:var(--danger);">❌ ${e.message}</span>`;
+            }
+        }
+
+        async function cancelSeasonalPromo() {
+            if (!confirm('Cancel the current seasonal promo?')) return;
+            try {
+                const res = await fetch(`/api/admin/seasonal-promo`, { headers: { 'X-Admin-Secret': adminSecret },
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('seasonalPromoStatus').innerHTML = 
+                        '<span style="color:var(--text-secondary);">Seasonal promo cancelled</span>';
+                    showToast('Seasonal promo cancelled', 'success');
+                    loadSeasonalPromo();
+                } else {
+                    showToast(data.error || 'Failed to cancel', 'error');
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        // ============================================
+        // RECEIPT ADS - MODERATION
+        // ============================================
+        async function updatePendingAdBadge() {
+            try {
+                const data = await adminFetch('/api/admin/receipt-ads/pending');
+                if (data.success && data.campaigns) {
+                    const count = data.campaigns.length;
+                    document.getElementById('pendingAdBadge').textContent = count;
+                    document.getElementById('pendingAdCount').textContent = count;
+                }
+            } catch (e) {}
+        }
+
+        async function loadPendingAds() {
+            const container = document.getElementById('pendingAdsContainer');
+            try {
+                const data = await adminFetch('/api/admin/receipt-ads/pending');
+                if (!data.success || !data.campaigns || data.campaigns.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No pending campaigns to review</div>';
+                    updatePendingAdBadge();
+                    return;
+                }
+                container.innerHTML = data.campaigns.map(c => `
+                    <div class="ad-campaign-item">
+                        <div class="ad-title">${escapeHtml(c.title)}</div>
+                        <div class="ad-body">${escapeHtml(c.body)}</div>
+                        <div class="ad-meta">
+                            <span>👤 ${escapeHtml(c.advertiser_name || 'User ' + c.advertiser_user_id)}</span>
+                            <span>📧 ${escapeHtml(c.advertiser_email || 'N/A')}</span>
+                            <span>💰 ${c.price_currency} ${Number(c.price_paid).toLocaleString()}</span>
+                            <span>📊 ${(c.impressions_purchased || 0).toLocaleString()} impressions</span>
+                            <span>🏷️ ${c.campaign_tier || 'basic'}</span>
+                            <span>📅 ${formatDate(c.submitted_at)}</span>
+                        </div>
+                        ${c.cta_text ? `<div class="ad-meta">🔗 ${escapeHtml(c.cta_text)} → ${escapeHtml(c.cta_url || '')}</div>` : ''}
+                        ${c.target_tx_type ? `<div class="ad-meta">🎯 Target: ${c.target_tx_type} ${c.target_min_amount ? '• Min: '+c.target_min_amount : ''} ${c.target_max_amount ? '• Max: '+c.target_max_amount : ''}</div>` : ''}
+                        <div class="ad-actions">
+                            <button class="btn btn-approve btn-sm" onclick="approveAd(${c.id})">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                            <button class="btn btn-reject btn-sm" onclick="rejectAd(${c.id})">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                            <button class="btn btn-warning btn-sm" onclick="rejectAdWithRefund(${c.id})">
+                                <i class="fas fa-undo"></i> Reject & Refund
+                            </button>
+                        </div>
+                        <div id="adModerationStatus_${c.id}" style="margin-top:8px;"></div>
+                    </div>
+                `).join('');
+                updatePendingAdBadge();
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Failed to load pending ads</div>';
+                console.error(e);
+            }
+        }
+
+        async function approveAd(campaignId) {
+            const statusDiv = document.getElementById(`adModerationStatus_${campaignId}`);
+            statusDiv.innerHTML = '<span style="color:var(--text-secondary);">Approving...</span>';
+            try {
+                const res = await fetch(`/api/admin/receipt-ads/${campaignId}/approve`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    statusDiv.innerHTML = '<span style="color:#22c55e;">Approved! Campaign is now live.</span>';
+                    showToast('Campaign approved!', 'success');
+                    setTimeout(() => { loadPendingAds(); loadModeratedAds(); }, 1000);
+                } else {
+                    statusDiv.innerHTML = `<span style="color:#ef4444;">${data.error || 'Failed to approve'}</span>`;
+                }
+            } catch (e) {
+                statusDiv.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+
+        async function rejectAd(campaignId) {
+            const statusDiv = document.getElementById(`adModerationStatus_${campaignId}`);
+            const reason = prompt('Enter rejection reason (optional):');
+            statusDiv.innerHTML = '<span style="color:var(--text-secondary);">Rejecting...</span>';
+            try {
+                const res = await fetch(`/api/admin/receipt-ads/${campaignId}/reject`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        reason: reason || 'Did not meet content guidelines',
+                        refund: false
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    statusDiv.innerHTML = `<span style="color:#f59e0b;">Rejected. Reason: ${reason || 'Not provided'}</span>`;
+                    showToast('Campaign rejected', 'warning');
+                    setTimeout(() => { loadPendingAds(); loadModeratedAds(); }, 1000);
+                } else {
+                    statusDiv.innerHTML = `<span style="color:#ef4444;">${data.error || 'Failed to reject'}</span>`;
+                }
+            } catch (e) {
+                statusDiv.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+
+        async function rejectAdWithRefund(campaignId) {
+            const statusDiv = document.getElementById(`adModerationStatus_${campaignId}`);
+            const reason = prompt('Enter rejection reason (optional):');
+            statusDiv.innerHTML = '<span style="color:var(--text-secondary);">Rejecting & refunding...</span>';
+            try {
+                const res = await fetch(`/api/admin/receipt-ads/${campaignId}/reject`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        reason: reason || 'Did not meet content guidelines',
+                        refund: true
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    statusDiv.innerHTML = `<span style="color:#22c55e;">Rejected & refunded. Reason: ${reason || 'Not provided'}</span>`;
+                    showToast('Campaign rejected and refunded', 'success');
+                    setTimeout(() => { loadPendingAds(); loadModeratedAds(); }, 1000);
+                } else {
+                    statusDiv.innerHTML = `<span style="color:#ef4444;">${data.error || 'Failed'}</span>`;
+                }
+            } catch (e) {
+                statusDiv.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+
+        // ============================================
+        // MODERATED ADS
+        // ============================================
+        async function loadModeratedAds() {
+            const container = document.getElementById('moderatedAdsContainer');
+            try {
+                const data = await adminFetch('/api/admin/receipt-ads/all?limit=50');
+                if (!data.success || !data.campaigns || data.campaigns.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No moderated campaigns yet.</div>';
+                    return;
+                }
+                const filtered = data.campaigns.filter(c => c.status === 'approved' || c.status === 'rejected' || c.status === 'completed' || c.status === 'paused');
+                if (filtered.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No approved, rejected, or paused campaigns yet.</div>';
+                    return;
+                }
+                container.innerHTML = filtered.slice(0, 20).map(c => `
+                    <div class="ad-campaign-item" style="opacity:${c.status === 'rejected' ? '0.6' : '1'};">
+                        <div class="ad-title">${escapeHtml(c.title)} 
+                            <span class="badge ${c.status === 'approved' ? 'badge-success' : c.status === 'completed' ? 'badge-info' : c.status === 'paused' ? 'badge-warning' : 'badge-danger'}">${c.status}</span>
+                        </div>
+                        <div class="ad-body">${escapeHtml(c.body)}</div>
+                        <div class="ad-meta">
+                            <span>👤 ${escapeHtml(c.advertiser_name || 'User ' + c.advertiser_user_id)}</span>
+                            <span>💰 ${c.price_currency} ${Number(c.price_paid).toLocaleString()}</span>
+                            <span>📊 ${(c.impressions_delivered || 0).toLocaleString()}/${(c.impressions_purchased || 0).toLocaleString()} impressions</span>
+                            <span>🏷️ ${c.campaign_tier || 'basic'}</span>
+                            <span>📅 ${formatDate(c.created_at)}</span>
+                            ${c.reviewed_at ? `<span>✅ Reviewed: ${formatDate(c.reviewed_at)}</span>` : ''}
+                            ${c.rejection_reason ? `<span>❌ Reason: ${escapeHtml(c.rejection_reason)}</span>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Failed to load moderated ads</div>';
+                console.error(e);
+            }
+        }
+
+        // ============================================
+        // PROMOTIONS MANAGEMENT (Enhanced)
+        // ============================================
+        async function loadPromotions() {
+            const container = document.getElementById('promotionsList');
+            try {
+                const data = await adminFetch('/api/admin/promotions?limit=100');
+                if (!data.success || !data.promotions || data.promotions.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No promotions created yet. Click "Create Promotion" to start.</div>';
+                    document.getElementById('promoCount').textContent = '0';
+                    return;
+                }
+
+                document.getElementById('promoCount').textContent = data.promotions.length;
+
+                container.innerHTML = data.promotions.map(p => {
+                    const statusBadge = p.active 
+                        ? '<span class="badge badge-success">Active</span>' 
+                        : '<span class="badge badge-danger">Inactive</span>';
+
+                    const targetInfo = [];
+                    if (p.target_tx_type) targetInfo.push(`🎯 ${p.target_tx_type}`);
+                    if (p.target_min_amount) targetInfo.push(`💰 ≥${p.target_min_amount}`);
+                    if (p.target_max_amount) targetInfo.push(`💰 ≤${p.target_max_amount}`);
+                    if (p.target_customer_type) targetInfo.push(`👤 ${p.target_customer_type}`);
+                    if (p.target_hour_start !== null && p.target_hour_start !== undefined) targetInfo.push(`🕐 ${p.target_hour_start}-${p.target_hour_end || '23'}`);
+
+                    let discountDisplay = '';
+                    if (p.discount_type === 'percentage') {
+                        discountDisplay = `${p.discount_value}% off`;
+                        if (p.max_discount) discountDisplay += ` (max ${p.max_discount})`;
+                    } else if (p.discount_value) {
+                        discountDisplay = `₦${p.discount_value} off`;
+                    }
+
+                    let serviceDisplay = '';
+                    if (p.service_types) {
+                        const services = p.service_types.split(',').map(s => s.trim());
+                        serviceDisplay = services.includes('all') ? 'All Services' : services.join(', ');
+                    }
+
+                    let referralDisplay = '';
+                    if (p.is_referral) {
+                        referralDisplay = `👥 Referral: ${p.referrer_bonus_value || 0}${p.referrer_bonus_type === 'percentage' ? '%' : '₦'} / ${p.referred_bonus_value || 0}${p.referred_bonus_type === 'percentage' ? '%' : '₦'}`;
+                    }
+
+                    let couponDisplay = '';
+                    if (p.coupon_code) {
+                        couponDisplay = `🔑 ${p.coupon_code}`;
+                    }
+
+                    let usageDisplay = '';
+                    if (p.usage_limit_per_user) {
+                        usageDisplay = `👤 ${p.usage_limit_per_user}x per user`;
+                    }
+
+                    return `
+                        <div class="promo-item" style="border-left: 4px solid ${p.brand_color || '#4f46e5'};">
+                            <div class="promo-title">
+                                ${p.icon || '🎁'} ${escapeHtml(p.title)} ${statusBadge}
+                                <span style="font-size:12px;color:var(--text-secondary);font-weight:normal;">${escapeHtml(p.name)}</span>
+                            </div>
+                            <div class="promo-body">${escapeHtml(p.body)}</div>
+                            <div class="promo-meta">
+                                <span>🏷️ ${p.category || 'general'}</span>
+                                <span>🔢 Priority: ${p.priority || 0}</span>
+                                ${discountDisplay ? `<span>💰 ${discountDisplay}</span>` : ''}
+                                ${p.min_purchase ? `<span>💳 Min: ₦${p.min_purchase}</span>` : ''}
+                                ${serviceDisplay ? `<span>📋 ${serviceDisplay}</span>` : ''}
+                                ${couponDisplay ? `<span>${couponDisplay}</span>` : ''}
+                                ${referralDisplay ? `<span>${referralDisplay}</span>` : ''}
+                                ${p.cta_text ? `<span>🔗 ${escapeHtml(p.cta_text)}</span>` : ''}
+                                ${targetInfo.length ? `<span>${targetInfo.join(' · ')}</span>` : ''}
+                                <span>📊 ${p.impressions_used || 0}/${p.max_impressions || '∞'} impressions</span>
+                                ${p.max_clicks ? `<span>🖱️ ${p.clicks_used || 0}/${p.max_clicks} clicks</span>` : ''}
+                                ${usageDisplay ? `<span>${usageDisplay}</span>` : ''}
+                                ${p.conversions ? `<span>✅ ${p.conversions} conversions</span>` : ''}
+                            </div>
+                            <div class="promo-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editPromotion(${p.id})">Edit</button>
+                                <button class="btn btn-sm ${p.active ? 'btn-warning' : 'btn-success'}" 
+                                        onclick="togglePromotion(${p.id}, ${!p.active})">
+                                    ${p.active ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deletePromotion(${p.id})">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Failed to load promotions</div>';
+                console.error(e);
+            }
+        }
+
+        // ============================================
+        // PROMOTION FORM HELPERS
+        // ============================================
+        function toggleDiscountFields() {
+            const type = document.getElementById('promoDiscountType').value;
+            const hint = document.getElementById('discountValueHint');
+            const maxRow = document.getElementById('maxDiscountRow');
+
+            if (type === 'percentage') {
+                hint.textContent = 'Percentage (e.g., 10 for 10%)';
+                maxRow.style.display = 'flex';
+            } else {
+                hint.textContent = 'Amount in NGN';
+                maxRow.style.display = 'none';
+            }
+        }
+
+        function toggleReferralFields() {
+            const isReferral = document.getElementById('promoIsReferral').value === '1';
+            document.getElementById('referralFields').style.display = isReferral ? 'block' : 'none';
+        }
+
+        // ============================================
+        // SHOW CREATE PROMO MODAL
+        // ============================================
+        function showCreatePromoModal() {
+            document.getElementById('editPromoId').value = '';
+            document.getElementById('promoModalTitle').textContent = 'Create Promotion';
+            document.getElementById('promoName').value = '';
+            document.getElementById('promoIcon').value = '🎁';
+            document.getElementById('promoTitle').value = '';
+            document.getElementById('promoBody').value = '';
+            document.getElementById('promoCtaText').value = '';
+            document.getElementById('promoCtaUrl').value = '';
+            document.getElementById('promoBrandColor').value = '#4f46e5';
+            document.getElementById('promoBgColor').value = '#f5f3ff';
+            document.getElementById('promoCategory').value = 'general';
+            document.getElementById('promoPriority').value = '0';
+            document.getElementById('promoDiscountType').value = 'fixed';
+            document.getElementById('promoDiscountValue').value = '';
+            document.getElementById('promoMaxDiscount').value = '';
+            document.getElementById('promoMinPurchase').value = '';
+            document.getElementById('promoServiceTypes').value = '';
+            document.getElementById('promoTargetTxType').value = '';
+            document.getElementById('promoTargetCustomer').value = '';
+            document.getElementById('promoTargetMin').value = '';
+            document.getElementById('promoTargetMax').value = '';
+            document.getElementById('promoTargetHourStart').value = '';
+            document.getElementById('promoTargetHourEnd').value = '';
+            document.getElementById('promoTargetDays').value = '';
+            document.getElementById('promoMaxImpressions').value = '';
+            document.getElementById('promoMaxClicks').value = '';
+            document.getElementById('promoUsageLimit').value = '';
+            document.getElementById('promoCouponCode').value = '';
+            document.getElementById('promoIsReferral').value = '0';
+            document.getElementById('promoReferrerBonusType').value = 'fixed';
+            document.getElementById('promoReferrerBonusValue').value = '';
+            document.getElementById('promoReferredBonusType').value = 'fixed';
+            document.getElementById('promoReferredBonusValue').value = '';
+            document.getElementById('promoStartDate').value = '';
+            document.getElementById('promoEndDate').value = '';
+            document.getElementById('promoActive').checked = true;
+            document.getElementById('promoStatus').innerHTML = '';
+
+            toggleDiscountFields();
+            toggleReferralFields();
+
+            const serviceSelect = document.getElementById('promoServiceTypes');
+            for (let i = 0; i < serviceSelect.options.length; i++) {
+                serviceSelect.options[i].selected = false;
+            }
+
+            openModal('promoModal');
+        }
+
+        // ============================================
+        // EDIT PROMOTION
+        // ============================================
+        async function editPromotion(promoId) {
+            try {
+                const data = await adminFetch(`/api/admin/promotions/${promoId}`);
+                if (!data.success || !data.promotion) {
+                    showToast('Promotion not found', 'error');
+                    return;
+                }
+                const p = data.promotion;
+
+                document.getElementById('editPromoId').value = promoId;
+                document.getElementById('promoModalTitle').textContent = 'Edit Promotion';
+                document.getElementById('promoName').value = p.name || '';
+                document.getElementById('promoIcon').value = p.icon || '🎁';
+                document.getElementById('promoTitle').value = p.title || '';
+                document.getElementById('promoBody').value = p.body || '';
+                document.getElementById('promoCtaText').value = p.cta_text || '';
+                document.getElementById('promoCtaUrl').value = p.cta_url || '';
+                document.getElementById('promoBrandColor').value = p.brand_color || '#4f46e5';
+                document.getElementById('promoBgColor').value = p.background_color || '#f5f3ff';
+                document.getElementById('promoCategory').value = p.category || 'general';
+                document.getElementById('promoPriority').value = p.priority || 0;
+                document.getElementById('promoDiscountType').value = p.discount_type || 'fixed';
+                document.getElementById('promoDiscountValue').value = p.discount_value || '';
+                document.getElementById('promoMaxDiscount').value = p.max_discount || '';
+                document.getElementById('promoMinPurchase').value = p.min_purchase || '';
+                document.getElementById('promoTargetTxType').value = p.target_tx_type || '';
+                document.getElementById('promoTargetCustomer').value = p.target_customer_type || '';
+                document.getElementById('promoTargetMin').value = p.target_min_amount || '';
+                document.getElementById('promoTargetMax').value = p.target_max_amount || '';
+                document.getElementById('promoTargetHourStart').value = p.target_hour_start ?? '';
+                document.getElementById('promoTargetHourEnd').value = p.target_hour_end ?? '';
+                document.getElementById('promoTargetDays').value = p.target_days || '';
+                document.getElementById('promoMaxImpressions').value = p.max_impressions || '';
+                document.getElementById('promoMaxClicks').value = p.max_clicks || '';
+                document.getElementById('promoUsageLimit').value = p.usage_limit_per_user || '';
+                document.getElementById('promoCouponCode').value = p.coupon_code || '';
+                document.getElementById('promoIsReferral').value = p.is_referral ? '1' : '0';
+                document.getElementById('promoReferrerBonusType').value = p.referrer_bonus_type || 'fixed';
+                document.getElementById('promoReferrerBonusValue').value = p.referrer_bonus_value || '';
+                document.getElementById('promoReferredBonusType').value = p.referred_bonus_type || 'fixed';
+                document.getElementById('promoReferredBonusValue').value = p.referred_bonus_value || '';
+                document.getElementById('promoStartDate').value = p.start_date ? p.start_date.slice(0, 16) : '';
+                document.getElementById('promoEndDate').value = p.end_date ? p.end_date.slice(0, 16) : '';
+                document.getElementById('promoActive').checked = !!p.active;
+
+                const serviceSelect = document.getElementById('promoServiceTypes');
+                for (let i = 0; i < serviceSelect.options.length; i++) {
+                    serviceSelect.options[i].selected = false;
+                }
+                if (p.service_types) {
+                    const services = p.service_types.split(',').map(s => s.trim());
+                    for (let i = 0; i < serviceSelect.options.length; i++) {
+                        if (services.includes(serviceSelect.options[i].value)) {
+                            serviceSelect.options[i].selected = true;
+                        }
+                    }
+                }
+
+                toggleDiscountFields();
+                toggleReferralFields();
+                document.getElementById('promoStatus').innerHTML = '';
+                openModal('promoModal');
+            } catch (e) {
+                showToast('Failed to load promotion', 'error');
+            }
+        }
+
+        // ============================================
+        // SAVE PROMOTION
+        // ============================================
+        async function savePromotion(event) {
+            event.preventDefault();
+            const promoId = document.getElementById('editPromoId').value;
+
+            const serviceSelect = document.getElementById('promoServiceTypes');
+            const selectedServices = [];
+            for (let i = 0; i < serviceSelect.options.length; i++) {
+                if (serviceSelect.options[i].selected) {
+                    selectedServices.push(serviceSelect.options[i].value);
+                }
+            }
+
+            const data = {
+                name: document.getElementById('promoName').value.trim(),
+                icon: document.getElementById('promoIcon').value.trim() || '🎁',
+                title: document.getElementById('promoTitle').value.trim(),
+                body: document.getElementById('promoBody').value.trim(),
+                cta_text: document.getElementById('promoCtaText').value.trim(),
+                cta_url: document.getElementById('promoCtaUrl').value.trim(),
+                brand_color: document.getElementById('promoBrandColor').value,
+                background_color: document.getElementById('promoBgColor').value,
+                category: document.getElementById('promoCategory').value,
+                priority: parseInt(document.getElementById('promoPriority').value) || 0,
+                discount_type: document.getElementById('promoDiscountType').value,
+                discount_value: parseFloat(document.getElementById('promoDiscountValue').value) || 0,
+                max_discount: document.getElementById('promoMaxDiscount').value ? parseFloat(document.getElementById('promoMaxDiscount').value) : null,
+                min_purchase: document.getElementById('promoMinPurchase').value ? parseFloat(document.getElementById('promoMinPurchase').value) : null,
+                service_types: selectedServices.length > 0 ? selectedServices.join(',') : null,
+                target_tx_type: document.getElementById('promoTargetTxType').value || null,
+                target_customer_type: document.getElementById('promoTargetCustomer').value || null,
+                target_min_amount: document.getElementById('promoTargetMin').value ? parseFloat(document.getElementById('promoTargetMin').value) : null,
+                target_max_amount: document.getElementById('promoTargetMax').value ? parseFloat(document.getElementById('promoTargetMax').value) : null,
+                target_hour_start: document.getElementById('promoTargetHourStart').value ? parseInt(document.getElementById('promoTargetHourStart').value) : null,
+                target_hour_end: document.getElementById('promoTargetHourEnd').value ? parseInt(document.getElementById('promoTargetHourEnd').value) : null,
+                target_days: document.getElementById('promoTargetDays').value || null,
+                max_impressions: document.getElementById('promoMaxImpressions').value ? parseInt(document.getElementById('promoMaxImpressions').value) : null,
+                max_clicks: document.getElementById('promoMaxClicks').value ? parseInt(document.getElementById('promoMaxClicks').value) : null,
+                usage_limit_per_user: document.getElementById('promoUsageLimit').value ? parseInt(document.getElementById('promoUsageLimit').value) : null,
+                coupon_code: document.getElementById('promoCouponCode').value.trim().toUpperCase() || null,
+                is_referral: document.getElementById('promoIsReferral').value === '1',
+                referrer_bonus_type: document.getElementById('promoReferrerBonusType').value,
+                referrer_bonus_value: parseFloat(document.getElementById('promoReferrerBonusValue').value) || 0,
+                referred_bonus_type: document.getElementById('promoReferredBonusType').value,
+                referred_bonus_value: parseFloat(document.getElementById('promoReferredBonusValue').value) || 0,
+                start_date: document.getElementById('promoStartDate').value || null,
+                end_date: document.getElementById('promoEndDate').value || null,
+                active: document.getElementById('promoActive').checked
+            };
+
+            const status = document.getElementById('promoStatus');
+            status.innerHTML = '<span style="color:var(--text-secondary);">Saving...</span>';
+
+            try {
+                const url = promoId 
+                    ? `/api/admin/promotions/${promoId}`
+                    : `/api/admin/promotions`;
+                const method = promoId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    status.innerHTML = '<span style="color:#22c55e;">Promotion saved successfully!</span>';
+                    showToast('Promotion saved!', 'success');
+                    closeModal('promoModal');
+                    loadPromotions();
+                } else {
+                    status.innerHTML = `<span style="color:#ef4444;">${result.error || 'Failed to save'}</span>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+
+        // ============================================
+        // TOGGLE / DELETE PROMOTION
+        // ============================================
+        async function togglePromotion(promoId, activate) {
+            const data = { active: activate };
+            try {
+                const res = await fetch(`/api/admin/promotions/${promoId}`, {
+                    method: 'PUT',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast(`Promotion ${activate ? 'activated' : 'deactivated'}`, 'success');
+                    loadPromotions();
+                } else {
+                    showToast(result.error || 'Failed to toggle', 'error');
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function deletePromotion(promoId) {
+            if (!confirm('Delete this promotion?')) return;
+            try {
+                const res = await fetch(`/api/admin/promotions/${promoId}`, { headers: { 'X-Admin-Secret': adminSecret },
+                    method: 'DELETE'
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('Promotion deleted', 'success');
+                    loadPromotions();
+                } else {
+                    showToast(result.error || 'Failed to delete', 'error');
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        // ============================================
+        // BRAND COLOR MANAGEMENT
+        // ============================================
+        async function loadBrands() {
+            const container = document.getElementById('brandsList');
+            try {
+                const data = await adminFetch('/api/admin/brand-colors');
+                if (!data.success || !data.brands || data.brands.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No brands configured. Click "Add Brand" to set up brand colors.</div>';
+                    return;
+                }
+
+                container.innerHTML = data.brands.map(b => `
+                    <div class="promo-item">
+                        <div class="promo-title">
+                            <span class="promo-color-preview" style="background:${b.primary_color};"></span>
+                            ${escapeHtml(b.advertiser_name)}
+                            <span style="font-size:12px;color:var(--text-secondary);font-weight:normal;">(${escapeHtml(b.advertiser_id)})</span>
+                            <span class="badge ${b.is_active ? 'badge-success' : 'badge-danger'}">${b.is_active ? 'Active' : 'Inactive'}</span>
+                        </div>
+                        <div class="promo-meta">
+                            <span>🎨 Primary: <span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:${b.primary_color};vertical-align:middle;"></span> ${b.primary_color}</span>
+                            ${b.secondary_color ? `<span>Secondary: <span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:${b.secondary_color};vertical-align:middle;"></span> ${b.secondary_color}</span>` : ''}
+                            ${b.accent_color ? `<span>Accent: <span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:${b.accent_color};vertical-align:middle;"></span> ${b.accent_color}</span>` : ''}
+                            ${b.logo_url ? `<span>🔗 <a href="${escapeHtml(b.logo_url)}" target="_blank">Logo</a></span>` : ''}
+                        </div>
+                        <div class="promo-actions">
+                            <button class="btn btn-sm btn-primary" onclick="editBrand('${b.advertiser_id}')">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteBrand('${b.advertiser_id}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Failed to load brands</div>';
+                console.error(e);
+            }
+        }
+
+        function showCreateBrandModal() {
+            document.getElementById('editBrandId').value = '';
+            document.getElementById('brandModalTitle').textContent = 'Add Brand';
+            document.getElementById('brandAdvertiserId').value = '';
+            document.getElementById('brandName').value = '';
+            document.getElementById('brandPrimaryColor').value = '#4f46e5';
+            document.getElementById('brandSecondaryColor').value = '#7c3aed';
+            document.getElementById('brandAccentColor').value = '#06b6d4';
+            document.getElementById('brandTextColor').value = '#ffffff';
+            document.getElementById('brandBgColor').value = '#f8fafc';
+            document.getElementById('brandLogoUrl').value = '';
+            document.getElementById('brandStatus').innerHTML = '';
+            openModal('brandModal');
+        }
+
+        async function editBrand(advertiserId) {
+            try {
+                const data = await adminFetch(`/api/admin/brand-colors`);
+                if (!data.success || !data.brands) {
+                    showToast('Failed to load brands', 'error');
+                    return;
+                }
+                const brand = data.brands.find(b => b.advertiser_id === advertiserId);
+                if (!brand) {
+                    showToast('Brand not found', 'error');
+                    return;
+                }
+
+                document.getElementById('editBrandId').value = brand.id;
+                document.getElementById('brandModalTitle').textContent = 'Edit Brand';
+                document.getElementById('brandAdvertiserId').value = brand.advertiser_id;
+                document.getElementById('brandName').value = brand.advertiser_name;
+                document.getElementById('brandPrimaryColor').value = brand.primary_color;
+                document.getElementById('brandSecondaryColor').value = brand.secondary_color || '#7c3aed';
+                document.getElementById('brandAccentColor').value = brand.accent_color || '#06b6d4';
+                document.getElementById('brandTextColor').value = brand.text_color || '#ffffff';
+                document.getElementById('brandBgColor').value = brand.background_color || '#f8fafc';
+                document.getElementById('brandLogoUrl').value = brand.logo_url || '';
+                document.getElementById('brandStatus').innerHTML = '';
+                openModal('brandModal');
+            } catch (e) {
+                showToast('Failed to load brand', 'error');
+            }
+        }
+
+        async function saveBrand(event) {
+            event.preventDefault();
+            const id = document.getElementById('editBrandId').value;
+            const data = {
+                advertiser_id: document.getElementById('brandAdvertiserId').value.trim().toLowerCase(),
+                advertiser_name: document.getElementById('brandName').value.trim(),
+                primary_color: document.getElementById('brandPrimaryColor').value,
+                secondary_color: document.getElementById('brandSecondaryColor').value,
+                accent_color: document.getElementById('brandAccentColor').value,
+                text_color: document.getElementById('brandTextColor').value,
+                background_color: document.getElementById('brandBgColor').value,
+                logo_url: document.getElementById('brandLogoUrl').value.trim()
+            };
+
+            if (!data.advertiser_id || !data.advertiser_name) {
+                document.getElementById('brandStatus').innerHTML = '<span style="color:#ef4444;">Brand ID and Name are required.</span>';
+                return;
+            }
+
+            const status = document.getElementById('brandStatus');
+            status.innerHTML = '<span style="color:var(--text-secondary);">Saving...</span>';
+
+            try {
+                const res = await fetch(`/api/admin/brand-colors`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    status.innerHTML = '<span style="color:#22c55e;">Brand saved successfully!</span>';
+                    showToast('Brand saved!', 'success');
+                    closeModal('brandModal');
+                    loadBrands();
+                } else {
+                    status.innerHTML = `<span style="color:#ef4444;">${result.error || 'Failed to save'}</span>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+
+        async function deleteBrand(advertiserId) {
+            if (!confirm(`Delete brand "${advertiserId}"?`)) return;
+            try {
+                const res = await fetch(`/api/admin/brand-colors/${advertiserId}`, { headers: { 'X-Admin-Secret': adminSecret },
+                    method: 'DELETE'
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast('Brand deleted', 'success');
+                    loadBrands();
+                } else {
+                    showToast(result.error || 'Failed to delete', 'error');
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        // ============================================
+        // SMS PROVIDER CONFIGURATION
+        // ============================================
+        function toggleSmsProviderFields() {
+            const provider = document.getElementById('smsProviderSelect').value;
+            document.querySelectorAll('.sms-provider-fields').forEach(el => {
+                el.style.display = el.dataset.provider === provider ? 'block' : 'none';
+            });
+        }
+
+        async function loadSmsConfig() {
+            const status = document.getElementById('smsConfigStatus');
+            status.innerHTML = '<span style="color:var(--text-secondary);">Loading...</span>';
+
+            try {
+                const data = await adminFetch('/api/admin/sms/config');
+                if (data.success && data.config) {
+                    const cfg = data.config;
+                    document.getElementById('smsProviderSelect').value = cfg.provider || 'none';
+                    document.getElementById('smsSenderId').value = cfg.sender_id || 'Net365';
+
+                    if (cfg.provider === 'termii') {
+                        document.getElementById('termiiApiKey').value = cfg.api_key || '';
+                        document.getElementById('termiiSenderId').value = cfg.sender_id || 'Net365';
+                    } else if (cfg.provider === 'twilio') {
+                        document.getElementById('twilioSid').value = cfg.account_sid || '';
+                        document.getElementById('twilioToken').value = cfg.auth_token || '';
+                        document.getElementById('twilioFrom').value = cfg.from_number || '';
+                    } else if (cfg.provider === 'africastalking') {
+                        document.getElementById('atApiKey').value = cfg.api_key || '';
+                        document.getElementById('atUsername').value = cfg.username || 'sandbox';
+                    }
+                    toggleSmsProviderFields();
+                    status.innerHTML = '<span style="color:#22c55e;">Configuration loaded</span>';
+                } else {
+                    status.innerHTML = '<span style="color:var(--text-secondary);">No configuration found - set up your SMS provider</span>';
+                }
+            } catch (e) {
+                status.innerHTML = '<span style="color:var(--text-secondary);">No configuration found</span>';
+            }
+        }
+
+        async function saveSmsConfig() {
+            const status = document.getElementById('smsConfigStatus');
+            const provider = document.getElementById('smsProviderSelect').value;
+            const senderId = document.getElementById('smsSenderId').value.trim() || 'Net365';
+
+            const config = { provider, sender_id: senderId };
+
+            if (provider === 'termii') {
+                config.api_key = document.getElementById('termiiApiKey').value.trim();
+                config.sender_id = document.getElementById('termiiSenderId').value.trim() || senderId;
+            } else if (provider === 'twilio') {
+                config.account_sid = document.getElementById('twilioSid').value.trim();
+                config.auth_token = document.getElementById('twilioToken').value.trim();
+                config.from_number = document.getElementById('twilioFrom').value.trim();
+            } else if (provider === 'africastalking') {
+                config.api_key = document.getElementById('atApiKey').value.trim();
+                config.username = document.getElementById('atUsername').value.trim() || 'sandbox';
+            }
+
+            status.innerHTML = '<span style="color:var(--text-secondary);">Saving...</span>';
+
+            try {
+                const res = await fetch(`/api/admin/sms/config`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    status.innerHTML = `<span style="color:#22c55e;">${data.message || 'SMS configuration saved!'}</span>`;
+                    showToast('SMS configuration saved!', 'success');
+                } else {
+                    status.innerHTML = `<span style="color:#ef4444;">${data.error || 'Failed to save'}</span>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+
+        async function testSmsConfig() {
+            const status = document.getElementById('smsConfigStatus');
+            const phone = prompt('Enter a test phone number (international format):', '+2348012345678');
+            if (!phone) return;
+
+            status.innerHTML = '<span style="color:var(--text-secondary);">Sending test SMS...</span>';
+
+            try {
+                const res = await fetch(`/api/admin/sms/test`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, message: 'Hello from Net365! Your SMS provider is configured correctly.' })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    status.innerHTML = `<span style="color:#22c55e;">Test SMS sent! ${data.sent || 1} delivered.</span>`;
+                    showToast('Test SMS sent successfully!', 'success');
+                } else {
+                    status.innerHTML = `<span style="color:#ef4444;">${data.error || 'Failed to send test SMS'}</span>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+
+        async function clearSmsConfig() {
+            if (!confirm('Are you sure you want to clear the SMS configuration?')) return;
+            const status = document.getElementById('smsConfigStatus');
+            status.innerHTML = '<span style="color:var(--text-secondary);">Clearing...</span>';
+
+            try {
+                const res = await fetch(`/api/admin/sms/config`, {
+                    method: 'DELETE',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    status.innerHTML = '<span style="color:#22c55e;">SMS configuration cleared</span>';
+                    document.getElementById('smsProviderSelect').value = 'none';
+                    toggleSmsProviderFields();
+                    showToast('SMS configuration cleared', 'success');
+                } else {
+                    status.innerHTML = `<span style="color:#ef4444;">${data.error || 'Failed to clear'}</span>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+
+        // ============================================
+        // USER MANAGEMENT
+        // ============================================
+        async function searchUsers() {
+            const query = document.getElementById('userSearchInput').value.trim();
+            const container = document.getElementById('userSearchResults');
+
+            if (!query) {
+                container.innerHTML = '<div class="empty-state">Enter a search query to find users.</div>';
+                return;
+            }
+
+            try {
+                const data = await adminFetch(`/api/admin/users?q=${encodeURIComponent(query)}`);
+                if (!data.success || !data.users || data.users.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No users found matching your search.</div>';
+                    return;
+                }
+
+                const statusMap = {
+                    'active': '<span class="user-status-badge active">Active</span>',
+                    'suspended': '<span class="user-status-badge suspended">Suspended</span>',
+                    'blocked': '<span class="user-status-badge blocked">Blocked</span>',
+                    'deleted': '<span class="user-status-badge deleted">Deleted</span>'
+                };
+
+                container.innerHTML = `
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                    <th>Verified</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.users.map(u => `
+                                    <tr>
+                                        <td>${u.id}</td>
+                                        <td>${escapeHtml(u.full_name || 'N/A')}</td>
+                                        <td>${escapeHtml(u.email || 'N/A')}</td>
+                                        <td>${escapeHtml(u.phone || 'N/A')}</td>
+                                        <td>${statusMap[u.account_status] || statusMap.active}</td>
+                                        <td>${u.email_verified ? '✅' : '❌'}</td>
+                                        <td>${formatDate(u.created_at)}</td>
+                                        <td>
+                                            <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                                                <button class="btn btn-sm btn-warning" onclick="suspendUser(${u.id})">Suspend</button>
+                                                <button class="btn btn-sm btn-danger" onclick="blockUser(${u.id})">Block</button>
+                                                <button class="btn btn-sm btn-success" onclick="reactivateUser(${u.id})">Reactivate</button>
+                                                <button class="btn btn-sm btn-outline" onclick="resetPassword(${u.id})">Reset PW</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Failed to search users</div>';
+                console.error(e);
+            }
+        }
+
+        // ============================================
+        // USER ACTIONS
+        // ============================================
+        async function suspendUser(userId) {
+            if (!confirm('Suspend this user?')) return;
+            const reason = prompt('Reason for suspension:');
+            if (!reason) { showToast('Suspension cancelled', 'info'); return; }
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/suspend`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason: reason })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ User suspended', 'success');
+                    searchUsers();
+                } else {
+                    showToast('❌ ' + (data.error || 'Failed'), 'error');
+                }
+            } catch (e) {
+                showToast('❌ ' + e.message, 'error');
+            }
+        }
+
+        async function blockUser(userId) {
+            if (!confirm('Block this user? All sessions will be terminated.')) return;
+            const reason = prompt('Reason for blocking:');
+            if (!reason) { showToast('Block cancelled', 'info'); return; }
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/block`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason: reason })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ User blocked and sessions terminated', 'success');
+                    searchUsers();
+                } else {
+                    showToast('❌ ' + (data.error || 'Failed'), 'error');
+                }
+            } catch (e) {
+                showToast('❌ ' + e.message, 'error');
+            }
+        }
+
+        async function reactivateUser(userId) {
+            if (!confirm('Reactivate this user?')) return;
+            const reason = prompt('Reason for reactivation (optional):');
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/reactivate`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        reason: reason || 'Reactivated by admin' 
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ User reactivated successfully!', 'success');
+                    searchUsers();
+                } else {
+                    showToast('❌ ' + (data.error || 'Failed to reactivate user'), 'error');
+                }
+            } catch (e) {
+                showToast('❌ ' + e.message, 'error');
+            }
+        }
+
+        async function resetPassword(userId) {
+            if (!confirm('Trigger a password reset email for this user?')) return;
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ Password reset email sent', 'success');
+                } else {
+                    showToast('❌ ' + (data.error || 'Failed'), 'error');
+                }
+            } catch (e) {
+                showToast('❌ ' + e.message, 'error');
+            }
+        }
+
+        // ============================================
+        // CREATE USER
+        // ============================================
+        function showCreateUserModal() {
+            document.getElementById('newUserFullName').value = '';
+            document.getElementById('newUserEmail').value = '';
+            document.getElementById('newUserPhone').value = '';
+            document.getElementById('newUserPassword').value = '';
+            document.getElementById('createUserStatus').innerHTML = '';
+            openModal('createUserModal');
+        }
+
+        async function createUser(event) {
+            event.preventDefault();
+            const name = document.getElementById('newUserFullName').value.trim();
+            const email = document.getElementById('newUserEmail').value.trim();
+            const phone = document.getElementById('newUserPhone').value.trim();
+            const password = document.getElementById('newUserPassword').value;
+            const status = document.getElementById('createUserStatus');
+
+            if (!name || !email || !password) {
+                status.innerHTML = '<span style="color:#ef4444;">Please fill in all required fields.</span>';
+                return;
+            }
+            if (password.length < 8) {
+                status.innerHTML = '<span style="color:#ef4444;">Password must be at least 8 characters.</span>';
+                return;
+            }
+
+            status.innerHTML = '<span style="color:var(--text-secondary);">Creating account...</span>';
+
+            try {
+                const res = await fetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: name,
+                        email: email,
+                        phone: phone,
+                        password: password
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    status.innerHTML = '<span style="color:#22c55e;">Account created successfully!</span>';
+                    showToast('User account created', 'success');
+                    closeModal('createUserModal');
+                    searchUsers();
+                } else {
+                    status.innerHTML = `<span style="color:#ef4444;">${data.error || 'Failed to create account'}</span>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+
+        // ============================================
+        // SYSTEM HEALTH
+        // ============================================
+        async function loadSystemHealth() {
+            try {
+                const res = await fetch('/api/health/dependencies');
+                const data = await res.json();
+                if (data.status) {
+                    const map = {
+                        'database': 'Database',
+                        'reloadly': 'Reloadly API',
+                        'paystack': 'Paystack',
+                        'stripe': 'Stripe',
+                        'flutterwave': 'Flutterwave',
+                        'encryption': 'Encryption',
+                        'exchange_rates': 'Exchange Rates',
+                        'sms_provider': 'SMS Provider'
+                    };
+
+                    const grid = document.getElementById('healthGrid');
+                    grid.innerHTML = '';
+                    Object.entries(data.status).forEach(([key, value]) => {
+                        const statusDot = value ? 'ok' : 'error';
+                        const statusText = value ? 'Connected' : 'Disconnected';
+                        const div = document.createElement('div');
+                        div.className = 'health-item';
+                        div.innerHTML = `
+                            <div class="status-dot ${statusDot}"></div>
+                            <div>
+                                <div class="health-name">${map[key] || key}</div>
+                                <div class="health-status">${statusText}</div>
+                            </div>
+                        `;
+                        grid.appendChild(div);
+                    });
+                }
+            } catch (e) {
+                console.error('Health check failed:', e);
+            }
+
+            try {
+                const res = await fetch('/api/health');
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('sysVersion').textContent = data.version || '2.2.0';
+                    document.getElementById('sysEnv').textContent = data.reloadly_environment || 'sandbox';
+                }
+            } catch (e) {}
+
+            try {
+                const res = await fetch('/api/exchange-rates/status');
+                const data = await res.json();
+                if (data.success && data.status) {
+                    document.getElementById('sysExchangeRate').textContent = 
+                        data.status.last_update ? new Date(data.status.last_update).toLocaleString() : 'Never';
+                }
+            } catch (e) {}
+        }
+
+        // ============================================
+        // TRANSACTION MONITORING
+        // ============================================
+        async function loadAdminTransactions() {
+            const tbody = document.getElementById('adminTxTableBody');
+            tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">Loading transactions...</div></td></tr>';
+
+            try {
+                const status = document.getElementById('txFilterStatus').value;
+                const type = document.getElementById('txFilterType').value;
+                const date = document.getElementById('txFilterDate').value;
+
+                let url = `/api/admin/transactions?limit=${txPageSize}&offset=${currentTxOffset}`;
+                if (status) url += `&status=${encodeURIComponent(status)}`;
+                if (type) url += `&tx_type=${encodeURIComponent(type)}`;
+                if (date) url += `&date=${encodeURIComponent(date)}`;
+
+                const data = await adminFetch(url);
+                if (!data.success || !data.transactions) {
+                    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No transactions found</div></td></tr>';
+                    return;
+                }
+
+                allTransactions = data.transactions;
+                lastTxCount = data.count || data.transactions.length;
+
+                tbody.innerHTML = data.transactions.map(tx => {
+                    const statusBadge = {
+                        'pending': 'badge-warning',
+                        'processing': 'badge-info',
+                        'paid': 'badge-info',
+                        'fulfilled': 'badge-success',
+                        'failed': 'badge-danger',
+                        'fulfillment_failed': 'badge-danger'
+                    }[tx.status] || 'badge-warning';
+
+                    return `
+                        <tr>
+                            <td>${formatDate(tx.created_at)}</td>
+                            <td><code style="font-size:11px;">${escapeHtml(tx.reference)}</code></td>
+                            <td>${tx.user_id ? 'User #'+tx.user_id : 'Guest'}</td>
+                            <td>${escapeHtml(tx.tx_type || 'unknown')}</td>
+                            <td><strong>${tx.currency || 'NGN'} ${Number(tx.amount || 0).toFixed(2)}</strong></td>
+                            <td><span class="badge ${statusBadge}">${tx.status || 'pending'}</span></td>
+                            <td>${escapeHtml(tx.provider || 'N/A')}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="viewTransaction('${tx.reference}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                ${tx.status === 'fulfillment_failed' ? 
+                                    `<button class="btn btn-sm btn-warning" onclick="retryFulfillment('${tx.reference}')">
+                                        <i class="fas fa-redo"></i>
+                                    </button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('txPageLabel').textContent = 
+                    `Showing ${currentTxOffset + 1}–${currentTxOffset + data.transactions.length} of ${data.total || data.transactions.length}`;
+                document.getElementById('txPrevBtn').disabled = currentTxOffset === 0;
+                document.getElementById('txNextBtn').disabled = data.transactions.length < txPageSize;
+
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">Failed to load transactions</div></td></tr>`;
+                console.error(e);
+            }
+        }
+
+        function prevTxPage() {
+            if (currentTxOffset > 0) {
+                currentTxOffset -= txPageSize;
+                loadAdminTransactions();
+            }
+        }
+
+        function nextTxPage() {
+            if (lastTxCount >= txPageSize) {
+                currentTxOffset += txPageSize;
+                loadAdminTransactions();
+            }
+        }
+
+        async function viewTransaction(reference) {
+            try {
+                const data = await adminFetch(`/api/transaction/${reference}`);
+                if (data.success) {
+                    const tx = data.transaction;
+                    alert(`
+Transaction Details
+====================
+Reference: ${tx.reference}
+Type: ${tx.tx_type}
+Amount: ${tx.currency || 'NGN'} ${Number(tx.amount || 0).toFixed(2)}
+Status: ${tx.status}
+Provider: ${tx.provider}
+User: ${tx.user_id || 'Guest'}
+Created: ${tx.created_at}
+Payload: ${JSON.stringify(tx.payload || {}, null, 2)}
+                    `);
+                }
+            } catch (e) {
+                showToast('Failed to load transaction details', 'error');
+            }
+        }
+
+        async function retryFulfillment(reference) {
+            if (!confirm(`Retry fulfillment for transaction ${reference}?`)) return;
+            try {
+                const res = await fetch(`/api/admin/retry-fulfillment/${reference}`, {
+                    method: 'POST',
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Fulfillment retriggered', 'success');
+                    loadAdminTransactions();
+                } else {
+                    showToast(data.error, 'error');
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        function exportTransactionsCSV() {
+            if (!allTransactions || allTransactions.length === 0) {
+                showToast('No transactions to export', 'warning');
+                return;
+            }
+            let csv = 'Date,Reference,Type,Amount,Currency,Status,Provider,User\n';
+            allTransactions.forEach(t => {
+                csv += `${t.created_at || ''},`;
+                csv += `${t.reference || ''},`;
+                csv += `${t.tx_type || 'unknown'},`;
+                csv += `${Number(t.amount || 0).toFixed(2)},`;
+                csv += `${t.currency || 'NGN'},`;
+                csv += `${t.status || 'pending'},`;
+                csv += `${t.provider || 'N/A'},`;
+                csv += `${t.user_id || 'Guest'}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `admin_transactions_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showToast('CSV exported successfully', 'success');
+        }
+
+        // ============================================
+        // RECEIPT PROMOS
+        // ============================================
+        async function loadPromos() {
+            const container = document.getElementById('promoListContainer');
+            try {
+                const data = await adminFetch('/api/admin/receipt-promos');
+                if (!data.success || !data.promos || data.promos.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No promos configured. Click "Add Promo" to create one.</div>';
+                    return;
+                }
+                container.innerHTML = data.promos.map(p => `
+                    <div class="ad-campaign-item" style="${p.active ? '' : 'opacity:0.5;'}">
+                        <div class="ad-title">#${p.slot_index}: ${escapeHtml(p.title)} 
+                            <span class="badge ${p.active ? 'badge-success' : 'badge-danger'}">${p.active ? 'Active' : 'Inactive'}</span>
+                        </div>
+                        <div class="ad-body">${escapeHtml(p.body)}</div>
+                        <div class="ad-meta">
+                            ${p.cta_text ? `<span>🔗 ${escapeHtml(p.cta_text)} → ${escapeHtml(p.cta_url || '')}</span>` : ''}
+                            <span>📅 ${formatDate(p.created_at)}</span>
+                        </div>
+                        <div class="ad-actions">
+                            <button class="btn btn-sm btn-primary" onclick="editPromo(${p.id})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deletePromo(${p.id})">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Failed to load promos</div>';
+                console.error(e);
+            }
+        }
+
+        function showAddPromoModal() {
+            document.getElementById('editPromoId').value = '';
+            document.getElementById('promoModalTitle').textContent = 'Add Receipt Promo';
+            document.getElementById('promoSlotIndex').value = '';
+            document.getElementById('promoTitle').value = '';
+            document.getElementById('promoBody').value = '';
+            document.getElementById('promoCtaText').value = '';
+            document.getElementById('promoCtaUrl').value = '';
+            document.getElementById('promoActive').checked = true;
+            document.getElementById('promoStatus').innerHTML = '';
+            openModal('addPromoModal');
+        }
+
+        async function editPromo(promoId) {
+            try {
+                const data = await adminFetch('/api/admin/receipt-promos');
+                if (!data.success || !data.promos) return;
+                const promo = data.promos.find(p => p.id === promoId);
+                if (!promo) return;
+
+                document.getElementById('editPromoId').value = promoId;
+                document.getElementById('promoModalTitle').textContent = 'Edit Receipt Promo';
+                document.getElementById('promoSlotIndex').value = promo.slot_index;
+                document.getElementById('promoTitle').value = promo.title;
+                document.getElementById('promoBody').value = promo.body;
+                document.getElementById('promoCtaText').value = promo.cta_text || '';
+                document.getElementById('promoCtaUrl').value = promo.cta_url || '';
+                document.getElementById('promoActive').checked = promo.active;
+                document.getElementById('promoStatus').innerHTML = '';
+                openModal('addPromoModal');
+            } catch (e) {
+                showToast('Failed to load promo', 'error');
+            }
+        }
+
+        async function savePromo(event) {
+            event.preventDefault();
+            const promoId = document.getElementById('editPromoId').value;
+            const slotIndex = parseInt(document.getElementById('promoSlotIndex').value);
+            const title = document.getElementById('promoTitle').value.trim();
+            const body = document.getElementById('promoBody').value.trim();
+            const ctaText = document.getElementById('promoCtaText').value.trim();
+            const ctaUrl = document.getElementById('promoCtaUrl').value.trim();
+            const active = document.getElementById('promoActive').checked;
+            const status = document.getElementById('promoStatus');
+
+            if (!title || !body || isNaN(slotIndex)) {
+                status.innerHTML = '<span style="color:#ef4444;">Please fill in all required fields.</span>';
+                return;
+            }
+
+            status.innerHTML = '<span style="color:var(--text-secondary);">Saving...</span>';
+
+            try {
+                const url = promoId ? `/api/admin/receipt-promos/${promoId}` 
+                                   : `/api/admin/receipt-promos`;
+                const method = promoId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ slot_index: slotIndex, title, body, cta_text: ctaText, cta_url: ctaUrl, active })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    status.innerHTML = '<span style="color:#22c55e;">Promo saved successfully!</span>';
+                    showToast('Promo saved!', 'success');
+                    closeModal('addPromoModal');
+                    loadPromos();
+                } else {
+                    status.innerHTML = `<span style="color:#ef4444;">${data.error || 'Failed to save promo'}</span>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+
+        async function deletePromo(promoId) {
+            if (!confirm('Delete this promo?')) return;
+            try {
+                const res = await fetch(`/api/admin/receipt-promos/${promoId}`, { headers: { 'X-Admin-Secret': adminSecret },
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Promo deleted', 'success');
+                    loadPromos();
+                } else {
+                    showToast(data.error || 'Failed to delete', 'error');
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        // ============================================
+        // AUTO-UNLOCK
+        // ============================================
+        (function tryAutoUnlock() {
+            const saved = sessionStorage.getItem('net365_admin_secret');
+            if (saved) {
+                document.getElementById('secretInput').value = saved;
+                unlock();
+            }
+        })();
+
+        // ============================================
+        // INITIAL LOAD
+        // ============================================
+        console.log('Net365 Admin Panel loaded with Referral/Bonus Management and Enhanced Promotions');
+        console.log('Ready for admin tasks');
+    </script>
+</body>
+</html>

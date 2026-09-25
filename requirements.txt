@@ -1,0 +1,11 @@
+Flask>=3.0,<4
+requests>=2.31
+python-dotenv>=1.0
+cryptography>=42
+Authlib>=1.3
+dnspython>=2.6
+tzdata>=2024.1
+stripe>=6.0.0
+phonenumbers>=8.13.0
+gunicorn>=21.0.0
+reportlab>=4.0.0
