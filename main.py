@@ -15182,12 +15182,40 @@ class ReloadlyWebApp:
         logger.info(f"Starting web server on port {port} (debug={debug})")
         self.app.run(debug=debug, port=port, host=os.getenv("FLASK_HOST", "127.0.0.1"))
 
+# ============================================================
+# WSGI ENTRY POINT FOR GUNICORN / RAILWAY
+# ============================================================
+# Gunicorn is started with `gunicorn main:app`, which means it imports
+# this module and looks for a variable named `app`. Our Flask instance
+# actually lives at ReloadlyWebApp(...).app, so we need to:
+#
+#   1. Build the ReloadlyWebApp instance at import time
+#   2. Expose its .app attribute under the module-level name `app`
+#
+# This block runs whether the module is imported by gunicorn or executed
+# directly via `python main.py`. `main()` below just reuses the already-
+# built instance instead of creating a second one (which would double
+# DB init, background threads, etc.).
+# ============================================================
+_credentials = ReloadlyCredentials.from_env()
+
+if not _credentials.client_id or not _credentials.client_secret:
+    raise RuntimeError(
+        "RELOADLY_CLIENT_ID and RELOADLY_CLIENT_SECRET must be set in the environment. "
+        "On Railway, add them under the service's Variables tab."
+    )
+
+web_app = ReloadlyWebApp(_credentials)
+app = web_app.app  # <-- this is what `gunicorn main:app` binds to
+# ============================================================
+
+
 def main():
     print("\n" + "=" * 60)
     print("NET365 / RELOADLY PLATFORM v2.2")
     print("=" * 60)
 
-    credentials = ReloadlyCredentials.from_env()
+    credentials = _credentials  # reuse, don't re-create
 
     print(f"\nENVIRONMENT: {credentials.environment.value.upper()} MODE")
     print(
@@ -15195,13 +15223,6 @@ def main():
     )
     print(f"   Base URL: {credentials.base_url}")
     print(f"   Auth URL: {credentials.auth_url}")
-
-    if not credentials.client_id or not credentials.client_secret:
-        print("\nERROR: Credentials not found!")
-        print("Your .env file must have:")
-        print("  RELOADLY_CLIENT_ID=your_client_id")
-        print("  RELOADLY_CLIENT_SECRET=your_client_secret")
-        return
 
     # ============================================================
     # Diagnostic: referral bonus flag state.
@@ -15213,8 +15234,6 @@ def main():
     print(f"  REFERRAL_BONUS_ENABLED  = {REFERRAL_BONUS_ENABLED}")
     print(f"  raw env value           = {os.getenv('REFERRAL_BONUS_ENABLED')!r}")
     print("=== END FLAG ===\n")
-
-    web_app = ReloadlyWebApp(credentials)
 
     # ============================================================
     # Diagnostic: print every route Flask actually registered.
@@ -15237,9 +15256,9 @@ def main():
             print(f"  {methods}  {rule}")
     print("=== END ===\n")
 
+    # Reuse the web_app already built at module load.
     web_app.run(debug=False, port=int(os.getenv("PORT", 5557)))
 
 
 if __name__ == "__main__":
     main()
-
