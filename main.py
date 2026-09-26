@@ -4363,17 +4363,26 @@ def send_welcome_email(to_email: str, first_name: str = "") -> bool:
         msg["Reply-To"] = reply_to
         msg.attach(MIMEText(html_body, "html"))
 
-        if smtp_port == 465:
-            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=20) as server:
-                server.login(smtp_user, smtp_password)
-                server.send_message(msg)
-        else:
-            with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_password)
-                server.send_message(msg)
+        # Same fix as send_email_notification: SMTP I/O on a background thread
+        # so a hung DNS/socket connect can never block the request (signup) path.
+        import threading as _threading
 
-        logger.info(f"Welcome email sent to {to_email}")
+        def _bg_send():
+            try:
+                if smtp_port == 465:
+                    with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
+                        server.login(smtp_user, smtp_password)
+                        server.send_message(msg)
+                else:
+                    with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+                        server.starttls()
+                        server.login(smtp_user, smtp_password)
+                        server.send_message(msg)
+                logger.info(f"Welcome email sent to {to_email}")
+            except Exception as e:
+                logger.error(f"Welcome email failed for {to_email}: {e}")
+
+        _threading.Thread(target=_bg_send, daemon=True).start()
         return True
     except Exception as e:
         logger.error(f"Welcome email failed for {to_email}: {e}")
@@ -4382,22 +4391,74 @@ def send_welcome_email(to_email: str, first_name: str = "") -> bool:
 
 
 
+import os
+import smtplib
+import logging
+import threading
+import html as _html
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
+
+# Make sure this is defined somewhere in your app config
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://net365co.com")
+
+
+def _deliver_smtp_message(smtp_host, smtp_port, smtp_user, smtp_password, msg, to_email, _result):
+    """Runs the actual network I/O. Called on a background thread so that a slow/hung
+    DNS lookup or SMTP handshake (not bounded by smtplib's timeout= param) can never
+    block the Flask/gunicorn worker handling the HTTP request."""
+    try:
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
+                server.login(smtp_user, smtp_password)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.send_message(msg)
+        logger.info(f"Email sent to {to_email}")
+        _result["success"] = True
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {e}")
+        _result["success"] = False
+        _result["error"] = str(e)
+
+
 def send_email_notification(
     to_email: str,
     subject: str,
     message: str,
-    attachment: bytes = None,
-    attachment_name: str = None,
+    attachment: Optional[bytes] = None,
+    attachment_name: Optional[str] = None,
     include_promo: bool = False,
-    promo_context: Dict = None,
+    promo_context: Optional[Dict] = None,
+    wait_seconds: float = 0,
 ) -> bool:
+    """
+    Builds and sends the email. The actual SMTP connection always happens on a
+    background daemon thread so it can never hang the calling request.
+
+    wait_seconds:
+      0 (default)  -> fire-and-forget. Returns True as soon as the send is dispatched;
+                       use this for receipts/notifications where nobody checks the result.
+      > 0          -> blocks up to wait_seconds for a real success/failure result (used by
+                       flows like OTP delivery that need to tell the user whether it worked).
+                       If the send hasn't finished by then, returns False immediately without
+                       waiting any further — the send still completes in the background.
+    """
     smtp_host = os.getenv("SMTP_HOST", "smtp.mailgun.org")
     smtp_port = int(os.getenv("SMTP_PORT", 587))
     smtp_user = os.getenv("SMTP_USER")
     smtp_password = os.getenv("SMTP_PASSWORD")
-    from_email = os.getenv("FROM_EMAIL", smtp_user)
+    from_email = os.getenv("FROM_EMAIL") or smtp_user
     from_name = os.getenv("FROM_NAME", "Net365 Support")
-    reply_to = os.getenv("REPLY_TO", from_email)
+    reply_to = os.getenv("REPLY_TO") or from_email
 
     if not smtp_user or not smtp_password:
         logger.warning("SMTP credentials not configured, skipping email notification")
@@ -4413,28 +4474,20 @@ def send_email_notification(
         promo_html = ""
         if include_promo:
             context = promo_context or {}
-            promo = _get_transaction_promo(
-                user_id=context.get("user_id"),
-                reference=context.get("reference"),
-                tx_type=context.get("tx_type"),
-                amount=context.get("amount"),
-                created_at=context.get("created_at"),
-            )
-            promo_html = _build_email_promo_html(promo)
-
-        import html as _html
+            try:
+                promo = _get_transaction_promo(
+                    user_id=context.get("user_id"),
+                    reference=context.get("reference"),
+                    tx_type=context.get("tx_type"),
+                    amount=context.get("amount"),
+                    created_at=context.get("created_at"),
+                )
+                promo_html = _build_email_promo_html(promo)
+            except NameError:
+                logger.warning("Promo helpers not available, skipping promo block")
 
         safe_subject = _html.escape(str(subject))
-        safe_message = str(message).replace("\n", "<br>")
-
-        # ============================================================
-        # NET365 BRAND COLORS - Updated from dull blue to bright red
-        # ============================================================
-        # Primary: Bright Red (#E31E24)
-        # Secondary: Dark Red (#991B1B)
-        # Accent: Warm Red (#F97316)
-        # Text: White (#FFFFFF)
-        # Background: Light Gray (#F8FAFC)
+        safe_message = _html.escape(str(message)).replace("\n", "<br>")
 
         html_body = f"""
         <html>
@@ -4453,157 +4506,38 @@ def send_email_notification(
                 padding: 32px 28px 28px 28px;
                 text-align: center;
                 border-radius: 16px 16px 0 0;
-                position: relative;
-                overflow: hidden;
             }}
-            .header::after {{
-                content: '';
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 4px;
-                background: linear-gradient(90deg, #F97316, #E31E24, #F97316);
-            }}
-            .header h1 {{
-                margin: 0;
-                font-size: 32px;
-                font-weight: 800;
-                letter-spacing: 1px;
-                color: white;
-            }}
+            .header h1 {{ margin: 0; font-size: 32px; font-weight: 800; }}
             .header .sub {{
-                font-size: 11px;
-                opacity: 0.85;
-                letter-spacing: 2px;
-                text-transform: uppercase;
-                margin-top: 4px;
-                color: rgba(255,255,255,0.85);
+                font-size: 11px; opacity: 0.85; letter-spacing: 2px;
+                text-transform: uppercase; margin-top: 4px;
             }}
             .content {{
-                padding: 28px 28px 24px 28px;
-                background: #ffffff;
-                border: 1px solid #e2e8f0;
-                border-top: none;
+                padding: 28px; background: #ffffff;
+                border: 1px solid #e2e8f0; border-top: none;
                 border-radius: 0 0 16px 16px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.04);
             }}
-            .content h2 {{
-                color: #1e293b;
-                font-size: 20px;
-                margin-top: 0;
-                margin-bottom: 12px;
-                font-weight: 700;
+            .content h2 {{ color: #1e293b; font-size: 20px; margin-top: 0; }}
+            .content p {{ color: #475569; line-height: 1.7; font-size: 15px; }}
+            .message-box {{
+                background: #fef2f2; border-left: 4px solid #E31E24;
+                padding: 16px 20px; border-radius: 8px; margin: 16px 0;
             }}
-            .content p {{
-                color: #475569;
-                line-height: 1.7;
-                font-size: 15px;
-                margin-bottom: 12px;
-            }}
-            .content .message-box {{
-                background: #fef2f2;
-                border-left: 4px solid #E31E24;
-                padding: 16px 20px;
-                border-radius: 8px;
-                margin: 16px 0;
-            }}
-            .content .message-box p {{
-                margin: 0;
-                color: #1e293b;
-            }}
-            .amount {{
-                font-size: 28px;
-                font-weight: 700;
-                color: #E31E24;
-            }}
+            .message-box p {{ margin: 0; color: #1e293b; }}
             .button {{
                 background: linear-gradient(145deg, #E31E24 0%, #991B1B 100%);
-                color: white;
-                padding: 14px 32px;
-                text-decoration: none;
-                border-radius: 999px;
-                display: inline-block;
-                font-weight: 700;
-                font-size: 14px;
-                transition: transform 0.2s ease;
-                box-shadow: 0 4px 16px rgba(227, 30, 36, 0.3);
-            }}
-            .button:hover {{
-                transform: scale(1.02);
-                box-shadow: 0 6px 24px rgba(227, 30, 36, 0.4);
+                color: white; padding: 14px 32px; text-decoration: none;
+                border-radius: 999px; display: inline-block;
+                font-weight: 700; font-size: 14px;
             }}
             .footer {{
-                text-align: center;
-                padding: 20px 28px;
-                background: #f8fafc;
-                border-radius: 0 0 16px 16px;
-                border: 1px solid #e2e8f0;
-                border-top: none;
+                text-align: center; padding: 20px 28px;
+                background: #f8fafc; border-radius: 0 0 16px 16px;
+                border: 1px solid #e2e8f0; border-top: none;
             }}
-            .footer p {{
-                margin: 0;
-                color: #94a3b8;
-                font-size: 12px;
-            }}
-            .footer .link {{
-                color: #E31E24;
-                text-decoration: none;
-                font-weight: 600;
-            }}
-            .footer .link:hover {{
-                text-decoration: underline;
-            }}
-            .divider {{
-                height: 1px;
-                background: #e2e8f0;
-                margin: 16px 0;
-            }}
-            .promo-card {{
-                background: #fef2f2;
-                border: 1px solid #fecaca;
-                border-radius: 12px;
-                padding: 18px 20px;
-                margin-top: 20px;
-            }}
-            .promo-card .promo-badge {{
-                display: inline-block;
-                background: #E31E24;
-                color: white;
-                font-size: 10px;
-                font-weight: 700;
-                padding: 2px 12px;
-                border-radius: 999px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }}
-            .promo-card h3 {{
-                color: #991B1B;
-                margin: 8px 0 4px 0;
-                font-size: 16px;
-            }}
-            .promo-card p {{
-                color: #475569;
-                font-size: 14px;
-                line-height: 1.6;
-                margin: 4px 0 0 0;
-            }}
-            .promo-card .promo-cta {{
-                display: inline-block;
-                background: #E31E24;
-                color: white;
-                padding: 8px 20px;
-                border-radius: 999px;
-                text-decoration: none;
-                font-weight: 600;
-                font-size: 13px;
-                margin-top: 10px;
-            }}
-            @media only screen and (max-width: 480px) {{
-                .header {{ padding: 24px 20px 20px 20px; }}
-                .content {{ padding: 20px; }}
-                .header h1 {{ font-size: 24px; }}
-            }}
+            .footer p {{ margin: 0; color: #94a3b8; font-size: 12px; }}
+            .footer .link {{ color: #E31E24; text-decoration: none; font-weight: 600; }}
+            .divider {{ height: 1px; background: #e2e8f0; margin: 16px 0; }}
         </style>
         </head>
         <body>
@@ -4613,13 +4547,8 @@ def send_email_notification(
             </div>
             <div class="content">
                 <h2>{safe_subject}</h2>
-                
-                <div class="message-box">
-                    <p>{safe_message}</p>
-                </div>
-                
+                <div class="message-box"><p>{safe_message}</p></div>
                 {promo_html}
-                
                 <p style="text-align:center;margin-top:24px;margin-bottom:0;">
                     <a href="{_html.escape(FRONTEND_URL, quote=True)}" class="button">
                         View in Dashboard
@@ -4630,12 +4559,11 @@ def send_email_notification(
                 <p>
                     &copy; 2026 Net365. All rights reserved.<br>
                     <span style="font-size:11px;color:#94a3b8;">
-                        This is an automated receipt from Net365. Please keep this for your records.
+                        This is an automated receipt from Net365.
                     </span>
                 </p>
                 <div class="divider"></div>
-                <p>
-                    Need help? Contact us at 
+                <p>Need help? Contact
                     <a href="mailto:support@net365co.com" class="link">support@net365co.com</a>
                 </p>
             </div>
@@ -4654,17 +4582,28 @@ def send_email_notification(
             )
             msg.attach(part)
 
-        if smtp_port == 465:
-            with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
-                server.login(smtp_user, smtp_password)
-                server.send_message(msg)
-        else:
-            with smtplib.SMTP(smtp_host, smtp_port) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_password)
-                server.send_message(msg)
+        # ⬇️ THE KEY FIX: SMTP I/O runs on a background thread, never on the
+        # request thread. A hung DNS lookup or blocked outbound port can no
+        # longer take down the Flask/gunicorn worker (see WORKER TIMEOUT crash).
+        _result: Dict = {}
+        t = threading.Thread(
+            target=_deliver_smtp_message,
+            args=(smtp_host, smtp_port, smtp_user, smtp_password, msg, to_email, _result),
+            daemon=True,
+        )
+        t.start()
 
-        logger.info(f"Email sent to {to_email}")
+        if wait_seconds > 0:
+            t.join(wait_seconds)
+            if t.is_alive():
+                logger.warning(
+                    f"Email to {to_email} still in flight after {wait_seconds}s wait; "
+                    f"not blocking the request further (it will finish in the background)"
+                )
+                return False
+            return bool(_result.get("success"))
+
+        # Fire-and-forget: don't block the caller/request at all.
         return True
 
     except Exception as e:
@@ -11864,6 +11803,7 @@ class ReloadlyWebApp:
                         f'Your verification code is <span class="amount">{code}</span>. '
                         f"It expires in 10 minutes. Enter it in the app to verify your email "
                         f"and unlock wallet funding and payments.",
+                        wait_seconds=8,  # OTP flow needs a real success/fail answer, but bounded
                     )
                     if not otp_sent:
                         logger.warning(
