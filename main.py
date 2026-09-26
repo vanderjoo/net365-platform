@@ -4370,11 +4370,24 @@ def send_welcome_email(to_email: str, first_name: str = "") -> bool:
         msg["Reply-To"] = reply_to
         msg.attach(MIMEText(html_body, "html"))
 
-        # Same fix as send_email_notification: SMTP I/O on a background thread
-        # so a hung DNS/socket connect can never block the request (signup) path.
+        # Same fix as send_email_notification: I/O on a background thread so a
+        # hung DNS/socket connect can never block the request (signup) path,
+        # and prefer the Mailgun HTTP API over raw SMTP when available.
         import threading as _threading
 
+        mailgun_api_key = os.getenv("MAILGUN_API_KEY")
+        mailgun_domain = os.getenv("MAILGUN_DOMAIN") or (
+            smtp_user.split("@", 1)[1] if smtp_user and "@" in smtp_user else None
+        )
+
         def _bg_send():
+            if mailgun_api_key and mailgun_domain:
+                _r = {}
+                _send_via_mailgun_api(
+                    mailgun_domain, mailgun_api_key, formataddr((from_name, from_email)),
+                    to_email, subject, html_body, None, None, _r,
+                )
+                return
             try:
                 if smtp_port == 465:
                     with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
@@ -4413,6 +4426,35 @@ logger = logging.getLogger(__name__)
 
 # Make sure this is defined somewhere in your app config
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://net365co.com")
+
+
+def _send_via_mailgun_api(mg_domain, mg_api_key, from_addr, to_email, subject, html_body, attachment, attachment_name, _result):
+    """Sends via Mailgun's HTTPS API instead of raw SMTP. Used automatically
+    whenever MAILGUN_API_KEY is set, because outbound SMTP (port 587/465/25)
+    is commonly blocked or silently dropped by PaaS hosts like Railway —
+    that's what a 'timed out' error sending mail (rather than an auth or
+    delivery error) almost always means. The API call goes out over normal
+    HTTPS (443), which is never blocked the same way."""
+    try:
+        files = [("attachment", (attachment_name, attachment))] if (attachment and attachment_name) else None
+        resp = requests.post(
+            f"https://api.mailgun.net/v3/{mg_domain}/messages",
+            auth=("api", mg_api_key),
+            data={"from": from_addr, "to": [to_email], "subject": subject, "html": html_body},
+            files=files,
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            logger.info(f"Email sent via Mailgun API to {to_email}")
+            _result["success"] = True
+        else:
+            logger.error(f"Mailgun API error {resp.status_code} sending to {to_email}: {resp.text[:300]}")
+            _result["success"] = False
+            _result["error"] = f"HTTP {resp.status_code}: {resp.text[:300]}"
+    except Exception as e:
+        logger.error(f"Mailgun API request failed for {to_email}: {e}")
+        _result["success"] = False
+        _result["error"] = str(e)
 
 
 def _deliver_smtp_message(smtp_host, smtp_port, smtp_user, smtp_password, msg, to_email, _result):
@@ -4592,12 +4634,31 @@ def send_email_notification(
         # ⬇️ THE KEY FIX: SMTP I/O runs on a background thread, never on the
         # request thread. A hung DNS lookup or blocked outbound port can no
         # longer take down the Flask/gunicorn worker (see WORKER TIMEOUT crash).
-        _result: Dict = {}
-        t = threading.Thread(
-            target=_deliver_smtp_message,
-            args=(smtp_host, smtp_port, smtp_user, smtp_password, msg, to_email, _result),
-            daemon=True,
+        # Prefer Mailgun's HTTPS API (port 443) over raw SMTP (port 587) when a
+        # MAILGUN_API_KEY is configured — Railway (like many PaaS hosts) can
+        # silently drop outbound SMTP traffic, which shows up as a plain
+        # socket "timed out" rather than an auth/delivery error.
+        mailgun_api_key = os.getenv("MAILGUN_API_KEY")
+        mailgun_domain = os.getenv("MAILGUN_DOMAIN") or (
+            smtp_user.split("@", 1)[1] if smtp_user and "@" in smtp_user else None
         )
+
+        _result: Dict = {}
+        if mailgun_api_key and mailgun_domain:
+            t = threading.Thread(
+                target=_send_via_mailgun_api,
+                args=(
+                    mailgun_domain, mailgun_api_key, f"{from_name} <{from_email}>",
+                    to_email, subject, html_body, attachment, attachment_name, _result,
+                ),
+                daemon=True,
+            )
+        else:
+            t = threading.Thread(
+                target=_deliver_smtp_message,
+                args=(smtp_host, smtp_port, smtp_user, smtp_password, msg, to_email, _result),
+                daemon=True,
+            )
         t.start()
 
         if wait_seconds > 0:
