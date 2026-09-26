@@ -30,7 +30,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = (
     os.getenv("DATABASE_PATH")
     or os.getenv("DATABASE_URL")
-    or os.path.join(BASE_DIR, "reloadly.db")
+    or os.path.join(BASE_DIR, "net365.db")
 )
 logger.info(f"Using database file: {DATABASE}")
 
