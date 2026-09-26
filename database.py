@@ -19,9 +19,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Use absolute path for database
+# Use absolute path for database.
+# Accepts DATABASE_PATH (what you set on Railway) first, falls back to the
+# older DATABASE_URL name some deploys used, then finally a local file for
+# bare local runs. Previously this only checked DATABASE_URL, so a
+# DATABASE_PATH variable set on Railway was silently ignored and the app
+# always fell back to a file inside the ephemeral container filesystem —
+# wiped on every restart/redeploy regardless of any Volume you attached.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE = os.getenv("DATABASE_URL", os.path.join(BASE_DIR, "reloadly.db"))
+DATABASE = (
+    os.getenv("DATABASE_PATH")
+    or os.getenv("DATABASE_URL")
+    or os.path.join(BASE_DIR, "reloadly.db")
+)
+logger.info(f"Using database file: {DATABASE}")
 
 # Database lock timeout (in seconds)
 DB_TIMEOUT = 30
@@ -180,61 +191,14 @@ def get_user_by_id(user_id):
     return get_user(user_id)
 
 
-def get_user_by_email(email):
-    """Get user by email"""
-    try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, email, phone, full_name, referred_by, referral_code FROM users WHERE email = ?", (email,))
-        user = cursor.fetchone()
-        conn.close()
-        
-        if user:
-            return {
-                'id': user[0],
-                'email': user[1],
-                'phone': user[2],
-                'full_name': user[3],
-                'referred_by': user[4],
-                'referral_code': user[5]
-            }
-        return None
-    except Exception as e:
-        logger.error(f"Error getting user by email: {e}")
-        return None
-
-def get_referral_code_by_user_id(user_id):
-    """Get referral code created by user"""
-    try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT referral_code FROM users WHERE id = ?", (user_id,))
-        result = cursor.fetchone()
-        conn.close()
-        return result[0] if result else None
-    except Exception as e:
-        logger.error(f"Error getting referral code: {e}")
-        return None
-
-def get_referral_code_owner(referral_code):
-    """Get user who owns a referral code"""
-    try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, email, full_name FROM users WHERE referral_code = ?", (referral_code,))
-        user = cursor.fetchone()
-        conn.close()
-        
-        if user:
-            return {
-                'id': user[0],
-                'email': user[1],
-                'full_name': user[2]
-            }
-        return None
-    except Exception as e:
-        logger.error(f"Error getting referral code owner: {e}")
-        return None
+# get_user_by_email, get_referral_code_by_user_id, get_referral_code_owner:
+# removed from here. These used to hardcode sqlite3.connect('database.db') —
+# a THIRD, different SQLite file from DATABASE, that never received any
+# schema migrations. They were dead code (silently overridden later in this
+# file by correct versions using get_db_connection()), but left in place as
+# a landmine for anyone who reorders the file. The real implementations are
+# further down, near get_referral_code_by_user_id / get_referral_code_owner /
+# get_user_by_email.
 
 
 
@@ -953,81 +917,12 @@ def get_contact_count(user_id: int) -> int:
 
 
 
-def create_notification(user_id, title, message, notification_type):
-    """Create a notification for a user"""
-    try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO notifications (user_id, title, message, type, is_read, created_at)
-            VALUES (?, ?, ?, ?, ?, datetime('now'))
-        """, (user_id, title, message, notification_type, 0))
-        conn.commit()
-        conn.close()
-        return {'success': True}
-    except Exception as e:
-        logger.error(f"Error creating notification: {e}")
-        return {'success': False, 'message': str(e)}
-    
-    # ============================================
-    # ✅ CREDIT THE REFERRER'S BONUS
-    # ============================================
-    
-    if referrer_id:
-        try:
-            # Calculate bonus (5% of the transaction amount)
-            bonus_amount = amount * 0.05
-            bonus_currency = "NGN"
-            
-            logger.info(f"💰 Crediting referral bonus: {bonus_currency} {bonus_amount:,.2f} to referrer {referrer_id}")
-            
-            # ✅ Credit the referrer's wallet
-            if hasattr(db, 'credit_wallet'):
-                credit_result = db.credit_wallet(
-                    referrer_id, 
-                    bonus_amount, 
-                    "referral_bonus", 
-                    f"Referral bonus from user {user_id}'s transaction"
-                )
-                
-                if credit_result.get('success'):
-                    logger.info(f"✅ Referral bonus of {bonus_currency} {bonus_amount:,.2f} credited to referrer {referrer_id}")
-                    
-                    # Create notification for referrer
-                    if hasattr(db, 'create_notification'):
-                        db.create_notification(
-                            referrer_id,
-                            "🎉 Referral Bonus Earned!",
-                            f"You earned {bonus_currency} {bonus_amount:,.2f} (5% of your referral's transaction)!",
-                            "success"
-                        )
-                        logger.info(f"✅ Notification sent to referrer {referrer_id}")
-                else:
-                    logger.error(f"❌ Failed to credit referral bonus: {credit_result}")
-            else:
-                logger.warning("credit_wallet function not found in database module")
-                
-        except Exception as e:
-            logger.error(f"❌ Error giving referral bonus: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            # Don't fail the payment
-    
-    # ============================================
-    # NOTIFY THE USER WHO FUNDED THEIR WALLET
-    # ============================================
-    
-    if hasattr(db, 'create_notification'):
-        db.create_notification(
-            user_id,
-            "💰 Wallet Funded Successfully!",
-            f"Your wallet has been credited with NGN {amount:,.2f}",
-            "success"
-        )
-    
-    logger.info(f"Transaction {reference} completed successfully")
-
-def process_pending_referrals() -> Dict:
+# create_notification: removed from here — dead/shadowed duplicate with the
+# same hardcoded 'database.db' issue as above, plus ~70 lines of unreachable
+# code after its return statements (a stray copy-paste from a wallet-funding
+# code path, referencing undefined names like referrer_id/amount/db that
+# would have raised NameError had it ever actually been reachable). The real
+# implementation (using get_db_connection()) lives further down this file.
     """
     Process all pending referrals where the referred user has made a transaction.
     This can be called manually or via a scheduled job.
@@ -1183,6 +1078,7 @@ def init_db():
         ("email_verified", "BOOLEAN", "0"),
         ("phone_verified", "BOOLEAN", "0"),
         ("verified_at", "TIMESTAMP", "NULL"),
+        ("verification_status", "TEXT", "'unverified'"),
     ]:
         if col not in user_columns:
             c.execute(f"ALTER TABLE users ADD COLUMN {col} {typ} DEFAULT {default}")
@@ -1820,6 +1716,11 @@ def init_db():
     # that silently shadowed this function (Python keeps only the last def with a
     # given name), so on a fresh database NO tables were ever created. Merged here.
     migrate_promotions_table()
+
+    # This was defined but never called anywhere, so referral_rewards never
+    # got created on any deploy — every referral-reward lookup/insert failed
+    # with "no such table: referral_rewards" (see logs).
+    migrate_referral_tables()
 
 
 # ============ BRAND COLORS TABLE ============
