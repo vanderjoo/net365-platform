@@ -46,6 +46,13 @@ if _smtp_host_check:
 else:
     print("SMTP_HOST not set — email sending will use the default (smtp.gmail.com)")
 print(f"SMTP_PORT loaded as: [{os.getenv('SMTP_PORT', '587 (default)')}]")
+_smtp_user_check = os.getenv("SMTP_USER")
+_smtp_pass_check = os.getenv("SMTP_PASSWORD")
+print(f"SMTP_USER loaded: [{'SET as ' + _smtp_user_check if _smtp_user_check else 'NOT SET'}]")
+print(f"SMTP_PASSWORD loaded: [{'SET' if _smtp_pass_check else 'NOT SET'}]")
+if not _smtp_user_check or not _smtp_pass_check:
+    print("⚠️ WARNING: SMTP_USER/SMTP_PASSWORD missing — send_email_notification() will "
+          "silently return False for every email until these are set on Railway.")
 from flask import send_from_directory, render_template_string
 
 print("=" * 60)
@@ -6772,53 +6779,67 @@ class ReloadlyWebApp:
             return {"success": False, "error": "Missing reference"}
 
         with _finalize_lock:
-            max_retries = 5
-            tx = None
-            for attempt in range(max_retries):
-                try:
+            # Everything up to the fulfillment lock used to be unprotected: any
+            # DB error here (get_transaction, decrypt_payload, try_lock_for_fulfillment)
+            # would propagate straight out of _finalize_transaction, past
+            # /payment/success (which has no try/except of its own), and Flask
+            # would return a raw 500 Internal Server Error instead of redirecting
+            # the user back to the app. Wrapping it turns that into a clean
+            # {"success": False} result, which the route already knows how to
+            # handle (redirects with status=processing instead of crashing).
+            try:
+                max_retries = 5
+                tx = None
+                for attempt in range(max_retries):
+                    try:
+                        tx = db.get_transaction(reference)
+                        break
+                    except sqlite3.OperationalError as e:
+                        if "database is locked" in str(e) and attempt < max_retries - 1:
+                            time.sleep(0.5 * (attempt + 1))
+                            continue
+                        raise
+
+                stripe_session_id = None
+
+                if not tx and (reference.startswith("cs_") or reference.startswith("cs_test_")):
+                    stripe_session_id = reference
+                    tx = self._find_transaction_by_stripe_session(reference)
+                    if tx:
+                        logger.info(f"Found transaction {tx['reference']} for Stripe session {reference}")
+                        reference = tx["reference"]
+
+                if not tx:
+                    return {"success": False, "error": f"Unknown reference: {reference}"}
+
+                if tx.get("payload"):
+                    tx["payload"] = decrypt_payload(tx["payload"])
+
+                payload = tx.get("payload", {})
+
+                logger.info(
+                    f"Finalizing transaction: reference={reference}, tx_type={tx.get('tx_type')}, provider={tx.get('provider')}, status={tx.get('status')}"
+                )
+
+                if tx["status"] == "fulfilled":
+                    return {
+                        "success": True,
+                        "already_fulfilled": True,
+                        "result": tx["reloadly_result"],
+                    }
+
+                if not db.try_lock_for_fulfillment(reference):
+                    logger.info(f"Transaction {reference} is already being processed, waiting...")
+                    time.sleep(1)
                     tx = db.get_transaction(reference)
-                    break
-                except sqlite3.OperationalError as e:
-                    if "database is locked" in str(e) and attempt < max_retries - 1:
-                        time.sleep(0.5 * (attempt + 1))
-                        continue
-                    raise
-
-            stripe_session_id = None
-
-            if not tx and (reference.startswith("cs_") or reference.startswith("cs_test_")):
-                stripe_session_id = reference
-                tx = self._find_transaction_by_stripe_session(reference)
-                if tx:
-                    logger.info(f"Found transaction {tx['reference']} for Stripe session {reference}")
-                    reference = tx["reference"]
-
-            if not tx:
-                return {"success": False, "error": f"Unknown reference: {reference}"}
-
-            if tx.get("payload"):
-                tx["payload"] = decrypt_payload(tx["payload"])
-
-            payload = tx.get("payload", {})
-
-            logger.info(
-                f"Finalizing transaction: reference={reference}, tx_type={tx.get('tx_type')}, provider={tx.get('provider')}, status={tx.get('status')}"
-            )
-
-            if tx["status"] == "fulfilled":
-                return {
-                    "success": True,
-                    "already_fulfilled": True,
-                    "result": tx["reloadly_result"],
-                }
-
-            if not db.try_lock_for_fulfillment(reference):
-                logger.info(f"Transaction {reference} is already being processed, waiting...")
-                time.sleep(1)
-                tx = db.get_transaction(reference)
-                if tx and tx["status"] == "fulfilled":
-                    return {"success": True, "already_fulfilled": True}
-                return {"success": False, "error": "Transaction is being processed"}
+                    if tx and tx["status"] == "fulfilled":
+                        return {"success": True, "already_fulfilled": True}
+                    return {"success": False, "error": "Transaction is being processed"}
+            except Exception as e:
+                logger.error(f"FINALIZE PRE-CHECK FAILED for {reference}: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                return {"success": False, "error": str(e)}
 
             try:
                 verify_reference = reference
@@ -8648,60 +8669,76 @@ class ReloadlyWebApp:
 
         @self.app.route("/payment/success")
         def payment_success():
+            # Whole body wrapped in try/except: this route MUST always redirect
+            # the user's browser somewhere, never return a raw Flask 500 page.
+            # Previously an exception here (DB errors, etc.) escaped uncaught and
+            # the user landed on an "Internal Server Error" page instead of the
+            # app, even when the underlying payment had already succeeded.
+            frontend_url = FRONTEND_URL
             reference = (
                 request.args.get("reference")
                 or request.args.get("session_id")
                 or request.args.get("trxref")
             )
+            try:
+                if not reference:
+                    return redirect(frontend_url)
 
-            frontend_url = FRONTEND_URL
+                logger.info(f"Payment success callback received: reference={reference}")
 
-            if not reference:
-                return redirect(frontend_url)
-
-            logger.info(f"Payment success callback received: reference={reference}")
-
-            stripe_session_id = None
-            if reference.startswith("cs_") or reference.startswith("cs_test_"):
-                stripe_session_id = reference
-                tx = self._find_transaction_by_stripe_session(reference)
-                if tx:
-                    reference = tx["reference"]
-                    logger.info(
-                        f"Found transaction {reference} for Stripe session {stripe_session_id}"
-                    )
-                    try:
-                        payload = tx.get("payload", {})
-                        if isinstance(payload, str):
-                            payload = json.loads(payload) if payload else {}
-                        payload["stripe_session_id"] = stripe_session_id
-                        conn = db.get_db_connection()
-                        c = conn.cursor()
-                        c.execute(
-                            "UPDATE transactions SET payload = ? WHERE reference = ?",
-                            (json.dumps(payload), reference),
-                        )
-                        conn.commit()
+                stripe_session_id = None
+                if reference.startswith("cs_") or reference.startswith("cs_test_"):
+                    stripe_session_id = reference
+                    tx = self._find_transaction_by_stripe_session(reference)
+                    if tx:
+                        reference = tx["reference"]
                         logger.info(
-                            f"Updated transaction {reference} with Stripe session ID {stripe_session_id}"
+                            f"Found transaction {reference} for Stripe session {stripe_session_id}"
                         )
-                    except Exception as e:
-                        logger.error(
-                            f"Failed to update transaction with Stripe session ID: {e}"
-                        )
+                        try:
+                            payload = tx.get("payload", {})
+                            if isinstance(payload, str):
+                                payload = json.loads(payload) if payload else {}
+                            payload["stripe_session_id"] = stripe_session_id
+                            conn = db.get_db_connection()
+                            c = conn.cursor()
+                            c.execute(
+                                "UPDATE transactions SET payload = ? WHERE reference = ?",
+                                (json.dumps(payload), reference),
+                            )
+                            conn.commit()
+                            logger.info(
+                                f"Updated transaction {reference} with Stripe session ID {stripe_session_id}"
+                            )
+                        except Exception as e:
+                            logger.error(
+                                f"Failed to update transaction with Stripe session ID: {e}"
+                            )
 
-            result = self._finalize_transaction(reference)
+                result = self._finalize_transaction(reference)
 
-            if result.get("success"):
-                redirect_url = f"{frontend_url}/?status=success&reference={reference}"
-                logger.info(f"Payment success - redirecting to: {redirect_url}")
-            else:
-                redirect_url = (
-                    f"{frontend_url}/?status=processing&reference={reference}"
+                if result.get("success"):
+                    redirect_url = f"{frontend_url}/?status=success&reference={reference}"
+                    logger.info(f"Payment success - redirecting to: {redirect_url}")
+                else:
+                    redirect_url = (
+                        f"{frontend_url}/?status=processing&reference={reference}"
+                    )
+                    logger.info(f"Payment processing - redirecting to: {redirect_url}")
+
+                return redirect(redirect_url)
+
+            except Exception as e:
+                logger.error(f"payment_success crashed for reference={reference}: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                # Never show the raw error page — send them back to the app.
+                # The transaction itself (if it succeeded) is unaffected; this
+                # only controls what the browser does next.
+                fallback_ref = reference or ""
+                return redirect(
+                    f"{frontend_url}/?status=error&reference={fallback_ref}"
                 )
-                logger.info(f"Payment processing - redirecting to: {redirect_url}")
-
-            return redirect(redirect_url)
 
         @self.app.route("/payment/cancel")
         def payment_cancel():
@@ -8717,12 +8754,16 @@ class ReloadlyWebApp:
                 or request.args.get("session_id")
             )
             return_url = _safe_payment_return_url(request.args.get("return_url"))
-            if not reference:
-                return redirect(f"{return_url}?status=error")
-            separator = "&" if "?" in return_url else "?"
-            return redirect(
-                f"{return_url}{separator}status=processing&reference={reference}"
-            )
+            try:
+                if not reference:
+                    return redirect(f"{return_url}?status=error")
+                separator = "&" if "?" in return_url else "?"
+                return redirect(
+                    f"{return_url}{separator}status=processing&reference={reference}"
+                )
+            except Exception as e:
+                logger.error(f"payment_callback crashed for reference={reference}: {e}")
+                return redirect(f"{FRONTEND_URL}/?status=error")
 
 
 
