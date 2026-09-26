@@ -9,3 +9,4 @@ stripe>=6.0.0
 phonenumbers>=8.13.0
 gunicorn>=21.0.0
 reportlab>=4.0.0
+Authlib==1.6.5
