@@ -6,19 +6,138 @@
     <title>Net365 Analytics Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* Same styles as scheduler.html */
         :root {
             --bg-primary: #f0f4f8;
             --bg-secondary: #ffffff;
             --text-primary: #1e293b;
             --text-secondary: #64748b;
             --border-color: #e2e8f0;
+            --card-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+            --transition: all 0.3s ease;
             --primary: #4f46e5;
             --success: #22c55e;
             --danger: #ef4444;
             --warning: #f59e0b;
+            --radius: 12px;
         }
-        /* ... (copy styles from scheduler.html) ... */
+
+        body.dark-mode {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: var(--transition);
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+        .scheduler-nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: var(--transition);
+            flex-wrap: wrap;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .scheduler-nav .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .scheduler-nav .logo i { color: var(--primary); }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+        .theme-toggle:hover { background: var(--border-color); }
+        body.dark-mode .theme-toggle .fa-sun { display: inline; }
+        body.dark-mode .theme-toggle .fa-moon { display: none; }
+        .theme-toggle .fa-sun { display: none; }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 14px;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+        .back-btn:hover { background: var(--bg-primary); color: var(--text-primary); }
+
+        .scheduler-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #4338ca; transform: translateY(-1px); }
+        .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* ---- page-specific styles below ---- */
         .chart-container {
             background: var(--bg-secondary);
             border-radius: 16px;
@@ -94,7 +213,7 @@
         <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
         <a href="#" class="logo"><i class="fas fa-chart-pie"></i> Analytics Dashboard</a>
         <div style="display:flex;gap:8px;">
-            <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme"><i class="fas fa-moon"></i><i class="fas fa-sun"></i></button>
             <button class="btn btn-primary btn-sm" onclick="refreshData()"><i class="fas fa-sync"></i> Refresh</button>
         </div>
     </nav>
@@ -253,7 +372,7 @@
 
         function toggleTheme() {
             document.body.classList.toggle('dark-mode');
-            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            localStorage.setItem('net365_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
         }
 
         function showToast(message, type = 'info') {
@@ -272,7 +391,7 @@
         }
 
         // Load theme
-        if (localStorage.getItem('theme') === 'dark') {
+        if (localStorage.getItem('net365_theme') === 'dark') {
             document.body.classList.add('dark-mode');
         }
 

@@ -526,11 +526,11 @@
 
         function toggleTheme() {
             document.body.classList.toggle('dark-mode');
-            localStorage.setItem('business_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            localStorage.setItem('net365_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
             document.querySelector('.theme-toggle i').className = document.body.classList.contains('dark-mode') ? 'fas fa-sun' : 'fas fa-moon';
         }
 
-        if (localStorage.getItem('business_theme') === 'dark') {
+        if (localStorage.getItem('net365_theme') === 'dark') {
             document.body.classList.add('dark-mode');
             document.querySelector('.theme-toggle i').className = 'fas fa-sun';
         }

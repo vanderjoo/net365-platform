@@ -3014,13 +3014,13 @@
     // ================================================
     function toggleTheme() {
       document.body.classList.toggle('dark-mode');
-      localStorage.setItem('net365_scheduler_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+      localStorage.setItem('net365_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
       const icon = document.querySelector('.theme-toggle i');
       icon.className = document.body.classList.contains('dark-mode') ? 'fas fa-sun' : 'fas fa-moon';
     }
 
     function loadTheme() {
-      if (localStorage.getItem('net365_scheduler_theme') === 'dark') {
+      if (localStorage.getItem('net365_theme') === 'dark') {
         document.body.classList.add('dark-mode');
         document.querySelector('.theme-toggle i').className = 'fas fa-sun';
       }
