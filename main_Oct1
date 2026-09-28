@@ -1195,38 +1195,11 @@ SUPPORTED_CURRENCIES = {
     "PLN": {"name": "Polish Zloty",     "symbol": "zł",   "gateway": "stripe", "min_amount": 5,     "step": 1,    "is_local": False, "country": "PL", "decimals": 2},
 }
 
-# ============================================================
-# COUNTRY_CURRENCY_MAP — mirrors the frontend's GATEWAY_CONFIG
-# country -> currency mapping. Used by /api/payment/init to reject a
-# currency that doesn't match the recharge's destination country
-# (e.g. NGN for a US topup), which is what let a ₦5.13 payment intent
-# get created for a US recharge and crash deep inside
-# _finalize_transaction trying to convert it to USD.
-# ============================================================
-COUNTRY_CURRENCY_MAP = {
-    "NG": "NGN", "GH": "GHS", "KE": "KES", "ZA": "ZAR", "UG": "UGX", "TZ": "TZS",
-    "US": "USD", "CA": "CAD",
-    "GB": "GBP", "EU": "EUR", "FR": "EUR", "DE": "EUR", "IT": "EUR", "ES": "EUR",
-    "NL": "EUR", "BE": "EUR", "AT": "EUR", "IE": "EUR", "PT": "EUR", "FI": "EUR", "GR": "EUR",
-    "CH": "CHF", "SE": "SEK", "NO": "NOK", "DK": "DKK", "PL": "PLN",
-    "AU": "AUD", "NZ": "NZD", "JP": "JPY", "CN": "CNY", "HK": "HKD", "SG": "SGD",
-    "MY": "MYR", "TH": "THB", "ID": "IDR", "PH": "PHP", "IN": "INR", "KR": "KRW",
-    "AE": "AED", "SA": "SAR", "QA": "QAR", "KW": "KWD", "BH": "BHD", "OM": "OMR",
-    "IL": "ILS", "TR": "TRY", "EG": "EGP",
-    "BR": "BRL", "MX": "MXN", "AR": "ARS", "CL": "CLP", "CO": "COP", "PE": "PEN",
-}
-
 GATEWAY_CURRENCIES = {
     "paystack": ["NGN"],
-    "stripe": [
-        "ZAR", "USD", "CAD", "GBP", "EUR", "CHF", "SEK", "NOK", "DKK", "PLN",
-        "AUD", "NZD", "JPY", "CNY", "HKD", "SGD", "MYR", "THB", "IDR", "PHP",
-        "INR", "KRW", "AED", "SAR", "QAR", "KWD", "BHD", "OMR", "ILS", "TRY",
-        "EGP", "BRL", "MXN", "ARS", "CLP", "COP", "PEN",
-        "NGN",  # accepted for international cards
-    ],
-    "flutterwave": ["NGN", "GHS", "KES", "ZAR", "UGX", "TZS", "USD", "EUR", "GBP"],
-    "wallet": ["NGN", "USD", "GBP", "EUR", "CAD", "AUD", "GHS", "KES", "ZAR"],
+    "stripe": ["USD", "EUR", "GBP", "CAD", "AUD"],
+    "flutterwave": ["NGN", "USD", "EUR", "GBP"],
+    "wallet": ["NGN", "USD", "GBP", "EUR", "CAD", "AUD"],
 }
 
 # ============ ENCRYPTION SETUP ============
@@ -7237,19 +7210,10 @@ class ReloadlyWebApp:
                     if not formatted_phone:
                         raise Exception("Invalid phone number format")
 
-                    # Convert amount to USD (Reloadly top‑ups are in USD).
-                    # If the currency is already USD — which it now will be
-                    # for any international destination, thanks to the
-                    # currency/country validation in /api/payment/init —
-                    # use it directly rather than round-tripping through
-                    # convert_to_usd again. Domestic NG (NGN) still goes
-                    # through the FX helper exactly as before.
+                    # Convert amount to USD (Reloadly top‑ups are in USD)
                     amount = float(tx.get("amount", 0))
                     currency = tx.get("currency", "NGN")
-                    if currency == "USD":
-                        usd_amount = amount
-                    else:
-                        usd_amount = self.platform.convert_to_usd(amount, currency)
+                    usd_amount = self.platform.convert_to_usd(amount, currency)
                     if usd_amount <= 0:
                         raise Exception(f"Unable to convert {amount} {currency} to USD")
 
@@ -9473,68 +9437,6 @@ class ReloadlyWebApp:
                     ),
                     400,
                 )
-
-            # ------------------------------------------------------------
-            # Currency must match the destination country, not whatever the
-            # client happened to send. This is the actual root-cause fix:
-            # previously nothing here checked country_code at all, so a
-            # frontend bug (or a malicious/buggy client) could create a
-            # ₦5.13 payment intent for a US topup, which would later crash
-            # _finalize_transaction trying to convert that to a viable USD
-            # amount. Skipped for wallet_funding, where there is no
-            # "destination country" — the user is choosing their own
-            # wallet currency directly.
-            # ------------------------------------------------------------
-            country_code = str(data.get("country_code") or "").upper() or None
-            tx_type_for_validation = data.get("type", "topup")
-            if country_code and tx_type_for_validation != "wallet_funding":
-                expected_currency = COUNTRY_CURRENCY_MAP.get(country_code)
-                if expected_currency and currency != expected_currency:
-                    # NOTE: this is the hook point for the optional
-                    # cross-currency-funding feature (pay a USD recharge
-                    # from an NGN wallet balance at the live rate) — not
-                    # implemented yet, so for now we reject cleanly rather
-                    # than risk creating an unpayable/mismatched intent.
-                    return (
-                        jsonify(
-                            {
-                                "success": False,
-                                "error": (
-                                    f"Currency mismatch: {country_code} recharges are "
-                                    f"priced in {expected_currency}, not {currency}. "
-                                    f"Please switch currency or payment method."
-                                ),
-                            }
-                        ),
-                        400,
-                    )
-
-            if float(amount) < SUPPORTED_CURRENCIES[currency]["min_amount"]:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "error": (
-                                f"Minimum amount for {currency} is "
-                                f"{SUPPORTED_CURRENCIES[currency]['min_amount']}."
-                            ),
-                        }
-                    ),
-                    400,
-                )
-
-            if provider and str(provider).lower().strip() not in ("", "wallet"):
-                provider_key = str(provider).lower().strip()
-                if provider_key in GATEWAY_CURRENCIES and currency not in GATEWAY_CURRENCIES[provider_key]:
-                    return (
-                        jsonify(
-                            {
-                                "success": False,
-                                "error": f"{provider_key} does not support {currency}.",
-                            }
-                        ),
-                        400,
-                    )
 
             if not provider:
                 provider = SUPPORTED_CURRENCIES[currency]["gateway"]

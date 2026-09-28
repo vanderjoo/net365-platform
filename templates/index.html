@@ -767,15 +767,7 @@
 
     @media(max-width:1100px){.global-network-stats{grid-template-columns:repeat(3,1fr);}}
     @media(max-width:1024px){.services-grid{grid-template-columns:repeat(2,1fr);}.right-col{width:280px;}}
-    .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:999;}
-    .sidebar-backdrop.active{display:block;}
-    .mobile-menu-btn{display:none;background:none;border:1px solid var(--border-color);border-radius:10px;width:40px;height:40px;align-items:center;justify-content:center;color:var(--text-primary);cursor:pointer;font-size:16px;flex-shrink:0;}
-    .mobile-bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg-secondary);border-top:1px solid var(--border-color);z-index:998;padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));}
-    .mobile-bottom-nav .mbn-row{display:flex;justify-content:space-around;align-items:center;}
-    .mobile-bottom-nav a{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--text-secondary);text-decoration:none;font-size:10px;font-weight:600;padding:6px 4px;border-radius:10px;flex:1;min-width:0;}
-    .mobile-bottom-nav a i{font-size:18px;}
-    .mobile-bottom-nav a.active{color:#4f46e5;}
-    @media(max-width:768px){.sidebar{width:260px;padding:16px 12px;transform:translateX(-100%);box-shadow:0 0 40px rgba(0,0,0,.3);z-index:1000;}.sidebar.mobile-open{transform:translateX(0);}.main{margin-left:0;padding-bottom:78px;}.mobile-menu-btn{display:flex;}.mobile-bottom-nav{display:block;}.chat-fab{bottom:88px;}.content{flex-direction:column;}.right-col{width:100%;}.quick-actions{grid-template-columns:repeat(5,1fr);}.stats-grid{grid-template-columns:1fr;}.welcome-banner h1{font-size:22px;}.bottom-banner{flex-direction:column;text-align:center;gap:12px;}.topbar{flex-wrap:wrap;gap:8px;}.search-box{max-width:100%;order:3;flex-basis:100%;}.global-network-stats{grid-template-columns:repeat(2,1fr);}.global-network-stat:last-child{grid-column:span 2;}.global-network-footer{flex-direction:column;align-items:flex-start;}}
+    @media(max-width:768px){.sidebar{width:60px;padding:12px 8px;}.sidebar .logo span,.sidebar .nav-item span,.sidebar .invite-card{display:none;}.sidebar .logo{justify-content:center;padding:8px 0 16px;}.sidebar .nav-item{justify-content:center;padding:12px;}.sidebar .nav-item i{font-size:18px;}.main{margin-left:60px;}.content{flex-direction:column;}.right-col{width:100%;}.quick-actions{grid-template-columns:repeat(5,1fr);}.stats-grid{grid-template-columns:1fr;}.welcome-banner h1{font-size:22px;}.bottom-banner{flex-direction:column;text-align:center;gap:12px;}.topbar{flex-wrap:wrap;gap:8px;}.search-box{max-width:100%;order:3;flex-basis:100%;}.global-network-stats{grid-template-columns:repeat(2,1fr);}.global-network-stat:last-child{grid-column:span 2;}.global-network-footer{flex-direction:column;align-items:flex-start;}}
     @media(max-width:480px){.quick-actions{grid-template-columns:repeat(3,1fr);}.services-grid{grid-template-columns:1fr;}.welcome-banner{padding:20px;min-height:auto;}.banner-btns{flex-direction:column;}.wallet-actions{grid-template-columns:repeat(2,1fr);}.footer{flex-direction:column;gap:8px;text-align:center;}.footer-links{flex-wrap:wrap;justify-content:center;}.global-network-header{flex-direction:column;}.network-live-status{align-self:flex-start;}.global-network-stats{grid-template-columns:repeat(2,1fr);}.network-stat-value{font-size:16px;}.global-network-stat:last-child{grid-column:span 2;}}
   </style>
 </head>
@@ -813,23 +805,10 @@
       </div>
     </aside>
 
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeMobileSidebar()"></div>
-
-    <nav class="mobile-bottom-nav">
-      <div class="mbn-row">
-        <a href="#" class="active" onclick="showDashboard();return false"><i class="fas fa-home"></i>Home</a>
-        <a href="#" onclick="showAnalytics();return false"><i class="fas fa-exchange-alt"></i>History</a>
-        <a href="#" onclick="handleAddMoneyClick();return false"><i class="fas fa-wallet"></i>Wallet</a>
-        <a href="/utilities"><i class="fas fa-bolt"></i>Bills</a>
-        <a href="#" onclick="toggleMobileSidebar();return false"><i class="fas fa-bars"></i>More</a>
-      </div>
-    </nav>
-
     <!-- MAIN CONTENT -->
     <div class="main">
       <!-- TOPBAR -->
       <header class="topbar">
-        <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Open menu"><i class="fas fa-bars"></i></button>
         <div class="search-box">
           <i class="fas fa-search"></i>
           <input type="text" placeholder="Search services, contacts, countries..." id="searchInput" />
@@ -2070,6 +2049,7 @@ body.dark-mode .wallet-enhanced {
                   <span class="currency-symbol" id="currencySymbol">₦</span>
                   <input type="number" id="amountInput" placeholder="Enter amount" step="1" min="1" oninput="updateBreakdown()" />
                 </div>
+                <div id="minAmountWarning" style="display:none;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;margin-top:8px;"></div>
                 <div class="quick-amounts">
                   <button class="quick-amount-btn" onclick="setQuickAmount(100, event)">100</button>
                   <button class="quick-amount-btn" onclick="setQuickAmount(200, event)">200</button>
@@ -2607,6 +2587,43 @@ const SUPPORTED_CURRENCIES = {
 // ============================================================
 // GATEWAY CONFIG — which gateway to use per country
 // ============================================================
+// ============================================================
+// PHONE PREFIX -> COUNTRY
+// Single source of truth for phone-based country detection, used by
+// both onPhoneInput() (typing) and contactClickPay() (picking a saved
+// contact). Longest prefix first so e.g. +1 doesn't shadow a more
+// specific match; detectCountryFromPhone() below sorts for this.
+// ============================================================
+const PHONE_PREFIX_TO_COUNTRY = {
+  '234': 'NG', '233': 'GH', '254': 'KE', '27': 'ZA', '256': 'UG', '255': 'TZ',
+  '1': 'US', // NANP: US/CA share +1 — default to US, CA users can switch manually
+  '44': 'GB',
+  '49': 'DE', '33': 'FR', '39': 'IT', '34': 'ES', '31': 'NL', '32': 'BE',
+  '43': 'AT', '353': 'IE', '351': 'PT', '358': 'FI', '30': 'GR',
+  '41': 'CH', '46': 'SE', '47': 'NO', '45': 'DK', '48': 'PL',
+  '61': 'AU', '64': 'NZ', '81': 'JP', '86': 'CN', '852': 'HK', '65': 'SG',
+  '60': 'MY', '66': 'TH', '62': 'ID', '63': 'PH', '91': 'IN', '82': 'KR',
+  '971': 'AE', '966': 'SA', '974': 'QA', '965': 'KW', '973': 'BH', '968': 'OM',
+  '972': 'IL', '90': 'TR', '20': 'EG',
+  '55': 'BR', '52': 'MX', '54': 'AR', '56': 'CL', '57': 'CO', '51': 'PE',
+};
+
+function detectCountryFromPhone(phone) {
+  let digits = String(phone || '').replace(/\D/g, '');
+  if (!digits) return null;
+  // Local Nigerian format: 0801... (11 digits, no country code) — the
+  // dominant use case for this app, so it gets a dedicated check rather
+  // than requiring users to type +234. Checked before the 00-strip below
+  // since a single leading 0 here is a trunk prefix, not "00 international".
+  if (digits.startsWith('0') && !digits.startsWith('00') && digits.length >= 10) return 'NG';
+  if (digits.startsWith('00')) digits = digits.slice(2); // 00 → international dialing prefix
+  for (const len of [3, 2, 1]) {
+    const prefix = digits.slice(0, len);
+    if (PHONE_PREFIX_TO_COUNTRY[prefix]) return PHONE_PREFIX_TO_COUNTRY[prefix];
+  }
+  return null;
+}
+
 const GATEWAY_CONFIG = {
   // ── Africa ─────────────────────────────────────────────────
   'NG': { preferred: 'paystack',    alternatives: ['flutterwave', 'stripe'], displayName: 'Nigeria',        currency: 'NGN', isLocal: true  },
@@ -2785,23 +2802,6 @@ const PROVIDER_NAMES = {
         document.body.classList.add('dark-mode');
       }
     }
-
-    // ============================================
-    // MOBILE SIDEBAR DRAWER
-    // ============================================
-    function toggleMobileSidebar() {
-      document.querySelector('.sidebar').classList.toggle('mobile-open');
-      document.getElementById('sidebarBackdrop').classList.toggle('active');
-    }
-    function closeMobileSidebar() {
-      document.querySelector('.sidebar').classList.remove('mobile-open');
-      document.getElementById('sidebarBackdrop').classList.remove('active');
-    }
-    document.addEventListener('DOMContentLoaded', function () {
-      document.querySelectorAll('.sidebar .nav-item').forEach(function (el) {
-        el.addEventListener('click', closeMobileSidebar);
-      });
-    });
 
     // ============================================
     // LOADING OVERLAY
@@ -3712,6 +3712,7 @@ const PROVIDER_NAMES = {
       }
 
       const preferred = config.preferred || 'stripe';
+      selectedPaymentMethod = preferred;
       const container = document.getElementById('paymentMethodContainer');
       const buttons = container.querySelectorAll('.payment-method-btn');
       buttons.forEach(btn => {
@@ -4871,7 +4872,10 @@ async function applyReferralCode() {
     }
 
     // ------------------------------------------------------------------
-    // onPhoneInput — auto-detect operator from phone number
+    // onPhoneInput — detect destination country from the phone prefix,
+    // switch the country dropdown if it changed (which cascades into
+    // currency + gateway + operator list via onRechargeCountryChange),
+    // then run operator auto-detect for whichever country we land on.
     // ------------------------------------------------------------------
     let operatorDetectTimer = null;
     let operatorDetectRequest = 0;
@@ -4883,12 +4887,41 @@ async function applyReferralCode() {
 
       if (operatorDetectTimer) clearTimeout(operatorDetectTimer);
 
-      if (phone.replace(/\D/g, '').length < 8 || !currentCountry) {
+      if (phone.replace(/\D/g, '').length < 8) {
         const el = document.getElementById('detectedOperator');
         if (el) el.style.display = 'none';
         updateBreakdown();
         return;
       }
+
+      // Country auto-detection: only act if the prefix maps to a country
+      // we actually support AND it differs from what's currently selected
+      // — this way a manual override the user just made isn't stomped on
+      // by, say, a trailing digit that still matches the same prefix.
+      const detected = detectCountryFromPhone(phone);
+      if (detected && detected !== currentCountry && COUNTRY_DATA[detected]) {
+        const countrySelect = document.getElementById('rechargeCountrySelect');
+        if (countrySelect) {
+          countrySelect.value = detected;
+          // onRechargeCountryChange is async (it loads the operator list);
+          // once that settles, run auto-detect against the NEW country.
+          onRechargeCountryChange().then(() => runOperatorAutoDetect(phone));
+          updateBreakdown();
+          return;
+        }
+      }
+
+      runOperatorAutoDetect(phone);
+      updateBreakdown();
+    }
+
+    // ------------------------------------------------------------------
+    // runOperatorAutoDetect — the actual auto-detect network call,
+    // separated out so onPhoneInput can call it either immediately or
+    // after a country switch has finished loading the new operator list.
+    // ------------------------------------------------------------------
+    function runOperatorAutoDetect(phone) {
+      if (!currentCountry) return;
 
       operatorDetectTimer = setTimeout(async () => {
         const requestId = ++operatorDetectRequest;
@@ -4919,6 +4952,12 @@ async function applyReferralCode() {
           };
           detectedOperator = selectedOperator;
 
+          // Keep the visible dropdown in sync with the detected operator.
+          const opSelect = document.getElementById('rechargeOperatorSelect');
+          if (opSelect && opSelect.querySelector(`option[value="${operatorId}"]`)) {
+            opSelect.value = String(operatorId);
+          }
+
           const el = document.getElementById('detectedOperator');
           if (el) el.style.display = 'flex';
           document.getElementById('detectIcon').textContent = '✓';
@@ -4933,8 +4972,6 @@ async function applyReferralCode() {
           console.debug('Operator auto-detection unavailable:', e);
         }
       }, 450);
-
-      updateBreakdown();
     }
 
     // ============================================
@@ -4953,7 +4990,23 @@ async function applyReferralCode() {
       document.getElementById('payButtonSub').textContent = `${symbol}${total.toFixed(2)} total`;
       document.getElementById('cotBadge').textContent = `${CONFIG.cotPercentage}% COT`;
       const phone = document.getElementById('phoneInput').value.trim();
-      document.getElementById('payButton').disabled = !(phone.length >= 8 && airtime > 0 && currentCountry && selectedOperator);
+
+      // Minimum-amount check for the destination currency. This is what
+      // stops a US/UK/etc. recharge from ever reaching payment/init with
+      // an amount too small for Reloadly's minimum (the ₦5.13 → $0.003
+      // failure mode) — caught here, at entry, with a clear message,
+      // rather than surfacing as a cryptic fulfillment error later.
+      const minForCurrency = (SUPPORTED_CURRENCIES[currentCurrency] || {}).min ?? 0;
+      const belowMinimum = airtime > 0 && airtime < minForCurrency;
+      const minWarningEl = document.getElementById('minAmountWarning');
+      if (minWarningEl) {
+        minWarningEl.style.display = belowMinimum ? 'block' : 'none';
+        minWarningEl.textContent = belowMinimum
+          ? `⚠️ Minimum for ${currentCurrency} is ${symbol}${minForCurrency}. Please enter at least that amount.`
+          : '';
+      }
+
+      document.getElementById('payButton').disabled = !(phone.length >= 8 && airtime > 0 && !belowMinimum && currentCountry && selectedOperator);
       updateWalletPaymentOption();
     }
 
@@ -5000,16 +5053,31 @@ async function applyReferralCode() {
         event.currentTarget.style.color = method === 'wallet' ? '#15803d' : '#4f46e5';
       }
 
+      // Currency ALWAYS follows the destination country — never the
+      // provider. (The old logic checked whether the provider's currency
+      // list happened to already include currentCurrency, which broke for
+      // Stripe specifically: Stripe's list includes NGN "for international
+      // cards", so a US destination that had drifted to NGN never got
+      // corrected to USD.)
+      const destCountry = getCountryData(currentCountry);
+      currentCurrency = destCountry.currency;
+      currentSymbol = destCountry.symbol || getCurrencySymbol(currentCurrency);
+      document.getElementById('currencySymbol').textContent = currentSymbol;
+
       if (method !== 'wallet') {
-        const supported = PROVIDER_CURRENCIES[method] || ['NGN'];
+        const supported = PROVIDER_CURRENCIES[method] || [];
         if (!supported.includes(currentCurrency)) {
-          let newCurrency = method === 'stripe' ? 'USD' : (method === 'flutterwave' ? 'NGN' : 'NGN');
-          currentCurrency = newCurrency;
-          currentSymbol = getCurrencySymbol(newCurrency);
-          document.getElementById('currencySymbol').textContent = currentSymbol;
-          showToast(`💳 Switched to ${PROVIDER_NAMES[method] || method} (${newCurrency})`, 'info');
+          // This provider can't actually charge the destination's currency.
+          // Don't silently force a different currency (that's the bug we're
+          // fixing) — tell the user plainly and let them pick a provider
+          // that does, or fund via wallet.
+          showToast(
+            `⚠️ ${PROVIDER_NAMES[method] || method} doesn't support ${currentCurrency}. ` +
+            `Try ${PROVIDER_NAMES[GATEWAY_CONFIG[currentCountry]?.preferred] || 'another provider'}, or pay from your Net365 Wallet.`,
+            'warning'
+          );
         } else {
-          showToast(`💳 Payment method: ${PROVIDER_NAMES[method] || method}`, 'info');
+          showToast(`💳 Payment method: ${PROVIDER_NAMES[method] || method} (${currentCurrency})`, 'info');
         }
       } else {
         if (!userId) {
@@ -5032,12 +5100,14 @@ async function applyReferralCode() {
       const symbol = currentSymbol || '$';
       if (!phone || airtime <= 0 || !currentCountry || !selectedOperator) { showToast('⚠️ Please select country, mobile network operator, phone number and amount.', 'warning'); return; }
       
-      let currency = currentCurrency;
-      const supported = PROVIDER_CURRENCIES[selectedPaymentMethod] || ['NGN'];
-      if (!supported.includes(currency)) {
-        if (selectedPaymentMethod === 'stripe') currency = 'USD';
-        else if (selectedPaymentMethod === 'flutterwave') currency = 'NGN';
-        else currency = 'USD';
+      let currency = getCountryData(currentCountry).currency;
+      const supported = PROVIDER_CURRENCIES[selectedPaymentMethod] || [];
+      if (selectedPaymentMethod !== 'wallet' && !supported.includes(currency)) {
+        showToast(
+          `⚠️ ${PROVIDER_NAMES[selectedPaymentMethod] || selectedPaymentMethod} can't charge ${currency} for this destination. Please choose a different payment method.`,
+          'warning'
+        );
+        return;
       }
       
       const countryInfo = getCountryData(currentCountry);
