@@ -10097,6 +10097,7 @@ class ReloadlyWebApp:
                         "email": g.current_user.get("email"),
                         "wallet_currency": currency,
                     }
+
                 else:
                     payload = {
                         "operator_id": data.get("operator_id"),
@@ -10104,8 +10105,26 @@ class ReloadlyWebApp:
                         "country_code": data.get("country_code", "NG"),
                         "email": g.current_user.get("email"),
                     }
+
                     if payload.get("phone"):
                         payload["phone"] = encrypt_pii(payload["phone"])
+
+
+                # ============================================================
+                # PRESERVE STRIPE SESSION ID FOR EVERY STRIPE TRANSACTION
+                # ============================================================
+                if (
+                    result.get("provider") == "stripe"
+                    and result.get("stripe_session_id")
+                ):
+                    payload["stripe_session_id"] = result["stripe_session_id"]
+
+                    logger.info(
+                        f"Saving Stripe session ID "
+                        f"{result['stripe_session_id']} "
+                        f"to {tx_type} transaction "
+                        f"{result['reference']}"
+                    )
 
                 db.create_pending(
                     reference=result["reference"],
