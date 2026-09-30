@@ -8844,132 +8844,7 @@ class ReloadlyWebApp:
             frontend_url = FRONTEND_URL
             return redirect(f"{frontend_url}/?status=cancelled&reference={reference}")
 
-        @self.app.route("/payment/success")
-        def payment_success():
-            # Stripe sends session_id=cs_...
-            # Net365 sends/uses reference=STR_...
-            stripe_session_id = request.args.get("session_id")
-            reference = request.args.get("reference") or request.args.get("trxref")
 
-            frontend_url = FRONTEND_URL
-
-            try:
-                # ============================================================
-                # STRIPE: Resolve Stripe Checkout Session -> Net365 reference
-                # ============================================================
-                if stripe_session_id and stripe_session_id.startswith("cs_"):
-                    logger.info(
-                        f"Stripe callback received: "
-                        f"session_id={stripe_session_id}, reference={reference}"
-                    )
-
-                    tx = self._find_transaction_by_stripe_session(
-                        stripe_session_id
-                    )
-
-                    if tx:
-                        reference = tx["reference"]
-
-                        logger.info(
-                            f"Resolved Stripe session {stripe_session_id} "
-                            f"to Net365 transaction {reference}"
-                        )
-
-                        try:
-                            payload = tx.get("payload", {})
-
-                            if isinstance(payload, str):
-                                payload = json.loads(payload) if payload else {}
-
-                            payload["stripe_session_id"] = stripe_session_id
-
-                            conn = db.get_db_connection()
-                            c = conn.cursor()
-
-                            c.execute(
-                                """
-                                UPDATE transactions
-                                SET payload = ?
-                                WHERE reference = ?
-                                """,
-                                (json.dumps(payload), reference),
-                            )
-
-                            conn.commit()
-
-                            logger.info(
-                                f"Saved Stripe session ID {stripe_session_id} "
-                                f"to transaction {reference}"
-                            )
-
-                        except Exception as e:
-                            logger.error(
-                                f"Failed to save Stripe session ID: {e}"
-                            )
-
-                    else:
-                        logger.warning(
-                            f"Could not find Net365 transaction for "
-                            f"Stripe session {stripe_session_id}"
-                        )
-
-                # ============================================================
-                # VALIDATE REFERENCE
-                # ============================================================
-                if not reference:
-                    return redirect(
-                        f"{frontend_url}/?status=error"
-                    )
-
-                logger.info(
-                    f"Payment success callback received: "
-                    f"reference={reference}"
-                )
-
-                # ============================================================
-                # FINALIZE PAYMENT
-                # ============================================================
-                result = self._finalize_transaction(reference)
-
-                if result.get("success"):
-                    redirect_url = (
-                        f"{frontend_url}/"
-                        f"?status=success"
-                        f"&reference={reference}"
-                    )
-
-                    logger.info(
-                        f"Payment success - redirecting to: {redirect_url}"
-                    )
-
-                else:
-                    redirect_url = (
-                        f"{frontend_url}/"
-                        f"?status=processing"
-                        f"&reference={reference}"
-                    )
-
-                    logger.info(
-                        f"Payment processing - redirecting to: {redirect_url}"
-                    )
-
-                return redirect(redirect_url)
-
-            except Exception as e:
-                logger.error(
-                    f"payment_success crashed for reference={reference}: {e}"
-                )
-
-                import traceback
-                logger.error(traceback.format_exc())
-
-                fallback_ref = reference or ""
-
-                return redirect(
-                    f"{frontend_url}/"
-                    f"?status=error"
-                    f"&reference={fallback_ref}"
-                )
 
         @self.app.route("/payment/callback", methods=["GET"])
         def payment_callback():
@@ -10105,7 +9980,7 @@ class ReloadlyWebApp:
 
             return jsonify(result)
 
-        # ============ WALLET FUNDING ============
+                # ============ WALLET FUNDING ============
         @self.app.route("/api/wallet/fund", methods=["POST"])
         @login_required
         @email_verified_required
@@ -10117,12 +9992,10 @@ class ReloadlyWebApp:
 
             if currency not in SUPPORTED_CURRENCIES:
                 return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "error": f"Unsupported wallet currency: {currency}",
-                        }
-                    ),
+                    jsonify({
+                        "success": False,
+                        "error": f"Unsupported wallet currency: {currency}",
+                    }),
                     400,
                 )
 
@@ -10139,12 +10012,10 @@ class ReloadlyWebApp:
 
             if float(amount) < min_amount:
                 return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "error": f"Minimum {currency} funding is {min_amount:g}",
-                        }
-                    ),
+                    jsonify({
+                        "success": False,
+                        "error": f"Minimum {currency} funding is {min_amount:g}",
+                    }),
                     400,
                 )
 
@@ -10165,15 +10036,15 @@ class ReloadlyWebApp:
             )
 
             if result.get("success") and result.get("reference"):
-            payload = {
-                "type": "wallet_funding",
-                "user_id": user_id,
-                "email": email,
-                "wallet_currency": currency,
-            }
+                payload = {
+                    "type": "wallet_funding",
+                    "user_id": user_id,
+                    "email": email,
+                    "wallet_currency": currency,
+                }
 
-            if result.get("provider") == "stripe" and result.get("stripe_session_id"):
-                payload["stripe_session_id"] = result["stripe_session_id"]
+                if result.get("provider") == "stripe" and result.get("stripe_session_id"):
+                    payload["stripe_session_id"] = result["stripe_session_id"]
 
                 db.create_pending(
                     reference=result["reference"],
