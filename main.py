@@ -5556,7 +5556,13 @@ def calculate_next_run(
     try:
         tz = ZoneInfo(timezone_str)
     except Exception:
-        tz = ZoneInfo("Africa/Lagos")
+        try:
+            tz = ZoneInfo("Africa/Lagos")
+        except Exception:
+            # Container has no tz database (slim image without tzdata).
+            # Lagos has no DST, so a fixed UTC+1 is exactly equivalent.
+            tz = dt_timezone(timedelta(hours=1))
+            logger.error("No tz database found; add 'tzdata' to requirements.txt")
         logger.warning(
             f"Invalid timezone '{timezone_str}', falling back to Africa/Lagos"
         )
@@ -6680,6 +6686,16 @@ class ScheduleAutoRunner:
             WHERE status = 'active' AND next_run IS NOT NULL
         """
         ).fetchall()
+
+        # Heartbeat (~every 10 ticks) so the logs prove the runner is alive and
+        # show what it is waiting for.
+        cls._tick_count = getattr(cls, "_tick_count", 0) + 1
+        if cls._tick_count % 10 == 1:
+            logger.info(
+                f"Schedule auto-runner heartbeat: {len(candidates)} active schedule(s), "
+                f"now(UTC)={now_utc.isoformat(timespec='seconds')}, "
+                f"next_runs={[str(r['next_run']) for r in candidates[:5]]}"
+            )
 
         due = []
         for r in candidates:
