@@ -5691,6 +5691,7 @@ def calculate_next_run(
 def normalize_next_run(value) -> Optional[str]:
     """Force any datetime representation into canonical ISO-8601 UTC with offset.
     Returns None if the input is unusable — callers should recompute in that case."""
+    from datetime import timezone
     if not value:
         return None
     try:
@@ -6541,6 +6542,7 @@ def _finalize_schedule_run(
                 schedule.get("day_of_week", 0),
                 schedule.get("month", 1),
                 schedule.get("event_date"),
+                schedule.get("timezone") or "Africa/Lagos",
             )
             if next_run:
                 c.execute(
@@ -6665,15 +6667,30 @@ class ScheduleAutoRunner:
     def _tick(cls):
         conn = db.get_db_connection()
         c = conn.cursor()
-        now_utc_iso = datetime.utcnow().isoformat()
+        from datetime import timezone as _tz
 
-        due = c.execute(
+        now_utc = datetime.now(_tz.utc)
+
+        # next_run may be stored in mixed formats (naive, 'Z', '+00:00', with or
+        # without milliseconds), so a SQL string comparison is unreliable.
+        # Parse each value and compare real datetimes instead.
+        candidates = c.execute(
             """
-            SELECT id, user_id FROM scheduler_schedules
-            WHERE status = 'active' AND next_run IS NOT NULL AND next_run <= ?
-        """,
-            (now_utc_iso,),
+            SELECT id, user_id, next_run FROM scheduler_schedules
+            WHERE status = 'active' AND next_run IS NOT NULL
+        """
         ).fetchall()
+
+        due = []
+        for r in candidates:
+            norm = normalize_next_run(r["next_run"])
+            if not norm:
+                logger.warning(
+                    f"Schedule {r['id']} has unparseable next_run {r['next_run']!r}"
+                )
+                continue
+            if datetime.fromisoformat(norm) <= now_utc:
+                due.append(r)
 
         for row in due:
             schedule_id, user_id = row["id"], row["user_id"]
@@ -9305,7 +9322,7 @@ class ReloadlyWebApp:
                 c = conn.cursor()
 
                 schedule = c.execute(
-                    "SELECT name, status, frequency, day_of_month, day_of_week, month, time, event_date FROM scheduler_schedules WHERE id = ? AND user_id = ?",
+                    "SELECT name, status, frequency, day_of_month, day_of_week, month, time, event_date, timezone FROM scheduler_schedules WHERE id = ? AND user_id = ?",
                     (schedule_id, user_id),
                 ).fetchone()
 
@@ -9328,6 +9345,7 @@ class ReloadlyWebApp:
                     schedule.get("day_of_week", 0),
                     schedule.get("month", 1),
                     schedule.get("event_date"),
+                    schedule.get("timezone") or "Africa/Lagos",
                 )
 
                 c.execute(
@@ -12870,16 +12888,30 @@ class ReloadlyWebApp:
             if priority < 1 or priority > 10:
                 priority = 5
 
-            next_run = data.get("next_run")
-            if not next_run and data.get("frequency"):
+            # The browser's next_run is computed in the viewer's LOCAL time and ignores
+            # the selected timezone, so it is never trusted. Always recompute here from
+            # the chosen time + timezone.
+            freq_value = str(data.get("frequency") or "").lower()
+            event_date_value = data.get("event_date") or (
+                (data.get("startDate") or data.get("eventDate"))
+                if freq_value == "once"
+                else (data.get("eventDate") or data.get("startDate"))
+            )
+            next_run = None
+            if data.get("frequency"):
                 next_run = calculate_next_run(
                     data.get("frequency"),
                     data.get("day_of_month", 1),
                     data.get("time", "09:00"),
                     data.get("day_of_week", 0),
                     data.get("month", 1),
-                    data.get("event_date"),
+                    event_date_value,
+                    data.get("timezone") or "Africa/Lagos",
                 )
+            logger.info(
+                f"Schedule next_run computed: freq={data.get('frequency')} "
+                f"time={data.get('time')} tz={data.get('timezone')} -> {next_run}"
+            )
 
             try:
                 conn = db.get_db_connection()
