@@ -1229,6 +1229,28 @@ GATEWAY_CURRENCIES = {
     "wallet": ["NGN", "USD", "GBP", "EUR", "CAD", "AUD", "GHS", "KES", "ZAR"],
 }
 
+# ============ SANDBOX FALLBACK OPERATORS ============
+# Reloadly's sandbox endpoint rejects real phone numbers on /operators/auto-detect
+# (returns HTTP 400), which means the frontend can't resolve an operator_id and
+# the downstream top-up fails with "Missing operator_id or phone". These are
+# per-country operator IDs that DO work in sandbox.
+#
+# ⚠️  VERIFY each ID against your Reloadly sandbox dashboard
+#     (https://topups-sandbox.reloadly.com/operators/countries/<CC>) before
+#     relying on it. An incorrect ID here produces a different failure
+#     (unknown operator) further down the stack.
+SANDBOX_FALLBACK_OPERATORS = {
+    # Confirmed working in sandbox (used by _process_bulk_job already)
+    "NG": {"operatorId": "341", "id": "341", "name": "MTN Nigeria (sandbox)"},
+
+    # ⚠️ Placeholders — replace with the real sandbox IDs from your Reloadly
+    # sandbox dashboard. The ones below are guesses and will likely 400.
+    "US": {"operatorId": "1",   "id": "1",   "name": "AT&T (sandbox — VERIFY ID)"},
+    "GB": {"operatorId": "10",  "id": "10",  "name": "Vodafone UK (sandbox — VERIFY ID)"},
+    "GH": {"operatorId": "344", "id": "344", "name": "MTN Ghana (sandbox — VERIFY ID)"},
+    "KE": {"operatorId": "345", "id": "345", "name": "Safaricom (sandbox — VERIFY ID)"},
+}
+
 # ============ ENCRYPTION SETUP ============
 
 # ============================================================
@@ -3209,7 +3231,8 @@ class PaymentProcessor:
             if currency.lower() in ZERO_DECIMAL:
                 amount_cents = int(amount)
             else:
-                amount_cents = int(amount * 100)
+                amount = round(amount, 2) 
+            amount_cents = int(amount * 100)
 
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
@@ -6838,30 +6861,149 @@ class ReloadlyWebApp:
                 "env var set — e.g. run scheduler_worker.py as one dedicated process in production."
             )
 
-    def _find_transaction_by_stripe_session(self, session_id: str) -> Optional[Dict]:
+    def _find_transaction_by_stripe_session(
+        self, session_id: str, tx_type: Optional[str] = None
+    ) -> Optional[Dict]:
+        """Find a transaction whose payload references the given Stripe session ID.
+
+        NOTE: payload is stored Fernet-encrypted (see encrypt_pii in /api/payment/init),
+        so a plain SQL LIKE against the raw column cannot match a plaintext session ID.
+        We therefore scan recent transactions in Python, decrypt each payload, and
+        compare. This is O(N) in recent transactions — acceptable because finalization
+        only runs a handful of times per payment and the window is bounded.
+        """
+        if not session_id:
+            return None
+
+        try:
+            conn = db.get_db_connection()
+            c = conn.cursor()
+
+            # Only consider transactions from the last 7 days — Stripe sessions
+            # expire well before that, and this keeps the scan bounded.
+            c.execute(
+                """
+                SELECT * FROM transactions
+                WHERE provider = 'stripe'
+                  AND created_at >= datetime('now', '-7 days')
+                ORDER BY created_at DESC
+                LIMIT 200
+                """
+            )
+            rows = c.fetchall()
+
+            for row in rows:
+                tx = dict(row)
+
+                # Optional filter — caller can narrow to a specific tx_type
+                # (e.g. 'wallet_funding' or 'topup') when they know it.
+                if tx_type and tx.get("tx_type") != tx_type:
+                    continue
+
+                raw_payload = tx.get("payload")
+                if not raw_payload:
+                    continue
+
+                # decrypt_payload handles both the encrypted-string case and the
+                # already-decrypted-dict case, so this is safe either way.
+                payload = decrypt_payload(raw_payload)
+                if not isinstance(payload, dict):
+                    continue
+
+                # Check the fields where the session ID might live.
+                candidates = (
+                    payload.get("stripe_session_id"),
+                    payload.get("session_id"),
+                    payload.get("checkout_session_id"),
+                )
+                if session_id in candidates:
+                    tx["payload"] = payload  # return the decrypted form
+                    return tx
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error finding Stripe transaction for session {session_id}: {e}")
+            return None
+
+
+    def _find_stripe_session_for_reference(self, reference: str) -> Optional[str]:
+        """Reverse lookup: given our internal reference (STR_...), find the
+        Stripe checkout session ID (cs_...) that was created for it.
+
+        First tries the local DB (fast, works offline), then falls back to
+        asking Stripe directly by scanning recent sessions for a metadata.reference
+        match. The Stripe fallback is what recovers transactions whose payload
+        predates the fix that persists stripe_session_id at init time.
+        """
+        if not reference:
+            return None
+
+        # ── 1. Local DB scan ────────────────────────────────────────────────
         try:
             conn = db.get_db_connection()
             c = conn.cursor()
             c.execute(
                 """
-                SELECT * FROM transactions 
-                WHERE payload LIKE ? 
-                AND tx_type = 'wallet_funding'
-                ORDER BY created_at DESC
+                SELECT * FROM transactions
+                WHERE reference = ?
+                  AND provider = 'stripe'
                 LIMIT 1
-            """,
-                (f"%{session_id}%",),
+                """,
+                (reference,),
             )
-            result = c.fetchone()
-            if result:
-                tx = dict(result)
-                if tx.get("payload"):
-                    tx["payload"] = decrypt_payload(tx["payload"])
-                return tx
-            return None
+            row = c.fetchone()
+            if row:
+                tx = dict(row)
+                payload = decrypt_payload(tx.get("payload"))
+                if isinstance(payload, dict):
+                    sid = (
+                        payload.get("stripe_session_id")
+                        or payload.get("session_id")
+                        or payload.get("checkout_session_id")
+                    )
+                    if sid and str(sid).startswith("cs_"):
+                        logger.info(
+                            f"_find_stripe_session_for_reference: local DB hit "
+                            f"{reference} → {sid}"
+                        )
+                        return sid
         except Exception as e:
-            logger.error(f"Error finding Stripe transaction: {e}")
+            logger.warning(
+                f"_find_stripe_session_for_reference: DB lookup failed for "
+                f"{reference}: {e}"
+            )
+
+        # ── 2. Ask Stripe ───────────────────────────────────────────────────
+        # This is the recovery path for transactions created before the init-time
+        # persistence fix landed. Stripe lets us filter sessions by metadata.
+        if not STRIPE_AVAILABLE or not os.getenv("STRIPE_SECRET_KEY"):
             return None
+
+        try:
+            # Stripe doesn't support server-side metadata filtering on list(), so
+            # we page through recent sessions and match client-side. Keep the scan
+            # short — a session older than ~100 entries is almost certainly stale.
+            sessions = stripe.checkout.Session.list(limit=100)
+            for s in sessions.auto_paging_iter():
+                meta = getattr(s, "metadata", None) or {}
+                try:
+                    meta_ref = meta.get("reference")
+                except Exception:
+                    meta_ref = None
+                if meta_ref == reference:
+                    logger.info(
+                        f"_find_stripe_session_for_reference: Stripe lookup hit "
+                        f"{reference} → {s.id}"
+                    )
+                    return s.id
+        except Exception as e:
+            logger.warning(
+                f"_find_stripe_session_for_reference: Stripe list failed for "
+                f"{reference}: {e}"
+            )
+
+        return None
 
     def _finalize_transaction(self, reference: str) -> Dict:
         if not reference:
@@ -6935,17 +7077,27 @@ class ReloadlyWebApp:
 
                 if tx.get("provider") == "stripe":
                     stripe_session_id = payload.get("stripe_session_id")
-                    if stripe_session_id and stripe_session_id.startswith("cs_"):
+                    if stripe_session_id and str(stripe_session_id).startswith("cs_"):
                         verify_reference = stripe_session_id
                         logger.info(f"Using Stripe session ID from payload: {stripe_session_id}")
                     elif reference.startswith("cs_"):
                         verify_reference = reference
                         logger.info(f"Using Stripe session ID from reference: {reference}")
-                    elif reference.startswith("STR_"):
-                        stripe_session_id = payload.get("stripe_session_id")
-                        if stripe_session_id:
-                            verify_reference = stripe_session_id
-                            logger.info(f"Found Stripe session ID in payload: {stripe_session_id}")
+                    else:
+                        # Neither the payload nor the reference gave us a session ID.
+                        # This is exactly the failure mode that was making top-ups die with
+                        # "No such checkout.session: STR_...". Recover it.
+                        recovered = self._find_stripe_session_for_reference(reference)
+                        if recovered:
+                            verify_reference = recovered
+                            logger.info(
+                                f"Recovered Stripe session ID {recovered} for reference {reference}"
+                            )
+                        else:
+                            logger.error(
+                                f"Stripe transaction {reference} has no session ID in payload and "
+                                f"none could be recovered from Stripe — verification will fail."
+                            )
 
                 try:
                     verify_result = self.platform.verify_payment(verify_reference, tx.get("provider"))
@@ -12400,10 +12552,11 @@ class ReloadlyWebApp:
         @self.app.route("/api/operators/auto-detect", methods=["GET"])
         def auto_detect_operator():
             phone = request.args.get("phone")
-            country_code = request.args.get("country_code", "NG")
+            country_code = (request.args.get("country_code") or "NG").upper()
             if not phone:
                 return jsonify({"success": False, "error": "Phone number required"}), 400
 
+            # 1. Ask Reloadly (authoritative in live mode; frequently 400s in sandbox).
             try:
                 result = self.platform.auto_detect_operator(phone, country_code)
             except Exception as e:
@@ -12413,21 +12566,46 @@ class ReloadlyWebApp:
             if result.get("success") and result.get("operator"):
                 return jsonify(result)
 
-            # Reloadly could not identify the number. If we couldn't reach Reloadly
-            # at all (network error), fall back to a prefix hint — clearly labelled.
-            # If Reloadly *did* respond but returned "unknown", respect that and do
-            # not guess.
-            reachable = result.get("success") is False and "unreachable" not in str(result.get("error", ""))
-            if not reachable:
-                fallback = detect_operator_from_prefix(phone, country_code)
+            # 2. Sandbox fallback.
+            #    Reloadly's sandbox rejects real numbers, so a 400 here is expected —
+            #    not evidence the number is invalid. Fall back to a known-good sandbox
+            #    operator for the country so the top-up can proceed.
+            if self.credentials.environment.value == "sandbox":
+                fallback = SANDBOX_FALLBACK_OPERATORS.get(country_code)
                 if fallback:
+                    logger.info(
+                        f"auto-detect: sandbox fallback for {phone} ({country_code}) "
+                        f"→ operator {fallback['operatorId']} ({fallback['name']})"
+                    )
                     return jsonify({
                         "success": True,
                         "operator": fallback,
-                        "source": "prefix_fallback",
-                        "warning": "Network inferred from number prefix — may be wrong if the number has been ported.",
+                        "source": "sandbox_fallback",
+                        "warning": (
+                            "Using sandbox fallback operator — Reloadly sandbox does not "
+                            "accept real phone numbers on auto-detect."
+                        ),
                     })
 
+            # 3. Live fallback: prefix table (Nigeria only, currently).
+            fallback = detect_operator_from_prefix(phone, country_code)
+            if fallback:
+                logger.info(
+                    f"auto-detect: prefix fallback for {phone} ({country_code}) "
+                    f"→ operator {fallback['operatorId']} ({fallback['name']})"
+                )
+                return jsonify({
+                    "success": True,
+                    "operator": fallback,
+                    "source": "prefix_fallback",
+                    "warning": (
+                        "Network inferred from number prefix — may be wrong if the "
+                        "number has been ported."
+                    ),
+                })
+
+            # 4. Nothing worked. Return Reloadly's original error so the frontend
+            #    can show a meaningful message instead of a generic failure.
             return jsonify(result)
 
         @self.app.route("/api/operators/<operator_id>", methods=["GET"])
