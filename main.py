@@ -5543,18 +5543,20 @@ def calculate_next_run(
     timezone_str: str = "Africa/Lagos",
 ) -> Optional[str]:
     """Calculate the next run time with proper timezone handling."""
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone as dt_timezone
+    from zoneinfo import ZoneInfo
     import calendar
-    import pytz
+
+    UTC = dt_timezone.utc
 
     # Default to WAT if no timezone specified
     if not timezone_str:
         timezone_str = "Africa/Lagos"
 
     try:
-        tz = pytz.timezone(timezone_str)
+        tz = ZoneInfo(timezone_str)
     except Exception:
-        tz = pytz.timezone("Africa/Lagos")
+        tz = ZoneInfo("Africa/Lagos")
         logger.warning(
             f"Invalid timezone '{timezone_str}', falling back to Africa/Lagos"
         )
@@ -5591,14 +5593,14 @@ def calculate_next_run(
                     str(event_date).replace("Z", "+00:00")
                 )
                 if event_dt.tzinfo is None:
-                    event_dt = tz.localize(event_dt)
+                    event_dt = event_dt.replace(tzinfo=tz)
                 else:
                     event_dt = event_dt.astimezone(tz)
                 next_run = at_time(event_dt)
                 if next_run <= now:
                     return None
                 # Convert to UTC for storage
-                return next_run.astimezone(pytz.UTC).isoformat()
+                return next_run.astimezone(UTC).isoformat()
             except (ValueError, TypeError):
                 return None
         return None
@@ -5607,7 +5609,7 @@ def calculate_next_run(
         next_run = at_time(now)
         if next_run <= now:
             next_run += timedelta(days=1)
-        return next_run.astimezone(pytz.UTC).isoformat()
+        return next_run.astimezone(UTC).isoformat()
 
     if freq == "weekly":
         target_day = min(max(int(day_of_week or 0), 0), 6)
@@ -5615,7 +5617,7 @@ def calculate_next_run(
         next_run = at_time(now + timedelta(days=days_ahead))
         if next_run <= now:
             next_run += timedelta(days=7)
-        return next_run.astimezone(pytz.UTC).isoformat()
+        return next_run.astimezone(UTC).isoformat()
 
     if freq == "monthly":
         target_day = max(int(day_of_month or 1), 1)
@@ -5628,7 +5630,7 @@ def calculate_next_run(
             next_run = at_time(
                 datetime(year, month, safe_day(year, month, target_day), tzinfo=tz)
             )
-        return next_run.astimezone(pytz.UTC).isoformat()
+        return next_run.astimezone(UTC).isoformat()
 
     if freq == "quarterly":
         target_day = max(int(day_of_month or 1), 1)
@@ -5642,7 +5644,7 @@ def calculate_next_run(
             next_run = at_time(
                 datetime(year, month, safe_day(year, month, target_day), tzinfo=tz)
             )
-        return next_run.astimezone(pytz.UTC).isoformat()
+        return next_run.astimezone(UTC).isoformat()
 
     if freq == "yearly":
         target_month = min(max(int(month or 1), 1), 12)
@@ -5663,24 +5665,52 @@ def calculate_next_run(
                     tzinfo=tz,
                 )
             )
-        return next_run.astimezone(pytz.UTC).isoformat()
+        return next_run.astimezone(UTC).isoformat()
 
     if freq == "event" and event_date:
         try:
             event_dt = datetime.fromisoformat(str(event_date).replace("Z", "+00:00"))
             if event_dt.tzinfo is None:
-                event_dt = tz.localize(event_dt)
+                event_dt = event_dt.replace(tzinfo=tz)
             else:
                 event_dt = event_dt.astimezone(tz)
             next_run = at_time(event_dt)
             if next_run <= now:
-                next_run = next_run.replace(year=next_run.year + 1)
-            return next_run.astimezone(pytz.UTC).isoformat()
+                try:
+                    next_run = next_run.replace(year=next_run.year + 1)
+                except ValueError:  # Feb 29 -> Feb 28
+                    next_run = next_run.replace(year=next_run.year + 1, day=28)
+            return next_run.astimezone(UTC).isoformat()
         except (ValueError, TypeError):
             return None
 
     return None
 
+
+
+def normalize_next_run(value) -> Optional[str]:
+    """Force any datetime representation into canonical ISO-8601 UTC with offset.
+    Returns None if the input is unusable — callers should recompute in that case."""
+    if not value:
+        return None
+    try:
+        if isinstance(value, datetime):
+            dt = value
+        else:
+            s = str(value).strip().replace("Z", "+00:00")
+            dt = datetime.fromisoformat(s)
+
+        if dt.tzinfo is None:
+            # Assume UTC for naive inputs (this is the safest default for
+            # values that came from calculate_next_run, which always emits UTC)
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+
+        return dt.isoformat()
+    except (ValueError, TypeError, AttributeError):
+        logger.warning(f"normalize_next_run: could not parse {value!r}")
+        return None
 
 # ============ HELPER: SANDBOX UTILITY FALLBACK ============
 def handle_sandbox_utility_fallback(
