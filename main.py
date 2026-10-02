@@ -4008,6 +4008,7 @@ def log_page_visit():
                 visitor_name = user.get("full_name") or user.get("email")
         except Exception:
             pass
+
         db.log_visitor(
             user_id=user_id,
             visitor_name=visitor_name,
@@ -4019,6 +4020,11 @@ def log_page_visit():
             path=request.path,
             referrer=request.headers.get("Referer", ""),
             session_id=request.cookies.get(SESSION_COOKIE_NAME, ""),
+            # NEW — from Cloudflare headers, empty string if not behind CF
+            country=request.headers.get("CF-IPCountry", ""),
+            city=request.headers.get("CF-IPCity", ""),
+            region=request.headers.get("CF-IPRegion", ""),
+            timezone=request.headers.get("CF-IPTimezone", ""),
         )
     except Exception as e:
         logger.warning(f"Visitor logging failed (non-fatal): {e}")
@@ -8126,14 +8132,20 @@ class ReloadlyWebApp:
 
         @self.app.route("/")
         def index():
+            device_type = parse_user_agent(request.headers.get("User-Agent", ""))["device_type"]
             return render_template(
-                "index.html", environment=self.credentials.environment.value
+                "index.html",
+                environment=self.credentials.environment.value,
+                device_type=device_type,
             )
 
         @self.app.route("/utilities")
         def utilities():
+            device_type = parse_user_agent(request.headers.get("User-Agent", ""))["device_type"]
             return render_template(
-                "utilities.html", environment=self.credentials.environment.value
+                "utilities.html",
+                environment=self.credentials.environment.value,
+                device_type=device_type,
             )
 
         @self.app.route("/scheduler")
@@ -15019,42 +15031,133 @@ class ReloadlyWebApp:
                 )
 
         @self.app.route(
-            "/api/admin/users/<int:target_user_id>/set-password", methods=["POST"]
+            "/api/admin/users/<int:target_user_id>/set-password",
+            methods=["POST"]
         )
         @admin_required
         def admin_set_password_directly(target_user_id):
-            data = request.json or {}
-            new_password = data.get("new_password")
-            if not new_password or len(new_password) < 8:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "error": "New password must be at least 8 characters",
-                        }
-                    ),
-                    400,
-                )
-            if not db.get_user(target_user_id):
-                return jsonify({"success": False, "error": "User not found"}), 404
+            """
+            Admin-controlled password reset.
 
-            db.set_password(target_user_id, new_password)
-            db.kill_user_sessions(target_user_id)
-            log_event(
-                user_id=target_user_id,
-                event_type="admin_password_set_directly",
-                details={
-                    "admin": _admin_identity(),
-                    "note": "Emergency direct set, no email round-trip",
-                },
-                status="success",
-            )
-            return jsonify(
-                {
+            Important:
+            - Admin can choose the new password.
+            - The plaintext password is never stored.
+            - db.set_password() is responsible for hashing it.
+            - All existing sessions are terminated.
+            - The plaintext password is never written to the audit log.
+            """
+
+            data = request.get_json(silent=True) or {}
+
+            new_password = data.get("new_password", "")
+            confirm_password = data.get("confirm_password", "")
+
+            # ---------------------------------------------------------
+            # Validate target user
+            # ---------------------------------------------------------
+            user = db.get_user(target_user_id)
+
+            if not user:
+                return jsonify({
+                    "success": False,
+                    "error": "User not found"
+                }), 404
+
+            # ---------------------------------------------------------
+            # Validate password
+            # ---------------------------------------------------------
+            if not new_password:
+                return jsonify({
+                    "success": False,
+                    "error": "New password is required"
+                }), 400
+
+            if len(new_password) < 8:
+                return jsonify({
+                    "success": False,
+                    "error": "Password must be at least 8 characters"
+                }), 400
+
+            if len(new_password) > 128:
+                return jsonify({
+                    "success": False,
+                    "error": "Password must not exceed 128 characters"
+                }), 400
+
+            # ---------------------------------------------------------
+            # Confirm password
+            # ---------------------------------------------------------
+            if confirm_password != new_password:
+                return jsonify({
+                    "success": False,
+                    "error": "Passwords do not match"
+                }), 400
+
+            # ---------------------------------------------------------
+            # Do not allow password changes for deleted accounts
+            # ---------------------------------------------------------
+            account_status = (user.get("account_status") or "active").lower()
+
+            if account_status == "deleted":
+                return jsonify({
+                    "success": False,
+                    "error": "Cannot set a password for a deleted account"
+                }), 400
+
+            # ---------------------------------------------------------
+            # Set password
+            #
+            # db.set_password() should hash the password before storage.
+            # NEVER store new_password directly in the database.
+            # ---------------------------------------------------------
+            try:
+                db.set_password(target_user_id, new_password)
+
+                # -----------------------------------------------------
+                # Kill every existing login session
+                # -----------------------------------------------------
+                killed_sessions = db.kill_user_sessions(target_user_id)
+
+                # -----------------------------------------------------
+                # Audit event
+                #
+                # NEVER include the actual password.
+                # -----------------------------------------------------
+                log_event(
+                    user_id=target_user_id,
+                    event_type="admin_password_set_directly",
+                    details={
+                        "admin": _admin_identity(),
+                        "sessions_killed": killed_sessions,
+                        "method": "admin_direct_password_set"
+                    },
+                    status="success"
+                )
+
+                logger.warning(
+                    "Admin %s directly set a new password for user_id=%s; "
+                    "%s session(s) terminated",
+                    _admin_identity(),
+                    target_user_id,
+                    killed_sessions
+                )
+
+                return jsonify({
                     "success": True,
-                    "message": "Password set. All existing sessions were terminated — the user (or you) can now log in with the new password.",
-                }
-            )
+                    "message": "Password changed successfully.",
+                    "sessions_killed": killed_sessions
+                })
+
+            except Exception as e:
+                logger.exception(
+                    "Admin password change failed for user_id=%s",
+                    target_user_id
+                )
+
+                return jsonify({
+                    "success": False,
+                    "error": "Could not change the password"
+                }), 500
 
         @self.app.route(
             "/api/admin/users/<int:target_user_id>/unblock", methods=["POST"]
