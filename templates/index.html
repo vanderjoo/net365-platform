@@ -771,7 +771,15 @@
     @media(max-width:480px){.quick-actions{grid-template-columns:repeat(3,1fr);}.services-grid{grid-template-columns:1fr;}.welcome-banner{padding:20px;min-height:auto;}.banner-btns{flex-direction:column;}.wallet-actions{grid-template-columns:repeat(2,1fr);}.footer{flex-direction:column;gap:8px;text-align:center;}.footer-links{flex-wrap:wrap;justify-content:center;}.global-network-header{flex-direction:column;}.network-live-status{align-self:flex-start;}.global-network-stats{grid-template-columns:repeat(2,1fr);}.network-stat-value{font-size:16px;}.global-network-stat:last-child{grid-column:span 2;}}
   </style>
 </head>
-<body>
+<body data-device="{{ device_type | default('Unknown') | lower }}">
+  <script>
+    // Server-computed from the User-Agent header (see parse_user_agent() in app.py) —
+    // the same signal that drives visitor analytics, now exposed client-side so JS can
+    // branch on real device type without re-sniffing the UA string itself. Layout is
+    // still handled by CSS media queries; this is for things CSS can't do (e.g. skipping
+    // a heavy widget's init on mobile).
+    window.NET365_DEVICE = "{{ device_type | default('Unknown') }}";
+  </script>
   <!-- LOADING OVERLAY -->
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner"></div>
@@ -878,7 +886,7 @@
           <!-- LEFT COLUMN -->
           <div class="left-col">
             <!-- WELCOME BANNER -->
-            <div class="welcome-banner">
+            <div class="welcome-banner" id="welcomeBanner">
               <div style="font-size:12px;opacity:0.8;margin-bottom:6px;">WELCOME TO NET365</div>
               <h1>Recharge the World<br />Fast. Secure. Instant.</h1>
               <p>A global payments platform for everyone, everywhere.</p>
@@ -889,7 +897,7 @@
             </div>
 
             <!-- GLOBAL RECHARGE NETWORK CARD -->
-            <div class="global-network-card">
+            <div class="global-network-card" id="globalNetworkCard">
               <div class="global-network-header">
                 <div class="global-network-title">
                   <div class="global-network-icon"><i class="fas fa-globe-americas"></i></div>
@@ -938,41 +946,41 @@
             </div>
 
             <!-- QUICK ACTIONS -->
-            <div class="quick-actions">
+            <div class="quick-actions" id="quickActions">
               <div class="action-item" onclick="document.getElementById('rechargeSection').scrollIntoView({behavior:'smooth'})">
-                <div class="action-icon" style="background:#3b82f6;"><i class="fas fa-mobile-alt"></i></div>
+                <div class="action-icon" style="background:#FFC000;"><i class="fas fa-mobile-alt"></i></div>
                 <span>Recharge Airtime</span>
               </div>
               <div class="action-item" onclick="document.getElementById('rechargeSection').scrollIntoView({behavior:'smooth'})">
-                <div class="action-icon" style="background:#06b6d4;"><i class="fas fa-wifi"></i></div>
+                <div class="action-icon" style="background:#22D3EE;"><i class="fas fa-wifi"></i></div>
                 <span>Buy Data</span>
               </div>
               <div class="action-item" onclick="window.location.href='/utilities'">
-                <div class="action-icon" style="background:#f59e0b;"><i class="fas fa-bolt"></i></div>
+                <div class="action-icon" style="background:#0E7C93;"><i class="fas fa-bolt"></i></div>
                 <span>Pay Electricity</span>
               </div>
               <div class="action-item" onclick="window.location.href='/business'">
-                <div class="action-icon" style="background:#8b5cf6;"><i class="fas fa-tv"></i></div>
+                <div class="action-icon" style="background:#818CF8;"><i class="fas fa-tv"></i></div>
                 <span>Cable TV</span>
               </div>
               <div class="action-item" onclick="window.location.href='/business'">
-                <div class="action-icon" style="background:#ec4899;"><i class="fas fa-gift"></i></div>
+                <div class="action-icon" style="background:#34D399;"><i class="fas fa-gift"></i></div>
                 <span>Gift Cards</span>
               </div>
               <div class="action-item" onclick="showToast('Send money coming soon!', 'info')">
-                <div class="action-icon" style="background:#10b981;"><i class="fas fa-paper-plane"></i></div>
+                <div class="action-icon" style="background:#0891B2;"><i class="fas fa-paper-plane"></i></div>
                 <span>Send Money</span>
               </div>
               <div class="action-item" onclick="showToast('Crypto coming soon!', 'info')">
-                <div class="action-icon" style="background:#f97316;"><i class="fab fa-bitcoin"></i></div>
+                <div class="action-icon" style="background:#6366F1;"><i class="fab fa-bitcoin"></i></div>
                 <span>Crypto</span>
               </div>
               <div class="action-item" onclick="window.location.href='/utilities'">
-                <div class="action-icon" style="background:#14b8a6;"><i class="fas fa-home"></i></div>
+                <div class="action-icon" style="background:#2DD4BF;"><i class="fas fa-home"></i></div>
                 <span>Utilities</span>
               </div>
               <div class="action-item" onclick="showToast('Travel eSIM coming soon!', 'info')">
-                <div class="action-icon" style="background:#6366f1;"><i class="fas fa-plane"></i></div>
+                <div class="action-icon" style="background:#38BDF8;"><i class="fas fa-plane"></i></div>
                 <span>Travel eSIM</span>
               </div>
               <div class="action-item" onclick="showToast('More features coming soon!', 'info')">
@@ -982,7 +990,7 @@
             </div>
 
             <!-- DASHBOARD STATS -->
-            <div class="dashboard-section">
+            <div class="dashboard-section stats-section">
               <div class="section-header">
                 <h3>Your Dashboard</h3>
                 <a onclick="showAnalytics()">View Analytics →</a>
@@ -1006,8 +1014,8 @@
               </div>
             </div>
 
-            <!-- POPULAR SERVICES -->
-            <div class="dashboard-section">
+            <!-- POPULAR SERVICES (hidden on mobile — duplicates Quick Actions above) -->
+            <div class="dashboard-section popular-section">
               <div class="section-header">
                 <h3>Popular Services</h3>
                 <a onclick="showToast('All services coming soon!', 'info')">View All</a>
@@ -1073,7 +1081,7 @@
             </div>
 
             <!-- RECENT TRANSACTIONS -->
-            <div class="dashboard-section">
+            <div class="dashboard-section recent-section">
               <div class="section-header">
                 <h3>Recent Transactions</h3>
                 <a onclick="showAnalytics()">View All</a>
@@ -1964,6 +1972,43 @@ body.dark-mode .wallet-enhanced {
   .wallet-enhanced-btn-secondary i {
     font-size: 12px;
   }
+}
+
+/* ===================================================================
+   MOBILE UX PASS — reorders content so core actions appear first,
+   removes the duplicate "Popular Services" list, compacts the stat
+   cards into one row, and gives the floating chat button safe space.
+   Added in response to family/friend phone testing feedback.
+   =================================================================== */
+@media (max-width: 768px) {
+  /* .left-col is already display:flex;flex-direction:column, so each
+     direct child can be reordered with `order` — no markup changes
+     needed beyond the ids/classes added above. */
+  #quickActions      { order: 1; }
+  #welcomeBanner      { order: 2; padding: 18px 20px; min-height: auto; }
+  #welcomeBanner h1   { font-size: 20px; }
+  #welcomeBanner p    { font-size: 13px; margin-bottom: 14px; }
+  .dashboard-section.stats-section  { order: 3; }
+  #globalNetworkCard  { order: 4; }
+  .dashboard-section.recent-section { order: 5; }
+
+  /* Popular Services duplicates Quick Actions above it — hide on
+     mobile instead of making the user scroll past the same options
+     twice. Still shown on tablet/desktop where there's room. */
+  .dashboard-section.popular-section { display: none; }
+
+  /* Stat cards: one compact row instead of three stacked full-width
+     cards (was the single biggest contributor to scroll length). */
+  .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat-card  { padding: 10px 8px; text-align: center; }
+  .stat-card .label  { font-size: 10.5px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat-card .value  { font-size: 16px; margin-bottom: 2px; }
+  .stat-card .change { font-size: 10px; justify-content: center; }
+
+  /* Give the floating chat button its own clear space at the bottom
+     instead of sitting on top of whatever happens to scroll under it. */
+  .chat-fab { width: 48px; height: 48px; font-size: 18px; bottom: 16px; right: 16px; }
+  .content  { padding-bottom: 76px; }
 }
 </style>
 
@@ -4750,7 +4795,11 @@ async function applyReferralCode() {
         countrySelect.value = finalCountry;
         countrySelect.disabled = false;
         // One call to sync everything — banner, currency, gateway, operators.
-        onRechargeCountryChange();
+        // silent=true: this is the automatic page-load sync, not something the
+        // user did. If the operator fetch fails here, the dropdown already
+        // shows an inline "could not load" option — no need to also alarm
+        // the user with a toast before they've touched anything.
+        onRechargeCountryChange({ silent: true });
       }
     }
 
@@ -4761,7 +4810,8 @@ async function applyReferralCode() {
     // fetches the operator list. Uses a request-id guard so rapid country
     // flips can't cause a stale response to clobber the current selection.
     // ------------------------------------------------------------------
-    async function onRechargeCountryChange() {
+    async function onRechargeCountryChange(opts) {
+      const silent = !!(opts && opts.silent);
       const countrySelect = document.getElementById('rechargeCountrySelect');
       const operatorSelect = document.getElementById('rechargeOperatorSelect');
       if (!countrySelect || !operatorSelect) return;
@@ -4810,10 +4860,14 @@ async function applyReferralCode() {
         operatorSelect.innerHTML =
           '<option value="">⚠️ Could not load networks — try again</option>';
         operatorSelect.disabled = true;
-        showToast(
-          '⚠️ Could not load mobile networks for this country. Please try again.',
-          'warning'
-        );
+        if (!silent) {
+          showToast(
+            '⚠️ Could not load mobile networks for this country. Please try again.',
+            'warning'
+          );
+        } else {
+          console.warn(`onRechargeCountryChange: initial operator fetch failed for ${code} — dropdown shows inline fallback, toast suppressed.`);
+        }
         updateBreakdown();
         return;
       }
