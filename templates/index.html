@@ -769,6 +769,11 @@
     @media(max-width:1024px){.services-grid{grid-template-columns:repeat(2,1fr);}.right-col{width:280px;}}
     @media(max-width:768px){.sidebar{width:60px;padding:12px 8px;}.sidebar .logo span,.sidebar .nav-item span,.sidebar .invite-card{display:none;}.sidebar .logo{justify-content:center;padding:8px 0 16px;}.sidebar .nav-item{justify-content:center;padding:12px;}.sidebar .nav-item i{font-size:18px;}.main{margin-left:60px;}.content{flex-direction:column;}.right-col{width:100%;}.quick-actions{grid-template-columns:repeat(5,1fr);}.stats-grid{grid-template-columns:1fr;}.welcome-banner h1{font-size:22px;}.bottom-banner{flex-direction:column;text-align:center;gap:12px;}.topbar{flex-wrap:wrap;gap:8px;}.search-box{max-width:100%;order:3;flex-basis:100%;}.global-network-stats{grid-template-columns:repeat(2,1fr);}.global-network-stat:last-child{grid-column:span 2;}.global-network-footer{flex-direction:column;align-items:flex-start;}}
     @media(max-width:480px){.quick-actions{grid-template-columns:repeat(3,1fr);}.services-grid{grid-template-columns:1fr;}.welcome-banner{padding:20px;min-height:auto;}.banner-btns{flex-direction:column;}.wallet-actions{grid-template-columns:repeat(2,1fr);}.footer{flex-direction:column;gap:8px;text-align:center;}.footer-links{flex-wrap:wrap;justify-content:center;}.global-network-header{flex-direction:column;}.network-live-status{align-self:flex-start;}.global-network-stats{grid-template-columns:repeat(2,1fr);}.network-stat-value{font-size:16px;}.global-network-stat:last-child{grid-column:span 2;}}
+  
+@media (max-width: 768px) {
+  .mobile-nav-close { display: block !important; }
+}
+
   </style>
 </head>
 <body data-device="{{ device_type | default('Unknown') | lower }}">
@@ -787,8 +792,23 @@
   </div>
 
   <div class="app">
+    <!-- MOBILE NAVIGATION -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle"
+            type="button" aria-label="Open navigation" aria-expanded="false"
+            onclick="toggleMobileNav()">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="mobile-nav-backdrop" id="mobileNavBackdrop"
+         onclick="closeMobileNav()"></div>
+
     <!-- SIDEBAR -->
     <aside class="sidebar">
+      <button type="button" class="mobile-nav-close"
+              aria-label="Close navigation" onclick="closeMobileNav()"
+              style="display:none;margin-left:auto;margin-bottom:10px;border:0;background:transparent;color:var(--text-primary);font-size:22px;cursor:pointer;">
+        <i class="fas fa-times"></i>
+      </button>
+
       <div class="logo">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Net365" style="height:40px;width:auto;display:block;object-fit:contain;" />
       </div>
@@ -1971,6 +1991,184 @@ body.dark-mode .wallet-enhanced {
   .wallet-enhanced-btn-primary i,
   .wallet-enhanced-btn-secondary i {
     font-size: 12px;
+  }
+}
+
+
+/* ===================================================================
+   NET365 MOBILE NAVIGATION / PHONE UX PATCH
+   Desktop/tablet layout remains unchanged.
+   =================================================================== */
+.mobile-menu-toggle,
+.mobile-nav-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Replace the permanent 60px icon rail with a real mobile drawer. */
+  .sidebar {
+    position: fixed;
+    z-index: 3000;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(82vw, 320px) !important;
+    height: 100vh;
+    padding: 18px 12px !important;
+    transform: translateX(-105%);
+    transition: transform .25s ease;
+    box-shadow: 8px 0 30px rgba(0,0,0,.18);
+    overflow-y: auto;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar .logo span,
+  .sidebar .nav-item span,
+  .sidebar .invite-card {
+    display: block !important;
+  }
+
+  .sidebar .logo {
+    justify-content: flex-start !important;
+    padding: 8px 10px 18px !important;
+  }
+
+  .sidebar .nav-item {
+    justify-content: flex-start !important;
+    padding: 12px 14px !important;
+  }
+
+  .sidebar .nav-item i {
+    width: 22px;
+    margin-right: 10px;
+    font-size: 17px !important;
+  }
+
+  .main {
+    margin-left: 0 !important;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mobile-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 18px;
+  }
+
+  .mobile-nav-backdrop {
+    position: fixed;
+    z-index: 2999;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+  }
+
+  .mobile-nav-backdrop.mobile-open {
+    display: block;
+  }
+
+  /* Don't allow wide dashboard components to force horizontal scrolling. */
+  .app,
+  .main,
+  .content,
+  .left-col,
+  .right-col,
+  #dashboardContent {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .content {
+    overflow-x: hidden;
+  }
+
+  /* Phone: make Quick Actions comfortable instead of squeezing five columns. */
+  .quick-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding: 12px !important;
+  }
+
+  .action-item {
+    min-width: 0;
+    padding: 9px 3px;
+  }
+
+  .action-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .action-item span {
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  /* Quick Recharge gets priority on phones. */
+  #rechargeSection {
+    order: 0;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Hide duplicate/desktop-heavy dashboard content already represented above. */
+  .dashboard-section.popular-section {
+    display: none !important;
+  }
+
+  /* Tables should scroll inside themselves, never stretch the whole page. */
+  .analytics-table,
+  .table-responsive,
+  .transactions-table,
+  .tx-table {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /* Keep common form controls inside the viewport. */
+  input, select, textarea, button {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    padding: 10px !important;
+  }
+
+  .action-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 17px;
+  }
+
+  .action-item span {
+    font-size: 10.5px;
+  }
+
+  .dashboard-section {
+    padding: 14px !important;
+    border-radius: 13px;
+  }
+
+  .content {
+    padding-left: 10px;
+    padding-right: 10px;
   }
 }
 
@@ -6550,15 +6748,86 @@ async function importSelectedContacts() {
 
         
     // ============================================
+
+    // ============================================
+    // MOBILE NAVIGATION
+    // ============================================
+    function toggleMobileNav() {
+      const sidebar = document.querySelector('.sidebar');
+      const backdrop = document.getElementById('mobileNavBackdrop');
+      const button = document.getElementById('mobileMenuToggle');
+      if (!sidebar || !backdrop) return;
+
+      const open = !sidebar.classList.contains('mobile-open');
+      sidebar.classList.toggle('mobile-open', open);
+      backdrop.classList.toggle('mobile-open', open);
+      if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+      document.body.style.overflow = open ? 'hidden' : '';
+    }
+
+    function closeMobileNav() {
+      const sidebar = document.querySelector('.sidebar');
+      const backdrop = document.getElementById('mobileNavBackdrop');
+      const button = document.getElementById('mobileMenuToggle');
+
+      if (sidebar) sidebar.classList.remove('mobile-open');
+      if (backdrop) backdrop.classList.remove('mobile-open');
+      if (button) button.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    }
+
+    // Close the drawer after choosing a navigation item on phones.
+    document.addEventListener('click', (event) => {
+      if (window.innerWidth <= 768 &&
+          event.target.closest('.sidebar .nav-item')) {
+        closeMobileNav();
+      }
+    });
+
     // INIT
     // ============================================
-   
+    // Load the agent code that belongs to this visitor.
+    //  - Signed in  → fetch the account's real referral code from the backend
+    //  - Guest      → reuse a code already stored in localStorage for this browser,
+    //                 or create one ONCE and persist it. Never overwrite an
+    //                 existing stored code.
+    async function initializeAgentCode() {
+      const display = document.getElementById('agentCodeDisplay');
+      if (!display) return;
+
+      // Signed-in path — the backend is the source of truth.
+      if (userId) {
+        try {
+          const res = await apiFetch(`${API_BASE}/referral/code`);
+          const data = await res.json();
+          if (data.success && data.referral_code) {
+            display.textContent = data.referral_code;
+            // Do NOT touch #referralInput here — that field is owned by the
+            // referral apply flow (applyReferralCode / toggleReferralInput).
+            // Writing to it here is what was stomping on incoming ?ref= codes.
+            localStorage.setItem('net365_agent_code', data.referral_code);
+            return;
+          }
+        } catch (e) {
+          console.warn('Could not load referral code from server:', e);
+        }
+      }
+
+      // Guest path — reuse or create-once, never overwrite.
+      let stored = localStorage.getItem('net365_agent_code');
+      if (!stored) {
+        stored = `NET365-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        localStorage.setItem('net365_agent_code', stored);
+      }
+      display.textContent = stored;
+    }   
     // INIT
     // ============================================
     document.addEventListener('DOMContentLoaded', async () => {
       loadTheme();
       handlePaymentCallback();
-      generateAgentCode();
+      await initializeAgentCode();
       const defaultSymbol = getCurrencySymbol(CONFIG.defaultCurrency);
       document.getElementById('currencySymbol').textContent = defaultSymbol;
       document.getElementById('addMoneySymbol').textContent = defaultSymbol;
