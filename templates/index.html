@@ -252,6 +252,16 @@
       border: 1px solid transparent;
     }
     .icon-btn:hover { border-color: var(--border-color); }
+    .sidebar-hamburger {
+      display: none; /* desktop: sidebar is always visible, no toggle needed */
+      width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border-color);
+      background: var(--bg-primary); color: var(--text-secondary); font-size: 16px;
+      align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+    }
+    .sidebar-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(15,23,42,.45);
+      z-index: 998; backdrop-filter: blur(1px);
+    }
     .icon-btn .badge { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: none; }
     .icon-btn .badge.show { display: block; }
 
@@ -769,11 +779,6 @@
     @media(max-width:1024px){.services-grid{grid-template-columns:repeat(2,1fr);}.right-col{width:280px;}}
     @media(max-width:768px){.sidebar{width:60px;padding:12px 8px;}.sidebar .logo span,.sidebar .nav-item span,.sidebar .invite-card{display:none;}.sidebar .logo{justify-content:center;padding:8px 0 16px;}.sidebar .nav-item{justify-content:center;padding:12px;}.sidebar .nav-item i{font-size:18px;}.main{margin-left:60px;}.content{flex-direction:column;}.right-col{width:100%;}.quick-actions{grid-template-columns:repeat(5,1fr);}.stats-grid{grid-template-columns:1fr;}.welcome-banner h1{font-size:22px;}.bottom-banner{flex-direction:column;text-align:center;gap:12px;}.topbar{flex-wrap:wrap;gap:8px;}.search-box{max-width:100%;order:3;flex-basis:100%;}.global-network-stats{grid-template-columns:repeat(2,1fr);}.global-network-stat:last-child{grid-column:span 2;}.global-network-footer{flex-direction:column;align-items:flex-start;}}
     @media(max-width:480px){.quick-actions{grid-template-columns:repeat(3,1fr);}.services-grid{grid-template-columns:1fr;}.welcome-banner{padding:20px;min-height:auto;}.banner-btns{flex-direction:column;}.wallet-actions{grid-template-columns:repeat(2,1fr);}.footer{flex-direction:column;gap:8px;text-align:center;}.footer-links{flex-wrap:wrap;justify-content:center;}.global-network-header{flex-direction:column;}.network-live-status{align-self:flex-start;}.global-network-stats{grid-template-columns:repeat(2,1fr);}.network-stat-value{font-size:16px;}.global-network-stat:last-child{grid-column:span 2;}}
-  
-@media (max-width: 768px) {
-  .mobile-nav-close { display: block !important; }
-}
-
   </style>
 </head>
 <body data-device="{{ device_type | default('Unknown') | lower }}">
@@ -792,23 +797,8 @@
   </div>
 
   <div class="app">
-    <!-- MOBILE NAVIGATION -->
-    <button class="mobile-menu-toggle" id="mobileMenuToggle"
-            type="button" aria-label="Open navigation" aria-expanded="false"
-            onclick="toggleMobileNav()">
-      <i class="fas fa-bars"></i>
-    </button>
-    <div class="mobile-nav-backdrop" id="mobileNavBackdrop"
-         onclick="closeMobileNav()"></div>
-
     <!-- SIDEBAR -->
     <aside class="sidebar">
-      <button type="button" class="mobile-nav-close"
-              aria-label="Close navigation" onclick="closeMobileNav()"
-              style="display:none;margin-left:auto;margin-bottom:10px;border:0;background:transparent;color:var(--text-primary);font-size:22px;cursor:pointer;">
-        <i class="fas fa-times"></i>
-      </button>
-
       <div class="logo">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Net365" style="height:40px;width:auto;display:block;object-fit:contain;" />
       </div>
@@ -832,11 +822,15 @@
         <div class="gift">🎁</div>
       </div>
     </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
     <!-- MAIN CONTENT -->
     <div class="main">
       <!-- TOPBAR -->
       <header class="topbar">
+        <button class="sidebar-hamburger" id="sidebarHamburger" onclick="toggleSidebar()" aria-label="Open menu">
+          <i class="fas fa-bars"></i>
+        </button>
         <div class="search-box">
           <i class="fas fa-search"></i>
           <input type="text" placeholder="Search services, contacts, countries..." id="searchInput" />
@@ -1119,7 +1113,7 @@
 <!-- ============================================
      FUTURISTIC & ULTRA-PREMIUM WALLET COMPONENT
      ============================================ -->
-<div class="wallet-futuristic">
+<div class="wallet-futuristic" id="walletFuturistic">
   <!-- Glowing Canvas Backdrops -->
   <div class="glow-sphere glow-1"></div>
   <div class="glow-sphere glow-2"></div>
@@ -1994,184 +1988,6 @@ body.dark-mode .wallet-enhanced {
   }
 }
 
-
-/* ===================================================================
-   NET365 MOBILE NAVIGATION / PHONE UX PATCH
-   Desktop/tablet layout remains unchanged.
-   =================================================================== */
-.mobile-menu-toggle,
-.mobile-nav-backdrop {
-  display: none;
-}
-
-@media (max-width: 768px) {
-  /* Replace the permanent 60px icon rail with a real mobile drawer. */
-  .sidebar {
-    position: fixed;
-    z-index: 3000;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: min(82vw, 320px) !important;
-    height: 100vh;
-    padding: 18px 12px !important;
-    transform: translateX(-105%);
-    transition: transform .25s ease;
-    box-shadow: 8px 0 30px rgba(0,0,0,.18);
-    overflow-y: auto;
-  }
-
-  .sidebar.mobile-open {
-    transform: translateX(0);
-  }
-
-  .sidebar .logo span,
-  .sidebar .nav-item span,
-  .sidebar .invite-card {
-    display: block !important;
-  }
-
-  .sidebar .logo {
-    justify-content: flex-start !important;
-    padding: 8px 10px 18px !important;
-  }
-
-  .sidebar .nav-item {
-    justify-content: flex-start !important;
-    padding: 12px 14px !important;
-  }
-
-  .sidebar .nav-item i {
-    width: 22px;
-    margin-right: 10px;
-    font-size: 17px !important;
-  }
-
-  .main {
-    margin-left: 0 !important;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .mobile-menu-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    cursor: pointer;
-    font-size: 18px;
-  }
-
-  .mobile-nav-backdrop {
-    position: fixed;
-    z-index: 2999;
-    inset: 0;
-    background: rgba(0,0,0,.45);
-  }
-
-  .mobile-nav-backdrop.mobile-open {
-    display: block;
-  }
-
-  /* Don't allow wide dashboard components to force horizontal scrolling. */
-  .app,
-  .main,
-  .content,
-  .left-col,
-  .right-col,
-  #dashboardContent {
-    max-width: 100%;
-    min-width: 0;
-  }
-
-  .content {
-    overflow-x: hidden;
-  }
-
-  /* Phone: make Quick Actions comfortable instead of squeezing five columns. */
-  .quick-actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 8px !important;
-    padding: 12px !important;
-  }
-
-  .action-item {
-    min-width: 0;
-    padding: 9px 3px;
-  }
-
-  .action-icon {
-    width: 44px;
-    height: 44px;
-    font-size: 18px;
-  }
-
-  .action-item span {
-    font-size: 11px;
-    line-height: 1.2;
-  }
-
-  /* Quick Recharge gets priority on phones. */
-  #rechargeSection {
-    order: 0;
-    width: 100%;
-    min-width: 0;
-  }
-
-  /* Hide duplicate/desktop-heavy dashboard content already represented above. */
-  .dashboard-section.popular-section {
-    display: none !important;
-  }
-
-  /* Tables should scroll inside themselves, never stretch the whole page. */
-  .analytics-table,
-  .table-responsive,
-  .transactions-table,
-  .tx-table {
-    max-width: 100%;
-    overflow-x: auto;
-  }
-
-  /* Keep common form controls inside the viewport. */
-  input, select, textarea, button {
-    max-width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .quick-actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 6px !important;
-    padding: 10px !important;
-  }
-
-  .action-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 17px;
-  }
-
-  .action-item span {
-    font-size: 10.5px;
-  }
-
-  .dashboard-section {
-    padding: 14px !important;
-    border-radius: 13px;
-  }
-
-  .content {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-}
-
 /* ===================================================================
    MOBILE UX PASS — reorders content so core actions appear first,
    removes the duplicate "Popular Services" list, compacts the stat
@@ -2179,16 +1995,48 @@ body.dark-mode .wallet-enhanced {
    Added in response to family/friend phone testing feedback.
    =================================================================== */
 @media (max-width: 768px) {
-  /* .left-col is already display:flex;flex-direction:column, so each
-     direct child can be reordered with `order` — no markup changes
-     needed beyond the ids/classes added above. */
-  #quickActions      { order: 1; }
-  #welcomeBanner      { order: 2; padding: 18px 20px; min-height: auto; }
-  #welcomeBanner h1   { font-size: 20px; }
-  #welcomeBanner p    { font-size: 13px; margin-bottom: 14px; }
-  .dashboard-section.stats-section  { order: 3; }
-  #globalNetworkCard  { order: 4; }
-  .dashboard-section.recent-section { order: 5; }
+  /* SIDEBAR → off-canvas drawer. Previously the sidebar was squeezed
+     into a permanent 60px icon-only rail, eating real width on a small
+     screen on every single page. Now it's hidden off-screen by default
+     and slides in full-width-labelled when the hamburger is tapped. */
+  .sidebar-hamburger { display: flex; }
+  .sidebar {
+    position: fixed; top: 0; left: 0; height: 100vh; width: 250px;
+    transform: translateX(-100%); transition: transform .25s ease;
+    z-index: 999; padding: 20px 16px; overflow-y: auto;
+  }
+  .sidebar .logo span, .sidebar .nav-item span, .sidebar .invite-card { display: block; }
+  .sidebar .logo { justify-content: flex-start; padding: 0 4px 20px; }
+  .sidebar .nav-item { justify-content: flex-start; padding: 12px 14px; }
+  .sidebar .nav-item i { font-size: 16px; width: 20px; }
+  body.sidebar-open .sidebar { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,.2); }
+  body.sidebar-open .sidebar-backdrop { display: block; }
+  body.sidebar-open { overflow: hidden; } /* lock background scroll while drawer is open */
+  .main { margin-left: 0; }
+
+  /* .left-col and .right-col are normally two side-by-side columns.
+     display:contents makes each wrapper "disappear" from the box
+     model — its children become direct flex items of .content
+     instead, without moving anything in the HTML. That lets us
+     interleave cards from BOTH columns into one real priority order
+     on mobile (e.g. put the recharge form right after Quick Actions,
+     ahead of things that were physically above it in the markup),
+     while desktop keeps its normal two-column layout untouched. */
+  .left-col, .right-col { display: contents; }
+
+  #quickActions        { order: 1; }  /* core actions, unchanged */
+  #rechargeSection      { order: 2; }  /* the actual pay form — was buried after the whole left column; now right after the action tiles that link to it */
+  #welcomeBanner        { order: 3; padding: 18px 20px; min-height: auto; }
+  #welcomeBanner h1     { font-size: 20px; }
+  #welcomeBanner p      { font-size: 13px; margin-bottom: 14px; }
+  #walletFuturistic     { order: 4; }  /* wallet balance — valuable, now surfaces early instead of near the bottom */
+  .dashboard-section.stats-section { order: 5; }
+  #globalNetworkCard    { order: 6; }
+  #recentContactsCard   { order: 7; }
+  #rewardsCard          { order: 8; }
+  #aiCard               { order: 9; }
+  .dashboard-section.recent-section { order: 10; }
+  #bulkRechargeSection  { order: 11; }  /* stays display:none until opened — order is just for safety */
 
   /* Popular Services duplicates Quick Actions above it — hide on
      mobile instead of making the user scroll past the same options
@@ -2339,7 +2187,7 @@ body.dark-mode .wallet-enhanced {
             </div>
 
             <!-- RECENT CONTACTS -->
-            <div class="card">
+            <div class="card" id="recentContactsCard">
               <div class="card-header">
                 <h4>Recent Contacts</h4>
                 <a onclick="showAllContacts()">See All</a>
@@ -2358,7 +2206,7 @@ body.dark-mode .wallet-enhanced {
             </div>
 
             <!-- REWARDS -->
-            <div class="rewards-card">
+            <div class="rewards-card" id="rewardsCard">
               <div class="rewards-header">
                 <h4>Net365 Rewards</h4>
                 <span class="level-badge" id="rewardLevel">Level: Bronze 🥉</span>
@@ -2377,7 +2225,7 @@ body.dark-mode .wallet-enhanced {
             </div>
 
             <!-- AI ASSISTANT -->
-            <div class="ai-card" onclick="showToast('AI Assistant coming soon!', 'info')">
+            <div class="ai-card" id="aiCard" onclick="showToast('AI Assistant coming soon!', 'info')">
               <div class="ai-robot">🤖</div>
               <div class="ai-text">
                 <h5>Ask Net365 AI</h5>
@@ -3029,6 +2877,25 @@ const PROVIDER_NAMES = {
     let bulkJobId = null;
     let bulkPollingInterval = null;
     let referralAppliedAttempted = false;
+
+    // ============================================
+    // MOBILE SIDEBAR (off-canvas drawer)
+    // ============================================
+    function toggleSidebar() {
+      document.body.classList.toggle('sidebar-open');
+    }
+    // Tapping any nav link inside the drawer should close it — otherwise the
+    // drawer stays open and covers the page the user just navigated to.
+    document.addEventListener('DOMContentLoaded', () => {
+      const sidebarEl = document.querySelector('.sidebar');
+      if (sidebarEl) {
+        sidebarEl.addEventListener('click', (e) => {
+          if (e.target.closest('.nav-item') && window.innerWidth <= 768) {
+            document.body.classList.remove('sidebar-open');
+          }
+        });
+      }
+    });
 
     // ============================================
     // THEME TOGGLE
@@ -4660,11 +4527,17 @@ const PROVIDER_NAMES = {
     // ============================================
     // AGENT / INVITE
     // ============================================
-    function generateAgentCode() {
+    function generateAgentCode(opts) {
+      const silent = !!(opts && opts.silent);
       const code = `NET365-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       document.getElementById('agentCodeDisplay').textContent = code;
       document.getElementById('referralInput').value = code;
-      showToast(`🔑 New agent code generated: ${code}`, 'success');
+      // silent=true: used on page load to populate the display for every visitor,
+      // including anonymous ones who haven't asked for anything yet. Only announce
+      // it with a toast when it's a deliberate action (the "Generate New" button).
+      if (!silent) {
+        showToast(`🔑 New agent code generated: ${code}`, 'success');
+      }
       if (document.getElementById('referralGroup').classList.contains('show')) applyReferralCode();
       return code;
     }
@@ -6748,86 +6621,15 @@ async function importSelectedContacts() {
 
         
     // ============================================
-
-    // ============================================
-    // MOBILE NAVIGATION
-    // ============================================
-    function toggleMobileNav() {
-      const sidebar = document.querySelector('.sidebar');
-      const backdrop = document.getElementById('mobileNavBackdrop');
-      const button = document.getElementById('mobileMenuToggle');
-      if (!sidebar || !backdrop) return;
-
-      const open = !sidebar.classList.contains('mobile-open');
-      sidebar.classList.toggle('mobile-open', open);
-      backdrop.classList.toggle('mobile-open', open);
-      if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
-
-      document.body.style.overflow = open ? 'hidden' : '';
-    }
-
-    function closeMobileNav() {
-      const sidebar = document.querySelector('.sidebar');
-      const backdrop = document.getElementById('mobileNavBackdrop');
-      const button = document.getElementById('mobileMenuToggle');
-
-      if (sidebar) sidebar.classList.remove('mobile-open');
-      if (backdrop) backdrop.classList.remove('mobile-open');
-      if (button) button.setAttribute('aria-expanded', 'false');
-      document.body.style.overflow = '';
-    }
-
-    // Close the drawer after choosing a navigation item on phones.
-    document.addEventListener('click', (event) => {
-      if (window.innerWidth <= 768 &&
-          event.target.closest('.sidebar .nav-item')) {
-        closeMobileNav();
-      }
-    });
-
     // INIT
     // ============================================
-    // Load the agent code that belongs to this visitor.
-    //  - Signed in  → fetch the account's real referral code from the backend
-    //  - Guest      → reuse a code already stored in localStorage for this browser,
-    //                 or create one ONCE and persist it. Never overwrite an
-    //                 existing stored code.
-    async function initializeAgentCode() {
-      const display = document.getElementById('agentCodeDisplay');
-      if (!display) return;
-
-      // Signed-in path — the backend is the source of truth.
-      if (userId) {
-        try {
-          const res = await apiFetch(`${API_BASE}/referral/code`);
-          const data = await res.json();
-          if (data.success && data.referral_code) {
-            display.textContent = data.referral_code;
-            // Do NOT touch #referralInput here — that field is owned by the
-            // referral apply flow (applyReferralCode / toggleReferralInput).
-            // Writing to it here is what was stomping on incoming ?ref= codes.
-            localStorage.setItem('net365_agent_code', data.referral_code);
-            return;
-          }
-        } catch (e) {
-          console.warn('Could not load referral code from server:', e);
-        }
-      }
-
-      // Guest path — reuse or create-once, never overwrite.
-      let stored = localStorage.getItem('net365_agent_code');
-      if (!stored) {
-        stored = `NET365-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-        localStorage.setItem('net365_agent_code', stored);
-      }
-      display.textContent = stored;
-    }   
+   
     // INIT
     // ============================================
     document.addEventListener('DOMContentLoaded', async () => {
       loadTheme();
       handlePaymentCallback();
-      await initializeAgentCode();
+      generateAgentCode({ silent: true });
       const defaultSymbol = getCurrencySymbol(CONFIG.defaultCurrency);
       document.getElementById('currencySymbol').textContent = defaultSymbol;
       document.getElementById('addMoneySymbol').textContent = defaultSymbol;
