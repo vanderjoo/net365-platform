@@ -19,20 +19,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Use absolute path for database.
-# Accepts DATABASE_PATH (what you set on Railway) first, falls back to the
-# older DATABASE_URL name some deploys used, then finally a local file for
-# bare local runs. Previously this only checked DATABASE_URL, so a
-# DATABASE_PATH variable set on Railway was silently ignored and the app
-# always fell back to a file inside the ephemeral container filesystem —
-# wiped on every restart/redeploy regardless of any Volume you attached.
+# Use absolute path for database
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE = (
-    os.getenv("DATABASE_PATH")
-    or os.getenv("DATABASE_URL")
-    or os.path.join(BASE_DIR, "net365.db")
-)
-logger.info(f"Using database file: {DATABASE}")
+DATABASE = os.getenv("DATABASE_URL", os.path.join(BASE_DIR, "reloadly.db"))
 
 # Database lock timeout (in seconds)
 DB_TIMEOUT = 30
@@ -191,14 +180,61 @@ def get_user_by_id(user_id):
     return get_user(user_id)
 
 
-# get_user_by_email, get_referral_code_by_user_id, get_referral_code_owner:
-# removed from here. These used to hardcode sqlite3.connect('database.db') —
-# a THIRD, different SQLite file from DATABASE, that never received any
-# schema migrations. They were dead code (silently overridden later in this
-# file by correct versions using get_db_connection()), but left in place as
-# a landmine for anyone who reorders the file. The real implementations are
-# further down, near get_referral_code_by_user_id / get_referral_code_owner /
-# get_user_by_email.
+def get_user_by_email(email):
+    """Get user by email"""
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, email, phone, full_name, referred_by, referral_code FROM users WHERE email = ?", (email,))
+        user = cursor.fetchone()
+        conn.close()
+        
+        if user:
+            return {
+                'id': user[0],
+                'email': user[1],
+                'phone': user[2],
+                'full_name': user[3],
+                'referred_by': user[4],
+                'referral_code': user[5]
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Error getting user by email: {e}")
+        return None
+
+def get_referral_code_by_user_id(user_id):
+    """Get referral code created by user"""
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT referral_code FROM users WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+        conn.close()
+        return result[0] if result else None
+    except Exception as e:
+        logger.error(f"Error getting referral code: {e}")
+        return None
+
+def get_referral_code_owner(referral_code):
+    """Get user who owns a referral code"""
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, email, full_name FROM users WHERE referral_code = ?", (referral_code,))
+        user = cursor.fetchone()
+        conn.close()
+        
+        if user:
+            return {
+                'id': user[0],
+                'email': user[1],
+                'full_name': user[2]
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Error getting referral code owner: {e}")
+        return None
 
 
 
@@ -917,12 +953,81 @@ def get_contact_count(user_id: int) -> int:
 
 
 
-# create_notification: removed from here — dead/shadowed duplicate with the
-# same hardcoded 'database.db' issue as above, plus ~70 lines of unreachable
-# code after its return statements (a stray copy-paste from a wallet-funding
-# code path, referencing undefined names like referrer_id/amount/db that
-# would have raised NameError had it ever actually been reachable). The real
-# implementation (using get_db_connection()) lives further down this file.
+def create_notification(user_id, title, message, notification_type):
+    """Create a notification for a user"""
+    try:
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO notifications (user_id, title, message, type, is_read, created_at)
+            VALUES (?, ?, ?, ?, ?, datetime('now'))
+        """, (user_id, title, message, notification_type, 0))
+        conn.commit()
+        conn.close()
+        return {'success': True}
+    except Exception as e:
+        logger.error(f"Error creating notification: {e}")
+        return {'success': False, 'message': str(e)}
+    
+    # ============================================
+    # ✅ CREDIT THE REFERRER'S BONUS
+    # ============================================
+    
+    if referrer_id:
+        try:
+            # Calculate bonus (5% of the transaction amount)
+            bonus_amount = amount * 0.05
+            bonus_currency = "NGN"
+            
+            logger.info(f"💰 Crediting referral bonus: {bonus_currency} {bonus_amount:,.2f} to referrer {referrer_id}")
+            
+            # ✅ Credit the referrer's wallet
+            if hasattr(db, 'credit_wallet'):
+                credit_result = db.credit_wallet(
+                    referrer_id, 
+                    bonus_amount, 
+                    "referral_bonus", 
+                    f"Referral bonus from user {user_id}'s transaction"
+                )
+                
+                if credit_result.get('success'):
+                    logger.info(f"✅ Referral bonus of {bonus_currency} {bonus_amount:,.2f} credited to referrer {referrer_id}")
+                    
+                    # Create notification for referrer
+                    if hasattr(db, 'create_notification'):
+                        db.create_notification(
+                            referrer_id,
+                            "🎉 Referral Bonus Earned!",
+                            f"You earned {bonus_currency} {bonus_amount:,.2f} (5% of your referral's transaction)!",
+                            "success"
+                        )
+                        logger.info(f"✅ Notification sent to referrer {referrer_id}")
+                else:
+                    logger.error(f"❌ Failed to credit referral bonus: {credit_result}")
+            else:
+                logger.warning("credit_wallet function not found in database module")
+                
+        except Exception as e:
+            logger.error(f"❌ Error giving referral bonus: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            # Don't fail the payment
+    
+    # ============================================
+    # NOTIFY THE USER WHO FUNDED THEIR WALLET
+    # ============================================
+    
+    if hasattr(db, 'create_notification'):
+        db.create_notification(
+            user_id,
+            "💰 Wallet Funded Successfully!",
+            f"Your wallet has been credited with NGN {amount:,.2f}",
+            "success"
+        )
+    
+    logger.info(f"Transaction {reference} completed successfully")
+
+def process_pending_referrals() -> Dict:
     """
     Process all pending referrals where the referred user has made a transaction.
     This can be called manually or via a scheduled job.
@@ -1078,7 +1183,6 @@ def init_db():
         ("email_verified", "BOOLEAN", "0"),
         ("phone_verified", "BOOLEAN", "0"),
         ("verified_at", "TIMESTAMP", "NULL"),
-        ("verification_status", "TEXT", "'unverified'"),
     ]:
         if col not in user_columns:
             c.execute(f"ALTER TABLE users ADD COLUMN {col} {typ} DEFAULT {default}")
@@ -1716,11 +1820,6 @@ def init_db():
     # that silently shadowed this function (Python keeps only the last def with a
     # given name), so on a fresh database NO tables were ever created. Merged here.
     migrate_promotions_table()
-
-    # This was defined but never called anywhere, so referral_rewards never
-    # got created on any deploy — every referral-reward lookup/insert failed
-    # with "no such table: referral_rewards" (see logs).
-    migrate_referral_tables()
 
 
 # ============ BRAND COLORS TABLE ============
@@ -4270,20 +4369,26 @@ def mark_failed(reference: str, error: str) -> bool:
     return True
 
 
+
+
 @retry_on_lock
-def mark_fulfillment_failed(reference: str, error: str) -> bool:
+def mark_fulfillment_failed(reference, error_message):
     conn = get_db_connection()
     c = conn.cursor()
     c.execute(
         """
-        UPDATE transactions 
-        SET status = 'fulfillment_failed', reloadly_result = ?, updated_at = CURRENT_TIMESTAMP 
+        UPDATE transactions
+        SET status = 'fulfillment_failed',
+            fulfillment_error = ?,
+            fulfillment_locked = 0,          -- ← RELEASE the lock
+            fulfillment_locked_at = NULL,    -- ← and clear the timestamp
+            updated_at = CURRENT_TIMESTAMP
         WHERE reference = ?
-    """,
-        (json.dumps({"error": error}), reference),
+        """,
+        (error_message, reference),
     )
     conn.commit()
-    return True
+    conn.close()
 
 
 @retry_on_lock
@@ -6552,21 +6657,29 @@ def record_webhook(webhook_id: str, reference: str = None) -> bool:
 
 # In database.py - Replace the visitor tracking functions with these:
 
-
 @retry_on_lock
 def log_visitor(
-    user_id: Optional[int],
-    visitor_name: Optional[str],
-    ip_address: str,
-    user_agent: str,
-    device_type: str,
-    os_name: str,
-    browser: str,
-    path: str,
-    referrer: str,
-    session_id: str,
+    user_id: Optional[int] = None,
+    visitor_name: Optional[str] = None,
+    ip_address: str = "",
+    user_agent: str = "",
+    device_type: str = "",
+    os_name: str = "",
+    browser: str = "",
+    path: str = "",
+    referrer: str = "",
+    session_id: str = "",
+    country: str = "",
+    city: str = "",
+    region: str = "",
+    timezone: str = "",
 ) -> bool:
-    """Log a page visit for analytics."""
+    """Log a page visit for analytics.
+
+    All parameters after user_id are optional so that old call sites —
+    tests, scripts, other modules — keep working even after the geo
+    fields (country, city, region, timezone) are added later.
+    """
     conn = get_db_connection()
     c = conn.cursor()
 
@@ -6584,6 +6697,10 @@ def log_visitor(
             path TEXT,
             referrer TEXT,
             session_id TEXT,
+            country TEXT,
+            city TEXT,
+            region TEXT,
+            timezone TEXT,
             visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
@@ -6604,6 +6721,10 @@ def log_visitor(
         "path",
         "referrer",
         "session_id",
+        "country",
+        "city",
+        "region",
+        "timezone",
         "visited_at",
     ]
     for col in required_columns:
@@ -6616,7 +6737,7 @@ def log_visitor(
             except sqlite3.OperationalError:
                 pass
 
-    # Create indexes
+    # Indexes
     c.execute(
         "CREATE INDEX IF NOT EXISTS idx_visitor_logs_user_id ON visitor_logs(user_id)"
     )
@@ -6633,14 +6754,19 @@ def log_visitor(
     c.execute(
         "CREATE INDEX IF NOT EXISTS idx_visitor_logs_session_id ON visitor_logs(session_id)"
     )
+    c.execute(
+        "CREATE INDEX IF NOT EXISTS idx_visitor_logs_country ON visitor_logs(country)"
+    )
 
     try:
         c.execute(
             """
-            INSERT INTO visitor_logs 
-            (user_id, visitor_name, ip_address, user_agent, device_type, os_name, browser, path, referrer, session_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
+            INSERT INTO visitor_logs
+            (user_id, visitor_name, ip_address, user_agent, device_type,
+             os_name, browser, path, referrer, session_id,
+             country, city, region, timezone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
             (
                 user_id,
                 visitor_name,
@@ -6652,15 +6778,24 @@ def log_visitor(
                 path,
                 referrer,
                 session_id,
+                country,
+                city,
+                region,
+                timezone,
             ),
         )
         conn.commit()
-        logger.info(f"Visitor logged: path={path}, user_id={user_id}, ip={ip_address}")
+        logger.info(
+            f"Visitor logged: path={path}, user_id={user_id}, "
+            f"ip={ip_address}, country={country or '?'}, city={city or '?'}"
+        )
         return True
     except Exception as e:
         logger.error(f"Failed to log visitor: {e}")
         conn.rollback()
         return False
+    finally:
+        conn.close()
 
 
 @retry_on_lock
@@ -6670,38 +6805,44 @@ def get_visitor_logs(
     device_type: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    country: Optional[str] = None,
 ) -> List[Dict]:
-    """Get visitor logs with filters."""
+    """Get visitor logs with filters. Newest first."""
     conn = get_db_connection()
     c = conn.cursor()
 
-    # Check if table exists
-    c.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='visitor_logs'"
-    )
-    if not c.fetchone():
-        logger.warning("visitor_logs table does not exist")
-        return []
-
-    query = "SELECT * FROM visitor_logs WHERE 1=1"
-    params = []
-
-    if device_type:
-        query += " AND device_type = ?"
-        params.append(device_type)
-
-    if start_date:
-        query += " AND date(visited_at) >= ?"
-        params.append(start_date)
-
-    if end_date:
-        query += " AND date(visited_at) <= ?"
-        params.append(end_date)
-
-    query += " ORDER BY visited_at DESC LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-
     try:
+        # Check if table exists
+        c.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='table' AND name='visitor_logs'"
+        )
+        if not c.fetchone():
+            logger.warning("visitor_logs table does not exist")
+            return []
+
+        query = "SELECT * FROM visitor_logs WHERE 1=1"
+        params: List[Any] = []
+
+        if device_type:
+            query += " AND device_type = ?"
+            params.append(device_type)
+
+        if country:
+            query += " AND country = ?"
+            params.append(country)
+
+        if start_date:
+            query += " AND date(visited_at) >= ?"
+            params.append(start_date)
+
+        if end_date:
+            query += " AND date(visited_at) <= ?"
+            params.append(end_date)
+
+        query += " ORDER BY visited_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
         rows = c.execute(query, params).fetchall()
         result = []
         for row in rows:
@@ -6713,13 +6854,15 @@ def get_visitor_logs(
                         str(r["visited_at"]).replace("Z", "+00:00")
                     )
                     r["visited_at"] = dt.isoformat()
-                except:
+                except Exception:
                     pass
             result.append(r)
         return result
     except Exception as e:
         logger.error(f"Error getting visitor logs: {e}")
         return []
+    finally:
+        conn.close()
 
 
 @retry_on_lock
@@ -6728,56 +6871,82 @@ def get_visitor_stats() -> Dict:
     conn = get_db_connection()
     c = conn.cursor()
 
-    # Check if table exists
-    c.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='visitor_logs'"
-    )
-    if not c.fetchone():
-        logger.warning("visitor_logs table does not exist")
-        return {
-            "total_visits": 0,
-            "unique_ips": 0,
-            "registered_visitors": 0,
-            "by_device": [],
-            "by_day": [],
-        }
-
     try:
+        # Check if table exists
+        c.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='table' AND name='visitor_logs'"
+        )
+        if not c.fetchone():
+            logger.warning("visitor_logs table does not exist")
+            return {
+                "total_visits": 0,
+                "unique_ips": 0,
+                "registered_visitors": 0,
+                "by_device": [],
+                "by_day": [],
+                "by_country": [],
+                "by_city": [],
+            }
+
         # Total visits
         total = c.execute("SELECT COUNT(*) FROM visitor_logs").fetchone()[0] or 0
 
         # Unique IPs
         unique_ips = (
             c.execute(
-                "SELECT COUNT(DISTINCT ip_address) FROM visitor_logs WHERE ip_address IS NOT NULL AND ip_address != ''"
+                "SELECT COUNT(DISTINCT ip_address) FROM visitor_logs "
+                "WHERE ip_address IS NOT NULL AND ip_address != ''"
             ).fetchone()[0]
             or 0
         )
 
-        # Registered visitors (user_id IS NOT NULL)
+        # Registered visitors
         registered = (
             c.execute(
-                "SELECT COUNT(DISTINCT user_id) FROM visitor_logs WHERE user_id IS NOT NULL"
+                "SELECT COUNT(DISTINCT user_id) FROM visitor_logs "
+                "WHERE user_id IS NOT NULL"
             ).fetchone()[0]
             or 0
         )
 
         # By device
         by_device = c.execute("""
-            SELECT device_type, COUNT(*) as count 
-            FROM visitor_logs 
+            SELECT device_type, COUNT(*) as count
+            FROM visitor_logs
             WHERE device_type IS NOT NULL AND device_type != ''
-            GROUP BY device_type 
+            GROUP BY device_type
             ORDER BY count DESC
         """).fetchall()
 
-        # By day (last 30 days)
+        # By day (last 30 days) — ASC so the chart renders left-to-right
         by_day = c.execute("""
-            SELECT DATE(visited_at) as day, COUNT(*) as count 
-            FROM visitor_logs 
+            SELECT DATE(visited_at) as day, COUNT(*) as count
+            FROM visitor_logs
             WHERE visited_at >= DATE('now', '-30 days')
-            GROUP BY DATE(visited_at) 
-            ORDER BY day DESC
+            GROUP BY DATE(visited_at)
+            ORDER BY day ASC
+        """).fetchall()
+
+        # By country — populated only when requests come through Cloudflare,
+        # which is what sets the CF-IPCountry header log_page_visit reads.
+        by_country = c.execute("""
+            SELECT country, COUNT(*) as count
+            FROM visitor_logs
+            WHERE country IS NOT NULL AND country != ''
+            GROUP BY country
+            ORDER BY count DESC
+            LIMIT 20
+        """).fetchall()
+
+        # By city — same caveat as by_country
+        by_city = c.execute("""
+            SELECT city, country, COUNT(*) as count
+            FROM visitor_logs
+            WHERE city IS NOT NULL AND city != ''
+            GROUP BY city, country
+            ORDER BY count DESC
+            LIMIT 20
         """).fetchall()
 
         return {
@@ -6786,6 +6955,8 @@ def get_visitor_stats() -> Dict:
             "registered_visitors": registered,
             "by_device": [dict(r) for r in by_device],
             "by_day": [dict(r) for r in by_day],
+            "by_country": [dict(r) for r in by_country],
+            "by_city": [dict(r) for r in by_city],
         }
     except Exception as e:
         logger.error(f"Error getting visitor stats: {e}")
@@ -6795,7 +6966,11 @@ def get_visitor_stats() -> Dict:
             "registered_visitors": 0,
             "by_device": [],
             "by_day": [],
+            "by_country": [],
+            "by_city": [],
         }
+    finally:
+        conn.close()
 
 
 # ============ SMS CAMPAIGN FUNCTIONS ============
