@@ -452,6 +452,11 @@
                 </div>
 
                 <div class="panel">
+                    <h3><i class="fas fa-globe"></i> Top Countries</h3>
+                    <div id="countryBreakdown"><div class="empty-state">No geo data yet</div></div>
+                </div>
+
+                <div class="panel">
                     <h3><i class="fas fa-calendar-days"></i> Visits (Last 30 Days)</h3>
                     <div id="dailyTrend" style="display:flex;align-items:flex-end;gap:4px;height:120px;overflow-x:auto;"></div>
                 </div>
@@ -466,6 +471,9 @@
                             <option value="Tablet">Tablet</option>
                             <option value="Unknown">Unknown</option>
                         </select>
+                        <input type="text" id="filterCountry" placeholder="Country (e.g. NG)"
+                               maxlength="2" style="text-transform:uppercase;max-width:140px;"
+                               onchange="loadVisitors(0)" />
                         <input type="date" id="filterStart" onchange="loadVisitors(0)" />
                         <input type="date" id="filterEnd" onchange="loadVisitors(0)" />
                         <button class="btn btn-sm btn-primary" onclick="exportVisitorCSV()"><i class="fas fa-download"></i> Export</button>
@@ -480,6 +488,8 @@
                                     <th>Device</th>
                                     <th>OS</th>
                                     <th>Browser</th>
+                                    <th>Country</th>
+                                    <th>City</th>
                                     <th>IP</th>
                                     <th>Referrer</th>
                                 </tr>
@@ -911,6 +921,45 @@
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">Create Account</button>
                 <div id="createUserStatus" style="margin-top:12px;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ADMIN SET PASSWORD MODAL -->
+    <div class="modal-overlay" id="setPasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Set User Password</h2>
+                <button class="modal-close" onclick="closeSetPasswordModal()">✕</button>
+            </div>
+
+            <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.20);">
+                <div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;">USER</div>
+                <div id="setPasswordUserName" style="font-weight:600;word-break:break-word;"></div>
+            </div>
+
+            <form id="setPasswordForm" onsubmit="setAdminPassword(event)">
+                <div class="form-group">
+                    <label for="adminNewPassword">New Password *</label>
+                    <input type="password" id="adminNewPassword" minlength="8" maxlength="128" autocomplete="new-password" required />
+                    <small style="color:var(--text-secondary);font-size:11px;">Minimum 8 characters. The existing password cannot be viewed.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="adminConfirmPassword">Confirm New Password *</label>
+                    <input type="password" id="adminConfirmPassword" minlength="8" maxlength="128" autocomplete="new-password" required />
+                </div>
+
+                <div style="padding:12px;margin:12px 0;border-radius:8px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.20);font-size:12px;line-height:1.5;">
+                    ⚠️ <strong>Security notice:</strong><br>
+                    Setting a new password will immediately terminate
+                    all existing login sessions for this user.
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">🔐 Set Password</button>
+                <button type="button" class="btn btn-outline" onclick="closeSetPasswordModal()" style="width:100%;margin-top:8px;padding:12px;">Cancel</button>
+
+                <div id="setPasswordStatus" style="margin-top:12px;"></div>
             </form>
         </div>
     </div>
@@ -1353,11 +1402,6 @@
         // ADMIN FETCH
         // ============================================
         async function adminFetch(path, options = {}) {
-            // Sends the admin secret as a header, not a URL query param — query
-            // strings end up in server access logs, proxy/CDN logs, and browser
-            // history, all of which is unnecessary exposure for a credential. The
-            // backend's admin_required already checks the X-Admin-Secret header
-            // first (see app.py), so this is a pure client-side fix.
             const opts = {
                 ...options,
                 credentials: 'include',
@@ -1464,6 +1508,7 @@
                 }
 
                 renderDeviceBreakdown(s.by_device || [], s.total_visits || 0);
+                renderCountryBreakdown(s.by_country || [], s.total_visits || 0);
                 renderDailyTrend(s.by_day || []);
             } catch (e) {
                 if (e.message === 'unauthorized') showGateAgain();
@@ -1481,6 +1526,31 @@
                     <span style="width:110px;"><i class="fas ${icon}"></i> ${d.device_type || 'Unknown'}</span>
                     <div class="device-bar-bg"><div class="device-bar-fill" style="width:${pct}%;"></div></div>
                     <span style="width:70px;text-align:right;">${d.count.toLocaleString()} (${pct}%)</span>
+                </div>`;
+            }).join('');
+        }
+
+        function renderCountryBreakdown(byCountry, total) {
+            const el = document.getElementById('countryBreakdown');
+            if (!el) return;
+            if (!byCountry.length) {
+                el.innerHTML = '<div class="empty-state">No geo data yet — this populates once requests come through Cloudflare (which supplies the country header).</div>';
+                return;
+            }
+            const flagEmoji = (code) => {
+                if (!code || code.length !== 2) return '🌍';
+                try {
+                    return String(code).toUpperCase().replace(/./g, ch =>
+                        String.fromCodePoint(127397 + ch.charCodeAt(0))
+                    );
+                } catch (_) { return '🌍'; }
+            };
+            el.innerHTML = byCountry.map(c => {
+                const pct = total ? Math.round((c.count / total) * 100) : 0;
+                return `<div class="device-row">
+                    <span style="width:150px;">${flagEmoji(c.country)} ${escapeHtml(c.country || 'Unknown')}</span>
+                    <div class="device-bar-bg"><div class="device-bar-fill" style="width:${pct}%;"></div></div>
+                    <span style="width:70px;text-align:right;">${c.count.toLocaleString()} (${pct}%)</span>
                 </div>`;
             }).join('');
         }
@@ -1504,10 +1574,13 @@
             currentOffset = Math.max(offset, 0);
             try {
                 const device = document.getElementById('filterDevice').value;
+                const country = (document.getElementById('filterCountry').value || '').trim().toUpperCase();
                 const start = document.getElementById('filterStart').value;
                 const end = document.getElementById('filterEnd').value;
+
                 let path = `/api/admin/visitors?limit=${pageSize}&offset=${currentOffset}`;
                 if (device) path += `&device_type=${encodeURIComponent(device)}`;
+                if (country) path += `&country=${encodeURIComponent(country)}`;
                 if (start) path += `&start_date=${encodeURIComponent(start)}`;
                 if (end) path += `&end_date=${encodeURIComponent(end)}T23:59:59`;
 
@@ -1515,7 +1588,8 @@
                 if (!data.success) return;
                 lastPageCount = data.count || 0;
                 renderVisitorTable(data.visitors || []);
-                document.getElementById('pageLabel').textContent = `Showing ${currentOffset + 1}–${currentOffset + lastPageCount}`;
+                document.getElementById('pageLabel').textContent =
+                    `Showing ${currentOffset + 1}–${currentOffset + lastPageCount}`;
                 document.getElementById('prevBtn').disabled = currentOffset === 0;
                 document.getElementById('nextBtn').disabled = lastPageCount < pageSize;
             } catch (e) {
@@ -1526,11 +1600,27 @@
         function renderVisitorTable(visitors) {
             const tbody = document.getElementById('visitorTableBody');
             if (!visitors.length) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No visits recorded for this filter</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No visits recorded for this filter</td></tr>';
                 return;
             }
             const badgeClass = { Desktop: 'badge-desktop', Mobile: 'badge-mobile', Tablet: 'badge-tablet' };
-            tbody.innerHTML = visitors.map(v => `
+            const flagEmoji = (code) => {
+                if (!code || code.length !== 2) return '';
+                try {
+                    return String(code).toUpperCase().replace(/./g, ch =>
+                        String.fromCodePoint(127397 + ch.charCodeAt(0))
+                    );
+                } catch (_) { return ''; }
+            };
+            tbody.innerHTML = visitors.map(v => {
+                const flag = flagEmoji(v.country);
+                const countryCell = v.country
+                    ? `<span title="${escapeHtml(v.country)}">${flag} ${escapeHtml(v.country)}</span>`
+                    : '<span style="color:var(--text-secondary)">—</span>';
+                const cityCell = v.city
+                    ? escapeHtml(v.city)
+                    : '<span style="color:var(--text-secondary)">—</span>';
+                return `
                 <tr>
                     <td>${formatDate(v.visited_at)}</td>
                     <td>${v.visitor_name ? escapeHtml(v.visitor_name) : '<span style="color:var(--text-secondary)">Guest</span>'}</td>
@@ -1538,10 +1628,12 @@
                     <td><span class="badge ${badgeClass[v.device_type] || 'badge-unknown'}">${v.device_type || 'Unknown'}</span></td>
                     <td>${escapeHtml(v.os_name || v.os || '')}</td>
                     <td>${escapeHtml(v.browser || '')}</td>
+                    <td>${countryCell}</td>
+                    <td>${cityCell}</td>
                     <td style="color:var(--text-secondary);">${escapeHtml(v.ip_address || '')}</td>
                     <td style="color:var(--text-secondary);max-width:180px;overflow:hidden;text-overflow:ellipsis;">${v.referrer ? escapeHtml(v.referrer) : '—'}</td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
         }
 
         function prevPage() { if (currentOffset > 0) loadVisitors(currentOffset - pageSize); }
@@ -1738,7 +1830,7 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
         }
 
         // ============================================
-        // REFERRAL REDEMPTIONS (from v1)
+        // REFERRAL REDEMPTIONS
         // ============================================
         async function loadReferralRedemptions() {
             const referrerId = document.getElementById('referrerIdInput').value.trim();
@@ -2117,7 +2209,7 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
         }
 
         // ============================================
-        // PROMOTIONS MANAGEMENT (Enhanced)
+        // PROMOTIONS MANAGEMENT
         // ============================================
         async function loadPromotions() {
             const container = document.getElementById('promotionsList');
@@ -2806,7 +2898,7 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
                                                 <button class="btn btn-sm btn-warning" onclick="suspendUser(${u.id})">Suspend</button>
                                                 <button class="btn btn-sm btn-danger" onclick="blockUser(${u.id})">Block</button>
                                                 <button class="btn btn-sm btn-success" onclick="reactivateUser(${u.id})">Reactivate</button>
-                                                <button class="btn btn-sm btn-outline" onclick="resetPassword(${u.id})">Reset PW</button>
+                                                <button class="btn btn-sm btn-primary" onclick="showSetPasswordModal(${u.id}, '${escapeHtml(u.full_name || u.email || '')}')">Set PW</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -2906,6 +2998,100 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
                 }
             } catch (e) {
                 showToast('❌ ' + e.message, 'error');
+            }
+        }
+
+        // ============================================
+        // ADMIN DIRECT PASSWORD SET
+        // ============================================
+        let setPasswordUserId = null;
+
+        function showSetPasswordModal(userId, userName) {
+            setPasswordUserId = userId;
+            document.getElementById('setPasswordUserName').textContent = userName || `User #${userId}`;
+            document.getElementById('adminNewPassword').value = '';
+            document.getElementById('adminConfirmPassword').value = '';
+            document.getElementById('setPasswordStatus').innerHTML = '';
+            openModal('setPasswordModal');
+            setTimeout(() => {
+                document.getElementById('adminNewPassword').focus();
+            }, 100);
+        }
+
+        function closeSetPasswordModal() {
+            setPasswordUserId = null;
+            document.getElementById('adminNewPassword').value = '';
+            document.getElementById('adminConfirmPassword').value = '';
+            document.getElementById('setPasswordStatus').innerHTML = '';
+            closeModal('setPasswordModal');
+        }
+
+        async function setAdminPassword(event) {
+            event.preventDefault();
+
+            if (!setPasswordUserId) {
+                showToast('No user selected.', 'error');
+                return;
+            }
+
+            const newPassword = document.getElementById('adminNewPassword').value;
+            const confirmPassword = document.getElementById('adminConfirmPassword').value;
+            const status = document.getElementById('setPasswordStatus');
+
+            if (!newPassword) {
+                status.innerHTML = '<span style="color:#ef4444;">Enter a new password.</span>';
+                return;
+            }
+            if (newPassword.length < 8) {
+                status.innerHTML = '<span style="color:#ef4444;">Password must be at least 8 characters.</span>';
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                status.innerHTML = '<span style="color:#ef4444;">Passwords do not match.</span>';
+                return;
+            }
+            if (!confirm(
+                'Set this password for the selected user?\n\n' +
+                'All existing login sessions will be terminated.'
+            )) {
+                return;
+            }
+
+            status.innerHTML = '<span style="color:var(--text-secondary);">Changing password...</span>';
+
+            try {
+                const data = await adminFetch(
+                    `/api/admin/users/${setPasswordUserId}/set-password`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            new_password: newPassword,
+                            confirm_password: confirmPassword
+                        })
+                    }
+                );
+
+                if (data && data.success) {
+                    status.innerHTML = '<span style="color:#22c55e;">✓ Password changed successfully.</span>';
+                    showToast(
+                        `Password changed. ${data.sessions_killed || 0} session(s) terminated.`,
+                        'success'
+                    );
+                    setTimeout(() => {
+                        closeSetPasswordModal();
+                        searchUsers();
+                    }, 1000);
+                } else {
+                    status.innerHTML = `<span style="color:#ef4444;">${escapeHtml(
+                        (data && data.error) || 'Failed to change password'
+                    )}</span>`;
+                }
+            } catch (e) {
+                console.error('Admin password change failed:', e);
+                status.innerHTML = `<span style="color:#ef4444;">${escapeHtml(
+                    e.message || 'Password change failed'
+                )}</span>`;
             }
         }
 
@@ -3317,8 +3503,7 @@ Payload: ${JSON.stringify(tx.payload || {}, null, 2)}
         // ============================================
         // INITIAL LOAD
         // ============================================
-        console.log('Net365 Admin Panel loaded with Referral/Bonus Management and Enhanced Promotions');
-        console.log('Ready for admin tasks');
+        console.log('Net365 Admin Panel loaded with visitor geo analytics (country/city columns)');
     </script>
 </body>
 </html>
