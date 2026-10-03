@@ -4020,12 +4020,19 @@ def log_page_visit():
             path=request.path,
             referrer=request.headers.get("Referer", ""),
             session_id=request.cookies.get(SESSION_COOKIE_NAME, ""),
-            # NEW — from Cloudflare headers, empty string if not behind CF
-            country=request.headers.get("CF-IPCountry", ""),
-            city=request.headers.get("CF-IPCity", ""),
-            region=request.headers.get("CF-IPRegion", ""),
-            timezone=request.headers.get("CF-IPTimezone", ""),
+            # From Cloudflare headers. None (not "") when absent so the DB
+            # stores a real NULL, which is what the aggregate queries above
+            # filter on (`country IS NOT NULL AND country != ''`).
+            country=request.headers.get("CF-IPCountry") or None,
+            city=request.headers.get("CF-IPCity") or None,
+            region=request.headers.get("CF-IPRegion") or None,
+            timezone=request.headers.get("CF-IPTimezone") or None,
         )
+    except TypeError as e:
+        # A TypeError here is almost always a signature mismatch between
+        # this caller and db.log_visitor. That's a bug, not a transient
+        # failure, so log at ERROR with a traceback.
+        logger.error(f"Visitor logging signature mismatch (BUG): {e}", exc_info=True)
     except Exception as e:
         logger.warning(f"Visitor logging failed (non-fatal): {e}")
 
@@ -11416,7 +11423,6 @@ class ReloadlyWebApp:
                 }
             )
 
-        # ============ VISITOR TRACKING (ADMIN) ============
         @self.app.route("/api/admin/visitors", methods=["GET"])
         @admin_required
         def get_admin_visitors():
@@ -11425,12 +11431,15 @@ class ReloadlyWebApp:
             device_type = request.args.get("device_type")
             start_date = request.args.get("start_date")
             end_date = request.args.get("end_date")
+            country = request.args.get("country")          # ← NEW
+
             logs = db.get_visitor_logs(
                 limit=limit,
                 offset=offset,
                 device_type=device_type,
                 start_date=start_date,
                 end_date=end_date,
+                country=country,                           # ← NEW
             )
             return jsonify({"success": True, "visitors": logs, "count": len(logs)})
 
