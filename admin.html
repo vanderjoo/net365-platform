@@ -370,6 +370,36 @@
             .health-grid { grid-template-columns: 1fr; }
             .container { padding: 12px; }
         }
+    
+        /* NET365 Live Support */
+        .chat-shell{display:grid;grid-template-columns:340px minmax(0,1fr);min-height:650px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:18px;overflow:hidden;}
+        .chat-list{border-right:1px solid var(--border-color);background:var(--bg-primary);overflow:auto;}
+        .chat-list-head{padding:16px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+        .chat-list-head h3{margin:0;font-size:15px;}
+        .chat-conversation{padding:14px 16px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:.15s;background:transparent;}
+        .chat-conversation:hover,.chat-conversation.active{background:rgba(79,70,229,.08);}
+        .chat-conversation.unread{border-left:3px solid var(--danger);padding-left:13px;}
+        .chat-row-top{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:13px;}
+        .chat-row-preview{font-size:12px;color:var(--text-secondary);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .chat-row-meta{display:flex;gap:6px;align-items:center;margin-top:7px;font-size:10px;color:var(--text-secondary);}
+        .chat-unread{background:var(--danger);color:#fff;border-radius:999px;padding:2px 7px;font-size:9px;font-weight:800;}
+        .chat-main{display:flex;flex-direction:column;min-width:0;}
+        .chat-main-head{padding:16px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;gap:15px;align-items:center;}
+        .chat-customer-name{font-weight:800;font-size:15px;}
+        .chat-customer-meta{font-size:11px;color:var(--text-secondary);margin-top:4px;}
+        .chat-messages{flex:1;padding:20px;overflow:auto;min-height:430px;max-height:520px;background:linear-gradient(180deg,var(--bg-primary),var(--bg-secondary));}
+        .admin-chat-msg{max-width:76%;padding:10px 13px;border-radius:15px;margin:7px 0;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
+        .admin-chat-msg.customer{background:var(--bg-secondary);border:1px solid var(--border-color);margin-right:auto;border-bottom-left-radius:4px;}
+        .admin-chat-msg.admin{background:var(--primary);color:#fff;margin-left:auto;border-bottom-right-radius:4px;}
+        .admin-chat-msg.system{background:rgba(100,116,139,.12);color:var(--text-secondary);margin:10px auto;text-align:center;font-size:11px;}
+        .chat-compose{padding:14px;border-top:1px solid var(--border-color);display:flex;gap:10px;background:var(--bg-secondary);}
+        .chat-compose textarea{flex:1;resize:none;min-height:46px;max-height:120px;border:1px solid var(--border-color);border-radius:12px;padding:12px;background:var(--bg-primary);color:var(--text-primary);font:inherit;}
+        .chat-compose button{min-width:100px;}
+        .chat-context{padding:12px 16px;border-bottom:1px solid var(--border-color);display:flex;gap:8px;flex-wrap:wrap;}
+        .chat-chip{padding:5px 9px;border-radius:999px;background:var(--bg-primary);border:1px solid var(--border-color);font-size:10px;color:var(--text-secondary);}
+        .chat-empty{height:100%;min-height:430px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);text-align:center;padding:30px;}
+        @media(max-width:800px){.chat-shell{grid-template-columns:1fr;}.chat-list{max-height:260px;border-right:0;border-bottom:1px solid var(--border-color)}.chat-main{min-height:560px}.chat-messages{max-height:none}.admin-chat-msg{max-width:88%;}}
+
     </style>
 </head>
 <body>
@@ -433,6 +463,40 @@
                 <button class="admin-tab" data-tab="promos" onclick="switchTab('promos')">
                     <i class="fas fa-ticket"></i> Receipt Promos
                 </button>
+                <button class="admin-tab" data-tab="chat" onclick="switchTab('chat')">
+                    <i class="fas fa-comments"></i> Live Support <span class="badge" id="chatUnreadBadge">0</span>
+                </button>
+            </div>
+
+            <!-- TAB: LIVE SUPPORT -->
+            <div class="tab-panel" id="tab-chat">
+                <div class="panel">
+                    <h3><i class="fas fa-headset"></i> NET365 Live Support <span class="badge-count" id="chatOpenCount">0 open</span></h3>
+                    <p style="color:var(--text-secondary);font-size:12px;margin:-8px 0 16px;">Customer conversations from the mobile and web recharge experience. Messages refresh automatically.</p>
+                    <div class="chat-shell">
+                        <aside class="chat-list">
+                            <div class="chat-list-head"><h3>Conversations</h3><button class="btn btn-sm" onclick="loadChatConversations()"><i class="fas fa-sync"></i></button></div>
+                            <div id="adminChatList"><div class="chat-empty" style="min-height:180px;">No conversations yet.</div></div>
+                        </aside>
+                        <section class="chat-main">
+                            <div id="adminChatEmpty" class="chat-empty">
+                                <div><div style="font-size:42px;margin-bottom:10px;">💬</div><strong>Select a conversation</strong><div style="font-size:12px;margin-top:6px;">New customer messages will appear on the left.</div></div>
+                            </div>
+                            <div id="adminChatActive" style="display:none;height:100%;flex-direction:column;">
+                                <div class="chat-main-head">
+                                    <div><div class="chat-customer-name" id="chatCustomerName">Customer</div><div class="chat-customer-meta" id="chatCustomerMeta">—</div></div>
+                                    <div style="display:flex;gap:6px;"><button class="btn btn-sm" onclick="closeAdminChat()"><i class="fas fa-check"></i> Close</button></div>
+                                </div>
+                                <div class="chat-context" id="chatCustomerContext"></div>
+                                <div class="chat-messages" id="adminChatMessages"></div>
+                                <div class="chat-compose">
+                                    <textarea id="adminChatInput" placeholder="Reply to customer…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminChatMessage();}"></textarea>
+                                    <button class="btn btn-primary" onclick="sendAdminChatMessage()"><i class="fas fa-paper-plane"></i> Send</button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
             </div>
 
             <!-- TAB: OVERVIEW -->
@@ -1355,6 +1419,9 @@
         let referralOffset = 0;
         const referralPageSize = 20;
         let referralTotal = 0;
+        let activeChatConversation = null;
+        let chatRefreshTimer = null;
+
 
         // ============================================
         // THEME
@@ -1458,6 +1525,7 @@
             if (tab === 'health') loadSystemHealth();
             if (tab === 'transactions') loadAdminTransactions();
             if (tab === 'promos') loadPromos();
+            if (tab === 'chat') { loadChatConversations(); startAdminChatPolling(); }
         }
 
         // ============================================
@@ -1478,6 +1546,7 @@
             loadSystemHealth();
             loadAdminTransactions();
             loadPromos();
+            loadChatConversations();
             showToast('Admin panel refreshed!', 'success');
         }
 
@@ -3488,6 +3557,68 @@ Payload: ${JSON.stringify(tx.payload || {}, null, 2)}
                 showToast(e.message, 'error');
             }
         }
+
+        // ============================================
+        // LIVE SUPPORT / CUSTOMER CHAT
+        // ============================================
+        async function loadChatConversations() {
+            try {
+                const data = await adminFetch('/api/admin/chat/conversations?status=all');
+                if (!data.success) return;
+                const conversations = data.conversations || [];
+                const open = conversations.filter(c => c.status === 'open').length;
+                const unread = conversations.reduce((n,c) => n + Number(c.unread_count || 0), 0);
+                const badge = document.getElementById('chatUnreadBadge');
+                badge.textContent = unread;
+                badge.style.display = unread ? 'inline-block' : 'none';
+                document.getElementById('chatOpenCount').textContent = `${open} open`;
+                const list = document.getElementById('adminChatList');
+                if (!conversations.length) { list.innerHTML = '<div class="chat-empty" style="min-height:180px;">No customer conversations yet.</div>'; return; }
+                list.innerHTML = conversations.map(c => `
+                    <div class="chat-conversation ${Number(c.unread_count||0)>0?'unread':''} ${activeChatConversation && activeChatConversation.id===c.id?'active':''}" onclick="openAdminChat(${c.id})">
+                        <div class="chat-row-top"><span>${escapeHtml(c.name || 'Guest customer')}</span><span>${formatDate(c.last_message_at)}</span></div>
+                        <div class="chat-row-preview">${escapeHtml(c.last_message || 'New conversation')}</div>
+                        <div class="chat-row-meta"><span>🌍 ${escapeHtml(c.country_code || '—')}</span>${c.phone ? `<span>📱 ${escapeHtml(c.phone)}</span>`:''}${Number(c.unread_count||0)>0?`<span class="chat-unread">${c.unread_count} new</span>`:''}</div>
+                    </div>`).join('');
+            } catch(e) { console.error('Chat list error',e); }
+        }
+
+        async function openAdminChat(conversationId) {
+            try {
+                const data = await adminFetch(`/api/admin/chat/conversations/${conversationId}`);
+                if (!data.success) throw new Error(data.error || 'Conversation unavailable');
+                activeChatConversation = data.conversation;
+                document.getElementById('adminChatEmpty').style.display = 'none';
+                document.getElementById('adminChatActive').style.display = 'flex';
+                document.getElementById('chatCustomerName').textContent = data.conversation.name || 'Guest customer';
+                document.getElementById('chatCustomerMeta').textContent = [data.conversation.email, data.conversation.phone].filter(Boolean).join(' • ') || 'Anonymous visitor';
+                const ctx = document.getElementById('chatCustomerContext');
+                ctx.innerHTML = '';
+                [['Country',data.conversation.country_code],['Phone',data.conversation.phone],['User ID',data.conversation.user_id]].forEach(([k,v])=>{if(v){const el=document.createElement('span');el.className='chat-chip';el.textContent=`${k}: ${v}`;ctx.appendChild(el);}});
+                renderAdminChatMessages(data.messages || []);
+                await loadChatConversations();
+            } catch(e) { showToast(e.message,'error'); }
+        }
+
+        function renderAdminChatMessages(messages) {
+            const box = document.getElementById('adminChatMessages');
+            box.innerHTML = messages.length ? '' : '<div class="chat-empty">No messages yet.</div>';
+            messages.forEach(m => { const el=document.createElement('div'); el.className=`admin-chat-msg ${m.sender_type}`; el.textContent=m.message; box.appendChild(el); });
+            box.scrollTop=box.scrollHeight;
+        }
+
+        async function sendAdminChatMessage() {
+            if (!activeChatConversation) return;
+            const input=document.getElementById('adminChatInput'); const text=input.value.trim(); if(!text)return;
+            try { const data=await adminFetch('/api/admin/chat/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conversation_id:activeChatConversation.id,message:text})}); if(!data.success)throw new Error(data.error||'Send failed'); input.value=''; await openAdminChat(activeChatConversation.id); } catch(e){showToast(e.message,'error');}
+        }
+
+        async function closeAdminChat() {
+            if(!activeChatConversation)return;
+            try { const data=await adminFetch(`/api/admin/chat/conversations/${activeChatConversation.id}/status`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'closed'})}); if(!data.success)throw new Error(data.error||'Unable to close'); activeChatConversation=null; document.getElementById('adminChatActive').style.display='none'; document.getElementById('adminChatEmpty').style.display='flex'; await loadChatConversations(); showToast('Conversation closed','success'); } catch(e){showToast(e.message,'error');}
+        }
+
+        function startAdminChatPolling() { clearInterval(chatRefreshTimer); chatRefreshTimer=setInterval(async()=>{await loadChatConversations(); if(activeChatConversation) await openAdminChat(activeChatConversation.id);},5000); }
 
         // ============================================
         // AUTO-UNLOCK
