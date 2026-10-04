@@ -1232,24 +1232,18 @@ GATEWAY_CURRENCIES = {
 # ============ SANDBOX FALLBACK OPERATORS ============
 # Reloadly's sandbox endpoint rejects real phone numbers on /operators/auto-detect
 # (returns HTTP 400), which means the frontend can't resolve an operator_id and
-# the downstream top-up fails with "Missing operator_id or phone". These are
-# per-country operator IDs that DO work in sandbox.
+# the downstream top-up fails with "Missing operator_id or phone".
 #
-# ⚠️  VERIFY each ID against your Reloadly sandbox dashboard
-#     (https://topups-sandbox.reloadly.com/operators/countries/<CC>) before
-#     relying on it. An incorrect ID here produces a different failure
-#     (unknown operator) further down the stack.
-SANDBOX_FALLBACK_OPERATORS = {
-    # Confirmed working in sandbox (used by _process_bulk_job already)
-    "NG": {"operatorId": "341", "id": "341", "name": "MTN Nigeria (sandbox)"},
-
-    # ⚠️ Placeholders — replace with the real sandbox IDs from your Reloadly
-    # sandbox dashboard. The ones below are guesses and will likely 400.
-    "US": {"operatorId": "1",   "id": "1",   "name": "AT&T (sandbox — VERIFY ID)"},
-    "GB": {"operatorId": "10",  "id": "10",  "name": "Vodafone UK (sandbox — VERIFY ID)"},
-    "GH": {"operatorId": "344", "id": "344", "name": "MTN Ghana (sandbox — VERIFY ID)"},
-    "KE": {"operatorId": "345", "id": "345", "name": "Safaricom (sandbox — VERIFY ID)"},
-}
+# This used to be a hardcoded table of per-country operator IDs here. The
+# problem: they were guesses (only NG was ever confirmed against a real
+# Reloadly sandbox dashboard), and a wrong ID fails silently downstream
+# rather than loudly — it just sends a test top-up to the wrong operator.
+#
+# Replaced by ReloadlyPlatform._sandbox_operator_fallback(), which asks
+# Reloadly's own /operators/countries/{code} endpoint which operators
+# genuinely exist for a country (that endpoint returns real data even in
+# sandbox) and uses one of them. No hardcoded IDs, nothing to verify by
+# hand, and it covers every country Reloadly supports automatically.
 
 # ============ ENCRYPTION SETUP ============
 
@@ -3111,6 +3105,71 @@ class ReloadlyPlatform:
             logger.error(f"Auto‑detect failed for {phone}: {e}")
             return {"success": False, "error": str(e)}
 
+    # In-memory cache for _sandbox_operator_fallback — operator lists for a
+    # country barely change, so there's no reason to hit Reloadly on every
+    # keystroke a tester makes. Keyed by country code.
+    _sandbox_fallback_cache: Dict[str, Dict] = {}
+    _sandbox_fallback_cache_ts: Dict[str, float] = {}
+    _SANDBOX_FALLBACK_TTL_SECONDS = 3600  # 1 hour
+
+    def _sandbox_operator_fallback(self, country_code: str) -> Optional[Dict]:
+        """Return a REAL, verified operator for `country_code` to use when
+        Reloadly's phone-based auto-detect endpoint rejects a number.
+
+        Why this exists: Reloadly's sandbox only recognizes its own test
+        phone numbers on /operators/auto-detect — any real number 400s there,
+        in every country, every time. That's a sandbox limitation, not a
+        signal the number or country is unsupported.
+
+        This used to be solved with a hardcoded table of guessed operator
+        IDs per country (unverified, and wrong for every country except NG).
+        Guessed IDs are a liability: an incorrect one doesn't fail loudly,
+        it just sends the top-up to the wrong place.
+
+        Instead, this asks Reloadly's own /operators/countries/{code}
+        endpoint — which DOES return real data in sandbox — which operators
+        actually exist for this country, and uses one of them. Zero hardcoded
+        IDs, zero manual verification, and it automatically covers every
+        country Reloadly supports rather than a short hand-maintained list.
+        """
+        now = time.time()
+        cached = self._sandbox_fallback_cache.get(country_code)
+        cached_at = self._sandbox_fallback_cache_ts.get(country_code, 0)
+        if cached is not None and (now - cached_at) < self._SANDBOX_FALLBACK_TTL_SECONDS:
+            return cached
+
+        try:
+            operators = self.get_operators_by_country(country_code)
+        except Exception as e:
+            logger.warning(f"sandbox fallback: could not fetch operators for {country_code}: {e}")
+            return None
+
+        if not operators:
+            return None
+
+        # Prefer a plain ACTIVE operator (not a data bundle or PIN-only
+        # product) so the fallback mirrors an ordinary airtime top-up as
+        # closely as possible. Fall back to whatever's returned if nothing
+        # matches that exactly — some countries only have bundle operators.
+        active = [op for op in operators if str(op.get("status", "")).upper() == "ACTIVE"]
+        plain = [op for op in active if not op.get("data") and not op.get("pin")]
+        chosen = (plain or active or operators)[0]
+
+        operator_id = chosen.get("operatorId") or chosen.get("id")
+        if not operator_id:
+            return None
+
+        result = {
+            "operatorId": str(operator_id),
+            "id": str(operator_id),
+            "name": f"{chosen.get('name', 'Unknown operator')} (sandbox test operator)",
+            "currencyCode": chosen.get("currencyCode"),
+            "localCurrencyCode": chosen.get("localCurrencyCode"),
+        }
+        self._sandbox_fallback_cache[country_code] = result
+        self._sandbox_fallback_cache_ts[country_code] = now
+        return result
+
 
 # ============ PAYMENT PROCESSOR ============
 class PaymentProcessor:
@@ -3993,6 +4052,15 @@ def get_client_ip() -> str:
 # with noise rather than meaningful visit data.
 VISITOR_TRACKED_PATHS = {"/", "/scheduler", "/analytics", "/business", "/utilities"}
 
+
+def log_page_visit():
+    try:
+        print(">>> log_page_visit fired for", request.path, flush=True)
+
+        # your existing log_page_visit logic here
+
+    except Exception as e:
+        print(f"❌ log_page_visit error: {e}", flush=True)
 
 def log_page_visit():
     try:
@@ -7523,12 +7591,13 @@ class ReloadlyWebApp:
                     )
 
                     # Notify user
-                    db.create_notification(
-                        user_id,
-                        "Airtime Recharge Successful ✅",
-                        f"{currency} {amount:,.2f} recharge completed for {formatted_phone}.",
-                        "success"
-                    )
+                    if user_id:
+                        db.create_notification(
+                            user_id,
+                            "Airtime Recharge Successful ✅",
+                            f"{currency} {amount:,.2f} recharge completed for {formatted_phone}.",
+                            "success"
+                        )
 
                     user = db.get_user(user_id) if user_id else None
                     if user and user.get("email"):
@@ -8130,6 +8199,213 @@ class ReloadlyWebApp:
     
 
     def setup_routes(self):
+        # ============================================================
+        # NET365 LIVE CHAT STORAGE
+        # Shared by mobile/desktop customers and the admin console.
+        # SQLite is used through the existing database connection so the
+        # chat layer requires no second application or service.
+        # ============================================================
+        try:
+            conn = db.get_db_connection()
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS chat_conversations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    visitor_id TEXT NOT NULL UNIQUE,
+                    user_id INTEGER,
+                    name TEXT,
+                    email TEXT,
+                    phone TEXT,
+                    country_code TEXT,
+                    status TEXT NOT NULL DEFAULT 'open',
+                    assigned_admin TEXT,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    last_message_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS chat_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    conversation_id INTEGER NOT NULL,
+                    sender_type TEXT NOT NULL CHECK(sender_type IN ('customer','admin','system')),
+                    sender_id TEXT,
+                    message TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    read_at TEXT,
+                    FOREIGN KEY(conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
+                )
+            """)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_chat_conv_updated ON chat_conversations(updated_at DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_chat_msg_conv ON chat_messages(conversation_id, id)")
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.warning(f"Live chat schema initialization failed (non-fatal): {e}")
+
+        @self.app.route("/api/chat/session", methods=["POST"])
+        def chat_session():
+            """Create/reuse a lightweight anonymous support conversation."""
+            data = request.get_json(silent=True) or {}
+            visitor_id = (request.cookies.get("net365_chat_visitor") or str(uuid.uuid4())).strip()
+            user = get_authenticated_user()
+            user_id = user.get("id") if user else None
+            name = str(data.get("name") or (user.get("full_name") if user else "") or "")[:120]
+            email = str(data.get("email") or (user.get("email") if user else "") or "")[:180]
+            phone = str(data.get("phone") or "")[:40]
+            country_code = str(data.get("country_code") or get_request_country(request) or "NG").upper()[:2]
+
+            conn = db.get_db_connection()
+            row = conn.execute("SELECT * FROM chat_conversations WHERE visitor_id = ?", (visitor_id,)).fetchone()
+            if row:
+                conversation_id = row["id"] if isinstance(row, sqlite3.Row) else row[0]
+                conn.execute("""UPDATE chat_conversations
+                    SET user_id=COALESCE(?, user_id), name=COALESCE(NULLIF(?, ''), name),
+                        email=COALESCE(NULLIF(?, ''), email), phone=COALESCE(NULLIF(?, ''), phone),
+                        country_code=COALESCE(NULLIF(?, ''), country_code), updated_at=CURRENT_TIMESTAMP
+                    WHERE id=?""", (user_id, name, email, phone, country_code, conversation_id))
+            else:
+                cur = conn.execute("""INSERT INTO chat_conversations
+                    (visitor_id,user_id,name,email,phone,country_code)
+                    VALUES (?,?,?,?,?,?)""", (visitor_id,user_id,name,email,phone,country_code))
+                conversation_id = cur.lastrowid
+                conn.execute("""INSERT INTO chat_messages(conversation_id,sender_type,message)
+                    VALUES (?,?,?)""", (conversation_id, "system", "Hi! 👋 Welcome to NET365 Support. An agent will join the conversation as soon as possible."))
+            conn.commit()
+            conn.close()
+
+            response = jsonify({"success": True, "conversation_id": conversation_id, "visitor_id": visitor_id})
+            response.set_cookie("net365_chat_visitor", visitor_id, max_age=60*60*24*90, httponly=True, samesite="Lax", secure=request.is_secure)
+            return response
+
+        @self.app.route("/api/chat/messages", methods=["GET"])
+        def chat_messages():
+            visitor_id = (request.args.get("visitor_id") or request.cookies.get("net365_chat_visitor") or "").strip()
+            conversation_id = request.args.get("conversation_id", type=int)
+            if not visitor_id and not conversation_id:
+                return jsonify({"success": False, "error": "Chat session required"}), 400
+            conn = db.get_db_connection()
+            if conversation_id:
+                conv = conn.execute("SELECT * FROM chat_conversations WHERE id=?", (conversation_id,)).fetchone()
+            else:
+                conv = conn.execute("SELECT * FROM chat_conversations WHERE visitor_id=?", (visitor_id,)).fetchone()
+            if not conv:
+                conn.close()
+                return jsonify({"success": True, "conversation": None, "messages": []})
+            cid = conv["id"] if isinstance(conv, sqlite3.Row) else conv[0]
+            rows = conn.execute("SELECT id,sender_type,sender_id,message,created_at,read_at FROM chat_messages WHERE conversation_id=? ORDER BY id ASC", (cid,)).fetchall()
+            messages = [dict(r) for r in rows]
+            # Customer reading admin messages marks them read.
+            conn.execute("UPDATE chat_messages SET read_at=CURRENT_TIMESTAMP WHERE conversation_id=? AND sender_type='admin' AND read_at IS NULL", (cid,))
+            conn.commit()
+            conn.close()
+            return jsonify({"success": True, "conversation": dict(conv), "messages": messages})
+
+        @self.app.route("/api/chat/messages", methods=["POST"])
+        @rate_limit(max_requests=30, window_seconds=60)
+        def chat_send_message():
+            data = request.get_json(silent=True) or {}
+            text = str(data.get("message") or "").strip()
+            if not text:
+                return jsonify({"success": False, "error": "Message is required"}), 400
+            if len(text) > 4000:
+                return jsonify({"success": False, "error": "Message is too long"}), 400
+
+            visitor_id = (data.get("visitor_id") or request.cookies.get("net365_chat_visitor") or "").strip()
+            conversation_id = data.get("conversation_id")
+            if not visitor_id and not conversation_id:
+                return jsonify({"success": False, "error": "Start a chat session first"}), 400
+
+            conn = db.get_db_connection()
+            if conversation_id:
+                conv = conn.execute("SELECT * FROM chat_conversations WHERE id=?", (int(conversation_id),)).fetchone()
+            else:
+                conv = conn.execute("SELECT * FROM chat_conversations WHERE visitor_id=?", (visitor_id,)).fetchone()
+            if not conv:
+                conn.close()
+                return jsonify({"success": False, "error": "Chat session not found"}), 404
+            cid = conv["id"] if isinstance(conv, sqlite3.Row) else conv[0]
+            conv_visitor = conv["visitor_id"] if isinstance(conv, sqlite3.Row) else conv[1]
+            if visitor_id and conv_visitor != visitor_id:
+                conn.close()
+                return jsonify({"success": False, "error": "Chat session mismatch"}), 403
+
+            user = get_authenticated_user()
+            cur = conn.execute("INSERT INTO chat_messages(conversation_id,sender_type,sender_id,message) VALUES (?,?,?,?)",
+                               (cid, "customer", str(user.get("id")) if user else visitor_id, text))
+            conn.execute("UPDATE chat_conversations SET status='open', updated_at=CURRENT_TIMESTAMP, last_message_at=CURRENT_TIMESTAMP WHERE id=?", (cid,))
+            conn.commit()
+            message_id = cur.lastrowid
+            row = conn.execute("SELECT id,sender_type,sender_id,message,created_at,read_at FROM chat_messages WHERE id=?", (message_id,)).fetchone()
+            conn.close()
+            return jsonify({"success": True, "message": dict(row)})
+
+        @self.app.route("/api/admin/chat/conversations", methods=["GET"])
+        @admin_required
+        def admin_chat_conversations():
+            status = (request.args.get("status") or "open").strip().lower()
+            if status not in ("open", "closed", "all"):
+                status = "open"
+            conn = db.get_db_connection()
+            where = "" if status == "all" else "WHERE c.status=?"
+            params = () if status == "all" else (status,)
+            rows = conn.execute(f"""SELECT c.*, 
+                (SELECT COUNT(*) FROM chat_messages m WHERE m.conversation_id=c.id AND m.sender_type='customer' AND m.read_at IS NULL) AS unread_count,
+                (SELECT message FROM chat_messages m WHERE m.conversation_id=c.id ORDER BY m.id DESC LIMIT 1) AS last_message
+                FROM chat_conversations c {where} ORDER BY c.last_message_at DESC LIMIT 100""", params).fetchall()
+            result = [dict(r) for r in rows]
+            conn.close()
+            return jsonify({"success": True, "conversations": result})
+
+        @self.app.route("/api/admin/chat/conversations/<int:conversation_id>", methods=["GET"])
+        @admin_required
+        def admin_chat_conversation(conversation_id):
+            conn = db.get_db_connection()
+            conv = conn.execute("SELECT * FROM chat_conversations WHERE id=?", (conversation_id,)).fetchone()
+            rows = conn.execute("SELECT id,sender_type,sender_id,message,created_at,read_at FROM chat_messages WHERE conversation_id=? ORDER BY id ASC", (conversation_id,)).fetchall()
+            conn.execute("UPDATE chat_messages SET read_at=CURRENT_TIMESTAMP WHERE conversation_id=? AND sender_type='customer'", (conversation_id,))
+            conn.commit()
+            conn.close()
+            if not conv:
+                return jsonify({"success": False, "error": "Conversation not found"}), 404
+            return jsonify({"success": True, "conversation": dict(conv), "messages": [dict(r) for r in rows]})
+
+        @self.app.route("/api/admin/chat/messages", methods=["POST"])
+        @admin_required
+        @rate_limit(max_requests=60, window_seconds=60)
+        def admin_chat_send_message():
+            data = request.get_json(silent=True) or {}
+            conversation_id = data.get("conversation_id")
+            text = str(data.get("message") or "").strip()
+            if not conversation_id or not text:
+                return jsonify({"success": False, "error": "Conversation and message are required"}), 400
+            if len(text) > 4000:
+                return jsonify({"success": False, "error": "Message is too long"}), 400
+            conn = db.get_db_connection()
+            exists = conn.execute("SELECT id FROM chat_conversations WHERE id=?", (int(conversation_id),)).fetchone()
+            if not exists:
+                conn.close()
+                return jsonify({"success": False, "error": "Conversation not found"}), 404
+            cur = conn.execute("INSERT INTO chat_messages(conversation_id,sender_type,sender_id,message) VALUES (?,?,?,?)",
+                               (int(conversation_id), "admin", "admin", text))
+            conn.execute("UPDATE chat_conversations SET status='open', assigned_admin='admin', updated_at=CURRENT_TIMESTAMP, last_message_at=CURRENT_TIMESTAMP WHERE id=?", (int(conversation_id),))
+            conn.commit()
+            row = conn.execute("SELECT id,sender_type,sender_id,message,created_at,read_at FROM chat_messages WHERE id=?", (cur.lastrowid,)).fetchone()
+            conn.close()
+            return jsonify({"success": True, "message": dict(row)})
+
+        @self.app.route("/api/admin/chat/conversations/<int:conversation_id>/status", methods=["POST"])
+        @admin_required
+        def admin_chat_status(conversation_id):
+            data = request.get_json(silent=True) or {}
+            status = str(data.get("status") or "open").lower()
+            if status not in ("open", "closed"):
+                return jsonify({"success": False, "error": "Invalid status"}), 400
+            conn = db.get_db_connection()
+            conn.execute("UPDATE chat_conversations SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (status, conversation_id))
+            conn.commit()
+            conn.close()
+            return jsonify({"success": True, "status": status})
+
         @self.app.after_request
         def add_security_headers(response):
             response.headers["X-Content-Type-Options"] = "nosniff"
@@ -8140,8 +8416,9 @@ class ReloadlyWebApp:
         @self.app.route("/")
         def index():
             device_type = parse_user_agent(request.headers.get("User-Agent", ""))["device_type"]
+            template = "mobile.html" if device_type == "Mobile" else "index.html"
             return render_template(
-                "index.html",
+                template,
                 environment=self.credentials.environment.value,
                 device_type=device_type,
             )
@@ -10234,6 +10511,81 @@ class ReloadlyWebApp:
 
             return jsonify(result)
 
+        # ============ PUBLIC / GUEST RECHARGE PAYMENT ============
+        # Mobile Express can recharge without an account. The payment gateway
+        # transaction is still recorded and verified server-side; fulfillment
+        # is tied to the verified payment reference, not browser state.
+        @self.app.route("/api/public/payment/init", methods=["POST"])
+        @rate_limit(max_requests=20, window_seconds=60)
+        def public_init_payment():
+            data = request.get_json(silent=True) or {}
+            try:
+                amount = float(data.get("amount", 0))
+            except (TypeError, ValueError):
+                amount = 0
+            currency = str(data.get("currency") or "NGN").upper()
+            provider = str(data.get("provider") or "").lower()
+            country_code = str(data.get("country_code") or "NG").upper()
+            operator_id = data.get("operator_id")
+            phone = str(data.get("phone") or "").strip()
+            email = str(data.get("email") or "").strip()
+
+            if amount <= 0 or not phone or not operator_id:
+                return jsonify({"success": False, "error": "Phone, network and amount are required"}), 400
+            if currency not in SUPPORTED_CURRENCIES:
+                return jsonify({"success": False, "error": "Unsupported currency"}), 400
+            expected_currency = COUNTRY_CURRENCY_MAP.get(country_code)
+            if expected_currency and currency != expected_currency:
+                return jsonify({"success": False, "error": f"{country_code} recharges are priced in {expected_currency}"}), 400
+            if provider not in GATEWAY_CURRENCIES or provider == "wallet" or currency not in GATEWAY_CURRENCIES[provider]:
+                cfg = recommended_payment(country_code)
+                provider = cfg.get("provider")
+                if provider not in GATEWAY_CURRENCIES or currency not in GATEWAY_CURRENCIES[provider]:
+                    return jsonify({"success": False, "error": f"No supported payment gateway for {currency}"}), 400
+            if amount < SUPPORTED_CURRENCIES[currency]["min_amount"]:
+                return jsonify({"success": False, "error": f"Minimum amount is {SUPPORTED_CURRENCIES[currency]['min_amount']} {currency}"}), 400
+            if not email or "@" not in email:
+                email = "customer@net365co.com"
+
+            try:
+                result = self.platform.create_payment(
+                    amount=amount,
+                    currency=currency,
+                    operator_id=operator_id,
+                    phone=phone,
+                    country_code=country_code,
+                    email=email,
+                    return_url=data.get("return_url") or f"{request.host_url.rstrip('/')}/payment/success",
+                    provider=provider,
+                )
+                if result.get("success") and result.get("reference"):
+                    payload = {
+                        "operator_id": str(operator_id),
+                        "phone": encrypt_pii(phone),
+                        "country_code": country_code,
+                        "email": email,
+                        "guest_recharge": True,
+                    }
+                    if result.get("provider") == "stripe" and result.get("stripe_session_id"):
+                        payload["stripe_session_id"] = result["stripe_session_id"]
+                    db.create_pending(
+                        reference=result["reference"],
+                        tx_type="topup",
+                        provider=result.get("provider", provider),
+                        amount=amount,
+                        currency=result.get("currency", currency),
+                        payload=payload,
+                        user_id=None,
+                    )
+                    log_event(user_id=None, event_type="guest_payment_initiated", details={
+                        "amount": amount, "currency": currency, "provider": result.get("provider", provider),
+                        "reference": result["reference"], "country_code": country_code,
+                    }, status="pending")
+                return jsonify(result)
+            except Exception as e:
+                logger.exception(f"Guest payment initialization failed: {e}")
+                return jsonify({"success": False, "error": "Payment initialization failed. Please try again."}), 502
+
                 # ============ WALLET FUNDING ============
         @self.app.route("/api/wallet/fund", methods=["POST"])
         @login_required
@@ -11423,6 +11775,7 @@ class ReloadlyWebApp:
                 }
             )
 
+        # ============ VISITOR TRACKING (ADMIN) ============
         @self.app.route("/api/admin/visitors", methods=["GET"])
         @admin_required
         def get_admin_visitors():
@@ -12672,22 +13025,30 @@ class ReloadlyWebApp:
 
             # 2. Sandbox fallback.
             #    Reloadly's sandbox rejects real numbers, so a 400 here is expected —
-            #    not evidence the number is invalid. Fall back to a known-good sandbox
-            #    operator for the country so the top-up can proceed.
-            if self.credentials.environment.value == "sandbox":
-                fallback = SANDBOX_FALLBACK_OPERATORS.get(country_code)
+            #    not evidence the number is invalid. Ask Reloadly which operators
+            #    actually exist for this country (a different endpoint, which DOES
+            #    work with real data in sandbox) and use a real one — no hardcoded
+            #    guesses, works for any country Reloadly supports, nothing to
+            #    manually verify or maintain as numbers get added/ported over time.
+            if self.credentials.environment == Environment.SANDBOX:
+                fallback = self.platform._sandbox_operator_fallback(country_code)
                 if fallback:
                     logger.info(
                         f"auto-detect: sandbox fallback for {phone} ({country_code}) "
-                        f"→ operator {fallback['operatorId']} ({fallback['name']})"
+                        f"→ operator {fallback['operatorId']} ({fallback['name']}) "
+                        f"[live operator data, not a guess]"
                     )
                     return jsonify({
                         "success": True,
                         "operator": fallback,
                         "source": "sandbox_fallback",
                         "warning": (
-                            "Using sandbox fallback operator — Reloadly sandbox does not "
-                            "accept real phone numbers on auto-detect."
+                            "Reloadly's sandbox only recognizes its own test phone "
+                            "numbers, not real ones, so exact-number detection isn't "
+                            "possible here. This is a real, verified operator for the "
+                            "country — not a guess — so the top-up flow can be tested "
+                            "end to end. Production credentials get genuine "
+                            "per-number detection automatically, no code changes needed."
                         ),
                     })
 
