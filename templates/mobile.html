@@ -663,6 +663,12 @@
 
   <!-- Smart Operator Detection -->
   <div class="detected-operator" id="detectedOperator">
+    <div style="text-align:right; margin:-14px 0 10px;">
+      <a href="#" onclick="document.getElementById('manualNetwork').classList.toggle('show'); loadManualOperators(); return false;"
+         style="font-size:12px; color:#ea580c; text-decoration:none; font-weight:600;">
+        🔄 Not your network? Change it
+      </a>
+    </div>  
     <span class="icon" id="detectIcon">📡</span>
     <div class="info">
       <div class="name" id="detectName">Ready to detect</div>
@@ -905,21 +911,83 @@ if (localStorage.getItem('darkMode') === 'true') {
 let detectTimeout = null;
 
 async function autoDetectOnInput() {
-  const phone = document.getElementById('phoneInput').value.trim(); const detectDiv=document.getElementById('detectedOperator'); const manual=document.getElementById('manualNetwork');
-  if(phone.length<5){detectDiv.classList.remove('show');manual.classList.remove('show');detectedOperator=null;return;}
-  detectDiv.classList.add('show'); document.getElementById('detectName').textContent='Detecting…'; document.getElementById('detectIcon').textContent='⏳'; document.getElementById('detectPill').textContent='CHECKING';
-  clearTimeout(detectTimeout); detectTimeout=setTimeout(async()=>{
-    const countryCode=detectCountryFromPhone(phone);
-    try{
-      const response=await fetch(`${API_BASE}/operators/auto-detect?phone=${encodeURIComponent(phone)}&country_code=${encodeURIComponent(countryCode)}`); const result=await response.json(); const op=result.operator||(result.operatorId?result:null);
-      if(response.ok&&result.success&&op&&(op.operatorId||op.id)){
-        detectedOperator=op; detectedOperator.operatorId=op.operatorId||op.id;
-        document.getElementById('detectName').textContent=op.name||'Network detected'; document.getElementById('detectIcon').textContent='✅'; document.getElementById('detectCountry').textContent=`${op.countryName||countryCode} • ${result.source==='prefix_fallback'?'Prefix fallback':'Auto-detected'}`; document.getElementById('detectPill').textContent=result.source==='prefix_fallback'?'FALLBACK':'AUTO'; manual.classList.remove('show');
-        await updatePaymentRecommendation(countryCode); updatePaymentMethod(); return;
+  const phone = document.getElementById('phoneInput').value.trim();
+  const detectDiv = document.getElementById('detectedOperator');
+  const manual = document.getElementById('manualNetwork');
+
+  if (phone.length < 5) {
+    detectDiv.classList.remove('show');
+    manual.classList.remove('show');
+    detectedOperator = null;
+    updatePayButtonState();
+    return;
+  }
+
+  detectDiv.classList.add('show');
+  document.getElementById('detectName').textContent = 'Detecting…';
+  document.getElementById('detectIcon').textContent = '⏳';
+  document.getElementById('detectPill').textContent = 'CHECKING';
+
+  clearTimeout(detectTimeout);
+  detectTimeout = setTimeout(async () => {
+    const countryCode = detectCountryFromPhone(phone);
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/operators/auto-detect?phone=${encodeURIComponent(phone)}&country_code=${encodeURIComponent(countryCode)}`
+      );
+      const result = await response.json();
+      const op = result.operator || (result.operatorId ? result : null);
+
+      if (response.ok && result.success && op && (op.operatorId || op.id)) {
+        detectedOperator = op;
+        detectedOperator.operatorId = op.operatorId || op.id;
+
+        // ─── Determine whether this detection is trustworthy ─────────────
+        // 'sandbox_fallback' and 'prefix_fallback' are GUESSES, not real
+        // per-number detection. When they come back, we show the result but
+        // ALSO show the dropdown so the user can correct it.
+        const isGuess = (result.source === 'sandbox_fallback' || result.source === 'prefix_fallback');
+
+        document.getElementById('detectName').textContent = op.name || 'Network detected';
+        document.getElementById('detectIcon').textContent = isGuess ? '🤔' : '✅';
+        document.getElementById('detectCountry').textContent =
+          `${op.countryName || countryCode} • ${
+            result.source === 'sandbox_fallback' ? 'Sandbox guess — verify below' :
+            result.source === 'prefix_fallback' ? 'Prefix guess — verify below' :
+            'Auto-detected'
+          }`;
+        document.getElementById('detectPill').textContent =
+          result.source === 'sandbox_fallback' ? 'SANDBOX' :
+          result.source === 'prefix_fallback' ? 'FALLBACK' : 'AUTO';
+
+        // ─── Show the dropdown whenever detection was a guess ────────────
+        if (isGuess) {
+          manual.classList.add('show');
+          await loadManualOperators(countryCode);
+        } else {
+          manual.classList.remove('show');
+        }
+
+        await updatePaymentRecommendation(countryCode);
+        updatePayButtonState();
+        return;
       }
-    }catch(e){console.warn('Operator detection failed',e);}
-    detectedOperator=null; document.getElementById('detectName').textContent='Network not detected'; document.getElementById('detectIcon').textContent='⚠️'; document.getElementById('detectCountry').textContent='Please select your network below'; document.getElementById('detectPill').textContent='MANUAL'; manual.classList.add('show'); await loadManualOperators(countryCode); await updatePaymentRecommendation(countryCode); updatePaymentMethod();
-  },450);
+    } catch (e) {
+      console.warn('Operator detection failed', e);
+    }
+
+    // No operator at all — full manual fallback
+    detectedOperator = null;
+    document.getElementById('detectName').textContent = 'Network not detected';
+    document.getElementById('detectIcon').textContent = '⚠️';
+    document.getElementById('detectCountry').textContent = 'Please select your network below';
+    document.getElementById('detectPill').textContent = 'MANUAL';
+    manual.classList.add('show');
+    await loadManualOperators(countryCode);
+    await updatePaymentRecommendation(countryCode);
+    updatePayButtonState();
+  }, 450);
 }
 
 async function loadManualOperators(countryCode=null){
