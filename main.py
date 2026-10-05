@@ -5611,8 +5611,16 @@ def log_event(
         conn.commit()
         return True
     except Exception as e:
-        logger.error(f"Failed to log event: {e}")
+        # Rollback so the failed insert doesn't leave the connection
+        # holding a write lock and hang every subsequent request.
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        logger.error(f"Failed to log event ({event_type}): {e}")
         return False
+    finally:
+        conn.close()
 
 
 def get_user_events(
@@ -10583,6 +10591,24 @@ class ReloadlyWebApp:
         # Mobile Express can recharge without an account. The payment gateway
         # transaction is still recorded and verified server-side; fulfillment
         # is tied to the verified payment reference, not browser state.
+        # ============ GUEST CHECKOUT HELPER ============
+        def _get_or_create_guest_user(email, phone=None):
+            """Guest checkouts still need a user_id for FK integrity and reporting.
+            Reuse by email so repeat guests collapse to one row."""
+            existing = db.get_user_by_email(email)
+            if existing:
+                return existing["id"]
+
+            import secrets as _secrets
+            return db.create_user(
+                email=email,
+                password=_secrets.token_urlsafe(32),
+                full_name="Guest Checkout",
+                phone=phone,
+            )
+
+
+        # ============ PUBLIC / GUEST RECHARGE PAYMENT ============
         @self.app.route("/api/public/payment/init", methods=["POST"])
         @rate_limit(max_requests=20, window_seconds=60)
         def public_init_payment():
@@ -10602,16 +10628,29 @@ class ReloadlyWebApp:
                 return jsonify({"success": False, "error": "Phone, network and amount are required"}), 400
             if currency not in SUPPORTED_CURRENCIES:
                 return jsonify({"success": False, "error": "Unsupported currency"}), 400
+
             expected_currency = COUNTRY_CURRENCY_MAP.get(country_code)
             if expected_currency and currency != expected_currency:
-                return jsonify({"success": False, "error": f"{country_code} recharges are priced in {expected_currency}"}), 400
+                return jsonify({
+                    "success": False,
+                    "error": f"{country_code} recharges are priced in {expected_currency}"
+                }), 400
+
             if provider not in GATEWAY_CURRENCIES or provider == "wallet" or currency not in GATEWAY_CURRENCIES[provider]:
                 cfg = recommended_payment(country_code)
                 provider = cfg.get("provider")
                 if provider not in GATEWAY_CURRENCIES or currency not in GATEWAY_CURRENCIES[provider]:
-                    return jsonify({"success": False, "error": f"No supported payment gateway for {currency}"}), 400
+                    return jsonify({
+                        "success": False,
+                        "error": f"No supported payment gateway for {currency}"
+                    }), 400
+
             if amount < SUPPORTED_CURRENCIES[currency]["min_amount"]:
-                return jsonify({"success": False, "error": f"Minimum amount is {SUPPORTED_CURRENCIES[currency]['min_amount']} {currency}"}), 400
+                return jsonify({
+                    "success": False,
+                    "error": f"Minimum amount is {SUPPORTED_CURRENCIES[currency]['min_amount']} {currency}"
+                }), 400
+
             if not email or "@" not in email:
                 email = "customer@net365co.com"
 
@@ -10626,16 +10665,33 @@ class ReloadlyWebApp:
                     return_url=data.get("return_url") or f"{request.host_url.rstrip('/')}/payment/success",
                     provider=provider,
                 )
+
                 if result.get("success") and result.get("reference"):
+                    # Create a lightweight guest account so this transaction
+                    # has a real user_id. Without it, the FK constraints on
+                    # reloadly_transactions and user_events reject the insert,
+                    # which leaves the SQLite write lock held and hangs the
+                    # worker (that's the "Database locked" → SIGKILL cascade).
+                    try:
+                        guest_user_id = _get_or_create_guest_user(email, phone)
+                    except Exception as e:
+                        logger.exception(f"Could not create guest user for {email}: {e}")
+                        return jsonify({
+                            "success": False,
+                            "error": "Could not initialize guest checkout. Please try again.",
+                        }), 500
+
                     payload = {
                         "operator_id": str(operator_id),
                         "phone": encrypt_pii(phone),
                         "country_code": country_code,
                         "email": email,
                         "guest_recharge": True,
+                        "guest_user_id": guest_user_id,
                     }
                     if result.get("provider") == "stripe" and result.get("stripe_session_id"):
                         payload["stripe_session_id"] = result["stripe_session_id"]
+
                     db.create_pending(
                         reference=result["reference"],
                         tx_type="topup",
@@ -10643,31 +10699,36 @@ class ReloadlyWebApp:
                         amount=amount,
                         currency=result.get("currency", currency),
                         payload=payload,
-                        user_id=None,
+                        user_id=guest_user_id,
                     )
-                    log_event(user_id=None, event_type="guest_payment_initiated", details={
-                        "amount": amount, "currency": currency, "provider": result.get("provider", provider),
-                        "reference": result["reference"], "country_code": country_code,
-                    }, status="pending")
+
+                    log_event(
+                        user_id=guest_user_id,
+                        event_type="guest_payment_initiated",
+                        details={
+                            "amount": amount,
+                            "currency": currency,
+                            "provider": result.get("provider", provider),
+                            "reference": result["reference"],
+                            "country_code": country_code,
+                        },
+                        status="pending",
+                    )
+
                 return jsonify(result)
+
             except Exception as e:
-                # Was: a generic message that hid the real cause from both the
-                # browser AND whoever's reading the response, meaning the only
-                # way to debug a guest-checkout failure was to already have
-                # server log access. Now: still logs the full traceback
-                # server-side (unchanged), but also returns the actual
-                # exception type + message in the response so a failure is
-                # diagnosable from the browser network tab / toast alone.
-                # Safe to expose: these are "payment gateway rejected this
-                # request" messages (bad currency, unreachable API, etc.),
-                # not secrets — API keys themselves are never in str(e) for
-                # the requests/stripe exceptions raised here.
                 logger.exception(f"Guest payment initialization failed: {e}")
                 return jsonify({
                     "success": False,
                     "error": f"Payment initialization failed: {type(e).__name__}: {e}",
                     "debug_hint": "Check server logs for the full traceback above this line.",
                 }), 502
+                
+                
+                
+                
+                
 
                 # ============ WALLET FUNDING ============
         @self.app.route("/api/wallet/fund", methods=["POST"])
