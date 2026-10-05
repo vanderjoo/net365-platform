@@ -3183,9 +3183,16 @@ class PaymentProcessor:
 
     def init_paystack_payment(
         self, email: str, amount: float, reference: str = None, return_url: str = None
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        # Returns (authorization_url, reference, error_detail). error_detail is
+        # None on success. Previously a non-200 Paystack response (bad email,
+        # bad amount, account issue, etc.) was silently discarded — the
+        # caller only ever saw a generic "Failed to initialize Paystack
+        # payment", with Paystack's actual explanation thrown away. That's
+        # the single biggest blind spot in diagnosing a gateway-specific
+        # failure, so it's now captured and threaded all the way back.
         if not self.api_key:
-            return None, None
+            return None, None, "Paystack secret key not configured on the server"
         reference = reference or generate_reference("PSK")
         amount_kobo = int(amount * 100)
         return_url = return_url or os.getenv("PAYSTACK_RETURN_URL", DEFAULT_RETURN_URL)
@@ -3211,11 +3218,24 @@ class PaymentProcessor:
             if response.status_code == 200:
                 data = response.json()
                 if data.get("status"):
-                    return data["data"]["authorization_url"], reference
-            return None, None
+                    return data["data"]["authorization_url"], reference, None
+                # HTTP 200 but Paystack flagged status:false — their message
+                # (e.g. "Invalid email address") is in data["message"].
+                err = data.get("message", "Paystack rejected the request (no detail given)")
+                logger.error(f"Paystack init rejected (200 but status:false): {err} | payload={payload}")
+                return None, None, err
+            # Non-200 — Paystack usually still returns a JSON body with a
+            # "message" explaining why (invalid key, invalid params, etc.).
+            try:
+                err_body = response.json()
+                err = err_body.get("message", response.text[:300])
+            except Exception:
+                err = response.text[:300] or f"HTTP {response.status_code}"
+            logger.error(f"Paystack init failed: HTTP {response.status_code} — {err} | payload={payload}")
+            return None, None, f"Paystack error ({response.status_code}): {err}"
         except Exception as e:
             logger.error(f"Paystack init error: {str(e)}")
-            return None, None
+            return None, None, f"Could not reach Paystack: {e}"
 
     def init_flutterwave_payment(
         self,
@@ -3224,10 +3244,13 @@ class PaymentProcessor:
         currency: str = "NGN",
         reference: str = None,
         return_url: str = None,
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        # Returns (authorization_url, reference, error_detail) — same pattern
+        # as init_paystack_payment/init_stripe_payment, for the same reason:
+        # don't silently discard the gateway's actual rejection reason.
         flutterwave_secret_key = os.getenv("FLUTTERWAVE_SECRET_KEY")
         if not flutterwave_secret_key:
-            return None, None
+            return None, None, "Flutterwave secret key not configured on the server"
         reference = reference or generate_reference("FLW")
         return_url = return_url or os.getenv(
             "FLUTTERWAVE_RETURN_URL", DEFAULT_RETURN_URL
@@ -3258,11 +3281,20 @@ class PaymentProcessor:
             if response.status_code == 200:
                 data = response.json()
                 if data.get("status") == "success":
-                    return data["data"]["link"], reference
-            return None, None
+                    return data["data"]["link"], reference, None
+                err = data.get("message", "Flutterwave rejected the request (no detail given)")
+                logger.error(f"Flutterwave init rejected (200 but status!=success): {err} | payload={payload}")
+                return None, None, err
+            try:
+                err_body = response.json()
+                err = err_body.get("message", response.text[:300])
+            except Exception:
+                err = response.text[:300] or f"HTTP {response.status_code}"
+            logger.error(f"Flutterwave init failed: HTTP {response.status_code} — {err} | payload={payload}")
+            return None, None, f"Flutterwave error ({response.status_code}): {err}"
         except Exception as e:
             logger.error(f"Flutterwave init error: {str(e)}")
-            return None, None
+            return None, None, f"Could not reach Flutterwave: {e}"
 
     def init_stripe_payment(
         self,
@@ -3272,26 +3304,40 @@ class PaymentProcessor:
         reference: str = None,
         return_url: str = None,
         description: str = "Airtime Top-up",
-    ) -> Tuple[Optional[str], Optional[str]]:
-        if not STRIPE_AVAILABLE or not self.api_key:
-            return None, None
+    ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        # Returns (checkout_url, reference, error_detail_or_session_id).
+        # On SUCCESS the 3rd element is the Stripe session id (unchanged
+        # behavior — callers rely on this). On FAILURE the 3rd element is
+        # now an error string instead of always being None, so a rejection
+        # reason isn't silently thrown away.
+        if not STRIPE_AVAILABLE:
+            return None, None, "Stripe library not installed on the server"
+        if not self.api_key:
+            return None, None, "Stripe secret key not configured on the server"
 
         reference = reference or generate_reference("STR")
         return_url = return_url or os.getenv("STRIPE_RETURN_URL", DEFAULT_RETURN_URL)
 
         try:
-                        # Stripe expects amounts in the smallest currency unit — but some
+            # Stripe expects amounts in the smallest currency unit — but some
             # currencies are zero-decimal (JPY, VND, IDR, CLP, UGX, TZS, KRW,
-            # ISK, HUF is 2-decimal, etc.). For those, send the raw amount.
+            # etc.). For those, send the raw integer amount as-is.
+            #
+            # BUG FIXED: this used to set amount_cents inside the if/else
+            # below, then unconditionally overwrite it on the next line with
+            # int(amount * 100) regardless of which branch ran — so every
+            # zero-decimal-currency payment (JPY, UGX, KRW, TZS...) was
+            # silently charged 100x. NGN/USD were never affected by this
+            # specific bug (neither is zero-decimal).
             ZERO_DECIMAL = {
                 "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga",
                 "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf",
             }
             if currency.lower() in ZERO_DECIMAL:
-                amount_cents = int(amount)
+                amount_cents = int(round(amount))
             else:
-                amount = round(amount, 2) 
-            amount_cents = int(amount * 100)
+                amount = round(amount, 2)
+                amount_cents = int(amount * 100)
 
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
@@ -3321,9 +3367,17 @@ class PaymentProcessor:
             )
             logger.info(f"Created Stripe Checkout Session: {session.id}")
             return session.url, reference, session.id
+        except stripe.error.StripeError as e:
+            # Stripe's own exception types carry a human-readable .user_message
+            # or str(e) — e.g. "Amount must be at least R10.00" or "No such
+            # currency: 'xyz'". This is exactly the detail that was being
+            # thrown away before.
+            err = getattr(e, "user_message", None) or str(e)
+            logger.error(f"Stripe init error ({type(e).__name__}): {err}")
+            return None, None, f"Stripe error: {err}"
         except Exception as e:
             logger.error(f"Stripe init error: {str(e)}")
-            return None, None
+            return None, None, f"Could not reach Stripe: {e}"
 
     def verify_flutterwave_payment(self, reference: str) -> Dict:
         flutterwave_secret_key = os.getenv("FLUTTERWAVE_SECRET_KEY")
@@ -3439,7 +3493,7 @@ class PaymentProcessor:
         )
 
         if provider == "paystack":
-            auth_url, reference = self.init_paystack_payment(
+            auth_url, reference, error_detail = self.init_paystack_payment(
                 email=email, amount=amount, return_url=return_url
             )
             if auth_url:
@@ -3451,10 +3505,13 @@ class PaymentProcessor:
                     "currency": currency,
                     "amount": amount,
                 }
-            return {"success": False, "error": "Failed to initialize Paystack payment"}
+            return {
+                "success": False,
+                "error": error_detail or "Failed to initialize Paystack payment",
+            }
 
         elif provider == "flutterwave":
-            auth_url, reference = self.init_flutterwave_payment(
+            auth_url, reference, error_detail = self.init_flutterwave_payment(
                 email=email, amount=amount, currency=currency, return_url=return_url
             )
             if auth_url:
@@ -3468,13 +3525,13 @@ class PaymentProcessor:
                 }
             return {
                 "success": False,
-                "error": "Failed to initialize Flutterwave payment",
+                "error": error_detail or "Failed to initialize Flutterwave payment",
             }
 
         elif provider == "stripe":
             if not STRIPE_AVAILABLE:
                 return {"success": False, "error": "Stripe library not installed"}
-            auth_url, reference, stripe_session_id = self.init_stripe_payment(
+            auth_url, reference, session_id_or_error = self.init_stripe_payment(
                 email=email,
                 amount=amount,
                 currency=currency,
@@ -3488,12 +3545,15 @@ class PaymentProcessor:
                     "authorization_url": auth_url,
                     "checkout_url": auth_url,
                     "reference": reference,
-                    "stripe_session_id": stripe_session_id,
+                    "stripe_session_id": session_id_or_error,
                     "provider": "stripe",
                     "currency": currency,
                     "amount": amount,
                 }
-            return {"success": False, "error": "Failed to initialize Stripe payment"}
+            return {
+                "success": False,
+                "error": session_id_or_error or "Failed to initialize Stripe payment",
+            }
 
         else:
             return {"success": False, "error": f"Unsupported provider: {provider}"}
@@ -8036,21 +8096,26 @@ class ReloadlyWebApp:
         # Paystack's own helper already builds the callback URL internally —
         # but it appends its own `return_url` handling. Pass our callback via
         # the return_url arg so the final redirect carries bulk_job_id.
+        error_detail = None
         if provider == "paystack":
-            auth_url, reference = processor.init_paystack_payment(
+            auth_url, reference, error_detail = processor.init_paystack_payment(
                 email=email,
                 amount=amount,
                 return_url=callback,
             )
         elif provider == "flutterwave":
-            auth_url, reference = processor.init_flutterwave_payment(
+            auth_url, reference, error_detail = processor.init_flutterwave_payment(
                 email=email,
                 amount=amount,
                 currency=currency,
                 return_url=callback,
             )
         elif provider == "stripe":
-            auth_url, reference = processor.init_stripe_payment(
+            # NOTE: this call site was unpacking only 2 values from a method
+            # that has always returned 3 (auth_url, reference, session_id) —
+            # meaning bulk-recharge-via-Stripe crashed with a ValueError on
+            # every attempt, success or failure, before this fix.
+            auth_url, reference, error_detail = processor.init_stripe_payment(
                 email=email,
                 amount=amount,
                 currency=currency,
@@ -8061,7 +8126,10 @@ class ReloadlyWebApp:
             raise ValueError(f"Unsupported provider: {provider}")
 
         if not auth_url:
-            raise RuntimeError(f"{provider} did not return an authorization_url")
+            raise RuntimeError(
+                f"{provider} did not return an authorization_url: "
+                f"{error_detail or 'no detail given'}"
+            )
 
         # Register this payment where /api/payment/verify and the
         # paystack/stripe/flutterwave webhooks actually look for it.
@@ -10583,8 +10651,23 @@ class ReloadlyWebApp:
                     }, status="pending")
                 return jsonify(result)
             except Exception as e:
+                # Was: a generic message that hid the real cause from both the
+                # browser AND whoever's reading the response, meaning the only
+                # way to debug a guest-checkout failure was to already have
+                # server log access. Now: still logs the full traceback
+                # server-side (unchanged), but also returns the actual
+                # exception type + message in the response so a failure is
+                # diagnosable from the browser network tab / toast alone.
+                # Safe to expose: these are "payment gateway rejected this
+                # request" messages (bad currency, unreachable API, etc.),
+                # not secrets — API keys themselves are never in str(e) for
+                # the requests/stripe exceptions raised here.
                 logger.exception(f"Guest payment initialization failed: {e}")
-                return jsonify({"success": False, "error": "Payment initialization failed. Please try again."}), 502
+                return jsonify({
+                    "success": False,
+                    "error": f"Payment initialization failed: {type(e).__name__}: {e}",
+                    "debug_hint": "Check server logs for the full traceback above this line.",
+                }), 502
 
                 # ============ WALLET FUNDING ============
         @self.app.route("/api/wallet/fund", methods=["POST"])
