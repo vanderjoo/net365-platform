@@ -1821,6 +1821,60 @@ def init_db():
     # given name), so on a fresh database NO tables were ever created. Merged here.
     migrate_promotions_table()
 
+def _ensure_nullable_user_id(conn):
+    """Guest checkouts produce reloadly_transactions and user_events rows with
+    user_id = NULL. If those columns are NOT NULL, every guest topup crashes
+    the fulfillment path with an IntegrityError that leaves the SQLite write
+    lock held — which then hangs the whole worker."""
+    c = conn.cursor()
+    for table, ddl in [
+        ("reloadly_transactions", """
+            CREATE TABLE IF NOT EXISTS reloadly_transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reference TEXT,
+                user_id INTEGER,            -- NULLABLE for guest checkouts
+                transaction_type TEXT,
+                amount REAL,
+                status TEXT,
+                provider_transaction_id TEXT,
+                result TEXT,
+                currency TEXT DEFAULT 'NGN',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """),
+        ("user_events", """
+            CREATE TABLE IF NOT EXISTS user_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,            -- NULLABLE for guest events
+                event_type TEXT NOT NULL,
+                status TEXT DEFAULT 'success',
+                details TEXT,
+                reference TEXT,
+                amount REAL,
+                currency TEXT DEFAULT 'NGN',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """),
+    ]:
+        # Detect a NOT NULL user_id and migrate to the nullable schema
+        cols = c.execute(f"PRAGMA table_info({table})").fetchall()
+        if not cols:
+            c.execute(ddl)
+            continue
+        user_id_col = next((col for col in cols if col[1] == "user_id"), None)
+        if user_id_col and user_id_col[3] == 1:  # notnull flag == 1
+            logger.info(f"Migrating {table}.user_id to nullable...")
+            c.execute(f"ALTER TABLE {table} RENAME TO {table}_old")
+            c.execute(ddl)
+            new_cols = [col[1] for col in c.execute(f"PRAGMA table_info({table})").fetchall()]
+            old_cols = [col[1] for col in cols]
+            shared = [col for col in new_cols if col in old_cols]
+            c.execute(
+                f"INSERT INTO {table} ({','.join(shared)}) "
+                f"SELECT {','.join(shared)} FROM {table}_old"
+            )
+            c.execute(f"DROP TABLE {table}_old")
+    conn.commit()
 
 # ============ BRAND COLORS TABLE ============
 def init_brand_colors_table():
@@ -3872,7 +3926,38 @@ def get_referrals_count_by_code(referral_code: str) -> int:
     conn.close()
     return count
 
+def get_db_connection():
+    # Resolve the DB path from whichever name this module defines.
+    # Prevents a NameError at runtime if the variable is renamed.
+    db_file = None
+    for _name in ("DATABASE", "DB_PATH", "DATABASE_PATH", "DB_FILE"):
+        if _name in globals():
+            db_file = globals()[_name]
+            break
 
+    if db_file is None:
+        # Last-resort fallback: alongside this file
+        db_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "reloadly.db",
+        )
+
+    conn = sqlite3.connect(
+        db_file,
+        timeout=30.0,
+        check_same_thread=False,
+        isolation_level=None,
+    )
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.OperationalError:
+        # Some filesystems (rare) refuse WAL; fall back to default mode
+        # rather than crashing startup.
+        pass
+    conn.execute("PRAGMA busy_timeout=30000")
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.row_factory = sqlite3.Row
+    return conn
 
 from typing import Dict
 import logging
