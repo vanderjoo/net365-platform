@@ -661,31 +661,34 @@
            oninput="autoDetectOnInput()" autofocus />
   </div>
 
-  <!-- Smart Operator Detection -->
-  <div class="detected-operator" id="detectedOperator">
-    <div style="text-align:right; margin:-14px 0 10px;">
-      <a href="#" onclick="document.getElementById('manualNetwork').classList.toggle('show'); loadManualOperators(); return false;"
-         style="font-size:12px; color:#ea580c; text-decoration:none; font-weight:600;">
-        🔄 Not your network? Change it
-      </a>
-    </div>  
-    <span class="icon" id="detectIcon">📡</span>
-    <div class="info">
-      <div class="name" id="detectName">Ready to detect</div>
-      <div class="country" id="detectCountry">Enter a mobile number</div>
-    </div>
-    <span class="detect-pill" id="detectPill">AUTO</span>
+<!-- Smart Operator Detection -->
+<div class="detected-operator" id="detectedOperator">
+  <span class="icon" id="detectIcon">📡</span>
+  <div class="info">
+    <div class="name" id="detectName">Ready to detect</div>
+    <div class="country" id="detectCountry">Enter a mobile number</div>
   </div>
-  <div class="manual-network" id="manualNetwork">
-    <div class="manual-network-head">
-      <div><strong>📶 Choose your network</strong><span>Automatic detection needs a little help.</span></div>
-      <button type="button" class="link-btn" onclick="loadManualOperators()">Refresh</button>
-    </div>
-    <select id="networkSelect" onchange="selectManualOperator(this.value)">
-      <option value="">Select network</option>
-    </select>
-    <div class="manual-hint">Your selection is used only for this recharge.</div>
+  <span class="detect-pill" id="detectPill">AUTO</span>
+</div>
+
+<!-- Always-available manual override -->
+<div id="changeNetworkWrap" style="text-align:right; margin:-4px 0 10px; min-height:16px;">
+  <a href="#" onclick="event.preventDefault(); document.getElementById('manualNetwork').classList.add('show'); loadManualOperators(); return false;"
+     style="font-size:12px; color:#ea580c; text-decoration:none; font-weight:700;">
+    🔄 Not your network? Change it
+  </a>
+</div>
+
+<div class="manual-network" id="manualNetwork">
+  <div class="manual-network-head">
+    <div><strong>📶 Choose your network</strong><span>Automatic detection needs a little help.</span></div>
+    <button type="button" class="link-btn" onclick="loadManualOperators()">Refresh</button>
   </div>
+  <select id="networkSelect" onchange="selectManualOperator(this.value)">
+    <option value="">Select network</option>
+  </select>
+  <div class="manual-hint">Your selection is used only for this recharge.</div>
+</div>
 
   <!-- ===== STEP 2: Amount ===== -->
   <div class="form-group" style="margin-top:4px;">
@@ -919,7 +922,6 @@ async function autoDetectOnInput() {
     detectDiv.classList.remove('show');
     manual.classList.remove('show');
     detectedOperator = null;
-    updatePayButtonState();
     return;
   }
 
@@ -943,10 +945,6 @@ async function autoDetectOnInput() {
         detectedOperator = op;
         detectedOperator.operatorId = op.operatorId || op.id;
 
-        // ─── Determine whether this detection is trustworthy ─────────────
-        // 'sandbox_fallback' and 'prefix_fallback' are GUESSES, not real
-        // per-number detection. When they come back, we show the result but
-        // ALSO show the dropdown so the user can correct it.
         const isGuess = (result.source === 'sandbox_fallback' || result.source === 'prefix_fallback');
 
         document.getElementById('detectName').textContent = op.name || 'Network detected';
@@ -961,7 +959,6 @@ async function autoDetectOnInput() {
           result.source === 'sandbox_fallback' ? 'SANDBOX' :
           result.source === 'prefix_fallback' ? 'FALLBACK' : 'AUTO';
 
-        // ─── Show the dropdown whenever detection was a guess ────────────
         if (isGuess) {
           manual.classList.add('show');
           await loadManualOperators(countryCode);
@@ -970,14 +967,13 @@ async function autoDetectOnInput() {
         }
 
         await updatePaymentRecommendation(countryCode);
-        updatePayButtonState();
+        updatePaymentMethod();
         return;
       }
     } catch (e) {
       console.warn('Operator detection failed', e);
     }
 
-    // No operator at all — full manual fallback
     detectedOperator = null;
     document.getElementById('detectName').textContent = 'Network not detected';
     document.getElementById('detectIcon').textContent = '⚠️';
@@ -986,7 +982,7 @@ async function autoDetectOnInput() {
     manual.classList.add('show');
     await loadManualOperators(countryCode);
     await updatePaymentRecommendation(countryCode);
-    updatePayButtonState();
+    updatePaymentMethod();
   }, 450);
 }
 
