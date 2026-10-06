@@ -1,1182 +1,2653 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <!-- Mobile & Notch/Dynamic Island Optimization -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  
-  <!-- iOS Native App Emulation -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Net365 Topup" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Net365" />
+<meta name="theme-color" content="#0A0E1A" />
+<title>Net365 — Recharge, Wallet, Utilities</title>
 
-  <!-- Browser Address Bar Tinting -->
-  <meta name="theme-color" content="#4f46e5" />
+<!--
+============================================================
+NET365 MOBILE — CHANGELOG
+============================================================
+v3.0 — Merged build
+  - Merge of mobile_raw.html (working logic) + upgrade.html (Midnight Neon UI)
+  - Four views: Home / Wallet / Transactions / Utilities
+  - Bottom nav + top bar with wallet chip + avatar
+  - Country override dropdown (from mobile_raw)
+  - Correct country detection (explicit codes first, leading-0 as fallback)
+  - Auto-select payment method per country via /api/payment/preferences
+  - In-app biller sheet (utilities never leaves the app)
+  - Support sheet (Email / Chat / WhatsApp) + floating chat button
+  - Auth modal (login + register) + user menu
+  - Add Money modal, Send Money modal, Referral sheet
+  - Payment modal: two-step (review -> confirm) — Option A
+  - All API calls use existing backend endpoints (no app.py changes)
+============================================================
+-->
 
-  <title>Net365 - Express Mobile & Web Recharge</title>
+<link rel="manifest" href='data:application/json,{
+  "name":"Net365","short_name":"Net365","start_url":"./","display":"standalone",
+  "background_color":"#0A0E1A","theme_color":"#7C3AED",
+  "icons":[{"src":"https://img.icons8.com/color/512/wifi.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
+}' />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  <!-- Web App Manifest embedded via Data URI -->
-  <link rel="manifest" href='data:application/json,{
-    "name": "Net365 Express Recharge",
-    "short_name": "Net365",
-    "start_url": "./",
-    "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#4f46e5",
-    "icons": [
-      {
-        "src": "https://img.icons8.com/color/512/wifi.png",
-        "sizes": "512x512",
-        "type": "image/png",
-        "purpose": "any maskable"
-      }
-    ]
-  }' />
+<style>
+/* ============================================================
+   NET365 MOBILE — MIDNIGHT NEON DESIGN SYSTEM
+   ============================================================ */
+:root{
+  --bg-0:#080B14;
+  --bg-1:#0A0E1A;
+  --bg-2:#0D1224;
+  --surface:rgba(20,26,45,0.72);
+  --surface-2:rgba(28,34,56,0.65);
+  --border:rgba(124,58,237,0.14);
+  --border-strong:rgba(124,58,237,0.35);
 
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-  
-  <style>
-    * { 
-      margin: 0; 
-      padding: 0; 
-      box-sizing: border-box; 
-      -webkit-tap-highlight-color: transparent; /* Disable tap color blink on iOS/Android */
-    }
+  --violet:#7C3AED;
+  --violet-bright:#8B5CF6;
+  --violet-soft:rgba(124,58,237,0.15);
+  --cyan:#22D3EE;
+  --cyan-soft:rgba(34,211,238,0.12);
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #f0f4ff 0%, #e8edf5 100%);
-      color: #1e2937;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-      /* Safe area insets for iPhone notches and gesture bars */
-      padding-top: calc(20px + env(safe-area-inset-top));
-      padding-bottom: calc(20px + env(safe-area-inset-bottom));
-      padding-left: calc(12px + env(safe-area-inset-left));
-      padding-right: calc(12px + env(safe-area-inset-right));
-      overscroll-behavior-y: none; /* Prevents pull-to-refresh pull-through on mobile browsers */
-    }
+  --success:#22C55E;
+  --success-soft:rgba(34,197,94,0.12);
+  --warning:#F59E0B;
+  --warning-soft:rgba(245,158,11,0.12);
+  --danger:#F43F5E;
+  --danger-soft:rgba(244,63,94,0.12);
 
-    body.dark-mode {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      color: #e2e8f0;
-    }
-    body.dark-mode .card { background: #1e293b; border-color: #334155; }
-    body.dark-mode .form-group input, body.dark-mode .form-group select {
-      background: #334155; border-color: #475569; color: #e2e8f0;
-    }
-    body.dark-mode .card h2 { color: #e2e8f0; }
-    body.dark-mode .detected-operator { background: #1a3a5f; border-color: #4f8bc9; color: #93c5fd; }
-    body.dark-mode .price-breakdown { background: #334155; border-color: #475569; }
-    body.dark-mode .toast { background: #1e293b; color: #e2e8f0; border-color: #334155; }
-    body.dark-mode .payment-method-badge { background: #334155; }
-    body.dark-mode #mobileNav { background: #1e293b; border-top-color: #334155; }
-    body.dark-mode #mobileNav a, body.dark-mode #mobileNav button { color: #94a3b8; }
-    body.dark-mode .support-bar { background: #0f172a; border-color: #334155; }
-    body.dark-mode .support-bar a { color: #818cf8; }
+  --text-0:#F8FAFC;
+  --text-1:#CBD5E1;
+  --text-2:#94A3B8;
+  --text-3:#64748B;
 
-    .card {
-      background: white;
-      border-radius: 32px;
-      padding: 48px 40px;
-      max-width: 520px;
-      width: 100%;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);
-      border: 1px solid rgba(255,255,255,0.2);
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-    }
+  --radius-xl:28px;
+  --radius-lg:20px;
+  --radius-md:14px;
+  --radius-sm:10px;
 
-    .card::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -30%;
-      width: 300px;
-      height: 300px;
-      background: linear-gradient(135deg, rgba(79,70,229,0.05), rgba(124,58,237,0.05));
-      border-radius: 50%;
-      pointer-events: none;
-    }
+  --shadow-card:0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
 
-    .logo { 
-      display: flex; 
-      align-items: center; 
-      gap: 12px; 
-      margin-bottom: 8px;
-      font-size: 28px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .logo span { font-size: 32px; -webkit-text-fill-color: initial; }
-    .subtitle { color: #64748b; font-size: 15px; margin-bottom: 20px; }
-    body.dark-mode .subtitle { color: #94a3b8; }
+  --nav-h:70px;
+  --top-h:64px;
 
-    /* Support Banner Component */
-    .support-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      padding: 10px 16px;
-      margin-bottom: 24px;
-      font-size: 13px;
-      color: #64748b;
-    }
-    .support-bar .support-links {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-    .support-bar a {
-      color: #4f46e5;
-      text-decoration: none;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .support-bar a:hover { text-decoration: underline; }
+  --font:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+}
 
-    .form-group { margin-bottom: 20px; }
-    .form-group label { 
-      display: block; 
-      margin-bottom: 8px; 
-      font-weight: 600; 
-      color: #334155; 
-      font-size: 14px; 
-    }
-    body.dark-mode .form-group label { color: #cbd5e1; }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 
-    /* Forces iOS not to auto-zoom input field focus */
-    .form-group input, .form-group select {
-      width: 100%; 
-      padding: 16px 18px; 
-      border: 2px solid #e2e8f0; 
-      border-radius: 16px; 
-      font-size: 16px !important; 
-      transition: all 0.3s; 
-      background: white; 
-      font-family: inherit;
-    }
-    .form-group input:focus, .form-group select:focus {
-      outline: none; 
-      border-color: #6366f1; 
-      box-shadow: 0 0 0 4px rgba(99,102,241,0.1);
-    }
-    .form-group input::placeholder { color: #94a3b8; }
+html,body{height:100%;overscroll-behavior-y:none;}
+body{
+  font-family:var(--font);
+  background:var(--bg-1);
+  color:var(--text-0);
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
 
-    .detected-operator {
-      background: #f0f9ff;
-      border: 2px solid #7dd3fc;
-      border-radius: 16px;
-      padding: 16px 20px;
-      margin: 12px 0 20px;
-      display: none;
-      align-items: center;
-      gap: 12px;
-      animation: slideDown 0.4s ease;
-    }
-    .detected-operator.show { display: flex; }
-    .detected-operator .icon { font-size: 28px; }
-    .detected-operator .info { flex: 1; }
-    .detected-operator .name { font-weight: 700; font-size: 16px; color: #0c4a6e; }
-    .detected-operator .country { font-size: 13px; color: #64748b; }
-    body.dark-mode .detected-operator .name { color: #93c5fd; }
-    body.dark-mode .detected-operator .country { color: #94a3b8; }
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 800px 500px at 15% -10%, rgba(124,58,237,0.28), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 15%, rgba(34,211,238,0.18), transparent 60%),
+    radial-gradient(ellipse 500px 500px at 50% 100%, rgba(124,58,237,0.14), transparent 65%);
+  pointer-events:none;
+  z-index:0;
+  animation:auroraDrift 24s ease-in-out infinite alternate;
+}
+@keyframes auroraDrift{
+  0%{transform:translate3d(0,0,0) scale(1);}
+  100%{transform:translate3d(-3%,2%,0) scale(1.06);}
+}
 
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+/* ============================================================
+   TOP BAR
+   ============================================================ */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  height:var(--top-h);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;
+  background:rgba(8,11,20,0.72);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:9px;cursor:pointer;}
+.brand-mark{
+  width:34px;height:34px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  box-shadow:0 0 20px rgba(124,58,237,0.45);
+  font-size:16px;color:#fff;
+}
+.brand-name{
+  font-weight:900;font-size:18px;letter-spacing:-0.02em;
+  background:linear-gradient(90deg,#fff,#CBD5E1);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.topbar-actions{display:flex;align-items:center;gap:8px;}
+.wallet-chip{
+  display:none;align-items:center;gap:8px;
+  padding:8px 14px;border-radius:999px;
+  background:rgba(124,58,237,0.14);
+  border:1px solid var(--border-strong);
+  font-weight:800;font-size:14px;
+  color:#fff;cursor:pointer;
+  transition:all .2s ease;
+}
+.wallet-chip.show{display:inline-flex;}
+.wallet-chip:hover{background:rgba(124,58,237,0.24);}
+.wallet-chip i{color:var(--cyan);font-size:13px;}
 
-    .amount-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: #f8fafc;
-      border-radius: 16px;
-      padding: 4px 4px 4px 18px;
-      border: 2px solid #e2e8f0;
-      transition: all 0.3s;
-    }
-    .amount-row:focus-within {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 4px rgba(99,102,241,0.1);
-    }
-    body.dark-mode .amount-row { background: #334155; border-color: #475569; }
-    .amount-row .currency-symbol {
-      font-weight: 700;
-      font-size: 20px;
-      color: #64748b;
-    }
-    body.dark-mode .amount-row .currency-symbol { color: #94a3b8; }
-    .amount-row input {
-      border: none;
-      padding: 14px 0;
-      font-size: 20px !important;
-      font-weight: 600;
-      background: transparent;
-      width: 100%;
-      font-family: inherit;
-    }
-    .amount-row input:focus { outline: none; box-shadow: none; }
-    .amount-row input::placeholder { color: #cbd5e1; font-weight: 400; }
+.avatar-btn{
+  width:38px;height:38px;border-radius:50%;
+  border:1px solid var(--border-strong);
+  background:var(--surface);
+  color:var(--text-1);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;
+  transition:all .2s ease;
+}
+.avatar-btn:hover{border-color:var(--violet);color:#fff;}
+.avatar-btn.logged-in{
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  color:#fff;border-color:transparent;
+  box-shadow:0 0 18px rgba(124,58,237,0.5);
+}
 
-    .price-breakdown {
-      background: #f8fafc;
-      border-radius: 16px;
-      padding: 16px 20px;
-      margin: 12px 0 20px;
-      border: 1px solid #e2e8f0;
-    }
-    body.dark-mode .price-breakdown { background: #334155; border-color: #475569; }
-    .price-breakdown .row {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      font-size: 14px;
-      color: #64748b;
-    }
-    body.dark-mode .price-breakdown .row { color: #94a3b8; }
-    .price-breakdown .row.total {
-      border-top: 2px solid #e2e8f0;
-      margin-top: 8px;
-      padding-top: 12px;
-      font-weight: 700;
-      font-size: 16px;
-      color: #1e2937;
-    }
-    body.dark-mode .price-breakdown .row.total { color: #e2e8f0; border-top-color: #475569; }
-    .price-breakdown .row .amount-value { font-weight: 600; }
-    .price-breakdown .row .fee-badge {
-      background: #fef3c7;
-      color: #92400e;
-      padding: 2px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-    body.dark-mode .price-breakdown .row .fee-badge { background: #78350f; color: #fcd34d; }
+/* ============================================================
+   VIEWS
+   ============================================================ */
+.app-view{padding:20px 18px 30px;position:relative;z-index:1;}
+.view{display:none;animation:viewIn .35s cubic-bezier(0.16,1,0.3,1);}
+.view.active{display:block;}
+@keyframes viewIn{
+  from{opacity:0;transform:translateY(8px);}
+  to{opacity:1;transform:translateY(0);}
+}
 
-    .payment-method-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #f1f5f9;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #475569;
-      margin-top: 4px;
-    }
-    body.dark-mode .payment-method-badge { background: #334155; color: #94a3b8; }
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card{
+  background:var(--surface);
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  padding:24px 22px;
+  box-shadow:var(--shadow-card);
+  position:relative;
+  overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(124,58,237,0.6),transparent);
+}
 
-    /* Touch-optimized ergonomics (min 48px target height) */
-    .btn {
-      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-      color: white;
-      border: none;
-      min-height: 52px;
-      padding: 16px 32px;
-      border-radius: 16px;
-      font-size: 18px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.1s ease, box-shadow 0.2s ease;
-      width: 100%;
-      box-shadow: 0 10px 25px -5px rgba(79,70,229,0.4);
-      margin-top: 8px;
-      position: relative;
-      overflow: hidden;
-      touch-action: manipulation;
-    }
-    .btn:active { transform: scale(0.97); }
-    .btn:hover { box-shadow: 0 20px 30px -5px rgba(79,70,229,0.5); }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .btn .btn-sub { display: block; font-size: 12px; font-weight: 400; opacity: 0.8; margin-top: 2px; }
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+.section-title{
+  font-size:12px;font-weight:800;letter-spacing:0.14em;
+  color:var(--text-2);text-transform:uppercase;
+  margin:22px 4px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.section-title a{
+  font-size:12px;color:var(--cyan);text-decoration:none;
+  font-weight:700;letter-spacing:0;cursor:pointer;
+}
+.field-label{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;font-weight:700;
+  color:var(--text-2);letter-spacing:0.05em;
+  text-transform:uppercase;
+  margin-bottom:9px;
+}
+.field-label i{color:var(--violet-bright);font-size:12px;}
 
-    .btn-paystack { background: linear-gradient(135deg, #2293e6, #1a7cc4); }
-    .btn-flutterwave { background: linear-gradient(135deg, #f5a623, #d4890f); }
-    .btn-stripe { background: linear-gradient(135deg, #635bff, #4a42cc); }
-    .btn-mock { background: linear-gradient(135deg, #6c757d, #495057); }
+/* ============================================================
+   INPUTS
+   ============================================================ */
+.field{margin-bottom:18px;}
+.input, select.input{
+  width:100%;
+  padding:16px 18px;
+  background:rgba(8,11,20,0.6);
+  border:1.5px solid rgba(148,163,184,0.16);
+  border-radius:var(--radius-md);
+  color:var(--text-0);
+  font-family:inherit;
+  font-size:16px;
+  font-weight:600;
+  outline:none;
+  transition:border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.input::placeholder{color:var(--text-3);font-weight:500;}
+.input:focus{
+  border-color:var(--violet-bright);
+  background:rgba(124,58,237,0.06);
+  box-shadow:0 0 0 4px rgba(124,58,237,0.16);
+}
+select.input{
+  appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%2394A3B8' d='M6 8L0 0h12z'/></svg>");
+  background-repeat:no-repeat;background-position:right 18px center;
+  padding-right:44px;
+}
 
-    .status { padding: 14px 18px; border-radius: 12px; margin: 16px 0; font-weight: 500; border-left: 5px solid; display: none; }
-    .status.show { display: block; }
-    .status.success { background: #ecfdf5; color: #065f46; border-color: #10b981; display: block; }
-    .status.error { background: #fef2f2; color: #991b1b; border-color: #ef4444; display: block; }
-    .status.info { background: #f0f9ff; color: #0c4a6e; border-color: #22d3ee; display: block; }
+/* Amount input — HERO */
+.amount-wrap{
+  display:flex;align-items:center;
+  background:rgba(8,11,20,0.72);
+  border:1.5px solid rgba(148,163,184,0.16);
+  border-radius:var(--radius-lg);
+  padding:8px 20px 8px 22px;
+  transition:border-color .2s ease, box-shadow .2s ease;
+  position:relative;overflow:hidden;
+}
+.amount-wrap::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--violet),var(--cyan));
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .35s cubic-bezier(0.16,1,0.3,1);
+}
+.amount-wrap:focus-within::after{transform:scaleX(1);}
+.amount-wrap:focus-within{
+  border-color:var(--violet-bright);
+  box-shadow:0 0 0 4px rgba(124,58,237,0.16);
+}
+.amount-symbol{
+  font-size:26px;font-weight:900;color:var(--text-2);
+  margin-right:12px;
+}
+.amount-input{
+  flex:1;background:none;border:none;outline:none;
+  color:#fff;font-family:inherit;
+  font-size:44px !important;font-weight:900;
+  letter-spacing:-0.03em;line-height:1.1;
+  padding:8px 0;width:100%;
+  caret-color:var(--cyan);
+}
+.amount-input::placeholder{color:var(--text-3);font-weight:900;}
 
-    #toastContainer {
-      position: fixed;
-      top: calc(12px + env(safe-area-inset-top));
-      right: 20px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-width: 380px;
-    }
-    .toast {
-      padding: 14px 20px;
-      border-radius: 12px;
-      font-weight: 500;
-      animation: slideIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-      background: white;
-      border: 1px solid #f1f5f9;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 14px;
-    }
-    .toast-success { border-left: 5px solid #10b981; }
-    .toast-error { border-left: 5px solid #ef4444; }
-    .toast-warning { border-left: 5px solid #f59e0b; }
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
+/* ============================================================
+   QUICK PILLS
+   ============================================================ */
+.quick-row{
+  display:flex;gap:8px;margin-top:14px;overflow-x:auto;
+  padding-bottom:2px;scrollbar-width:none;
+}
+.quick-row::-webkit-scrollbar{display:none;}
+.quick-pill{
+  flex-shrink:0;
+  padding:9px 18px;border-radius:999px;
+  background:rgba(148,163,184,0.08);
+  border:1px solid rgba(148,163,184,0.14);
+  color:var(--text-1);
+  font-family:inherit;font-size:13px;font-weight:800;
+  cursor:pointer;transition:all .18s ease;
+}
+.quick-pill:hover,.quick-pill:active{
+  background:var(--violet-soft);
+  border-color:var(--violet);
+  color:#fff;transform:translateY(-1px);
+}
+.quick-pill.active{
+  background:linear-gradient(135deg,var(--violet),var(--violet-bright));
+  border-color:transparent;color:#fff;
+  box-shadow:0 0 20px rgba(124,58,237,0.5);
+}
 
-    #mobileNav {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
-      z-index: 100;
-      border-top: 1px solid #f1f5f9;
-    }
-    #mobileNav .nav-items {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-    #mobileNav a, #mobileNav button {
-      text-decoration: none;
-      color: #94a3b8;
-      text-align: center;
-      padding: 6px 12px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 11px;
-      font-family: 'Inter', sans-serif;
-      touch-action: manipulation;
-    }
-    #mobileNav .nav-icon { font-size: 22px; display: block; }
+/* ============================================================
+   DETECT CARD
+   ============================================================ */
+.detect-card{
+  display:none;align-items:center;gap:12px;
+  padding:14px 16px;
+  border-radius:var(--radius-md);
+  background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(34,211,238,0.06));
+  border:1px solid rgba(34,197,94,0.28);
+  margin-top:14px;
+  animation:slideDown .3s ease;
+}
+.detect-card.show{display:flex;}
+.detect-card.warn{
+  background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(244,63,94,0.06));
+  border-color:rgba(245,158,11,0.30);
+}
+@keyframes slideDown{
+  from{opacity:0;transform:translateY(-6px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.detect-icon{
+  width:40px;height:40px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(34,197,94,0.18);
+  color:var(--success);
+  font-size:16px;flex-shrink:0;
+}
+.detect-card.warn .detect-icon{
+  background:rgba(245,158,11,0.18);color:var(--warning);
+}
+.detect-info{flex:1;min-width:0;}
+.detect-name{font-size:15px;font-weight:800;color:#fff;letter-spacing:-0.01em;}
+.detect-sub{font-size:11.5px;color:var(--text-2);margin-top:2px;font-weight:500;}
+.detect-badge{
+  font-size:10px;font-weight:900;letter-spacing:0.1em;
+  padding:5px 10px;border-radius:999px;
+  background:rgba(34,197,94,0.16);
+  color:var(--success);
+}
+.detect-card.warn .detect-badge{
+  background:rgba(245,158,11,0.16);color:var(--warning);
+}
 
-    /* Live Support Chat Floating Button & Window */
-    .chat-fab {
-      position: fixed;
-      bottom: calc(24px + env(safe-area-inset-bottom));
-      right: 24px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      color: white;
-      border: none;
-      box-shadow: 0 10px 25px rgba(79,70,229,0.4);
-      cursor: pointer;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 24px;
-      z-index: 900;
-      transition: transform 0.2s ease;
-    }
-    .chat-fab:active { transform: scale(0.9); }
+.manual-block{
+  display:none;margin-top:10px;
+  padding:14px;
+  border-radius:var(--radius-md);
+  background:rgba(124,58,237,0.08);
+  border:1px solid var(--border-strong);
+}
+.manual-block.show{display:block;animation:slideDown .3s ease;}
+.manual-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.manual-head strong{font-size:13px;color:#fff;font-weight:800;}
+.manual-head button{
+  background:none;border:none;color:var(--cyan);
+  font-family:inherit;font-size:12px;font-weight:700;
+  cursor:pointer;padding:0;
+}
 
-    .chat-widget {
-      display: none;
-      position: fixed;
-      bottom: calc(90px + env(safe-area-inset-bottom));
-      right: 24px;
-      width: 360px;
-      height: 480px;
-      max-width: calc(100vw - 32px);
-      background: white;
-      border-radius: 24px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-      border: 1px solid #e2e8f0;
-      z-index: 950;
-      flex-direction: column;
-      overflow: hidden;
-      animation: modalPop 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    body.dark-mode .chat-widget { background: #1e293b; border-color: #334155; }
-    .chat-widget.show { display: flex; }
-    .chat-header {
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      color: white;
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .chat-header h3 { font-size: 16px; font-weight: 700; }
-    .chat-header .status-dot {
-      width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 6px;
-    }
-    .chat-body {
-      flex: 1;
-      padding: 16px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      background: #f8fafc;
-    }
-    body.dark-mode .chat-body { background: #0f172a; }
-    .chat-msg {
-      max-width: 80%;
-      padding: 10px 14px;
-      border-radius: 16px;
-      font-size: 13px;
-      line-height: 1.4;
-    }
-    .chat-msg.support {
-      background: white;
-      color: #1e2937;
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
-      border: 1px solid #e2e8f0;
-    }
-    body.dark-mode .chat-msg.support { background: #334155; color: #e2e8f0; border-color: #475569; }
-    .chat-msg.user {
-      background: #4f46e5;
-      color: white;
-      align-self: flex-end;
-      border-bottom-right-radius: 4px;
-    }
-    .chat-footer {
-      padding: 12px;
-      border-top: 1px solid #e2e8f0;
-      display: flex;
-      gap: 8px;
-    }
-    body.dark-mode .chat-footer { border-top-color: #334155; }
-    .chat-footer input {
-      flex: 1;
-      padding: 10px 14px;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      font-size: 14px !important;
-      outline: none;
-    }
-    body.dark-mode .chat-footer input { background: #334155; border-color: #475569; color: white; }
-    .chat-footer button {
-      background: #4f46e5;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
+/* ============================================================
+   BREAKDOWN
+   ============================================================ */
+.breakdown{
+  background:rgba(8,11,20,0.55);
+  border:1px solid rgba(148,163,184,0.10);
+  border-radius:var(--radius-lg);
+  padding:16px 18px;
+  margin-top:14px;
+}
+.bd-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;
+}
+.bd-row .lbl{
+  font-size:13px;color:var(--text-2);font-weight:600;
+  display:flex;align-items:center;gap:8px;
+}
+.bd-row .lbl .fee-tag{
+  font-size:9.5px;padding:3px 8px;border-radius:6px;
+  background:rgba(245,158,11,0.14);
+  color:var(--warning);font-weight:800;letter-spacing:0.05em;
+}
+.bd-row .val{
+  font-size:20px;font-weight:800;
+  color:var(--text-0);letter-spacing:-0.01em;
+}
+.bd-row.total{
+  border-top:1px solid rgba(148,163,184,0.14);
+  margin-top:8px;padding-top:14px;
+}
+.bd-row.total .lbl{font-size:14px;color:#fff;font-weight:800;}
+.bd-row.total .val{
+  font-size:32px;font-weight:900;
+  letter-spacing:-0.03em;
+  background:linear-gradient(90deg,var(--violet-bright),var(--cyan));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.bd-row.discount .val{color:var(--success);}
 
-    /* Responsive Mobile Layout Adjustments */
-    @media (max-width: 600px) {
-      body { 
-        padding-top: calc(12px + env(safe-area-inset-top)); 
-        align-items: flex-start; 
-        padding-bottom: calc(90px + env(safe-area-inset-bottom)); 
-      }
-      .card { padding: 28px 20px; border-radius: 24px; }
-      .logo { font-size: 24px; }
-      .btn { font-size: 16px; }
-      #mobileNav { display: block !important; }
-      #toastContainer { left: 20px; right: 20px; max-width: none; }
-      .chat-fab { bottom: calc(80px + env(safe-area-inset-bottom)); right: 16px; }
-      .chat-widget { bottom: calc(145px + env(safe-area-inset-bottom)); right: 16px; }
-    }
+/* ============================================================
+   PAYMENT METHOD
+   ============================================================ */
+.pm-label{
+  font-size:12px;font-weight:700;letter-spacing:0.05em;
+  color:var(--text-2);text-transform:uppercase;
+  margin:18px 0 10px;display:flex;align-items:center;gap:8px;
+}
+.pm-label i{color:var(--violet-bright);font-size:12px;}
+.pm-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.pm-btn{
+  display:flex;align-items:center;gap:10px;
+  padding:13px 14px;
+  border-radius:var(--radius-md);
+  background:rgba(148,163,184,0.06);
+  border:1.5px solid rgba(148,163,184,0.12);
+  color:var(--text-1);
+  font-family:inherit;font-size:13px;font-weight:700;
+  cursor:pointer;transition:all .18s ease;
+  text-align:left;position:relative;
+}
+.pm-btn:hover{border-color:var(--violet);color:#fff;}
+.pm-btn.active{
+  background:linear-gradient(135deg,rgba(124,58,237,0.20),rgba(34,211,238,0.10));
+  border-color:var(--violet);color:#fff;
+  box-shadow:0 0 20px rgba(124,58,237,0.30);
+}
+.pm-btn .pm-icon{
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(124,58,237,0.16);
+  color:var(--violet-bright);
+  font-size:13px;flex-shrink:0;
+}
+.pm-btn.active .pm-icon{
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  color:#fff;
+}
+.pm-btn small{
+  display:block;font-size:10px;color:var(--text-2);
+  font-weight:500;margin-top:1px;
+}
+.pm-btn.active small{color:rgba(255,255,255,0.7);}
 
-    .header-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    .header-actions button {
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      padding: 6px 10px;
-      border-radius: 8px;
-      transition: background 0.2s;
-      touch-action: manipulation;
-    }
-    .header-actions button:hover { background: rgba(0,0,0,0.05); }
-    body.dark-mode .header-actions button:hover { background: rgba(255,255,255,0.05); }
+/* ============================================================
+   PRIMARY BUTTON
+   ============================================================ */
+.btn-hero{
+  width:100%;
+  margin-top:18px;
+  padding:20px 24px;
+  border-radius:var(--radius-lg);
+  border:none;
+  background:linear-gradient(135deg,#7C3AED 0%,#8B5CF6 45%,#22D3EE 100%);
+  background-size:200% 200%;
+  color:#fff;
+  font-family:inherit;
+  font-size:17px;font-weight:900;
+  letter-spacing:0.01em;
+  cursor:pointer;position:relative;overflow:hidden;
+  box-shadow:0 12px 32px rgba(124,58,237,0.42), inset 0 1px 0 rgba(255,255,255,0.20);
+  transition:transform .12s ease, box-shadow .25s ease;
+  animation:heroShift 8s ease-in-out infinite;
+}
+@keyframes heroShift{
+  0%,100%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+}
+.btn-hero:not(:disabled):active{transform:scale(0.97);}
+.btn-hero:not(:disabled):hover{box-shadow:0 16px 44px rgba(124,58,237,0.55);}
+.btn-hero:disabled{
+  opacity:0.42;cursor:not-allowed;
+  box-shadow:none;animation:none;
+  background:rgba(148,163,184,0.16);
+  color:var(--text-3);
+}
+.btn-hero .btn-hint{
+  display:block;font-size:12px;font-weight:500;
+  opacity:0.85;margin-top:3px;letter-spacing:0;
+}
 
-    .quick-amounts {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin: 10px 0 4px;
-    }
-    .quick-amount-btn {
-      padding: 8px 16px;
-      min-height: 44px;
-      border: 2px solid #e2e8f0;
-      border-radius: 20px;
-      background: white;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: inherit;
-      color: #64748b;
-      touch-action: manipulation;
-    }
-    .quick-amount-btn:active { transform: scale(0.95); }
-    .quick-amount-btn:hover { border-color: #6366f1; color: #4f46e5; }
-    .quick-amount-btn.active { border-color: #6366f1; background: #f0f4ff; color: #4f46e5; }
-    body.dark-mode .quick-amount-btn { background: #1e293b; color: #94a3b8; border-color: #334155; }
-    body.dark-mode .quick-amount-btn.active { background: #334155; color: #818cf8; border-color: #6366f1; }
+/* ============================================================
+   SECONDARY BUTTONS
+   ============================================================ */
+.btn-ghost{
+  width:100%;padding:16px;
+  border-radius:var(--radius-md);
+  background:rgba(148,163,184,0.06);
+  border:1px solid rgba(148,163,184,0.16);
+  color:var(--text-1);
+  font-family:inherit;font-size:14px;font-weight:700;
+  cursor:pointer;transition:all .2s ease;
+}
+.btn-ghost:hover{background:rgba(148,163,184,0.12);color:#fff;}
+.btn-secondary{
+  flex:1;padding:16px;
+  border-radius:var(--radius-md);
+  border:none;
+  background:linear-gradient(135deg,var(--violet),var(--violet-bright));
+  color:#fff;font-family:inherit;font-size:14px;font-weight:800;
+  cursor:pointer;
+  box-shadow:0 8px 24px rgba(124,58,237,0.32);
+  transition:transform .12s ease;
+}
+.btn-secondary:active{transform:scale(0.97);}
 
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(8px);
-      justify-content: center;
-      align-items: center;
-      padding: 16px;
-    }
-    .modal.show { display: flex; }
-    .modal-content {
-      background: white;
-      padding: 32px 24px;
-      border-radius: 24px;
-      width: 100%;
-      max-width: 440px;
-      animation: modalPop 0.3s cubic-bezier(0.34,1.56,0.64,1);
-      position: relative;
-    }
-    body.dark-mode .modal-content { background: #1e293b; }
-    @keyframes modalPop {
-      from { transform: scale(0.92) translateY(-10px); opacity: 0; }
-      to { transform: scale(1) translateY(0); opacity: 1; }
-    }
-    .modal-close {
-      position: absolute;
-      right: 16px;
-      top: 16px;
-      font-size: 24px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #94a3b8;
-      padding: 8px;
-    }
-    .modal .payment-details {
-      background: #f8fafc;
-      padding: 18px;
-      border-radius: 12px;
-      margin: 16px 0;
-      border: 1px solid #e2e8f0;
-    }
-    body.dark-mode .modal .payment-details { background: #334155; border-color: #475569; }
-    .modal .payment-details .amount { font-size: 26px; font-weight: 700; color: #4f46e5; }
-    body.dark-mode .modal .payment-details .amount { color: #818cf8; }
-  
-    /* NET365 Express 2026 mobile polish */
-    :root { --net-red:#e53935; --net-orange:#ff6d00; }
-    body { background: radial-gradient(circle at 10% 0%, rgba(255,109,0,.10), transparent 28%), radial-gradient(circle at 100% 20%, rgba(229,57,53,.10), transparent 30%), linear-gradient(145deg,#f7f9fc 0%,#eef2f7 100%); }
-    .card { border:1px solid rgba(255,255,255,.9) !important; box-shadow:0 24px 70px rgba(15,23,42,.12),0 4px 14px rgba(15,23,42,.06) !important; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); }
-    .logo { font-weight:900 !important; letter-spacing:-.04em; background:linear-gradient(90deg,var(--net-red),var(--net-orange)); -webkit-background-clip:text; background-clip:text; color:transparent !important; }
-    .subtitle { color:#64748b !important; font-weight:600; }
-    .form-group input,.form-group select,.amount-row { border-radius:18px !important; border:1px solid #e2e8f0 !important; min-height:54px; background:rgba(255,255,255,.88) !important; transition:.2s ease; }
-    .form-group input:focus,.form-group select:focus { border-color:#ff6d00 !important; box-shadow:0 0 0 4px rgba(255,109,0,.10) !important; transform:translateY(-1px); }
-    .quick-amount-btn { border-radius:14px !important; border:1px solid #e2e8f0 !important; background:#fff !important; font-weight:800 !important; }
-    .quick-amount-btn.active,.quick-amount-btn:hover { background:linear-gradient(135deg,var(--net-red),var(--net-orange)) !important; color:#fff !important; border-color:transparent !important; transform:translateY(-2px); }
-    .btn-primary,.btn-pay,.btn-paystack,.btn-flutterwave,.btn-stripe { background:linear-gradient(135deg,var(--net-red),var(--net-orange)) !important; border:none !important; box-shadow:0 12px 28px rgba(229,57,53,.22); border-radius:17px !important; font-weight:900 !important; }
-    .detected-operator { border-radius:18px !important; border:1px solid rgba(34,197,94,.20) !important; box-shadow:0 10px 30px rgba(15,23,42,.05); }
-    .detect-pill { font-size:10px; background:#ecfdf5; color:#047857; padding:6px 9px; border-radius:999px; font-weight:900; letter-spacing:.06em; }
-    .manual-network { display:none; margin-top:10px; padding:14px; border-radius:18px; background:linear-gradient(135deg,rgba(255,247,237,.95),rgba(255,255,255,.95)); border:1px solid #fed7aa; box-shadow:0 8px 24px rgba(15,23,42,.05); }
-    .manual-network.show { display:block; animation:slideUp .22s ease; }
-    .manual-network-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-    .manual-network-head div { display:flex; flex-direction:column; gap:3px; }
-    .manual-network-head span,.manual-hint { font-size:11px; color:#64748b; }
-    .manual-network select { width:100%; min-height:48px; padding:0 14px; border-radius:14px; border:1px solid #e2e8f0; background:#fff; font-weight:700; }
-    .link-btn { border:0; background:transparent; color:#ea580c; font-weight:800; font-size:12px; }
-    .manual-hint { margin-top:7px; }
-    @keyframes slideUp { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
-    .support-bar { border-radius:16px !important; background:rgba(255,255,255,.72) !important; border:1px solid rgba(226,232,240,.9); }
-    .chat-widget { box-shadow:0 24px 70px rgba(15,23,42,.22) !important; border-radius:24px !important; overflow:hidden; }
-    @media(max-width:600px){ body{padding:10px !important; align-items:flex-start;} .card{margin-top:8px !important; width:100% !important;} .quick-amounts{grid-template-columns:repeat(3,1fr) !important;} .quick-amount-btn{min-height:46px;} .bottom-nav{bottom:8px !important; border-radius:22px !important; left:10px !important; right:10px !important; width:auto !important;} }
+/* ============================================================
+   QUICK ACTIONS
+   ============================================================ */
+.qa-scroll{
+  display:flex;gap:10px;overflow-x:auto;
+  padding:4px 4px 12px;margin:0 -4px;
+  scrollbar-width:none;
+}
+.qa-scroll::-webkit-scrollbar{display:none;}
+.qa-item{
+  flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:0;background:none;border:none;
+  font-family:inherit;cursor:pointer;
+  width:72px;color:var(--text-1);
+}
+.qa-icon{
+  width:56px;height:56px;border-radius:18px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(124,58,237,0.10);
+  border:1px solid rgba(124,58,237,0.20);
+  color:var(--violet-bright);
+  font-size:20px;
+  transition:all .2s ease;
+}
+.qa-item:hover .qa-icon,
+.qa-item:active .qa-icon{
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  color:#fff;border-color:transparent;
+  box-shadow:0 8px 24px rgba(124,58,237,0.42);
+  transform:translateY(-3px);
+}
+.qa-label{
+  font-size:10.5px;font-weight:700;
+  letter-spacing:0.02em;text-align:center;
+  line-height:1.2;color:var(--text-2);
+}
 
-  </style>
+/* ============================================================
+   TRANSACTIONS
+   ============================================================ */
+.tx-list{display:flex;flex-direction:column;gap:6px;}
+.tx-row{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 16px;
+  border-radius:var(--radius-md);
+  background:rgba(148,163,184,0.04);
+  border:1px solid transparent;
+  cursor:pointer;
+  transition:all .18s ease;
+}
+.tx-row:hover,.tx-row:active{
+  background:rgba(124,58,237,0.08);
+  border-color:var(--border);
+}
+.tx-icon{
+  width:42px;height:42px;border-radius:13px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.tx-icon.credit{background:rgba(34,197,94,0.14);color:var(--success);}
+.tx-icon.debit{background:rgba(244,63,94,0.14);color:var(--danger);}
+.tx-icon.neutral{background:rgba(124,58,237,0.14);color:var(--violet-bright);}
+.tx-body{flex:1;min-width:0;}
+.tx-title{
+  font-size:14px;font-weight:700;color:var(--text-0);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tx-sub{
+  font-size:11.5px;color:var(--text-2);font-weight:500;
+  margin-top:3px;
+  display:flex;align-items:center;gap:8px;
+}
+.status-pill{
+  padding:2px 8px;border-radius:999px;
+  font-size:9.5px;font-weight:800;
+  letter-spacing:0.06em;text-transform:uppercase;
+}
+.status-pill.success{background:var(--success-soft);color:var(--success);}
+.status-pill.pending{background:var(--warning-soft);color:var(--warning);}
+.status-pill.failed{background:var(--danger-soft);color:var(--danger);}
+.tx-amount{text-align:right;flex-shrink:0;}
+.tx-amount .amt{
+  font-size:18px;font-weight:800;
+  letter-spacing:-0.02em;color:var(--text-0);
+}
+.tx-amount .amt.positive{color:var(--success);}
+
+.empty-state{
+  text-align:center;padding:36px 20px;color:var(--text-2);
+}
+.empty-state i{
+  font-size:36px;color:var(--text-3);
+  margin-bottom:12px;display:block;
+}
+.empty-state p{font-size:13px;font-weight:500;}
+
+/* ============================================================
+   WALLET
+   ============================================================ */
+.balance-hero{
+  background:
+    linear-gradient(135deg,rgba(124,58,237,0.28) 0%,rgba(34,211,238,0.12) 100%),
+    rgba(8,11,20,0.85);
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius-xl);
+  padding:28px 24px;
+  position:relative;overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.balance-hero::before{
+  content:'';position:absolute;
+  width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,58,237,0.35) 0%,transparent 70%);
+  top:-100px;right:-80px;pointer-events:none;
+}
+.balance-label{
+  font-size:11px;font-weight:800;
+  letter-spacing:0.16em;text-transform:uppercase;
+  color:rgba(255,255,255,0.6);
+  margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+.balance-label i{color:var(--cyan);}
+.balance-value{
+  font-size:52px;font-weight:900;
+  letter-spacing:-0.04em;line-height:1.05;
+  color:#fff;
+  text-shadow:0 0 40px rgba(124,58,237,0.35);
+  word-break:break-all;
+}
+.balance-currency{
+  font-size:14px;font-weight:700;
+  color:var(--text-2);margin-top:6px;
+}
+.balance-actions{
+  display:flex;gap:10px;margin-top:22px;
+  position:relative;z-index:1;
+}
+
+.cur-chips{
+  display:flex;gap:8px;overflow-x:auto;
+  padding:4px 4px 12px;margin:18px -4px 0;
+  scrollbar-width:none;
+}
+.cur-chips::-webkit-scrollbar{display:none;}
+.cur-chip{
+  flex-shrink:0;
+  padding:9px 16px;border-radius:999px;
+  background:rgba(148,163,184,0.06);
+  border:1px solid rgba(148,163,184,0.14);
+  color:var(--text-2);
+  font-family:inherit;font-size:12px;font-weight:800;
+  letter-spacing:0.04em;
+  cursor:pointer;transition:all .2s ease;
+}
+.cur-chip.active{
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  border-color:transparent;color:#fff;
+  box-shadow:0 0 18px rgba(124,58,237,0.45);
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+.biller-group{margin-bottom:22px;}
+.biller-head{
+  font-size:12px;font-weight:800;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--text-2);
+  margin:0 4px 12px;
+  display:flex;align-items:center;gap:8px;
+}
+.biller-head i{color:var(--cyan);font-size:13px;}
+.biller-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:10px;
+}
+.biller-btn{
+  display:flex;align-items:center;gap:12px;
+  padding:14px;
+  border-radius:var(--radius-md);
+  background:rgba(148,163,184,0.05);
+  border:1px solid rgba(148,163,184,0.10);
+  color:var(--text-1);
+  font-family:inherit;font-size:13px;font-weight:700;
+  cursor:pointer;transition:all .18s ease;
+  text-align:left;
+}
+.biller-btn:hover,.biller-btn:active{
+  background:rgba(124,58,237,0.10);
+  border-color:var(--border-strong);
+  color:#fff;transform:translateY(-1px);
+}
+.biller-logo{
+  width:34px;height:34px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(124,58,237,0.16);
+  color:var(--violet-bright);
+  font-size:14px;flex-shrink:0;font-weight:900;
+}
+
+/* ============================================================
+   BOTTOM NAV
+   ============================================================ */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  z-index:80;display:flex;
+  background:rgba(8,11,20,0.88);
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border-top:1px solid var(--border);
+  padding-bottom:env(safe-area-inset-bottom);
+  padding-top:8px;padding-left:8px;padding-right:8px;
+}
+.nav-item{
+  flex:1;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 4px 10px;
+  background:none;border:none;
+  color:var(--text-3);
+  font-family:inherit;font-size:10px;font-weight:700;
+  letter-spacing:0.04em;
+  cursor:pointer;transition:all .2s ease;
+  position:relative;
+}
+.nav-item .nav-icon{
+  font-size:20px;transition:all .2s ease;line-height:1;
+}
+.nav-item .nav-label{font-weight:800;letter-spacing:0.05em;}
+.nav-item.active{color:#fff;}
+.nav-item.active .nav-icon{
+  color:var(--violet-bright);
+  filter:drop-shadow(0 0 10px rgba(124,58,237,0.85));
+  transform:translateY(-2px);
+}
+.nav-item.active::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:32px;height:3px;border-radius:0 0 4px 4px;
+  background:linear-gradient(90deg,var(--violet),var(--cyan));
+  box-shadow:0 0 12px rgba(124,58,237,0.85);
+}
+
+/* ============================================================
+   SHEETS
+   ============================================================ */
+.sheet-backdrop{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(8,11,20,0.72);
+  backdrop-filter:blur(6px);
+  display:none;align-items:flex-end;justify-content:center;
+  animation:fadeIn .2s ease;
+}
+.sheet-backdrop.show{display:flex;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.sheet{
+  width:100%;max-width:560px;
+  background:var(--bg-2);
+  border-radius:28px 28px 0 0;
+  padding:8px 20px calc(24px + env(safe-area-inset-bottom));
+  max-height:88vh;overflow-y:auto;
+  border-top:1px solid var(--border-strong);
+  animation:sheetUp .32s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes sheetUp{
+  from{transform:translateY(100%);}
+  to{transform:translateY(0);}
+}
+.sheet-handle{
+  width:44px;height:4px;border-radius:99px;
+  background:rgba(148,163,184,0.28);
+  margin:6px auto 16px;
+}
+.sheet-title{
+  font-size:19px;font-weight:900;color:#fff;
+  letter-spacing:-0.02em;margin-bottom:4px;
+}
+.sheet-sub{
+  font-size:13px;color:var(--text-2);
+  margin-bottom:20px;font-weight:500;
+}
+.sheet-close{
+  position:absolute;top:16px;right:18px;
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(148,163,184,0.10);
+  border:none;color:var(--text-2);
+  font-size:15px;cursor:pointer;
+}
+.sheet-relative{position:relative;}
+
+/* ============================================================
+   USER MENU / SUPPORT MENU
+   ============================================================ */
+.user-menu-list{display:flex;flex-direction:column;gap:2px;}
+.um-item{
+  display:flex;align-items:center;gap:14px;
+  padding:15px 12px;
+  border-radius:var(--radius-md);
+  color:var(--text-1);
+  font-family:inherit;font-size:14px;font-weight:600;
+  background:none;border:none;
+  cursor:pointer;transition:all .16s ease;
+  text-align:left;width:100%;
+}
+.um-item:hover{background:rgba(124,58,237,0.10);color:#fff;}
+.um-item i{
+  width:34px;height:34px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(124,58,237,0.12);
+  color:var(--violet-bright);
+  font-size:13px;flex-shrink:0;
+}
+.um-item.danger{color:var(--danger);}
+.um-item.danger i{background:rgba(244,63,94,0.12);color:var(--danger);}
+.um-item.danger:hover{background:rgba(244,63,94,0.08);}
+
+/* ============================================================
+   CHAT WIDGET
+   ============================================================ */
+.chat-fab{
+  position:fixed;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  right:16px;
+  width:52px;height:52px;border-radius:50%;
+  border:none;
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  color:#fff;font-size:20px;cursor:pointer;
+  box-shadow:0 8px 28px rgba(124,58,237,0.55);
+  z-index:90;transition:transform .2s ease;
+  display:none;
+}
+.chat-fab.show{display:flex;align-items:center;justify-content:center;}
+.chat-fab:active{transform:scale(0.92);}
+
+.chat-widget{
+  display:none;
+  position:fixed;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  right:16px;left:16px;
+  max-width:420px;margin:0 auto;
+  height:min(520px, calc(100vh - 140px));
+  background:var(--bg-2);
+  border:1px solid var(--border-strong);
+  border-radius:24px;
+  box-shadow:0 30px 80px rgba(0,0,0,0.6);
+  z-index:100;flex-direction:column;overflow:hidden;
+  animation:sheetUp .3s cubic-bezier(0.16,1,0.3,1);
+}
+.chat-widget.show{display:flex;}
+.chat-header{
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  color:#fff;padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.chat-body{
+  flex:1;overflow-y:auto;padding:16px;
+  display:flex;flex-direction:column;gap:10px;
+  background:rgba(8,11,20,0.4);
+}
+.chat-msg{
+  max-width:82%;padding:10px 14px;
+  border-radius:16px;font-size:13.5px;line-height:1.45;font-weight:500;
+}
+.chat-msg.support{
+  background:rgba(148,163,184,0.10);
+  color:var(--text-0);
+  align-self:flex-start;
+  border-bottom-left-radius:4px;
+  border:1px solid rgba(148,163,184,0.12);
+}
+.chat-msg.user{
+  background:linear-gradient(135deg,var(--violet),var(--violet-bright));
+  color:#fff;align-self:flex-end;
+  border-bottom-right-radius:4px;
+}
+.chat-footer{
+  display:flex;gap:8px;padding:10px;
+  border-top:1px solid var(--border);
+  background:rgba(8,11,20,0.6);
+}
+.chat-footer input{
+  flex:1;padding:12px 16px;
+  border-radius:14px;
+  border:1.5px solid rgba(148,163,184,0.16);
+  background:rgba(8,11,20,0.6);
+  color:#fff;font-family:inherit;font-size:14px;
+  outline:none;
+}
+.chat-footer input:focus{border-color:var(--violet-bright);}
+.chat-footer button{
+  width:44px;border-radius:14px;border:none;
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  color:#fff;font-size:15px;cursor:pointer;
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+#toastWrap{
+  position:fixed;
+  top:calc(env(safe-area-inset-top) + 76px);
+  left:50%;transform:translateX(-50%);
+  z-index:9000;
+  display:flex;flex-direction:column;gap:8px;
+  pointer-events:none;width:calc(100% - 32px);max-width:420px;
+}
+.toast{
+  padding:14px 18px;border-radius:14px;
+  background:rgba(20,26,45,0.96);
+  backdrop-filter:blur(20px);
+  border:1px solid var(--border-strong);
+  color:#fff;font-size:13.5px;font-weight:600;
+  box-shadow:0 12px 32px rgba(0,0,0,0.55);
+  display:flex;align-items:center;gap:10px;
+  animation:toastIn .35s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events:auto;
+}
+.toast.success{border-color:rgba(34,197,94,0.45);}
+.toast.success i{color:var(--success);}
+.toast.error{border-color:rgba(244,63,94,0.45);}
+.toast.error i{color:var(--danger);}
+.toast.warning{border-color:rgba(245,158,11,0.45);}
+.toast.warning i{color:var(--warning);}
+.toast.info i{color:var(--cyan);}
+@keyframes toastIn{
+  from{opacity:0;transform:translateY(-14px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+.spinner{
+  display:inline-block;
+  width:14px;height:14px;
+  border:2px solid rgba(255,255,255,0.28);
+  border-top-color:#fff;
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+  vertical-align:middle;margin-right:8px;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (min-width:600px){
+  .app-view{max-width:520px;margin:0 auto;}
+  .bottom-nav{max-width:520px;margin:0 auto;left:50%;transform:translateX(-50%);border-radius:22px 22px 0 0;border-left:1px solid var(--border);border-right:1px solid var(--border);}
+  .biller-grid{grid-template-columns:repeat(3,1fr);}
+  .pm-grid{grid-template-columns:repeat(4,1fr);}
+}
+</style>
 </head>
 <body>
 
-<div class="card">
-  <!-- Header Actions -->
-  <div class="header-actions">
-    <button onclick="toggleDarkMode()" id="darkModeBtn" title="Toggle Theme">🌙</button>
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="brand" onclick="showView('home')">
+    <div class="brand-mark"><i class="fas fa-bolt"></i></div>
+    <div class="brand-name">NET365</div>
   </div>
-
-  <div class="logo">
-    <span>🌍</span> Net365
-  </div>
-  <p class="subtitle">Send airtime instantly — smooth on web & mobile</p>
-
-  <!-- ===== Support Action Bar ===== -->
-  <div class="support-bar">
-    <span>Need help?</span>
-    <div class="support-links">
-      <a href="mailto:support@net365co.com?subject=Recharge%20Support%20Issue">✉️ Email Support</a>
-      <span>•</span>
-      <a href="#" onclick="toggleChat(); return false;">💬 Live Chat</a>
+  <div class="topbar-actions">
+    <div class="wallet-chip" id="walletChip" onclick="showView('wallet')">
+      <i class="fas fa-wallet"></i>
+      <span id="walletChipValue">₦0.00</span>
     </div>
+    <button class="avatar-btn" onclick="openSheet('supportSheet')" aria-label="Support">
+      <i class="fas fa-headset"></i>
+    </button>
+    <button class="avatar-btn" id="avatarBtn" onclick="onAvatarTap()" aria-label="Account">
+      <i class="fas fa-user"></i>
+    </button>
   </div>
+</header>
 
-  <!-- ===== STEP 1: Phone & Country ===== -->
-  <div class="form-group">
-    <label>📱 Phone Number</label>
-    <input type="tel" id="phoneInput" placeholder="Enter phone number (e.g. 08012345678)" 
-           oninput="autoDetectOnInput()" autofocus />
-  </div>
+<main class="app-view">
 
-  <!-- Country override — a local-format number (leading 0, no country code,
-       e.g. a Ghana number like 0241234567) can't be told apart from a
-       Nigerian one by its digits alone, so this lets a user correct the
-       guess directly. Defaults to Auto so nobody has to think about it
-       unless the guess is actually wrong. Also fixes currency/payment
-       provider selection, since both are driven by this same country value. -->
-  <div class="form-group" style="margin-top:-6px;">
-    <label style="font-size:11px; color:#64748b; display:flex; align-items:center; gap:4px;">
-      🌍 Not in Nigeria? Select your country
-    </label>
-    <select id="countryOverrideSelect" onchange="setManualCountry(this.value)" style="min-height:40px; font-size:13px;">
-      <option value="">Auto-detect from number</option>
-      <option value="NG">🇳🇬 Nigeria</option>
-      <option value="GH">🇬🇭 Ghana</option>
-      <option value="KE">🇰🇪 Kenya</option>
-      <option value="UG">🇺🇬 Uganda</option>
-      <option value="TZ">🇹🇿 Tanzania</option>
-      <option value="ZA">🇿🇦 South Africa</option>
-      <option value="US">🇺🇸 United States</option>
-      <option value="GB">🇬🇧 United Kingdom</option>
-      <option value="IN">🇮🇳 India</option>
-    </select>
-  </div>
+  <!-- ============================================================
+       VIEW: HOME
+       ============================================================ -->
+  <section class="view active" id="view-home">
 
-  <!-- Smart Operator Detection -->
-  <div class="detected-operator" id="detectedOperator">
-    <span class="icon" id="detectIcon">📡</span>
-    <div class="info">
-      <div class="name" id="detectName">Ready to detect</div>
-      <div class="country" id="detectCountry">Enter a mobile number</div>
+    <div class="qa-scroll">
+      <button class="qa-item" onclick="openSheet('addMoneyModal')">
+        <div class="qa-icon"><i class="fas fa-plus"></i></div>
+        <span class="qa-label">Add<br>Money</span>
+      </button>
+      <button class="qa-item" onclick="showView('utilities')">
+        <div class="qa-icon"><i class="fas fa-bolt"></i></div>
+        <span class="qa-label">Pay<br>Utility</span>
+      </button>
+      <button class="qa-item" onclick="showView('wallet')">
+        <div class="qa-icon"><i class="fas fa-paper-plane"></i></div>
+        <span class="qa-label">Send<br>Money</span>
+      </button>
+      <button class="qa-item" onclick="openSheet('referralSheet')">
+        <div class="qa-icon"><i class="fas fa-user-plus"></i></div>
+        <span class="qa-label">Refer<br>& Earn</span>
+      </button>
+      <button class="qa-item" onclick="window.location.href='/scheduler'">
+        <div class="qa-icon"><i class="fas fa-calendar-check"></i></div>
+        <span class="qa-label">Schedule</span>
+      </button>
+      <button class="qa-item" onclick="window.location.href='/business'">
+        <div class="qa-icon"><i class="fas fa-briefcase"></i></div>
+        <span class="qa-label">Business</span>
+      </button>
     </div>
-    <span class="detect-pill" id="detectPill">AUTO</span>
-  </div>
-  <div class="manual-network" id="manualNetwork">
-    <div class="manual-network-head">
-      <div><strong>📶 Choose your network</strong><span>Automatic detection needs a little help.</span></div>
-      <button type="button" class="link-btn" onclick="loadManualOperators()">Refresh</button>
-    </div>
-    <select id="networkSelect" onchange="selectManualOperator(this.value)">
-      <option value="">Select network</option>
-    </select>
-    <div class="manual-hint">Your selection is used only for this recharge.</div>
-  </div>
 
-  <!-- ===== STEP 2: Amount ===== -->
-  <div class="form-group" style="margin-top:4px;">
-    <label>💰 Amount to Send</label>
-    <div class="amount-row">
-      <span class="currency-symbol" id="currencySymbol">₦</span>
-      <input type="number" id="amountInput" placeholder="Enter amount" step="1" min="1" 
-             oninput="updateBreakdown()" />
-    </div>
-    <div class="quick-amounts">
-      <button class="quick-amount-btn" onclick="setQuickAmount(100, event)">₦100</button>
-      <button class="quick-amount-btn" onclick="setQuickAmount(200, event)">₦200</button>
-      <button class="quick-amount-btn" onclick="setQuickAmount(500, event)">₦500</button>
-      <button class="quick-amount-btn" onclick="setQuickAmount(1000, event)">₦1,000</button>
-      <button class="quick-amount-btn" onclick="setQuickAmount(2000, event)">₦2,000</button>
-    </div>
-  </div>
+    <div class="card">
+      <div class="field">
+        <label class="field-label"><i class="fas fa-mobile-alt"></i> Phone Number</label>
+        <input type="tel" id="phoneInput" class="input" placeholder="08012345678" autocomplete="tel" oninput="onPhoneInput()" />
+      </div>
 
-  <!-- ===== Price Breakdown ===== -->
-  <div class="price-breakdown" id="priceBreakdown">
-    <div class="row">
-      <span>Airtime</span>
-      <span class="amount-value" id="breakdownAirtime">₦0.00</span>
-    </div>
-    <div class="row">
-      <span>Service Fee <span class="fee-badge">COT</span></span>
-      <span class="amount-value" id="breakdownFee">₦100.00</span>
-    </div>
-    <div class="row total">
-      <span>Total to Pay</span>
-      <span class="amount-value" id="breakdownTotal">₦100.00</span>
-    </div>
-  </div>
+      <div class="field" style="margin-top:-4px;">
+        <label class="field-label" style="text-transform:none; letter-spacing:0; font-size:11.5px; font-weight:600;">
+          <i class="fas fa-globe"></i> Not in Nigeria? Choose your country
+        </label>
+        <select id="countryOverrideSelect" class="input" onchange="setManualCountry(this.value)" style="padding:12px 14px; font-size:14px;">
+          <option value="">Auto-detect from number</option>
+          <option value="NG">🇳🇬 Nigeria</option>
+          <option value="GH">🇬🇭 Ghana</option>
+          <option value="KE">🇰🇪 Kenya</option>
+          <option value="UG">🇺🇬 Uganda</option>
+          <option value="TZ">🇹🇿 Tanzania</option>
+          <option value="ZA">🇿🇦 South Africa</option>
+          <option value="US">🇺🇸 United States</option>
+          <option value="GB">🇬🇧 United Kingdom</option>
+          <option value="IN">🇮🇳 India</option>
+        </select>
+      </div>
 
-  <!-- ===== Payment Method ===== -->
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
-    <span style="font-size:13px; color:#64748b;">💳 Auto-selected gateway</span>
-    <span class="payment-method-badge" id="paymentMethodBadge">💰 Paystack</span>
-  </div>
+      <div class="detect-card" id="detectCard">
+        <div class="detect-icon" id="detectIcon"><i class="fas fa-satellite-dish"></i></div>
+        <div class="detect-info">
+          <div class="detect-name" id="detectName">Ready to detect</div>
+          <div class="detect-sub" id="detectSub">Enter your number above</div>
+        </div>
+        <div class="detect-badge" id="detectBadge">AUTO</div>
+      </div>
 
-  <!-- ===== PAY BUTTON ===== -->
-  <button class="btn" id="payButton" onclick="initiatePayment()" disabled>
-    🔒 Pay Now
-    <span class="btn-sub" id="payButtonSub">₦0.00 total</span>
+      <div class="manual-block" id="manualBlock">
+        <div class="manual-head">
+          <strong><i class="fas fa-list" style="margin-right:6px;"></i>Choose Network</strong>
+          <button onclick="loadManualOperators()">Refresh</button>
+        </div>
+        <select id="networkSelect" class="input" onchange="selectManualOperator(this.value)">
+          <option value="">Select operator</option>
+        </select>
+      </div>
+
+      <div class="field" style="margin-top:20px;">
+        <label class="field-label"><i class="fas fa-coins"></i> Amount</label>
+        <div class="amount-wrap">
+          <span class="amount-symbol" id="amtSymbol">₦</span>
+          <input type="tel" id="amountInput" class="amount-input" placeholder="0" inputmode="decimal" oninput="onAmountInput()" />
+        </div>
+        <div class="quick-row">
+          <button class="quick-pill" onclick="setQuick(100,event)">₦100</button>
+          <button class="quick-pill" onclick="setQuick(200,event)">₦200</button>
+          <button class="quick-pill" onclick="setQuick(500,event)">₦500</button>
+          <button class="quick-pill" onclick="setQuick(1000,event)">₦1,000</button>
+          <button class="quick-pill" onclick="setQuick(2000,event)">₦2,000</button>
+          <button class="quick-pill" onclick="setQuick(5000,event)">₦5,000</button>
+        </div>
+      </div>
+
+      <div class="breakdown">
+        <div class="bd-row">
+          <span class="lbl">Recharge</span>
+          <span class="val" id="bdAirtime">₦0.00</span>
+        </div>
+        <div class="bd-row">
+          <span class="lbl">Service Fee <span class="fee-tag">COT</span></span>
+          <span class="val" id="bdFee">₦0.00</span>
+        </div>
+        <div class="bd-row total">
+          <span class="lbl">You Pay</span>
+          <span class="val" id="bdTotal">₦0.00</span>
+        </div>
+      </div>
+
+      <div class="pm-label"><i class="fas fa-credit-card"></i> Payment Method</div>
+      <div class="pm-grid" id="pmGrid">
+        <button class="pm-btn" data-method="paystack" onclick="selectPM('paystack')">
+          <div class="pm-icon"><i class="fas fa-bolt"></i></div>
+          <div>Paystack<small>NGN local</small></div>
+        </button>
+        <button class="pm-btn" data-method="stripe" onclick="selectPM('stripe')">
+          <div class="pm-icon"><i class="fas fa-credit-card"></i></div>
+          <div>Stripe<small>Card</small></div>
+        </button>
+        <button class="pm-btn" data-method="flutterwave" onclick="selectPM('flutterwave')">
+          <div class="pm-icon"><i class="fas fa-water"></i></div>
+          <div>Flutter<small>Africa</small></div>
+        </button>
+        <button class="pm-btn" data-method="wallet" onclick="selectPM('wallet')">
+          <div class="pm-icon"><i class="fas fa-wallet"></i></div>
+          <div>Wallet<small id="walletSub">Sign in</small></div>
+        </button>
+      </div>
+
+      <button class="btn-hero" id="payBtn" disabled onclick="openPaymentModal()">
+        <span id="payBtnLabel">Enter details</span>
+        <span class="btn-hint" id="payBtnHint">Complete the form to continue</span>
+      </button>
+    </div>
+
+    <div class="section-title">
+      Recent Activity
+      <a onclick="showView('transactions')">View all <i class="fas fa-arrow-right" style="font-size:10px;"></i></a>
+    </div>
+    <div class="tx-list" id="homeTxList">
+      <div class="empty-state">
+        <i class="fas fa-clock"></i>
+        <p>Sign in to see your transactions</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       VIEW: WALLET
+       ============================================================ -->
+  <section class="view" id="view-wallet">
+    <div class="balance-hero">
+      <div class="balance-label">
+        <i class="fas fa-shield-halved"></i>
+        <span id="walletLabelText">Available Balance</span>
+      </div>
+      <div class="balance-value" id="walletBalanceValue">₦0.00</div>
+      <div class="balance-currency" id="walletCurrencyLabel">Nigerian Naira</div>
+      <div class="balance-actions">
+        <button class="btn-secondary" onclick="openSheet('addMoneyModal')">
+          <i class="fas fa-plus" style="margin-right:6px;"></i>Add Money
+        </button>
+        <button class="btn-ghost" style="flex:1;" onclick="openSheet('sendMoneyModal')">
+          <i class="fas fa-paper-plane" style="margin-right:6px;"></i>Send
+        </button>
+      </div>
+    </div>
+
+    <div class="cur-chips" id="walletChips">
+      <button class="cur-chip active" data-cur="NGN" onclick="selectCurrency('NGN', event)">₦ NGN</button>
+      <button class="cur-chip" data-cur="USD" onclick="selectCurrency('USD', event)">$ USD</button>
+      <button class="cur-chip" data-cur="GBP" onclick="selectCurrency('GBP', event)">£ GBP</button>
+      <button class="cur-chip" data-cur="EUR" onclick="selectCurrency('EUR', event)">€ EUR</button>
+      <button class="cur-chip" data-cur="GHS" onclick="selectCurrency('GHS', event)">₵ GHS</button>
+      <button class="cur-chip" data-cur="KES" onclick="selectCurrency('KES', event)">KSh KES</button>
+      <button class="cur-chip" data-cur="ZAR" onclick="selectCurrency('ZAR', event)">R ZAR</button>
+    </div>
+
+    <div class="section-title">Wallet Activity</div>
+    <div class="tx-list" id="walletTxList">
+      <div class="empty-state">
+        <i class="fas fa-receipt"></i>
+        <p>No wallet activity yet</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       VIEW: TRANSACTIONS
+       ============================================================ -->
+  <section class="view" id="view-transactions">
+    <div class="section-title" style="margin-top:0;">
+      All Activity
+      <a onclick="exportTransactionsCSV()"><i class="fas fa-download"></i> CSV</a>
+    </div>
+
+    <div class="quick-row" style="margin-bottom:6px;">
+      <button class="quick-pill active" data-filter="all" onclick="filterTx('all',event)">All</button>
+      <button class="quick-pill" data-filter="topup" onclick="filterTx('topup',event)">Top-ups</button>
+      <button class="quick-pill" data-filter="utility" onclick="filterTx('utility',event)">Utilities</button>
+      <button class="quick-pill" data-filter="wallet_funding" onclick="filterTx('wallet_funding',event)">Funding</button>
+      <button class="quick-pill" data-filter="transfer" onclick="filterTx('transfer',event)">Transfers</button>
+      <button class="quick-pill" data-filter="reward" onclick="filterTx('reward',event)">Rewards</button>
+    </div>
+
+    <input type="text" id="txSearch" class="input" placeholder="Search by reference, phone, or amount" oninput="renderTransactions()" style="margin-bottom:14px;" />
+
+    <div class="tx-list" id="fullTxList">
+      <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <p>No transactions to show</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       VIEW: UTILITIES
+       ============================================================ -->
+  <section class="view" id="view-utilities">
+    <div class="biller-group">
+      <div class="biller-head"><i class="fas fa-bolt"></i> Electricity</div>
+      <div class="biller-grid" id="electricityGrid"></div>
+    </div>
+    <div class="biller-group">
+      <div class="biller-head"><i class="fas fa-tv"></i> Cable TV</div>
+      <div class="biller-grid" id="cableGrid"></div>
+    </div>
+    <div class="biller-group">
+      <div class="biller-head"><i class="fas fa-mobile-alt"></i> Airtime & Data</div>
+      <div class="biller-grid" id="airtimeGrid"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ BOTTOM NAV ============ -->
+<nav class="bottom-nav">
+  <button class="nav-item active" data-view="home" onclick="showView('home')">
+    <span class="nav-icon"><i class="fas fa-house"></i></span>
+    <span class="nav-label">Home</span>
   </button>
+  <button class="nav-item" data-view="wallet" onclick="showView('wallet')">
+    <span class="nav-icon"><i class="fas fa-wallet"></i></span>
+    <span class="nav-label">Wallet</span>
+  </button>
+  <button class="nav-item" data-view="transactions" onclick="showView('transactions')">
+    <span class="nav-icon"><i class="fas fa-chart-simple"></i></span>
+    <span class="nav-label">Activity</span>
+  </button>
+  <button class="nav-item" data-view="utilities" onclick="showView('utilities')">
+    <span class="nav-icon"><i class="fas fa-bolt"></i></span>
+    <span class="nav-label">Utilities</span>
+  </button>
+</nav>
 
-  <!-- ===== Status Messages ===== -->
-  <div id="statusMessage" class="status"></div>
-
-  <!-- ===== Small Footer ===== -->
-  <div style="margin-top:20px; text-align:center; font-size:12px; color:#94a3b8; border-top:1px solid #f1f5f9; padding-top:16px;">
-    🔒 Secure • Instant • Support: <a href="mailto:support@net365co.com" style="color:#6366f1; text-decoration:none;">support@net365co.com</a>
-    <br><span id="envBadge" style="background:#f1f5f9; padding:2px 10px; border-radius:12px; font-size:11px; margin-top:6px; display:inline-block;">sandbox</span>
+<!-- ============ SUPPORT SHEET ============ -->
+<div class="sheet-backdrop" id="supportSheet" onclick="if(event.target===this) closeSheet('supportSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('supportSheet')"><i class="fas fa-times"></i></button>
+      <div class="sheet-title">How can we help?</div>
+      <div class="sheet-sub">We typically reply within a few minutes.</div>
+    </div>
+    <div class="user-menu-list">
+      <button class="um-item" onclick="closeSheet('supportSheet'); openLiveChat();">
+        <i class="fas fa-comments"></i> Live Chat
+      </button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); window.location.href='mailto:support@net365co.com?subject=Net365%20Support';">
+        <i class="fas fa-envelope"></i> Email Support
+      </button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); window.open('https://wa.me/2348150450890','_blank');">
+        <i class="fab fa-whatsapp"></i> WhatsApp
+      </button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); toast('Help Center coming soon','info');">
+        <i class="fas fa-book-open"></i> Help Center
+      </button>
+    </div>
   </div>
 </div>
 
-<!-- ===== FLOATING CHAT BUTTON & WIDGET ===== -->
-<button class="chat-fab" onclick="toggleChat()" title="Chat with Support">💬</button>
+<!-- ============ BILLER SHEET (In-app utilities) ============ -->
+<div class="sheet-backdrop" id="billerSheet" onclick="if(event.target===this) closeSheet('billerSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('billerSheet')"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="billerSheetTitle">Pay Bill</div>
+      <div class="sheet-sub" id="billerSheetSub">Enter your account details</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><i class="fas fa-hashtag"></i> <span id="billerAccountLabel">Meter / Account Number</span></label>
+      <input type="tel" id="billerAccount" class="input" placeholder="Enter account number" inputmode="numeric" />
+    </div>
+
+    <button class="btn-ghost" id="billerValidateBtn" onclick="validateBillerAccount()" style="margin-bottom:14px;">
+      <i class="fas fa-check-circle" style="margin-right:6px;"></i> Validate Account
+    </button>
+
+    <div id="billerCustomerBox" style="display:none;padding:14px 16px;border-radius:14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.30);margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:0.10em;color:var(--success);text-transform:uppercase;">Account Verified</div>
+      <div style="font-size:15px;font-weight:800;color:#fff;margin-top:4px;" id="billerCustomerName">—</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><i class="fas fa-coins"></i> Amount</label>
+      <div class="amount-wrap">
+        <span class="amount-symbol">₦</span>
+        <input type="tel" id="billerAmount" class="amount-input" placeholder="0" inputmode="decimal" />
+      </div>
+    </div>
+
+    <button class="btn-hero" id="billerPayBtn" onclick="payBiller()">
+      <span id="billerPayLabel">Pay Bill</span>
+      <span class="btn-hint">Amount will be debited from your Net365 wallet</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ PAYMENT MODAL (Option A — two-step) ============ -->
+<div class="sheet-backdrop" id="paymentModal" onclick="if(event.target===this) closePaymentModal()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closePaymentModal()"><i class="fas fa-times"></i></button>
+      <div class="sheet-title">Review your payment</div>
+      <div class="sheet-sub">Confirm the details before we take you to the gateway.</div>
+    </div>
+
+    <div class="breakdown" style="margin-top:0;">
+      <div class="bd-row">
+        <span class="lbl">Operator</span>
+        <span class="val" id="modalOperator" style="font-size:15px;">—</span>
+      </div>
+      <div class="bd-row">
+        <span class="lbl">Phone</span>
+        <span class="val" id="modalPhone" style="font-size:15px;">—</span>
+      </div>
+      <div class="bd-row">
+        <span class="lbl">Airtime</span>
+        <span class="val" id="modalAirtime">₦0.00</span>
+      </div>
+      <div class="bd-row">
+        <span class="lbl">Service Fee</span>
+        <span class="val" id="modalFee">₦0.00</span>
+      </div>
+      <div class="bd-row total">
+        <span class="lbl">Total</span>
+        <span class="val" id="modalTotal">₦0.00</span>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:var(--text-2);margin:14px 2px 0;font-weight:600;">
+      <i class="fas fa-shield-halved" style="color:var(--cyan);margin-right:6px;"></i>
+      You'll be redirected to <span id="modalProvider" style="color:#fff;font-weight:800;">Paystack</span> to complete payment securely.
+    </div>
+
+    <button class="btn-hero" id="confirmPayBtn" onclick="processPayment()">
+      <span>Confirm & Pay</span>
+      <span class="btn-hint">Opens the payment gateway</span>
+    </button>
+    <div id="modalStatus" style="margin-top:12px;font-size:13px;color:var(--text-2);text-align:center;font-weight:600;"></div>
+  </div>
+</div>
+
+<!-- ============ ADD MONEY ============ -->
+<div class="sheet-backdrop" id="addMoneyModal" onclick="if(event.target===this) closeSheet('addMoneyModal')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('addMoneyModal')"><i class="fas fa-times"></i></button>
+      <div class="sheet-title">Add Money to Wallet</div>
+      <div class="sheet-sub">Fund your Net365 wallet to pay for recharges, utilities and transfers.</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><i class="fas fa-coins"></i> Wallet Currency</label>
+      <select id="addMoneyCurrency" class="input">
+        <option value="NGN">₦ Nigerian Naira (NGN)</option>
+        <option value="USD">$ US Dollar (USD)</option>
+        <option value="GBP">£ Pound Sterling (GBP)</option>
+        <option value="EUR">€ Euro (EUR)</option>
+        <option value="GHS">₵ Ghanaian Cedi (GHS)</option>
+        <option value="KES">KSh Kenyan Shilling (KES)</option>
+        <option value="ZAR">R South African Rand (ZAR)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><i class="fas fa-money-bill-wave"></i> Amount</label>
+      <div class="amount-wrap">
+        <span class="amount-symbol" id="addMoneySymbol">₦</span>
+        <input type="tel" id="addMoneyAmount" class="amount-input" placeholder="0" inputmode="decimal" />
+      </div>
+    </div>
+
+    <button class="btn-hero" onclick="submitAddMoney()">
+      <span id="addMoneyBtnLabel">Continue to Checkout</span>
+      <span class="btn-hint">You'll be redirected to the payment gateway</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ SEND MONEY ============ -->
+<div class="sheet-backdrop" id="sendMoneyModal" onclick="if(event.target===this) closeSheet('sendMoneyModal')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('sendMoneyModal')"><i class="fas fa-times"></i></button>
+      <div class="sheet-title">Send Money</div>
+      <div class="sheet-sub">Transfer funds to another Net365 user by email or phone.</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><i class="fas fa-user"></i> Recipient</label>
+      <input type="text" id="transferRecipient" class="input" placeholder="email@example.com or 08012345678" />
+    </div>
+
+    <div class="field">
+      <label class="field-label"><i class="fas fa-coins"></i> Amount</label>
+      <div class="amount-wrap">
+        <span class="amount-symbol" id="transferSymbol">₦</span>
+        <input type="tel" id="transferAmount" class="amount-input" placeholder="0" inputmode="decimal" />
+      </div>
+    </div>
+
+    <button class="btn-hero" onclick="submitTransfer()">
+      <span>Send Money</span>
+      <span class="btn-hint">Instant wallet-to-wallet transfer</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ AUTH MODAL ============ -->
+<div class="sheet-backdrop" id="authModal" onclick="if(event.target===this) closeSheet('authModal')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('authModal')"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="authTitle">Welcome back</div>
+      <div class="sheet-sub" id="authSub">Sign in to your Net365 account</div>
+    </div>
+
+    <div class="field" id="authNameField" style="display:none;">
+      <label class="field-label"><i class="fas fa-user"></i> Full Name</label>
+      <input type="text" id="authName" class="input" placeholder="Your full name" autocomplete="name" />
+    </div>
+
+    <div class="field">
+      <label class="field-label"><i class="fas fa-envelope"></i> Email</label>
+      <input type="email" id="authEmail" class="input" placeholder="you@example.com" autocomplete="email" />
+    </div>
+
+    <div class="field">
+      <label class="field-label"><i class="fas fa-lock"></i> Password</label>
+      <input type="password" id="authPassword" class="input" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+
+    <div id="authError" style="display:none;padding:12px;border-radius:12px;background:rgba(244,63,94,0.10);border:1px solid rgba(244,63,94,0.3);color:#FCA5A5;font-size:13px;margin-bottom:14px;font-weight:500;"></div>
+
+    <button class="btn-hero" id="authSubmitBtn" onclick="submitAuth()">
+      <span id="authSubmitLabel">Sign In</span>
+    </button>
+
+    <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-2);">
+      <span id="authSwitchText">New to Net365?</span>
+      <button onclick="toggleAuthMode()" style="background:none;border:none;color:var(--violet-bright);font-family:inherit;font-weight:800;cursor:pointer;font-size:13px;padding:0;margin-left:4px;">
+        <span id="authSwitchAction">Create an account</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ USER MENU ============ -->
+<div class="sheet-backdrop" id="userMenuModal" onclick="if(event.target===this) closeSheet('userMenuModal')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <div class="sheet-title" id="userMenuName">Hello 👋</div>
+      <div class="sheet-sub" id="userMenuEmail">Welcome to Net365</div>
+      <button class="sheet-close" onclick="closeSheet('userMenuModal')"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="user-menu-list">
+      <button class="um-item" id="umAuthToggle" onclick="fromUserMenuAuth()">
+        <i class="fas fa-user-gear"></i>
+        <span id="umAuthLabel">Account Settings</span>
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); showView('wallet');">
+        <i class="fas fa-wallet"></i> My Wallet
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); showView('transactions');">
+        <i class="fas fa-list"></i> Transaction History
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); openSheet('referralSheet');">
+        <i class="fas fa-user-plus"></i> Refer & Earn
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/scheduler';">
+        <i class="fas fa-calendar-check"></i> Scheduled Payments
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/business';">
+        <i class="fas fa-briefcase"></i> Business Tools
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/';">
+        <i class="fas fa-desktop"></i> Full Platform
+      </button>
+      <button class="um-item danger" id="umLogout" style="display:none;" onclick="doLogout()">
+        <i class="fas fa-right-from-bracket"></i> Sign Out
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ REFERRAL ============ -->
+<div class="sheet-backdrop" id="referralSheet" onclick="if(event.target===this) closeSheet('referralSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('referralSheet')"><i class="fas fa-times"></i></button>
+      <div class="sheet-title">Refer & Earn 🎁</div>
+      <div class="sheet-sub">Share your referral code and earn rewards when your friends recharge.</div>
+    </div>
+    <div style="padding:20px;border-radius:20px;background:rgba(124,58,237,0.10);border:1px solid var(--border-strong);text-align:center;">
+      <div style="font-size:11px;color:var(--text-2);font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px;">Your Referral Code</div>
+      <div style="font-size:32px;font-weight:900;letter-spacing:0.05em;color:#fff;" id="referralCodeDisplay">NET-XXXXX</div>
+    </div>
+    <button class="btn-hero" style="margin-top:18px;" onclick="shareReferral()">
+      <span><i class="fas fa-share-nodes" style="margin-right:8px;"></i>Share Invite Link</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ LIVE CHAT ============ -->
+<button class="chat-fab" id="chatFab" onclick="openLiveChat()" title="Chat with Support">
+  <i class="fas fa-comment-dots"></i>
+</button>
 
 <div class="chat-widget" id="chatWidget">
   <div class="chat-header">
     <div>
-      <h3><span class="status-dot"></span> Net365 Support</h3>
-      <span style="font-size:11px; opacity:0.8;">We typically reply in a few minutes</span>
+      <h3 style="margin:0;font-size:15px;font-weight:800;">
+        <span style="display:inline-block;width:7px;height:7px;background:#22C55E;border-radius:50%;margin-right:7px;"></span>
+        Net365 Support
+      </h3>
+      <div style="font-size:11px;opacity:0.75;margin-top:2px;">Typically replies in minutes</div>
     </div>
-    <button onclick="toggleChat()" style="background:none; border:none; color:white; font-size:18px; cursor:pointer;">✕</button>
+    <button onclick="closeLiveChat()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:4px;">
+      <i class="fas fa-times"></i>
+    </button>
   </div>
   <div class="chat-body" id="chatBody">
-    <div class="chat-msg support">
-      👋 Hello! Welcome to Net365 Support. How can we help you with your transaction today?
-    </div>
+    <div class="chat-msg support">👋 Hi! Welcome to Net365 Support. How can we help you today?</div>
   </div>
   <div class="chat-footer">
-    <input type="text" id="chatInput" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendChatMessage()" />
-    <button onclick="sendChatMessage()">Send</button>
+    <input type="text" id="chatInput" placeholder="Type a message…" onkeypress="if(event.key==='Enter') sendChatMessage()" />
+    <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
   </div>
 </div>
 
-<!-- ===== PAYMENT MODAL ===== -->
-<div class="modal" id="paymentModal">
-  <div class="modal-content">
-    <button class="modal-close" onclick="closePaymentModal()">✕</button>
-    <h2 style="margin-bottom:8px;">💳 Complete Payment</h2>
-    <p style="color:#64748b; font-size:14px; margin-bottom:16px;">Review your recharge details</p>
-    <div class="payment-details">
-      <p><strong>Operator:</strong> <span id="modalOperator">-</span></p>
-      <p><strong>Phone:</strong> <span id="modalPhone">-</span></p>
-      <p><strong>Airtime:</strong> <span class="amount" id="modalAirtime">₦0</span></p>
-      <p><strong>Fee:</strong> <span id="modalFee">₦100</span></p>
-      <p style="font-size:20px; font-weight:700; margin-top:8px; border-top:1px solid #e2e8f0; padding-top:12px;">
-        Total: <span id="modalTotal" style="color:#4f46e5;">₦0</span>
-      </p>
-    </div>
-    <button class="btn" id="confirmPayBtn" onclick="processPayment()">
-      🔒 Confirm & Pay
-    </button>
-    <div id="modalStatus" style="margin-top:12px;"></div>
-  </div>
-</div>
+<div id="toastWrap"></div>
 
-<!-- ===== TOAST CONTAINER ===== -->
-<div id="toastContainer"></div>
-
-<!-- ===== MOBILE BOTTOM NAVIGATION ===== -->
-<div id="mobileNav">
-  <div class="nav-items">
-    <a href="/"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></a>
-    <a href="#" onclick="toggleChat(); return false;"><span class="nav-icon">💬</span><span class="nav-label">Support</span></a>
-    <a href="#" onclick="document.querySelector('.card').scrollIntoView({behavior:'smooth'})"><span class="nav-icon">📱</span><span class="nav-label">Recharge</span></a>
-    <a href="#" onclick="window.location.reload()"><span class="nav-icon">🔄</span><span class="nav-label">Refresh</span></a>
-  </div>
-</div>
-
-<!-- ================================ -->
-<!-- ===== JAVASCRIPT LOGIC ===== -->
-<!-- ================================ -->
 <script>
-// CONFIGURATION
+// ============================================================
+// STATE
+// ============================================================
 const API_BASE = '/api';
+
 const SERVICE_FEES = {
-  NGN: 100,  // ₦100 COT fee
-  USD: 0.25, // $0.25 COT fee
-  GBP: 0.20,
-  GHS: 2.00,
-  KES: 25.00,
-  ZAR: 5.00,
-  EUR: 0.25
+  NGN: 100, USD: 0.25, GBP: 0.20, EUR: 0.25,
+  GHS: 2.00, KES: 25.00, ZAR: 5.00
+};
+const CURRENCY_SYMBOLS = {
+  NGN:'₦', USD:'$', GBP:'£', EUR:'€', GHS:'₵', KES:'KSh', ZAR:'R'
+};
+const COUNTRY_CURRENCY = {
+  NG:'NGN', GH:'GHS', KE:'KES', ZA:'ZAR',
+  US:'USD', CA:'CAD', GB:'GBP',
+  FR:'EUR', DE:'EUR', IT:'EUR', ES:'EUR', NL:'EUR', IE:'EUR', PT:'EUR',
+  AU:'AUD', NZ:'NZD', JP:'JPY', SG:'SGD', IN:'INR'
+};
+const PREFIX_COUNTRY = {
+  '234':'NG','233':'GH','254':'KE','256':'UG','255':'TZ','27':'ZA',
+  '1':'US','44':'GB','91':'IN'
 };
 
-let currentCurrency = 'NGN'; 
+// Manual override — if user selects a country explicitly, it always wins
+let manualCountryOverride = null;
+
+let currentCountry = 'NG';
+let currentCurrency = 'NGN';
+let currentSymbol = '₦';
 let detectedOperator = null;
-let selectedProvider = 'paystack';
+let selectedOperator = null;
+let selectedPaymentMethod = 'paystack';
+let currentUser = null;
+let walletBalances = {};
+let allTransactions = [];
+let txFilter = 'all';
+let activeWalletCurrency = 'NGN';
+let isAuthRegisterMode = false;
 let pendingPayment = null;
 let isProcessing = false;
 
-function getServiceFee(currency = 'NGN') {
-  return SERVICE_FEES[currency] !== undefined ? SERVICE_FEES[currency] : (SERVICE_FEES.NGN || 100);
+// ============================================================
+// VIEW MANAGER
+// ============================================================
+function showView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const target = document.getElementById('view-' + name);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.view === name);
+  });
+  window.scrollTo({top:0, behavior:'smooth'});
+  if (name === 'wallet') refreshWalletView();
+  if (name === 'transactions') renderTransactions();
 }
 
-const countryCurrencyMap = {
-  'NG':'NGN','US':'USD','GB':'GBP','GH':'GHS','KE':'KES','ZA':'ZAR',
-  'IN':'INR','CA':'CAD','AU':'AUD','EU':'EUR','EG':'EGP','SA':'SAR',
-  'AE':'AED','PK':'PKR','BD':'BDT','ID':'IDR'
-};
-
-const currencySymbols = { 
-  'NGN':'₦','USD':'$','GBP':'£','GHS':'₵','KES':'KSh','ZAR':'R',
-  'INR':'₹','CAD':'C$','AUD':'A$','EUR':'€' 
-};
-
-function getCurrencyForCountry(code) {
-  return countryCurrencyMap[code.toUpperCase()] || 'NGN';
+// ============================================================
+// SHEETS
+// ============================================================
+function openSheet(id){
+  const el = document.getElementById(id);
+  if (el) el.classList.add('show');
+}
+function closeSheet(id){
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('show');
 }
 
-function getCurrencySymbol(code) {
-  return currencySymbols[code] || code || '₦';
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, type='info'){
+  const wrap = document.getElementById('toastWrap');
+  const icons = {success:'fa-circle-check',error:'fa-circle-xmark',warning:'fa-triangle-exclamation',info:'fa-circle-info'};
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<i class="fas ${icons[type]||icons.info}"></i><span>${msg}</span>`;
+  wrap.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity .3s, transform .3s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(-10px)';
+    setTimeout(() => el.remove(), 320);
+  }, 4200);
 }
 
-// BUG FIXED: this used to check `startsWith('0')` → Nigeria FIRST, before
-// any other country code. That meant any number typed in local format with
-// a leading 0 — which is how most people naturally type their OWN
-// country's number — was misdetected as Nigerian, even Ghana (0241234567)
-// or Kenya (0712345678). Explicit international codes are now checked
-// first since they're unambiguous; leading-0 is still used as a fallback
-// guess, but only once every explicit code has been ruled out, and it's
-// now paired with a manual country override (below) since a local-format
-// number can never be fully disambiguated from the digits alone — a 10
-// digit number starting with 0 could just as easily be Ghanaian as
-// Nigerian. If manualCountryOverride is set (user picked a country
-// themselves), it always wins over any guess.
-let manualCountryOverride = null;
-
-function detectCountryFromPhone(phone) {
+// ============================================================
+// COUNTRY DETECTION
+// Explicit international codes first, leading-0 as fallback,
+// manual override always wins.
+// ============================================================
+function detectCountryFromPhone(phone){
   if (manualCountryOverride) return manualCountryOverride;
-  const cleaned = phone.replace(/\s/g, '').replace(/^\+/, '');
-  // Explicit international codes — unambiguous, checked first.
-  if (cleaned.startsWith('234')) return 'NG';
-  if (cleaned.startsWith('233')) return 'GH';
-  if (cleaned.startsWith('254')) return 'KE';
-  if (cleaned.startsWith('256')) return 'UG';
-  if (cleaned.startsWith('255')) return 'TZ';
-  if (cleaned.startsWith('27')) return 'ZA';
-  if (cleaned.startsWith('44')) return 'GB';
-  if (cleaned.startsWith('91')) return 'IN';
-  if (cleaned.startsWith('1')) return 'US';
-  // Ambiguous local format (leading 0, no country code) — can't be
-  // determined from the digits alone. Default to Nigeria (majority of
-  // current users) but this is exactly what the country override exists
-  // to correct.
-  if (cleaned.startsWith('0')) return 'NG';
+  let digits = String(phone||'').replace(/\D/g,'');
+  if (!digits) return null;
+  if (digits.startsWith('234')) return 'NG';
+  if (digits.startsWith('233')) return 'GH';
+  if (digits.startsWith('254')) return 'KE';
+  if (digits.startsWith('256')) return 'UG';
+  if (digits.startsWith('255')) return 'TZ';
+  if (digits.startsWith('27')) return 'ZA';
+  if (digits.startsWith('44')) return 'GB';
+  if (digits.startsWith('91')) return 'IN';
+  if (digits.startsWith('1')) return 'US';
+  if (digits.startsWith('0')) return 'NG';
   return 'NG';
 }
 
-function setManualCountry(code) {
+function setManualCountry(code){
   manualCountryOverride = code || null;
   const phone = document.getElementById('phoneInput').value.trim();
-  if (phone.length >= 5) autoDetectOnInput();
-}
-
-async function updatePaymentRecommendation(country) {
-  try {
-    const response = await fetch(`${API_BASE}/payment/preferences`, { headers: { 'X-Country-Code': country || 'NG' } });
-    const data = await response.json();
-    if (data.success) {
-      selectedProvider = data.recommended_provider || selectedProvider;
-      currentCurrency = data.currency || getCurrencyForCountry(country);
-      const badge = document.getElementById('paymentMethodBadge');
-      const labels = { paystack:'💰 Paystack', flutterwave:'🌊 Flutterwave', stripe:'💳 Stripe', wallet:'👛 NET365 Wallet' };
-      if (badge) badge.textContent = `${labels[selectedProvider] || selectedProvider} · ${currentCurrency}`;
-      document.getElementById('currencySymbol').textContent = getCurrencySymbol(currentCurrency);
-      updateBreakdown();
-    }
-  } catch (e) { console.warn('Payment recommendation unavailable', e); }
-}
-
-// CHAT SUPPORT WIDGET — connected to NET365 Flask backend
-let chatConversationId=null; let chatPollTimer=null;
-async function ensureChatSession(){if(chatConversationId)return chatConversationId;try{const phone=document.getElementById('phoneInput')?.value?.trim()||'';const res=await fetch(`${API_BASE}/chat/session`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,country_code:detectCountryFromPhone(phone)})});const data=await res.json();if(data.success){chatConversationId=data.conversation_id;return chatConversationId;}}catch(e){console.warn('Chat session failed',e);}return null;}
-async function loadChatMessages(){if(!chatConversationId)return;try{const res=await fetch(`${API_BASE}/chat/messages?conversation_id=${chatConversationId}`);const data=await res.json();if(!data.success)return;const body=document.getElementById('chatBody');body.innerHTML='';(data.messages||[]).forEach(msg=>{const el=document.createElement('div');el.className=`chat-msg ${msg.sender_type==='customer'?'user':'support'}`;el.textContent=msg.message;body.appendChild(el);});if(!data.messages?.length)body.innerHTML='<div class="chat-msg support">Hi! 👋 Tell us what you need help with and a NET365 agent will respond.</div>';body.scrollTop=body.scrollHeight;}catch(e){console.warn('Chat refresh failed',e);}}
-async function toggleChat(){const widget=document.getElementById('chatWidget');const opening=!widget.classList.contains('show');widget.classList.toggle('show');if(opening){await ensureChatSession();await loadChatMessages();clearInterval(chatPollTimer);chatPollTimer=setInterval(loadChatMessages,3000);}else{clearInterval(chatPollTimer);}}
-async function sendChatMessage(){const input=document.getElementById('chatInput');const text=input.value.trim();if(!text)return;const cid=await ensureChatSession();if(!cid){showToast('Unable to connect to support. Please try again.','error');return;}try{const res=await fetch(`${API_BASE}/chat/messages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conversation_id:cid,message:text})});const data=await res.json();if(!data.success)throw new Error(data.error||'Message failed');input.value='';await loadChatMessages();}catch(e){showToast(e.message,'error');}}
-
-// TOAST NOTIFICATIONS
-function showToast(message, type = 'info') {
-  const container = document.getElementById('toastContainer');
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-  toast.innerHTML = `${icons[type] || 'ℹ️'} ${message}`;
-  container.appendChild(toast);
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(100%)';
-    toast.style.transition = 'all 0.3s ease';
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
-}
-
-// DARK MODE TOGGLE
-function toggleDarkMode() {
-  document.body.classList.toggle('dark-mode');
-  const isDark = document.body.classList.contains('dark-mode');
-  localStorage.setItem('darkMode', isDark);
-  document.getElementById('darkModeBtn').textContent = isDark ? '☀️' : '🌙';
-}
-if (localStorage.getItem('darkMode') === 'true') {
-  document.body.classList.add('dark-mode');
-  document.getElementById('darkModeBtn').textContent = '☀️';
-}
-
-// AUTO-DETECT OPERATOR
-let detectTimeout = null;
-
-async function autoDetectOnInput() {
-  const phone = document.getElementById('phoneInput').value.trim(); const detectDiv=document.getElementById('detectedOperator'); const manual=document.getElementById('manualNetwork');
-  if(phone.length<5){detectDiv.classList.remove('show');manual.classList.remove('show');detectedOperator=null;return;}
-  detectDiv.classList.add('show'); document.getElementById('detectName').textContent='Detecting…'; document.getElementById('detectIcon').textContent='⏳'; document.getElementById('detectPill').textContent='CHECKING';
-  clearTimeout(detectTimeout); detectTimeout=setTimeout(async()=>{
-    const countryCode=detectCountryFromPhone(phone);
-    try{
-      const response=await fetch(`${API_BASE}/operators/auto-detect?phone=${encodeURIComponent(phone)}&country_code=${encodeURIComponent(countryCode)}`); const result=await response.json(); const op=result.operator||(result.operatorId?result:null);
-      if(response.ok&&result.success&&op&&(op.operatorId||op.id)){
-        detectedOperator=op; detectedOperator.operatorId=op.operatorId||op.id;
-        document.getElementById('detectName').textContent=op.name||'Network detected'; document.getElementById('detectIcon').textContent='✅'; document.getElementById('detectCountry').textContent=`${op.countryName||countryCode} • ${result.source==='prefix_fallback'?'Prefix fallback':'Auto-detected'}`; document.getElementById('detectPill').textContent=result.source==='prefix_fallback'?'FALLBACK':'AUTO'; manual.classList.remove('show');
-        await updatePaymentRecommendation(countryCode); updatePaymentMethod(); return;
-      }
-    }catch(e){console.warn('Operator detection failed',e);}
-    detectedOperator=null; document.getElementById('detectName').textContent='Network not detected'; document.getElementById('detectIcon').textContent='⚠️'; document.getElementById('detectCountry').textContent='Please select your network below'; document.getElementById('detectPill').textContent='MANUAL'; manual.classList.add('show'); await loadManualOperators(countryCode); await updatePaymentRecommendation(countryCode); updatePaymentMethod();
-  },450);
-}
-
-async function loadManualOperators(countryCode=null){
-  const phone=document.getElementById('phoneInput').value.trim(); countryCode=countryCode||detectCountryFromPhone(phone); const select=document.getElementById('networkSelect'); if(!select)return; select.innerHTML='<option value="">Loading networks…</option>';
-  try{const res=await fetch(`${API_BASE}/operators/country/${encodeURIComponent(countryCode)}`); const data=await res.json(); const operators=Array.isArray(data)?data:(data.operators||[]); select.innerHTML='<option value="">Select network</option>'; operators.forEach(op=>{const id=op.operatorId||op.id;if(!id)return;const o=document.createElement('option');o.value=id;o.textContent=op.name||`Network ${id}`;o.dataset.name=op.name||'';o.dataset.country=op.countryName||countryCode;select.appendChild(o);}); if(!operators.length)select.innerHTML='<option value="">No networks available</option>';}catch(e){select.innerHTML='<option value="">Unable to load networks</option>';}
-}
-
-function selectManualOperator(operatorId){
-  const select=document.getElementById('networkSelect'); const option=select&&select.options[select.selectedIndex]; if(!operatorId||!option){detectedOperator=null;return;} const country=detectCountryFromPhone(document.getElementById('phoneInput').value.trim()); detectedOperator={operatorId,name:option.dataset.name||option.textContent,countryName:option.dataset.country||country}; document.getElementById('detectName').textContent=detectedOperator.name; document.getElementById('detectIcon').textContent='✓'; document.getElementById('detectCountry').textContent=`${detectedOperator.countryName} • Manually selected`; document.getElementById('detectPill').textContent='MANUAL'; updatePaymentMethod();
-}
-
-function updatePaymentMethod() {
-  const phone=document.getElementById('phoneInput').value.trim(); const country=detectCountryFromPhone(phone); updatePaymentRecommendation(country); currentCurrency=getCurrencyForCountry(country); document.getElementById('currencySymbol').textContent=getCurrencySymbol(currentCurrency); updateBreakdown();
-}
-
-function setQuickAmount(amount, evt) {
-  document.getElementById('amountInput').value = amount;
-  document.querySelectorAll('.quick-amount-btn').forEach(b => b.classList.remove('active'));
-  if (evt && evt.target) {
-    evt.target.classList.add('active');
+  if (phone.length >= 5){
+    onPhoneInput();
   }
+}
+
+// ============================================================
+// AUTO-SELECT PAYMENT METHOD per country
+// ============================================================
+async function autoSelectPaymentMethod(){
+  const country = currentCountry || 'NG';
+  try{
+    const res = await fetch(`${API_BASE}/payment/preferences`, {
+      credentials: 'include',
+      headers: { 'X-Country-Code': country }
+    });
+    const data = await res.json();
+    if (data.success){
+      if (data.recommended_provider){
+        selectPM(data.recommended_provider);
+      }
+      if (data.currency){
+        currentCurrency = data.currency;
+        currentSymbol = CURRENCY_SYMBOLS[currentCurrency] || data.currency;
+        const symEl = document.getElementById('amtSymbol');
+        if (symEl) symEl.textContent = currentSymbol;
+      }
+    }
+  } catch(e){
+    console.warn('Payment preference lookup failed, keeping current selection', e);
+  }
+}
+
+// ============================================================
+// PHONE INPUT
+// ============================================================
+function onPhoneInput(){
+  const phone = document.getElementById('phoneInput').value.trim();
+  if (phone.replace(/\D/g,'').length < 8){
+    document.getElementById('detectCard').classList.remove('show');
+    document.getElementById('manualBlock').classList.remove('show');
+    detectedOperator = null;
+    selectedOperator = null;
+    updatePayButton();
+    return;
+  }
+
+  const detected = detectCountryFromPhone(phone);
+  const countryChanged = detected && detected !== currentCountry && COUNTRY_CURRENCY[detected];
+  if (countryChanged){
+    currentCountry = detected;
+    currentCurrency = COUNTRY_CURRENCY[detected];
+    currentSymbol = CURRENCY_SYMBOLS[currentCurrency] || '$';
+    document.getElementById('amtSymbol').textContent = currentSymbol;
+    loadManualOperators();
+    autoSelectPaymentMethod();
+  }
+
+  clearTimeout(window._detectTimer);
+  window._detectTimer = setTimeout(() => runAutoDetect(phone), 450);
+  updatePayButton();
+}
+
+async function runAutoDetect(phone){
+  const card = document.getElementById('detectCard');
+  card.classList.add('show');
+  card.classList.remove('warn');
+  document.getElementById('detectIcon').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  document.getElementById('detectName').textContent = 'Detecting network…';
+  document.getElementById('detectSub').textContent = 'Please wait';
+  document.getElementById('detectBadge').textContent = 'CHECKING';
+
+  try{
+    const res = await fetch(`${API_BASE}/operators/auto-detect?phone=${encodeURIComponent(phone)}&country_code=${encodeURIComponent(currentCountry)}`);
+    const data = await res.json();
+    const op = data.operator || null;
+
+    if (res.ok && data.success && op && (op.operatorId || op.id)){
+      const isGuess = data.source === 'sandbox_fallback' || data.source === 'prefix_fallback';
+      selectedOperator = {
+        operatorId: String(op.operatorId || op.id),
+        name: op.name || 'Network operator',
+        countryCode: currentCountry,
+        currency: op.currencyCode || op.localCurrencyCode || currentCurrency
+      };
+      detectedOperator = selectedOperator;
+
+      card.classList.toggle('warn', isGuess);
+      document.getElementById('detectIcon').innerHTML = isGuess
+        ? '<i class="fas fa-question"></i>'
+        : '<i class="fas fa-check"></i>';
+      document.getElementById('detectName').textContent = op.name || 'Network detected';
+      document.getElementById('detectSub').textContent = isGuess
+        ? 'Guessed — pick manually below if wrong'
+        : 'Auto-detected from your number';
+      document.getElementById('detectBadge').textContent = isGuess ? 'GUESS' : 'AUTO';
+
+      document.getElementById('manualBlock').classList.toggle('show', isGuess);
+      if (isGuess) loadManualOperators();
+
+      updatePayButton();
+      return;
+    }
+  } catch(e){ /* fallthrough */ }
+
+  card.classList.add('warn');
+  document.getElementById('detectIcon').innerHTML = '<i class="fas fa-exclamation"></i>';
+  document.getElementById('detectName').textContent = 'Network not detected';
+  document.getElementById('detectSub').textContent = 'Choose your network below';
+  document.getElementById('detectBadge').textContent = 'MANUAL';
+  document.getElementById('manualBlock').classList.add('show');
+  selectedOperator = null;
+  detectedOperator = null;
+  loadManualOperators();
+  updatePayButton();
+}
+
+async function loadManualOperators(){
+  const sel = document.getElementById('networkSelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Loading…</option>';
+  try{
+    const res = await fetch(`${API_BASE}/operators/country/${encodeURIComponent(currentCountry)}`);
+    const data = await res.json();
+    const ops = Array.isArray(data) ? data : (data.operators || []);
+    sel.innerHTML = '<option value="">Select operator</option>';
+    ops.forEach(op => {
+      const id = op.operatorId || op.id;
+      if (!id) return;
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = op.name || `Operator ${id}`;
+      sel.appendChild(opt);
+    });
+  } catch(e){
+    sel.innerHTML = '<option value="">Could not load operators</option>';
+  }
+}
+
+function selectManualOperator(id){
+  const sel = document.getElementById('networkSelect');
+  if (!id){ selectedOperator = null; updatePayButton(); return; }
+  const opt = sel.options[sel.selectedIndex];
+  selectedOperator = {
+    operatorId: String(id),
+    name: opt.textContent,
+    countryCode: currentCountry,
+    currency: currentCurrency
+  };
+  detectedOperator = selectedOperator;
+  document.getElementById('detectCard').classList.remove('warn');
+  document.getElementById('detectIcon').innerHTML = '<i class="fas fa-check"></i>';
+  document.getElementById('detectName').textContent = opt.textContent;
+  document.getElementById('detectSub').textContent = 'Manually selected';
+  document.getElementById('detectBadge').textContent = 'MANUAL';
+  updatePayButton();
+}
+
+// ============================================================
+// AMOUNT
+// ============================================================
+function onAmountInput(){ updateBreakdown(); }
+function setQuick(v, evt){
+  document.getElementById('amountInput').value = v;
+  document.querySelectorAll('.quick-pill').forEach(p => p.classList.remove('active'));
+  if (evt && evt.target) evt.target.classList.add('active');
   updateBreakdown();
 }
-
-function updateBreakdown() {
-  const amount = parseFloat(document.getElementById('amountInput').value) || 0;
+function getFee(){
+  return SERVICE_FEES[currentCurrency] !== undefined ? SERVICE_FEES[currentCurrency] : 100;
+}
+function updateBreakdown(){
+  const amt = parseFloat(document.getElementById('amountInput').value) || 0;
+  const fee = amt > 0 ? getFee() : 0;
+  const total = amt + fee;
+  document.getElementById('bdAirtime').textContent = `${currentSymbol}${amt.toFixed(2)}`;
+  document.getElementById('bdFee').textContent = `${currentSymbol}${fee.toFixed(2)}`;
+  document.getElementById('bdTotal').textContent = `${currentSymbol}${total.toFixed(2)}`;
+  updatePayButton();
+}
+function updatePayButton(){
+  const btn = document.getElementById('payBtn');
+  const lbl = document.getElementById('payBtnLabel');
+  const hint = document.getElementById('payBtnHint');
+  const amt = parseFloat(document.getElementById('amountInput').value) || 0;
   const phone = document.getElementById('phoneInput').value.trim();
-  const country = detectCountryFromPhone(phone);
-  currentCurrency = getCurrencyForCountry(country);
-  const symbol = getCurrencySymbol(currentCurrency);
-  
-  const activeFee = getServiceFee(currentCurrency);
-  const airtime = amount;
-  const fee = amount > 0 ? activeFee : 0;
-  const total = airtime + fee;
-  
-  document.getElementById('breakdownAirtime').textContent = `${symbol}${airtime.toFixed(2)}`;
-  document.getElementById('breakdownFee').textContent = `${symbol}${fee.toFixed(2)}`;
-  document.getElementById('breakdownTotal').textContent = `${symbol}${total.toFixed(2)}`;
-  
-  const btn = document.getElementById('payButton');
-  
-  if (total > 0 && (detectedOperator || phone.length >= 10)) {
-    btn.innerHTML = `🔒 Pay Now <span class="btn-sub">${symbol}${total.toFixed(2)} total</span>`;
-    btn.disabled = false;
-  } else if (total > 0 && !detectedOperator) {
-    btn.innerHTML = `📱 Enter phone to detect operator <span class="btn-sub">${symbol}${total.toFixed(2)} total</span>`;
+  const fee = amt > 0 ? getFee() : 0;
+  const total = amt + fee;
+
+  if (!phone || phone.replace(/\D/g,'').length < 8){
     btn.disabled = true;
-  } else {
-    btn.innerHTML = `🔒 Pay Now <span class="btn-sub">Enter amount</span>`;
-    btn.disabled = true;
+    lbl.textContent = 'Enter phone number';
+    hint.textContent = 'We need a valid number to send airtime';
+    return;
   }
+  if (!selectedOperator){
+    btn.disabled = true;
+    lbl.textContent = 'Select network';
+    hint.textContent = 'Choose the mobile network operator';
+    return;
+  }
+  if (amt <= 0){
+    btn.disabled = true;
+    lbl.textContent = 'Enter amount';
+    hint.textContent = 'How much airtime do you want to send?';
+    return;
+  }
+
+  btn.disabled = false;
+  lbl.textContent = `Pay ${currentSymbol}${total.toFixed(2)}`;
+  hint.textContent = `Via ${selectedPaymentMethod.replace(/^./, c => c.toUpperCase())}`;
 }
 
-async function initiatePayment() {
-  if (isProcessing) return;
-  
+// ============================================================
+// PAYMENT METHOD
+// ============================================================
+function selectPM(method){
+  selectedPaymentMethod = method;
+  document.querySelectorAll('.pm-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.method === method);
+  });
+  const sub = document.getElementById('walletSub');
+  if (sub) sub.textContent = currentUser ? `${CURRENCY_SYMBOLS[activeWalletCurrency]||'₦'}${(walletBalances[activeWalletCurrency]||0).toFixed(2)}` : 'Sign in';
+  updatePayButton();
+}
+
+// ============================================================
+// PAYMENT MODAL (Option A — two-step)
+// ============================================================
+function openPaymentModal(){
+  if (!currentUser){
+    toast('Please sign in to continue', 'warning');
+    openSheet('authModal');
+    return;
+  }
   const phone = document.getElementById('phoneInput').value.trim();
-  const amount = parseFloat(document.getElementById('amountInput').value);
-  const email = prompt('📧 Enter your email for receipt:', 'ceo@net365co.com');
-  
-  if (!email || !email.includes('@')) {
-    showToast('⚠️ Please enter a valid email address', 'error');
-    return;
-  }
-  
-  if (!phone || phone.length < 7) {
-    showToast('⚠️ Please enter a valid phone number', 'error');
-    document.getElementById('phoneInput').focus();
-    return;
-  }
-  if (!detectedOperator?.operatorId) {
-    showToast('📶 Please wait for network detection or select your network.', 'warning');
-    document.getElementById('manualNetwork').classList.add('show');
-    await loadManualOperators();
-    return;
-  }
-  
-  if (!amount || amount <= 0) {
-    showToast('⚠️ Please enter a valid amount', 'error');
-    document.getElementById('amountInput').focus();
-    return;
-  }
-  
-  if (!detectedOperator && phone.length >= 10) {
-    detectedOperator = { 
-      name: 'Network', 
-      operatorId: '341', 
-      countryName: detectCountryFromPhone(phone) 
-    };
-  }
-  
+  const amt = parseFloat(document.getElementById('amountInput').value) || 0;
+  const fee = getFee();
+  const total = amt + fee;
+
+  document.getElementById('modalOperator').textContent = selectedOperator.name || '—';
+  document.getElementById('modalPhone').textContent = phone;
+  document.getElementById('modalAirtime').textContent = `${currentSymbol}${amt.toFixed(2)}`;
+  document.getElementById('modalFee').textContent = `${currentSymbol}${fee.toFixed(2)}`;
+  document.getElementById('modalTotal').textContent = `${currentSymbol}${total.toFixed(2)}`;
+  const providerNames = {paystack:'Paystack',stripe:'Stripe',flutterwave:'Flutterwave',wallet:'Net365 Wallet'};
+  document.getElementById('modalProvider').textContent = providerNames[selectedPaymentMethod] || selectedPaymentMethod;
+  document.getElementById('modalStatus').textContent = '';
+
+  pendingPayment = {
+    phone,
+    amount: total,
+    airtimeAmount: amt,
+    fee,
+    currency: currentCurrency,
+    country_code: currentCountry,
+    operator_id: selectedOperator.operatorId,
+    operator_name: selectedOperator.name,
+    provider: selectedPaymentMethod
+  };
+
+  openSheet('paymentModal');
+}
+
+function closePaymentModal(){
+  closeSheet('paymentModal');
+  pendingPayment = null;
+}
+
+async function processPayment(){
+  if (!pendingPayment || isProcessing) return;
   isProcessing = true;
-  const statusDiv = document.getElementById('statusMessage');
-  statusDiv.className = 'status info show';
-  statusDiv.textContent = '⏳ Initializing payment session...';
-  
-  try {
-    const country = detectCountryFromPhone(phone);
-    const currency = getCurrencyForCountry(country);
-    const fee = getServiceFee(currency);
-    const total = amount + fee;
-    const cleanPhone = phone.replace(/\s/g, '').replace(/^\+?234/, '').replace(/^0/, '');
-    
-    const response = await fetch(`${API_BASE}/public/payment/init`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        amount: total,
-        currency: currency,
-        operator_id: detectedOperator?.operatorId,
-        phone: cleanPhone || phone,
-        country_code: country,
-        provider: selectedProvider,
+  const btn = document.getElementById('confirmPayBtn');
+  const status = document.getElementById('modalStatus');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Redirecting…';
+  status.textContent = 'Connecting to payment gateway…';
+
+  try{
+    const cleanPhone = pendingPayment.phone.replace(/\s/g,'').replace(/^\+?234/,'').replace(/^0/,'');
+    const res = await fetch(`${API_BASE}/payment/init`, {
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({
+        type:'topup',
+        amount: pendingPayment.amount,
+        currency: pendingPayment.currency,
+        operator_id: pendingPayment.operator_id,
+        phone: cleanPhone || pendingPayment.phone,
+        country_code: pendingPayment.country_code,
+        provider: pendingPayment.provider,
         return_url: window.location.origin + '/payment/success'
       })
     });
-    
-    const result = await response.json();
-    
-    if (!result.success && !result.checkout_url && !result.authorization_url) {
-      throw new Error(result.error || 'Payment initialization failed');
-    }
-    
-    pendingPayment = {
-      ...result,
-      operatorName: detectedOperator.name || 'Network',
-      phone: phone,
-      airtimeAmount: amount,
-      fee: fee,
-      total: total,
-      email: email,
-      currency: currency,
-      provider: selectedProvider
-    };
-    
-    openPaymentModal(pendingPayment);
-    statusDiv.classList.remove('show');
-    
-  } catch (e) {
-    statusDiv.className = 'status error show';
-    statusDiv.textContent = `❌ ${e.message || 'Payment initialization failed.'}`;
-    showToast('❌ ' + (e.message || 'Payment failed'), 'error');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Payment failed to initialize');
+    const url = data.authorization_url || data.checkout_url;
+    if (url){ window.location.href = url; return; }
+    throw new Error('No checkout URL received');
+  } catch(e){
+    status.textContent = `❌ ${e.message}`;
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+    toast(e.message || 'Payment failed', 'error');
   } finally {
     isProcessing = false;
   }
 }
 
-function openPaymentModal(data) {
-  const symbol = getCurrencySymbol(data.currency || 'NGN');
-  
-  document.getElementById('modalOperator').textContent = data.operatorName || 'Unknown';
-  document.getElementById('modalPhone').textContent = data.phone || '-';
-  document.getElementById('modalAirtime').textContent = `${symbol}${(data.airtimeAmount || 0).toFixed(2)}`;
-  document.getElementById('modalFee').textContent = `${symbol}${(data.fee || 0).toFixed(2)}`;
-  document.getElementById('modalTotal').textContent = `${symbol}${(data.total || 0).toFixed(2)}`;
-  
-  document.getElementById('paymentModal').classList.add('show');
-  document.getElementById('modalStatus').innerHTML = '';
-  
-  const confirmBtn = document.getElementById('confirmPayBtn');
-  const providerNames = {
-    'paystack': '💰 Pay with Paystack',
-    'flutterwave': '🌊 Pay with Flutterwave',
-    'stripe': '💳 Pay with Stripe',
-    'mock': '🧪 Test Payment'
-  };
-  confirmBtn.textContent = providerNames[data.provider] || '🔒 Confirm & Pay';
-  confirmBtn.className = `btn btn-${data.provider || 'paystack'}`;
-  confirmBtn.disabled = false;
-}
-
-function closePaymentModal() {
-  document.getElementById('paymentModal').classList.remove('show');
-  pendingPayment = null;
-}
-
-async function processPayment() {
-  if (!pendingPayment) return;
-  
-  const confirmBtn = document.getElementById('confirmPayBtn');
-  const modalStatus = document.getElementById('modalStatus');
-  
-  confirmBtn.disabled = true;
-  confirmBtn.textContent = '⏳ Redirecting to gateway...';
-  modalStatus.innerHTML = '<div style="color:#6366f1; text-align:center; font-size:14px;">Connecting to payment processor...</div>';
-
-  try {
-    const redirectUrl = pendingPayment.checkout_url || pendingPayment.authorization_url || pendingPayment.url;
-    
-    if (redirectUrl) {
-      window.location.href = redirectUrl;
-    } else {
-      throw new Error('No checkout URL provided');
-    }
-  } catch (e) {
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = '🔒 Confirm & Pay';
-    modalStatus.innerHTML = `<div style="color:#ef4444; text-align:center; font-size:14px;">❌ ${e.message}</div>`;
+// ============================================================
+// AUTH
+// ============================================================
+function onAvatarTap(){
+  if (currentUser){
+    openSheet('userMenuModal');
+    document.getElementById('userMenuName').textContent = `Hi, ${currentUser.full_name || 'friend'} 👋`;
+    document.getElementById('userMenuEmail').textContent = currentUser.email || '';
+    document.getElementById('umLogout').style.display = 'flex';
+  } else {
+    openSheet('authModal');
   }
 }
-</script>
 
-<!-- Optional: To use a live service like Tawk.to instead of the built-in widget, insert their script tag here -->
+function toggleAuthMode(){
+  isAuthRegisterMode = !isAuthRegisterMode;
+  document.getElementById('authTitle').textContent = isAuthRegisterMode ? 'Create account' : 'Welcome back';
+  document.getElementById('authSub').textContent = isAuthRegisterMode ? 'Join Net365 in seconds' : 'Sign in to your Net365 account';
+  document.getElementById('authNameField').style.display = isAuthRegisterMode ? 'block' : 'none';
+  document.getElementById('authSubmitLabel').textContent = isAuthRegisterMode ? 'Create Account' : 'Sign In';
+  document.getElementById('authSwitchText').textContent = isAuthRegisterMode ? 'Already have an account?' : 'New to Net365?';
+  document.getElementById('authSwitchAction').textContent = isAuthRegisterMode ? 'Sign in' : 'Create an account';
+  document.getElementById('authError').style.display = 'none';
+}
+
+async function submitAuth(){
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const name = document.getElementById('authName').value.trim();
+  const errEl = document.getElementById('authError');
+  errEl.style.display = 'none';
+
+  if (!email || !password){ errEl.textContent = 'Email and password required'; errEl.style.display = 'block'; return; }
+  if (isAuthRegisterMode && !name){ errEl.textContent = 'Please enter your full name'; errEl.style.display = 'block'; return; }
+  if (password.length < 8){ errEl.textContent = 'Password must be at least 8 characters'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('authSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Please wait…';
+
+  try{
+    const endpoint = isAuthRegisterMode ? '/api/auth/register' : '/api/auth/login';
+    const body = isAuthRegisterMode ? { email, password, full_name: name } : { email, password };
+    const res = await fetch(endpoint, {
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Authentication failed');
+
+    currentUser = data.user || null;
+    closeSheet('authModal');
+    toast(isAuthRegisterMode ? 'Account created! 🎉' : `Welcome back, ${currentUser?.full_name || 'friend'}`, 'success');
+    await refreshUserData();
+    updateAuthUI();
+    selectPM(selectedPaymentMethod);
+  } catch(e){
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<span id="authSubmitLabel">${isAuthRegisterMode ? 'Create Account' : 'Sign In'}</span>`;
+  }
+}
+
+function fromUserMenuAuth(){
+  closeSheet('userMenuModal');
+  if (currentUser){
+    toast('Account settings coming soon', 'info');
+  } else {
+    openSheet('authModal');
+  }
+}
+
+async function doLogout(){
+  try{ await fetch('/api/auth/logout', {method:'POST', credentials:'include'}); }catch(e){}
+  currentUser = null;
+  closeSheet('userMenuModal');
+  updateAuthUI();
+  toast('Signed out', 'info');
+}
+
+function updateAuthUI(){
+  const avatar = document.getElementById('avatarBtn');
+  const chip = document.getElementById('walletChip');
+  if (currentUser){
+    avatar.classList.add('logged-in');
+    avatar.innerHTML = (currentUser.full_name || 'U').slice(0,1).toUpperCase();
+    chip.classList.add('show');
+  } else {
+    avatar.classList.remove('logged-in');
+    avatar.innerHTML = '<i class="fas fa-user"></i>';
+    chip.classList.remove('show');
+  }
+}
+
+// ============================================================
+// USER DATA REFRESH
+// ============================================================
+async function refreshUserData(){
+  if (!currentUser) return;
+  try{
+    const [dashRes, txRes] = await Promise.all([
+      fetch('/api/dashboard/summary', {credentials:'include'}),
+      fetch('/api/user/transactions?limit=100', {credentials:'include'})
+    ]);
+    const dash = await dashRes.json();
+    const tx = await txRes.json();
+
+    if (dash.success && dash.summary){
+      const wallets = dash.summary.wallet.wallets || [];
+      walletBalances = {};
+      wallets.forEach(w => { walletBalances[w.currency] = parseFloat(w.balance||0); });
+      updateWalletChip();
+      refreshWalletView();
+    }
+    if (tx.success){
+      allTransactions = tx.transactions || [];
+      renderHomeTx();
+      renderTransactions();
+    }
+    selectPM(selectedPaymentMethod);
+  } catch(e){ console.warn('refreshUserData', e); }
+}
+
+function updateWalletChip(){
+  const bal = walletBalances[currentCurrency] || 0;
+  const sym = CURRENCY_SYMBOLS[currentCurrency] || '₦';
+  const chip = document.getElementById('walletChipValue');
+  if (chip) chip.textContent = `${sym}${bal.toFixed(2)}`;
+}
+
+function refreshWalletView(){
+  const bal = walletBalances[activeWalletCurrency] || 0;
+  const sym = CURRENCY_SYMBOLS[activeWalletCurrency] || '₦';
+  document.getElementById('walletBalanceValue').textContent = `${sym}${bal.toFixed(2)}`;
+  document.getElementById('walletCurrencyLabel').textContent = `${activeWalletCurrency} · Net365 Wallet`;
+  const wtx = allTransactions.filter(t => t.tx_type === 'wallet_funding' || t.tx_type === 'transfer' || t.tx_type === 'referral');
+  renderTxList('walletTxList', wtx.slice(0,10), 'No wallet activity yet');
+}
+
+function selectCurrency(cur, evt){
+  activeWalletCurrency = cur;
+  document.querySelectorAll('#walletChips .cur-chip').forEach(c => c.classList.remove('active'));
+  if (evt && evt.target) evt.target.classList.add('active');
+  refreshWalletView();
+  selectPM(selectedPaymentMethod);
+}
+
+// ============================================================
+// TRANSACTIONS
+// ============================================================
+function renderHomeTx(){
+  renderTxList('homeTxList', allTransactions.slice(0,4), 'No transactions yet');
+}
+
+function renderTransactions(){
+  let list = allTransactions;
+  if (txFilter !== 'all') list = list.filter(t => t.tx_type === txFilter);
+  const search = (document.getElementById('txSearch')?.value || '').toLowerCase();
+  if (search){
+    list = list.filter(t =>
+      (t.reference||'').toLowerCase().includes(search) ||
+      (t.description||'').toLowerCase().includes(search) ||
+      String(t.amount||'').includes(search)
+    );
+  }
+  renderTxList('fullTxList', list, 'No transactions match your filter');
+}
+
+function filterTx(f, evt){
+  txFilter = f;
+  document.querySelectorAll('[data-filter]').forEach(p => p.classList.remove('active'));
+  if (evt && evt.target) evt.target.classList.add('active');
+  renderTransactions();
+}
+
+function renderTxList(containerId, list, emptyMsg){
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!list.length){
+    el.innerHTML = `<div class="empty-state"><i class="fas fa-receipt"></i><p>${emptyMsg}</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map(t => {
+    const amt = parseFloat(t.amount||0);
+    const sym = CURRENCY_SYMBOLS[t.currency] || '₦';
+    const isCredit = t.tx_type === 'wallet_funding' || t.tx_type === 'reward' || t.tx_type === 'referral';
+    const statusClass = (t.status === 'fulfilled' || t.status === 'completed' || t.status === 'success') ? 'success'
+      : t.status === 'pending' ? 'pending' : 'failed';
+    const iconClass = isCredit ? 'credit' : 'debit';
+    const iconName = t.tx_type === 'topup' ? 'fa-mobile-alt'
+      : t.tx_type === 'utility' ? 'fa-bolt'
+      : t.tx_type === 'wallet_funding' ? 'fa-plus'
+      : t.tx_type === 'transfer' ? 'fa-paper-plane'
+      : t.tx_type === 'reward' ? 'fa-gift'
+      : 'fa-receipt';
+    return `
+      <div class="tx-row" onclick="openReceipt('${t.reference || t.id}')">
+        <div class="tx-icon ${iconClass}"><i class="fas ${iconName}"></i></div>
+        <div class="tx-body">
+          <div class="tx-title">${escapeHtml(t.description || t.tx_type || 'Transaction')}</div>
+          <div class="tx-sub">
+            <span class="status-pill ${statusClass}">${t.status || 'pending'}</span>
+            <span>${formatDate(t.created_at)}</span>
+          </div>
+        </div>
+        <div class="tx-amount">
+          <div class="amt ${isCredit ? 'positive' : ''}">${isCredit ? '+' : ''}${sym}${amt.toFixed(2)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openReceipt(ref){
+  toast(`Receipt: ${ref}`, 'info');
+}
+
+function exportTransactionsCSV(){
+  if (!allTransactions.length){ toast('Nothing to export', 'warning'); return; }
+  let csv = 'Date,Type,Description,Amount,Currency,Status,Reference\n';
+  allTransactions.forEach(t => {
+    csv += `"${t.created_at||''}","${t.tx_type||''}","${(t.description||'').replace(/"/g,'""')}",${t.amount||0},"${t.currency||'NGN'}","${t.status||''}","${t.reference||''}"\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `net365-transactions-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV downloaded', 'success');
+}
+
+function formatDate(s){
+  if (!s) return '';
+  let d = new Date(s);
+  if (isNaN(d.getTime())) d = new Date(String(s).replace(' ','T') + 'Z');
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
+}
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = String(s||'');
+  return d.innerHTML;
+}
+
+// ============================================================
+// WALLET MODALS
+// ============================================================
+async function submitAddMoney(){
+  const amount = parseFloat(document.getElementById('addMoneyAmount').value);
+  const currency = document.getElementById('addMoneyCurrency').value;
+  if (!currentUser){ toast('Please sign in first','warning'); openSheet('authModal'); return; }
+  if (!amount || amount <= 0){ toast('Enter a valid amount','warning'); return; }
+
+  const btn = document.querySelector('#addMoneyModal .btn-hero');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Redirecting…';
+
+  try{
+    const res = await fetch('/api/wallet/fund', {
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({ amount, currency, return_url: window.location.origin + '/payment/success' })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Could not initialize funding');
+    window.location.href = data.authorization_url || data.checkout_url;
+  } catch(e){
+    toast(e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<span id="addMoneyBtnLabel">Continue to Checkout</span><span class="btn-hint">You\'ll be redirected to the payment gateway</span>';
+  }
+}
+
+document.getElementById('addMoneyCurrency')?.addEventListener('change', function(){
+  const c = this.value;
+  document.getElementById('addMoneySymbol').textContent = CURRENCY_SYMBOLS[c] || '$';
+});
+
+async function submitTransfer(){
+  const recipient = document.getElementById('transferRecipient').value.trim();
+  const amount = parseFloat(document.getElementById('transferAmount').value);
+  if (!currentUser){ toast('Please sign in','warning'); openSheet('authModal'); return; }
+  if (!recipient || !amount || amount <= 0){ toast('Enter recipient and amount','warning'); return; }
+
+  const btn = document.querySelector('#sendMoneyModal .btn-hero');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Sending…';
+
+  try{
+    const isEmail = recipient.includes('@');
+    const lookup = await fetch(isEmail
+      ? `/api/auth/user/by-email?email=${encodeURIComponent(recipient)}`
+      : `/api/auth/user/by-phone?phone=${encodeURIComponent(recipient)}`,
+      {credentials:'include'});
+    const lookupData = await lookup.json();
+    if (!lookupData.success) throw new Error('Recipient not found');
+
+    const res = await fetch('/api/wallet/transfer', {
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({
+        to_user_id: lookupData.user.id,
+        amount: amount,
+        currency: activeWalletCurrency,
+        description: 'Net365 transfer'
+      })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Transfer failed');
+    toast(`Sent ${CURRENCY_SYMBOLS[activeWalletCurrency]}${amount.toFixed(2)} successfully`,'success');
+    closeSheet('sendMoneyModal');
+    await refreshUserData();
+  } catch(e){
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>Send Money</span><span class="btn-hint">Instant wallet-to-wallet transfer</span>';
+  }
+}
+
+// ============================================================
+// REFERRAL
+// ============================================================
+async function loadReferralCode(){
+  if (!currentUser) return;
+  try{
+    const res = await fetch('/api/referral/code', {credentials:'include'});
+    const data = await res.json();
+    if (data.success && data.referral_code){
+      document.getElementById('referralCodeDisplay').textContent = data.referral_code;
+    }
+  }catch(e){}
+}
+
+function shareReferral(){
+  const code = document.getElementById('referralCodeDisplay').textContent;
+  const msg = `Join me on Net365 using my referral code: ${code}\n${window.location.origin}/?ref=${code}`;
+  if (navigator.share){
+    navigator.share({title:'Join Net365', text:msg}).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(msg);
+    toast('Invite link copied!','success');
+  }
+}
+
+// ============================================================
+// UTILITIES — IN-APP BILLER FLOW
+// ============================================================
+function renderUtilities(){
+  const electricity = [
+    {id:38, name:'Eko Electric', short:'EKEDC'},
+    {id:39, name:'Ikeja Electric', short:'IKEDC'},
+    {id:40, name:'Kaduna Electric', short:'KAD'},
+    {id:41, name:'Kano Electric', short:'KEDCO'},
+    {id:42, name:'Abuja Electric', short:'AEDC'},
+    {id:43, name:'Port Harcourt', short:'PHED'},
+  ];
+  const cable = [
+    {id:53, name:'DSTV', short:'DSTV'},
+    {id:54, name:'GOtv', short:'GOtv'},
+    {id:55, name:'StarTimes', short:'ST'},
+  ];
+  const airtime = [
+    {id:49, name:'MTN', short:'MTN'},
+    {id:50, name:'Glo', short:'Glo'},
+    {id:51, name:'Airtel', short:'Airtel'},
+    {id:52, name:'9mobile', short:'9mb'},
+  ];
+  document.getElementById('electricityGrid').innerHTML = electricity.map(billerBtn).join('');
+  document.getElementById('cableGrid').innerHTML = cable.map(billerBtn).join('');
+  document.getElementById('airtimeGrid').innerHTML = airtime.map(billerBtn).join('');
+}
+
+function billerBtn(b){
+  return `<button class="biller-btn" onclick="openBiller(${b.id},'${b.name}')">
+    <div class="biller-logo">${b.short}</div>
+    <span>${b.name}</span>
+  </button>`;
+}
+
+let currentBiller = null;
+
+function openBiller(id, name){
+  if (!currentUser){
+    toast('Please sign in to pay bills', 'warning');
+    openSheet('authModal');
+    return;
+  }
+  currentBiller = { id: id, name: name };
+  document.getElementById('billerSheetTitle').textContent = name;
+  document.getElementById('billerSheetSub').textContent = 'Enter your account details to continue';
+  document.getElementById('billerAccount').value = '';
+  document.getElementById('billerAmount').value = '';
+  document.getElementById('billerCustomerBox').style.display = 'none';
+  document.getElementById('billerPayBtn').disabled = true;
+  document.getElementById('billerPayLabel').textContent = 'Pay Bill';
+
+  const isCable = [53,54,55].includes(id);
+  const isAirtime = [49,50,51,52].includes(id);
+  const label = isCable ? 'Smartcard / IUC Number'
+             : isAirtime ? 'Phone Number'
+             : 'Meter / Account Number';
+  document.getElementById('billerAccountLabel').textContent = label;
+
+  openSheet('billerSheet');
+}
+
+async function validateBillerAccount(){
+  if (!currentBiller) return;
+  const account = document.getElementById('billerAccount').value.trim();
+  if (!account || account.length < 6){
+    toast('Enter a valid account number', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('billerValidateBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Validating…';
+
+  try{
+    const res = await fetch(`${API_BASE}/utilities/validate`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        biller_id: currentBiller.id,
+        subscriber_account: account
+      })
+    });
+    const data = await res.json();
+
+    // ⚠️ VERIFY: field names returned by /api/utilities/validate.
+    // We try the common candidates. If the customer name doesn't appear,
+    // check the browser DevTools Network tab and tell me the actual field.
+    const customerName =
+      data.customerName || data.customer_name || data.name ||
+      data.accountName || data.account_name;
+
+    if (data.valid === true || customerName){
+      document.getElementById('billerCustomerName').textContent =
+        customerName || `Account ••••${account.slice(-4)}`;
+      document.getElementById('billerCustomerBox').style.display = 'block';
+      document.getElementById('billerPayBtn').disabled = false;
+      toast('Account verified', 'success');
+    } else {
+      toast(data.error || data.message || 'Could not verify account', 'error');
+    }
+  } catch(e){
+    toast('Validation failed. Try again.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check-circle" style="margin-right:6px;"></i> Validate Account';
+  }
+}
+
+async function payBiller(){
+  if (!currentBiller) return;
+  const account = document.getElementById('billerAccount').value.trim();
+  const amount = parseFloat(document.getElementById('billerAmount').value);
+
+  if (!account || !amount || amount <= 0){
+    toast('Enter account and amount', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('billerPayBtn');
+  const lbl = document.getElementById('billerPayLabel');
+  btn.disabled = true;
+  lbl.innerHTML = '<span class="spinner"></span>Processing…';
+
+  try{
+    const res = await fetch(`${API_BASE}/utilities/pay`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        biller_id: currentBiller.id,
+        subscriber_account: account,
+        amount: amount,
+        currency: 'NGN',
+        provider: 'wallet'
+      })
+    });
+    const data = await res.json();
+
+    if (data.success){
+      toast('Payment successful!', 'success');
+      closeSheet('billerSheet');
+      await refreshUserData();
+      showView('transactions');
+      return;
+    }
+
+    // Insufficient wallet → offer gateway fallback
+    if (data.error && data.error.toLowerCase().includes('insufficient')){
+      const useGateway = confirm('Insufficient wallet balance. Pay via Paystack instead?');
+      if (useGateway){
+        const gw = await fetch(`${API_BASE}/utilities/pay`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            biller_id: currentBiller.id,
+            subscriber_account: account,
+            amount: amount,
+            currency: 'NGN',
+            provider: 'paystack'
+          })
+        });
+        const gwd = await gw.json();
+        if (gwd.success && gwd.authorization_url){
+          window.location.href = gwd.authorization_url;
+          return;
+        }
+      }
+    }
+
+    throw new Error(data.error || 'Payment failed');
+  } catch(e){
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    lbl.textContent = 'Pay Bill';
+  }
+}
+
+// ============================================================
+// LIVE CHAT
+// ============================================================
+let chatConversationId = null;
+let chatPollTimer = null;
+
+function openLiveChat(){
+  document.getElementById('chatWidget').classList.add('show');
+  document.getElementById('chatFab').classList.remove('show');
+  ensureChatSession().then(loadChatMessages);
+  clearInterval(chatPollTimer);
+  chatPollTimer = setInterval(loadChatMessages, 3500);
+}
+
+function closeLiveChat(){
+  document.getElementById('chatWidget').classList.remove('show');
+  document.getElementById('chatFab').classList.add('show');
+  clearInterval(chatPollTimer);
+}
+
+async function ensureChatSession(){
+  if (chatConversationId) return chatConversationId;
+  try{
+    const phone = document.getElementById('phoneInput')?.value?.trim() || '';
+    const res = await fetch(`${API_BASE}/chat/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        phone,
+        country_code: currentCountry,
+        name: currentUser?.full_name || '',
+        email: currentUser?.email || ''
+      })
+    });
+    const data = await res.json();
+    if (data.success){
+      chatConversationId = data.conversation_id;
+      return chatConversationId;
+    }
+  } catch(e){ console.warn('Chat session failed', e); }
+  return null;
+}
+
+async function loadChatMessages(){
+  if (!chatConversationId) return;
+  try{
+    const res = await fetch(`${API_BASE}/chat/messages?conversation_id=${chatConversationId}`);
+    const data = await res.json();
+    if (!data.success) return;
+    const body = document.getElementById('chatBody');
+    body.innerHTML = '';
+    (data.messages || []).forEach(msg => {
+      const el = document.createElement('div');
+      el.className = `chat-msg ${msg.sender_type === 'customer' ? 'user' : 'support'}`;
+      el.textContent = msg.message;
+      body.appendChild(el);
+    });
+    if (!data.messages?.length){
+      body.innerHTML = '<div class="chat-msg support">👋 Hi! Welcome to Net365 Support. How can we help you today?</div>';
+    }
+    body.scrollTop = body.scrollHeight;
+  } catch(e){ console.warn('Chat refresh failed', e); }
+}
+
+async function sendChatMessage(){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const cid = await ensureChatSession();
+  if (!cid){ toast('Unable to connect to support. Try again.', 'error'); return; }
+
+  const body = document.getElementById('chatBody');
+  const el = document.createElement('div');
+  el.className = 'chat-msg user';
+  el.textContent = text;
+  body.appendChild(el);
+  body.scrollTop = body.scrollHeight;
+  input.value = '';
+
+  try{
+    const res = await fetch(`${API_BASE}/chat/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ conversation_id: cid, message: text })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Send failed');
+    await loadChatMessages();
+  } catch(e){
+    toast(e.message, 'error');
+  }
+}
+
+// ============================================================
+// SESSION
+// ============================================================
+async function checkSession(){
+  try{
+    const res = await fetch('/api/auth/me', {credentials:'include'});
+    if (res.ok){
+      const data = await res.json();
+      if (data.success && data.user){
+        currentUser = data.user;
+        updateAuthUI();
+        await refreshUserData();
+        loadReferralCode();
+        return;
+      }
+    }
+    updateAuthUI();
+  } catch(e){
+    updateAuthUI();
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', async () => {
+  renderUtilities();
+  await checkSession();
+  await autoSelectPaymentMethod();
+  selectPM(selectedPaymentMethod);
+  updateBreakdown();
+
+  // Reveal floating chat button after a short delay
+  setTimeout(() => {
+    const fab = document.getElementById('chatFab');
+    if (fab) fab.classList.add('show');
+  }, 800);
+
+  console.log('%cNET365 Mobile v3.0', 'font-size:16px;font-weight:900;color:#7C3AED;');
+  console.log('Ready.');
+});
+</script>
 </body>
 </html>
