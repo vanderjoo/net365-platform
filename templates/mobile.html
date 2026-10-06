@@ -1196,6 +1196,142 @@ select.input{
   .biller-grid{grid-template-columns:repeat(3,1fr);}
   .pm-grid{grid-template-columns:repeat(4,1fr);}
 }
+
+/* ============================================================
+   NET365 SMART MEDIA — SCALABLE AD UI v4
+   ============================================================ */
+.moment-ad-backdrop{
+  z-index:3000;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(124,58,237,.16), transparent 38%),
+    rgba(3,5,12,.92);
+}
+.moment-ad-sheet{
+  max-width:560px;
+  padding:12px 18px calc(24px + env(safe-area-inset-bottom));
+}
+.moment-ad-slot{min-height:120px;}
+
+.smart-ad{
+  position:relative;
+  overflow:hidden;
+  border-radius:26px;
+  padding:0;
+  border:1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(circle at 100% 0%, var(--ad-accent-soft,rgba(124,58,237,.20)), transparent 48%),
+    linear-gradient(145deg,rgba(25,31,54,.98),rgba(10,14,26,.98));
+  box-shadow:0 18px 55px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.06);
+  animation:smartAdIn .45s cubic-bezier(.16,1,.3,1);
+}
+@keyframes smartAdIn{
+  from{opacity:0;transform:translateY(12px) scale(.985);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+.smart-ad::before{
+  content:"";
+  position:absolute;inset:-40% auto auto -15%;
+  width:180px;height:180px;border-radius:50%;
+  background:var(--ad-accent, #7C3AED);
+  filter:blur(70px);opacity:.18;pointer-events:none;
+}
+.smart-ad-media{
+  position:relative;height:145px;overflow:hidden;
+  background:linear-gradient(135deg,rgba(124,58,237,.28),rgba(34,211,238,.16));
+}
+.smart-ad-media img{
+  width:100%;height:100%;object-fit:cover;display:block;
+}
+.smart-ad-media::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 35%,rgba(8,11,20,.82) 100%);
+}
+.smart-ad-top{
+  position:absolute;z-index:2;top:12px;left:12px;right:12px;
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+}
+.smart-ad-badge,.smart-ad-sponsored{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 10px;border-radius:999px;
+  font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.smart-ad-badge{
+  color:#fff;background:rgba(124,58,237,.72);
+  border:1px solid rgba(255,255,255,.12);
+}
+.smart-ad-sponsored{
+  color:rgba(255,255,255,.76);background:rgba(0,0,0,.32);
+  border:1px solid rgba(255,255,255,.10);
+}
+.smart-ad-logo{
+  position:absolute;z-index:3;left:16px;bottom:14px;
+  width:44px;height:44px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.20);
+  box-shadow:0 8px 24px rgba(0,0,0,.30);
+}
+.smart-ad-logo img{width:100%;height:100%;object-fit:cover;}
+.smart-ad-logo i{font-size:19px;color:#fff;}
+.smart-ad-body{position:relative;padding:18px 17px 16px;}
+.smart-ad-kicker{
+  font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ad-accent,#A78BFA);margin-bottom:7px;
+}
+.smart-ad-title{
+  font-size:22px;line-height:1.12;font-weight:900;letter-spacing:-.03em;
+  color:#fff;margin-bottom:8px;
+}
+.smart-ad-description{
+  font-size:13px;line-height:1.55;color:rgba(255,255,255,.72);
+  margin-bottom:14px;
+}
+.smart-ad-offer{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 13px;margin-bottom:14px;border-radius:16px;
+  background:rgba(255,255,255,.055);
+  border:1px solid rgba(255,255,255,.075);
+}
+.smart-ad-offer strong{font-size:18px;color:#fff;}
+.smart-ad-offer span{font-size:10px;color:rgba(255,255,255,.58);text-align:right;}
+.smart-ad-cta{
+  width:100%;border:0;border-radius:15px;padding:14px 16px;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  font:900 13px var(--font);color:#fff;cursor:pointer;
+  background:linear-gradient(135deg,var(--ad-accent,#7C3AED),var(--ad-accent-2,#22D3EE));
+  box-shadow:0 12px 28px color-mix(in srgb,var(--ad-accent,#7C3AED) 30%, transparent);
+  transition:transform .15s ease,filter .15s ease;
+}
+.smart-ad-cta:active{transform:scale(.985);filter:brightness(.95);}
+.smart-ad-meta{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  margin-top:10px;font-size:9.5px;color:rgba(255,255,255,.43);
+}
+.smart-ad-close{
+  position:absolute;z-index:5;right:12px;top:12px;
+  width:32px;height:32px;border:1px solid rgba(255,255,255,.12);
+  border-radius:50%;background:rgba(0,0,0,.34);color:#fff;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.smart-ad-compact{
+  padding:16px;border-radius:22px;
+  display:flex;gap:13px;align-items:center;
+}
+.smart-ad-compact .smart-ad-logo{position:static;flex:0 0 48px;}
+.smart-ad-compact .smart-ad-body{padding:0;flex:1;min-width:0;}
+.smart-ad-compact .smart-ad-title{font-size:17px;}
+.smart-ad-compact .smart-ad-description{font-size:11.5px;margin-bottom:8px;}
+.smart-ad-compact .smart-ad-cta{width:auto;padding:10px 13px;font-size:11px;}
+.smart-ad-disclaimer{
+  margin-top:11px;text-align:center;font-size:9px;color:rgba(255,255,255,.38);
+}
+@media(max-width:380px){
+  .smart-ad-title{font-size:19px;}
+  .smart-ad-media{height:125px;}
+  .moment-ad-sheet{padding-left:13px;padding-right:13px;}
+}
+
 </style>
 </head>
 <body>
@@ -2854,225 +2990,439 @@ async function sendChatMessage(){
 }
 
 // ============================================================
-// MOMENT ADS — Payment success page advertising engine
+// NET365 SMART MEDIA — Universal Advertising & Smart Offers Engine
+// v4: operator/country/currency agnostic, server-driven, scalable
 // ============================================================
 const MOMENT_AD_CONFIG = {
   MIN_INTERVAL_MS: 1000 * 60 * 5,
-  DELAY_MS: 600
+  DELAY_MS: 650,
+  API_TIMEOUT_MS: 3500,
+  DEFAULT_FREQUENCY_HOURS: 24
 };
+
 let lastMomentAdShownAt = 0;
 let currentMomentAd = null;
 
-function buildMomentAdContext(paymentDetails){
-  const history = allTransactions || [];
-  const now = Date.now();
-  const daysSince = (isoString) => {
-    if (!isoString) return 9999;
-    const t = new Date(String(isoString).replace(' ', 'T') + 'Z').getTime();
-    if (isNaN(t)) return 9999;
-    return Math.floor((now - t) / (1000 * 60 * 60 * 24));
-  };
-
-  const airtimeTx = history.filter(t => t.tx_type === 'topup');
-  const utilityTx = history.filter(t => t.tx_type === 'utility');
-
-  const lastFunding = history
-    .filter(t => t.tx_type === 'wallet_funding' && (t.status === 'fulfilled' || t.status === 'completed'))
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
-
-  const balance = walletBalances[currentCurrency] || 0;
-
-  return {
-    tx_type: paymentDetails?.tx_type || 'topup',
-    amount: paymentDetails?.amount || 0,
-    currency: paymentDetails?.currency || currentCurrency,
-    phone: paymentDetails?.phone || '',
-    airtime_count: airtimeTx.length,
-    utility_count: utilityTx.length,
-    wallet_balance: balance,
-    last_wallet_funding_days: lastFunding ? daysSince(lastFunding.created_at) : 9999,
-    has_referral_code: !!(currentUser?.referral_code),
-    is_logged_in: !!currentUser
-  };
-}
-
-function pickMomentAdType(ctx){
-  if (ctx.is_logged_in && (ctx.wallet_balance < 200 || ctx.last_wallet_funding_days > 30)){
-    return 'cashback_boost';
-  }
-  if (ctx.airtime_count >= 3 && ctx.utility_count === 0){
-    return 'cross_service';
-  }
-  if (ctx.has_referral_code && ctx.airtime_count >= 1){
-    return 'referral_race';
-  }
-  return 'cashback_boost';
-}
-
-const MOMENT_AD_TEMPLATES = {
-
-  cashback_boost: (ctx) => {
-    const rewardAmount = ctx.currency === 'NGN' ? 50
-                        : ctx.currency === 'USD' ? 2
-                        : ctx.currency === 'GBP' ? 1.5 : 50;
-    const sym = CURRENCY_SYMBOLS[ctx.currency] || '₦';
-    return {
-      type: 'cashback_boost',
-      html: `
-        <div class="moment-card moment-cashback">
-          <div class="m-icon"><i class="fas fa-gift"></i></div>
-          <div class="m-title">Get ${sym}${rewardAmount} back</div>
-          <div class="m-body">
-            Fund your Net365 wallet in the next 24 hours and we'll
-            add ${sym}${rewardAmount} to your balance — free money to spend
-            on your next recharge or bill.
-          </div>
-          <button class="m-cta" onclick="momentAdClick('cashback')">
-            Claim my ${sym}${rewardAmount} <i class="fas fa-arrow-right"></i>
-          </button>
-          <div class="m-footer">Available once per account</div>
-        </div>
-      `,
-      onClick: () => {
-        dismissMomentAd();
-        openSheet('addMoneyModal');
-      }
-    };
-  },
-
-  cross_service: (ctx) => ({
-    type: 'cross_service',
-    html: `
-      <div class="moment-card moment-cross">
-        <div class="m-icon"><i class="fas fa-bolt"></i></div>
-        <div class="m-title">Now try paying a bill</div>
-        <div class="m-body">
-          You're already comfortable with airtime. Pay your electricity,
-          DSTV, or internet in the same place — takes 30 seconds and
-          you'll get 5% off your first bill this month.
-        </div>
-        <button class="m-cta" onclick="momentAdClick('cross_service')">
-          Pay a bill <i class="fas fa-arrow-right"></i>
-        </button>
-        <div class="m-footer">5% off your first utility payment</div>
-      </div>
-    `,
-    onClick: () => {
-      dismissMomentAd();
-      showView('utilities');
-    }
-  }),
-
-  referral_race: (ctx) => ({
-    type: 'referral_race',
-    html: `
-      <div class="moment-card moment-referral">
-        <div class="m-icon"><i class="fas fa-users"></i></div>
-        <div class="m-title">Invite 3, earn ₦1,500</div>
-        <div class="m-body">
-          You've already recharged. Now earn from friends who do the same.
-          Share your code — every friend who recharges earns you a bonus.
-        </div>
-        <div class="moment-progress" style="--progress-target:33%;">
-          <div class="moment-progress-fill"></div>
-        </div>
-        <button class="m-cta" onclick="momentAdClick('referral')">
-          Share my code <i class="fas fa-share-nodes"></i>
-        </button>
-        <div class="m-footer">1 of 3 — invite 2 more</div>
-      </div>
-    `,
-    onClick: () => {
-      dismissMomentAd();
-      openSheet('referralSheet');
-    }
-  })
+const SMART_AD_CURRENCY_FALLBACKS = {
+  NGN:'₦', USD:'$', GBP:'£', EUR:'€', GHS:'₵', KES:'KSh', ZAR:'R',
+  CAD:'CA$', AUD:'A$', NZD:'NZ$', INR:'₹', JPY:'¥', SGD:'S$',
+  UGX:'USh', TZS:'TSh', XOF:'CFA', XAF:'FCFA', MAD:'MAD'
 };
 
-function showMomentAd(paymentDetails){
-  if (Date.now() - lastMomentAdShownAt < MOMENT_AD_CONFIG.MIN_INTERVAL_MS) return;
-  const ctx = buildMomentAdContext(paymentDetails);
-  const type = pickMomentAdType(ctx);
-  const template = MOMENT_AD_TEMPLATES[type];
-  if (typeof template === 'function'){
-    renderMomentAd(template(ctx), ctx, paymentDetails);
+function smartAdEscape(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+  }[ch]));
+}
+
+function smartAdCurrencyCode(currency){
+  return String(currency || currentCurrency || 'NGN').toUpperCase();
+}
+
+function smartAdSymbol(currency){
+  const code = smartAdCurrencyCode(currency);
+  return SMART_AD_CURRENCY_FALLBACKS[code] ||
+    (typeof CURRENCY_SYMBOLS !== 'undefined' && CURRENCY_SYMBOLS[code]) || code + ' ';
+}
+
+function smartAdMoney(amount, currency){
+  const code = smartAdCurrencyCode(currency);
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return `${smartAdSymbol(code)}0`;
+  try{
+    return new Intl.NumberFormat(undefined, {
+      style:'currency', currency:code,
+      minimumFractionDigits: code === 'JPY' ? 0 : 2,
+      maximumFractionDigits: code === 'JPY' ? 0 : 2
+    }).format(n);
+  }catch(e){
+    return `${smartAdSymbol(code)}${n.toFixed(code === 'JPY' ? 0 : 2)}`;
   }
 }
 
-function renderMomentAd(adDef, ctx, paymentDetails){
+function smartAdCountry(paymentDetails){
+  return String(
+    paymentDetails?.country_code ||
+    paymentDetails?.country ||
+    paymentDetails?.countryCode ||
+    window.currentCountry ||
+    'NG'
+  ).toUpperCase();
+}
+
+function smartAdOperator(paymentDetails){
+  const p = paymentDetails || {};
+  const payload = p.payload || {};
+  return {
+    id: p.operator_id ?? p.operatorId ?? payload.operator_id ?? payload.operatorId ?? null,
+    name: p.operator_name ?? p.operatorName ?? payload.operator_name ?? payload.operatorName ?? '',
+    brand: p.operator_brand ?? p.operatorBrand ?? payload.operator_brand ?? '',
+  };
+}
+
+function buildMomentAdContext(paymentDetails = {}){
+  const history = Array.isArray(window.allTransactions) ? window.allTransactions : [];
+  const currency = smartAdCurrencyCode(paymentDetails.currency);
+  const operator = smartAdOperator(paymentDetails);
+
+  const airtimeTx = history.filter(t =>
+    String(t.tx_type || t.type || '').toLowerCase() === 'topup'
+  );
+  const utilityTx = history.filter(t =>
+    String(t.tx_type || t.type || '').toLowerCase() === 'utility'
+  );
+
+  const country = smartAdCountry(paymentDetails);
+  const amount = Number(paymentDetails.amount || 0);
+
+  return {
+    placement: 'payment_success',
+    tx_type: paymentDetails.tx_type || 'topup',
+    amount: Number.isFinite(amount) ? amount : 0,
+    currency,
+    country,
+    phone: paymentDetails.phone || '',
+    operator_id: operator.id,
+    operator_name: operator.name,
+    operator_brand: operator.brand,
+    airtime_count: airtimeTx.length,
+    utility_count: utilityTx.length,
+    has_referral_code: !!(window.currentUser?.referral_code),
+    is_logged_in: !!window.currentUser,
+    user_id: window.currentUser?.id || null,
+    visitor_id: getNet365VisitorId()
+  };
+}
+
+/* First-party anonymous visitor ID.
+   It identifies a browser/session, not a person's real identity. */
+function getNet365VisitorId(){
+  try{
+    const key = 'net365_visitor_id';
+    let id = localStorage.getItem(key);
+    if (!id){
+      id = 'N365-V-' + cryptoRandomId();
+      localStorage.setItem(key, id);
+    }
+    return id;
+  }catch(e){
+    return 'N365-V-' + cryptoRandomId();
+  }
+}
+
+function cryptoRandomId(){
+  if (window.crypto?.getRandomValues){
+    const a = new Uint32Array(3);
+    window.crypto.getRandomValues(a);
+    return Array.from(a).map(x => x.toString(36)).join('').slice(0,18).toUpperCase();
+  }
+  return Math.random().toString(36).slice(2,14).toUpperCase();
+}
+
+function smartAdWithTimeout(promise, timeoutMs){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('ad_timeout')), timeoutMs))
+  ]);
+}
+
+/* Server-driven recommendation. */
+async function fetchSmartAd(ctx){
+  const res = await smartAdWithTimeout(fetch(`${API_BASE}/ads/recommend`, {
+    method:'POST',
+    credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(ctx)
+  }), MOMENT_AD_CONFIG.API_TIMEOUT_MS);
+
+  if (!res.ok) throw new Error(`ad_api_${res.status}`);
+  const data = await res.json();
+  if (!data?.success || !data?.ad) throw new Error(data?.error || 'no_ad');
+  return data.ad;
+}
+
+/* Safe local fallback so the customer still gets a polished experience
+   when the ad service is unavailable. */
+function localSmartAd(ctx){
+  if (ctx.tx_type === 'utility'){
+    return {
+      id:'local-utility-cross-sell',
+      type:'smart_offer',
+      category:'energy',
+      badge:'SMART OFFER',
+      sponsored:false,
+      accent:'#F59E0B',
+      accent2:'#22D3EE',
+      icon:'fa-solar-panel',
+      kicker:'Because you just paid a bill',
+      title:'Explore solar & backup power',
+      description:'See energy-saving options and solar solutions that could help reduce future power costs.',
+      offer_value:'Explore options',
+      offer_label:'Energy solutions',
+      cta:'Explore Energy',
+      landing_url:'#',
+      footer:'Net365 recommendation',
+      compact:false
+    };
+  }
+
+  if (ctx.tx_type === 'topup'){
+    const op = ctx.operator_name ? ` on ${ctx.operator_name}` : '';
+    return {
+      id:'local-topup-cross-sell',
+      type:'smart_offer',
+      category:'electronics',
+      badge:'SMART OFFER',
+      sponsored:false,
+      accent:'#7C3AED',
+      accent2:'#22D3EE',
+      icon:'fa-mobile-screen-button',
+      kicker:`Because you just recharged${op}`,
+      title:'Save on your next smartphone',
+      description:'Explore selected phones, accessories and connectivity deals from Net365 partners.',
+      offer_value:'Up to 25% OFF',
+      offer_label:'Selected devices',
+      cta:'Explore Offers',
+      landing_url:'#',
+      footer:'Net365 recommendation',
+      compact:false
+    };
+  }
+
+  return {
+    id:'local-generic-offer',
+    type:'smart_offer',
+    category:'discovery',
+    badge:'SMART OFFER',
+    sponsored:false,
+    accent:'#22D3EE',
+    accent2:'#7C3AED',
+    icon:'fa-sparkles',
+    kicker:'Picked for you',
+    title:'Discover something useful',
+    description:'Explore current Net365 offers and recommendations.',
+    offer_value:'Discover',
+    offer_label:'Net365 offers',
+    cta:'Explore Offers',
+    landing_url:'#',
+    footer:'Net365 recommendation',
+    compact:false
+  };
+}
+
+function renderSmartAd(ad, ctx, paymentDetails){
   const backdrop = document.getElementById('momentAdBackdrop');
   const slot = document.getElementById('momentAdSlot');
   const amtEl = document.getElementById('momentSuccessAmount');
   const subEl = document.getElementById('momentSuccessSub');
 
-  const sym = CURRENCY_SYMBOLS[paymentDetails?.currency] || currentSymbol || '₦';
-  const amt = parseFloat(paymentDetails?.amount || 0);
-  amtEl.textContent = `${sym}${amt.toFixed(2)}`;
+  if (!backdrop || !slot) return;
 
-  const txTypeLabels = {
-    topup: 'Airtime recharge completed',
-    utility: 'Bill payment completed',
-    wallet_funding: 'Wallet funded successfully',
-    transfer: 'Transfer sent successfully'
+  const currency = smartAdCurrencyCode(paymentDetails?.currency || ctx.currency);
+  const amount = Number(paymentDetails?.amount ?? ctx.amount ?? 0);
+
+  if (amtEl) amtEl.textContent = smartAdMoney(amount, currency);
+
+  const labels = {
+    topup:'Airtime recharge completed',
+    utility:'Bill payment completed',
+    wallet_funding:'Wallet funded successfully',
+    transfer:'Transfer sent successfully',
+    subscription:'Subscription payment completed'
   };
-  subEl.textContent = txTypeLabels[paymentDetails?.tx_type] || 'Transaction completed';
-
-  slot.innerHTML = adDef.html;
-
-  const card = slot.querySelector('.moment-card');
-  if (card){
-    const colors = ['#22C55E', '#7C3AED', '#22D3EE', '#F59E0B', '#F43F5E'];
-    for (let i = 0; i < 14; i++){
-      const conf = document.createElement('div');
-      conf.className = 'confetti';
-      conf.style.left = Math.random() * 100 + '%';
-      conf.style.top = Math.random() * 30 + '%';
-      conf.style.background = colors[i % colors.length];
-      conf.style.animationDelay = (Math.random() * 0.4) + 's';
-      card.appendChild(conf);
-    }
+  if (subEl){
+    subEl.textContent = labels[paymentDetails?.tx_type] ||
+      labels[ctx.tx_type] || 'Transaction completed';
   }
 
-  const cta = slot.querySelector('.m-cta');
-  if (cta && adDef.onClick) cta.onclick = adDef.onClick;
+  const safe = {
+    id:smartAdEscape(ad.id || 'unknown'),
+    badge:smartAdEscape(ad.badge || (ad.sponsored ? 'SPONSORED' : 'SMART OFFER')),
+    kicker:smartAdEscape(ad.kicker || ''),
+    title:smartAdEscape(ad.title || 'A special offer for you'),
+    description:smartAdEscape(ad.description || ''),
+    offer_value:smartAdEscape(ad.offer_value || ''),
+    offer_label:smartAdEscape(ad.offer_label || ''),
+    cta:smartAdEscape(ad.cta || 'Explore Offer'),
+    footer:smartAdEscape(ad.footer || (ad.sponsored ? 'Sponsored offer' : 'Net365 recommendation')),
+    image_url:ad.image_url ? smartAdEscape(ad.image_url) : '',
+    logo_url:ad.logo_url ? smartAdEscape(ad.logo_url) : '',
+    icon:smartAdEscape(ad.icon || 'fa-sparkles'),
+    accent:smartAdEscape(ad.accent || '#7C3AED'),
+    accent2:smartAdEscape(ad.accent2 || '#22D3EE'),
+    landing_url:ad.landing_url ? String(ad.landing_url) : '#'
+  };
 
+  const image = safe.image_url
+    ? `<img src="${safe.image_url}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+    : `<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:52px;color:rgba(255,255,255,.9);">
+         <i class="fas ${safe.icon}"></i>
+       </div>`;
+
+  const logo = safe.logo_url
+    ? `<img src="${safe.logo_url}" alt="">`
+    : `<i class="fas ${safe.icon}"></i>`;
+
+  const sponsored = ad.sponsored
+    ? `<span class="smart-ad-sponsored"><i class="fas fa-bullhorn"></i> Sponsored</span>`
+    : `<span class="smart-ad-sponsored"><i class="fas fa-wand-magic-sparkles"></i> Net365</span>`;
+
+  slot.innerHTML = `
+    <article class="smart-ad"
+      data-ad-id="${safe.id}"
+      style="--ad-accent:${safe.accent};--ad-accent-2:${safe.accent2};--ad-accent-soft:${safe.accent}33;">
+      <button class="smart-ad-close" type="button" aria-label="Close offer" onclick="dismissMomentAd()">
+        <i class="fas fa-xmark"></i>
+      </button>
+
+      <div class="smart-ad-media">
+        <div class="smart-ad-top">
+          <span class="smart-ad-badge">${safe.badge}</span>
+          ${sponsored}
+        </div>
+        ${image}
+        <div class="smart-ad-logo">${logo}</div>
+      </div>
+
+      <div class="smart-ad-body">
+        ${safe.kicker ? `<div class="smart-ad-kicker">${safe.kicker}</div>` : ''}
+        <div class="smart-ad-title">${safe.title}</div>
+        <div class="smart-ad-description">${safe.description}</div>
+
+        ${safe.offer_value ? `
+          <div class="smart-ad-offer">
+            <strong>${safe.offer_value}</strong>
+            <span>${safe.offer_label}</span>
+          </div>` : ''}
+
+        <button class="smart-ad-cta" type="button" onclick="smartAdClick()">
+          ${safe.cta} <i class="fas fa-arrow-right"></i>
+        </button>
+
+        <div class="smart-ad-meta">
+          <span>${safe.footer}</span>
+          <span>${ad.expires_at ? `Ends ${formatSmartAdExpiry(ad.expires_at)}` : 'Personalized for you'}</span>
+        </div>
+      </div>
+    </article>
+
+    <div class="smart-ad-disclaimer">
+      ${ad.sponsored ? 'Sponsored content. Availability and offer terms may vary.' : 'Recommendations are selected to keep your Net365 experience useful.'}
+    </div>
+  `;
+
+  currentMomentAd = { ad, context:ctx, paymentDetails };
   requestAnimationFrame(() => {
     backdrop.classList.add('show');
     lastMomentAdShownAt = Date.now();
-    currentMomentAd = { ...adDef, context: ctx, paymentDetails };
-    trackMomentAdEvent('impression', adDef.type);
+    trackMomentAdEvent('impression');
   });
 }
 
-function dismissMomentAd(){
-  document.getElementById('momentAdBackdrop').classList.remove('show');
-  currentMomentAd = null;
+function formatSmartAdExpiry(value){
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return 'soon';
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
 }
 
-function momentAdClick(action){
-  trackMomentAdEvent('click', action);
-  if (currentMomentAd && typeof currentMomentAd.onClick === 'function'){
-    currentMomentAd.onClick();
+function smartAdClick(){
+  if (!currentMomentAd) return;
+
+  trackMomentAdEvent('click');
+
+  const ad = currentMomentAd.ad || {};
+  const url = ad.landing_url || '#';
+
+  dismissMomentAd();
+
+  if (ad.action === 'wallet'){
+    if (typeof openSheet === 'function') openSheet('addMoneyModal');
+    return;
+  }
+  if (ad.action === 'utilities'){
+    if (typeof showView === 'function') showView('utilities');
+    return;
+  }
+  if (ad.action === 'referral'){
+    if (typeof openSheet === 'function') openSheet('referralSheet');
+    return;
+  }
+  if (url && url !== '#'){
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 }
 
-function trackMomentAdEvent(eventType, adType){
+function dismissMomentAd(){
+  const backdrop = document.getElementById('momentAdBackdrop');
+  if (backdrop) backdrop.classList.remove('show');
+  currentMomentAd = null;
+}
+
+function trackMomentAdEvent(eventType){
+  const ad = currentMomentAd?.ad || {};
+  const ctx = currentMomentAd?.context || {};
+  const tx = currentMomentAd?.paymentDetails || {};
+
   try{
-    fetch(`${API_BASE}/ads/moment/track`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        event: eventType,
-        ad_type: adType,
-        tx_type: currentMomentAd?.paymentDetails?.tx_type || null,
-        amount: currentMomentAd?.paymentDetails?.amount || null,
-        currency: currentMomentAd?.paymentDetails?.currency || null,
-        user_id: currentUser?.id || null,
-        timestamp: new Date().toISOString()
+    fetch(`${API_BASE}/ads/event`, {
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      keepalive:true,
+      body:JSON.stringify({
+        event:eventType,
+        ad_id:ad.id || null,
+        ad_type:ad.type || null,
+        campaign_id:ad.campaign_id || null,
+        placement:ctx.placement || 'payment_success',
+        tx_type:ctx.tx_type || tx.tx_type || null,
+        amount:ctx.amount || tx.amount || null,
+        currency:ctx.currency || tx.currency || null,
+        country:ctx.country || null,
+        operator_id:ctx.operator_id || null,
+        operator_name:ctx.operator_name || null,
+        visitor_id:ctx.visitor_id || getNet365VisitorId(),
+        user_id:window.currentUser?.id || null,
+        timestamp:new Date().toISOString()
       })
-    }).catch(() => {});
-  } catch(e){ /* silent */ }
+    }).catch(()=>{});
+  }catch(e){}
+}
+
+async function showMomentAd(paymentDetails){
+  if (Date.now() - lastMomentAdShownAt < MOMENT_AD_CONFIG.MIN_INTERVAL_MS) return;
+
+  const ctx = buildMomentAdContext(paymentDetails);
+  let ad;
+
+  try{
+    ad = await fetchSmartAd(ctx);
+  }catch(e){
+    ad = localSmartAd(ctx);
+  }
+
+  if (!ad) return;
+  renderSmartAd(ad, ctx, paymentDetails);
+}
+
+// Optional reusable entry point for future non-transaction placements.
+async function showSmartAdForPlacement(placement, extraContext = {}){
+  const ctx = buildMomentAdContext({
+    tx_type:extraContext.tx_type || 'discovery',
+    amount:extraContext.amount || 0,
+    currency:extraContext.currency || currentCurrency,
+    country_code:extraContext.country_code || currentCountry
+  });
+  ctx.placement = placement;
+  Object.assign(ctx, extraContext);
+
+  try{
+    const ad = await fetchSmartAd(ctx);
+    renderSmartAd(ad, ctx, extraContext);
+  }catch(e){
+    const ad = localSmartAd(ctx);
+    renderSmartAd(ad, ctx, extraContext);
+  }
 }
 
 // ============================================================
@@ -3130,13 +3480,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             tx_type: tx.tx_type,
             amount: tx.amount,
             currency: tx.currency,
-            phone: payload.phone || ''
+            phone: payload.phone || '',
+            country_code: payload.country_code || payload.country || payload.countryCode || tx.country_code || '',
+            operator_id: payload.operator_id || payload.operatorId || tx.operator_id || null,
+            operator_name: payload.operator_name || payload.operatorName || tx.operator_name || '',
+            operator_brand: payload.operator_brand || payload.operatorBrand || '',
+            payload: payload
           });
         } else {
-          showMomentAd({ tx_type: 'topup', amount: 0, currency: currentCurrency });
+          showMomentAd({ tx_type: 'topup', amount: 0, currency: currentCurrency, country_code: currentCountry });
         }
       } catch(e) {
-        showMomentAd({ tx_type: 'topup', amount: 0, currency: currentCurrency });
+        showMomentAd({ tx_type: 'topup', amount: 0, currency: currentCurrency, country_code: currentCountry });
       }
     }, MOMENT_AD_CONFIG.DELAY_MS);
   }
