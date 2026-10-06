@@ -9,6 +9,24 @@
 <meta name="theme-color" content="#0A0E1A" />
 <title>Net365 — Recharge, Wallet, Utilities</title>
 
+<!--
+============================================================
+NET365 MOBILE — CHANGELOG
+============================================================
+v3.0 — Integrated build
+  - Midnight Neon design (kept)
+  - Country override dropdown (restored)
+  - Correct phone/country detection (explicit codes first)
+  - Payment auto-select per country via /api/payment/preferences
+  - Support button + support sheet (Email, Chat, WhatsApp)
+  - Floating live chat widget (wired to /api/chat/*)
+  - In-app biller sheet for utilities (uses /api/utilities/*)
+  - Two-step payment modal (review -> confirm)
+  - Moment ad engine on payment success page (5 ad types)
+  - All sheets from previous build kept (auth, wallet, transfer, referral)
+============================================================
+-->
+
 <link rel="manifest" href='data:application/json,{
   "name":"Net365","short_name":"Net365","start_url":"./","display":"standalone",
   "background_color":"#0A0E1A","theme_color":"#7C3AED",
@@ -55,8 +73,6 @@
   --radius-md:14px;
   --radius-sm:10px;
 
-  --shadow-glow:0 0 40px rgba(124,58,237,0.35);
-  --shadow-soft:0 12px 32px rgba(0,0,0,0.45);
   --shadow-card:0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
 
   --nav-h:70px;
@@ -80,7 +96,6 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 
-/* Aurora background */
 body::before{
   content:'';
   position:fixed;inset:0;
@@ -123,7 +138,7 @@ body::before{
   background:linear-gradient(90deg,#fff,#CBD5E1);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
 }
-.topbar-actions{display:flex;align-items:center;gap:10px;}
+.topbar-actions{display:flex;align-items:center;gap:8px;}
 .wallet-chip{
   display:none;align-items:center;gap:8px;
   padding:8px 14px;border-radius:999px;
@@ -154,7 +169,7 @@ body::before{
 }
 
 /* ============================================================
-   VIEW CONTAINER
+   VIEWS
    ============================================================ */
 .app-view{padding:20px 18px 30px;position:relative;z-index:1;}
 .view{display:none;animation:viewIn .35s cubic-bezier(0.16,1,0.3,1);}
@@ -165,7 +180,7 @@ body::before{
 }
 
 /* ============================================================
-   CARDS — GLASSMORPHISM
+   CARDS
    ============================================================ */
 .card{
   background:var(--surface);
@@ -194,8 +209,7 @@ body::before{
 }
 .section-title a{
   font-size:12px;color:var(--cyan);text-decoration:none;
-  font-weight:700;letter-spacing:0;
-  cursor:pointer;
+  font-weight:700;letter-spacing:0;cursor:pointer;
 }
 .field-label{
   display:flex;align-items:center;gap:8px;
@@ -235,7 +249,6 @@ select.input{
   padding-right:44px;
 }
 
-/* Amount input — HERO */
 .amount-wrap{
   display:flex;align-items:center;
   background:rgba(8,11,20,0.72);
@@ -243,8 +256,7 @@ select.input{
   border-radius:var(--radius-lg);
   padding:8px 20px 8px 22px;
   transition:border-color .2s ease, box-shadow .2s ease;
-  position:relative;
-  overflow:hidden;
+  position:relative;overflow:hidden;
 }
 .amount-wrap::after{
   content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
@@ -263,21 +275,14 @@ select.input{
 }
 .amount-input{
   flex:1;background:none;border:none;outline:none;
-  color:#fff;
-  font-family:inherit;
-  font-size:44px !important;
-  font-weight:900;
-  letter-spacing:-0.03em;
-  line-height:1.1;
-  padding:8px 0;
-  width:100%;
+  color:#fff;font-family:inherit;
+  font-size:44px !important;font-weight:900;
+  letter-spacing:-0.03em;line-height:1.1;
+  padding:8px 0;width:100%;
   caret-color:var(--cyan);
 }
 .amount-input::placeholder{color:var(--text-3);font-weight:900;}
 
-/* ============================================================
-   QUICK AMOUNTS
-   ============================================================ */
 .quick-row{
   display:flex;gap:8px;margin-top:14px;overflow-x:auto;
   padding-bottom:2px;scrollbar-width:none;
@@ -285,8 +290,7 @@ select.input{
 .quick-row::-webkit-scrollbar{display:none;}
 .quick-pill{
   flex-shrink:0;
-  padding:9px 18px;
-  border-radius:999px;
+  padding:9px 18px;border-radius:999px;
   background:rgba(148,163,184,0.08);
   border:1px solid rgba(148,163,184,0.14);
   color:var(--text-1);
@@ -296,19 +300,14 @@ select.input{
 .quick-pill:hover,.quick-pill:active{
   background:var(--violet-soft);
   border-color:var(--violet);
-  color:#fff;
-  transform:translateY(-1px);
+  color:#fff;transform:translateY(-1px);
 }
 .quick-pill.active{
   background:linear-gradient(135deg,var(--violet),var(--violet-bright));
-  border-color:transparent;
-  color:#fff;
+  border-color:transparent;color:#fff;
   box-shadow:0 0 20px rgba(124,58,237,0.5);
 }
 
-/* ============================================================
-   DETECTED OPERATOR CARD
-   ============================================================ */
 .detect-card{
   display:none;align-items:center;gap:12px;
   padding:14px 16px;
@@ -350,7 +349,6 @@ select.input{
   background:rgba(245,158,11,0.16);color:var(--warning);
 }
 
-/* Manual network override */
 .manual-block{
   display:none;margin-top:10px;
   padding:14px;
@@ -370,9 +368,6 @@ select.input{
   cursor:pointer;padding:0;
 }
 
-/* ============================================================
-   BREAKDOWN — BOLD NUMBERS
-   ============================================================ */
 .breakdown{
   background:rgba(8,11,20,0.55);
   border:1px solid rgba(148,163,184,0.10);
@@ -401,9 +396,7 @@ select.input{
   border-top:1px solid rgba(148,163,184,0.14);
   margin-top:8px;padding-top:14px;
 }
-.bd-row.total .lbl{
-  font-size:14px;color:#fff;font-weight:800;
-}
+.bd-row.total .lbl{font-size:14px;color:#fff;font-weight:800;}
 .bd-row.total .val{
   font-size:32px;font-weight:900;
   letter-spacing:-0.03em;
@@ -412,9 +405,6 @@ select.input{
 }
 .bd-row.discount .val{color:var(--success);}
 
-/* ============================================================
-   PAYMENT METHOD CHOOSER
-   ============================================================ */
 .pm-label{
   font-size:12px;font-weight:700;letter-spacing:0.05em;
   color:var(--text-2);text-transform:uppercase;
@@ -431,14 +421,12 @@ select.input{
   color:var(--text-1);
   font-family:inherit;font-size:13px;font-weight:700;
   cursor:pointer;transition:all .18s ease;
-  text-align:left;
-  position:relative;
+  text-align:left;position:relative;
 }
 .pm-btn:hover{border-color:var(--violet);color:#fff;}
 .pm-btn.active{
   background:linear-gradient(135deg,rgba(124,58,237,0.20),rgba(34,211,238,0.10));
-  border-color:var(--violet);
-  color:#fff;
+  border-color:var(--violet);color:#fff;
   box-shadow:0 0 20px rgba(124,58,237,0.30);
 }
 .pm-btn .pm-icon{
@@ -458,9 +446,6 @@ select.input{
 }
 .pm-btn.active small{color:rgba(255,255,255,0.7);}
 
-/* ============================================================
-   PRIMARY ACTION BUTTON
-   ============================================================ */
 .btn-hero{
   width:100%;
   margin-top:18px;
@@ -473,9 +458,7 @@ select.input{
   font-family:inherit;
   font-size:17px;font-weight:900;
   letter-spacing:0.01em;
-  cursor:pointer;
-  position:relative;
-  overflow:hidden;
+  cursor:pointer;position:relative;overflow:hidden;
   box-shadow:0 12px 32px rgba(124,58,237,0.42), inset 0 1px 0 rgba(255,255,255,0.20);
   transition:transform .12s ease, box-shadow .25s ease;
   animation:heroShift 8s ease-in-out infinite;
@@ -497,9 +480,6 @@ select.input{
   opacity:0.85;margin-top:3px;letter-spacing:0;
 }
 
-/* ============================================================
-   SECONDARY BUTTONS
-   ============================================================ */
 .btn-ghost{
   width:100%;padding:16px;
   border-radius:var(--radius-md);
@@ -515,17 +495,13 @@ select.input{
   border-radius:var(--radius-md);
   border:none;
   background:linear-gradient(135deg,var(--violet),var(--violet-bright));
-  color:#fff;
-  font-family:inherit;font-size:14px;font-weight:800;
+  color:#fff;font-family:inherit;font-size:14px;font-weight:800;
   cursor:pointer;
   box-shadow:0 8px 24px rgba(124,58,237,0.32);
   transition:transform .12s ease;
 }
 .btn-secondary:active{transform:scale(0.97);}
 
-/* ============================================================
-   QUICK ACTIONS (Home)
-   ============================================================ */
 .qa-scroll{
   display:flex;gap:10px;overflow-x:auto;
   padding:4px 4px 12px;margin:0 -4px;
@@ -537,8 +513,7 @@ select.input{
   display:flex;flex-direction:column;align-items:center;gap:8px;
   padding:0;background:none;border:none;
   font-family:inherit;cursor:pointer;
-  width:72px;
-  color:var(--text-1);
+  width:72px;color:var(--text-1);
 }
 .qa-icon{
   width:56px;height:56px;border-radius:18px;
@@ -552,8 +527,7 @@ select.input{
 .qa-item:hover .qa-icon,
 .qa-item:active .qa-icon{
   background:linear-gradient(135deg,var(--violet),var(--cyan));
-  color:#fff;
-  border-color:transparent;
+  color:#fff;border-color:transparent;
   box-shadow:0 8px 24px rgba(124,58,237,0.42);
   transform:translateY(-3px);
 }
@@ -563,9 +537,6 @@ select.input{
   line-height:1.2;color:var(--text-2);
 }
 
-/* ============================================================
-   TRANSACTION LIST
-   ============================================================ */
 .tx-list{display:flex;flex-direction:column;gap:6px;}
 .tx-row{
   display:flex;align-items:center;gap:14px;
@@ -585,18 +556,9 @@ select.input{
   display:flex;align-items:center;justify-content:center;
   font-size:16px;flex-shrink:0;
 }
-.tx-icon.credit{
-  background:rgba(34,197,94,0.14);
-  color:var(--success);
-}
-.tx-icon.debit{
-  background:rgba(244,63,94,0.14);
-  color:var(--danger);
-}
-.tx-icon.neutral{
-  background:rgba(124,58,237,0.14);
-  color:var(--violet-bright);
-}
+.tx-icon.credit{background:rgba(34,197,94,0.14);color:var(--success);}
+.tx-icon.debit{background:rgba(244,63,94,0.14);color:var(--danger);}
+.tx-icon.neutral{background:rgba(124,58,237,0.14);color:var(--violet-bright);}
 .tx-body{flex:1;min-width:0;}
 .tx-title{
   font-size:14px;font-weight:700;color:var(--text-0);
@@ -615,21 +577,15 @@ select.input{
 .status-pill.success{background:var(--success-soft);color:var(--success);}
 .status-pill.pending{background:var(--warning-soft);color:var(--warning);}
 .status-pill.failed{background:var(--danger-soft);color:var(--danger);}
-.tx-amount{
-  text-align:right;flex-shrink:0;
-}
+.tx-amount{text-align:right;flex-shrink:0;}
 .tx-amount .amt{
   font-size:18px;font-weight:800;
-  letter-spacing:-0.02em;
-  color:var(--text-0);
+  letter-spacing:-0.02em;color:var(--text-0);
 }
 .tx-amount .amt.positive{color:var(--success);}
-.tx-amount .amt.negative{color:var(--text-0);}
 
 .empty-state{
-  text-align:center;
-  padding:36px 20px;
-  color:var(--text-2);
+  text-align:center;padding:36px 20px;color:var(--text-2);
 }
 .empty-state i{
   font-size:36px;color:var(--text-3);
@@ -637,9 +593,6 @@ select.input{
 }
 .empty-state p{font-size:13px;font-weight:500;}
 
-/* ============================================================
-   WALLET VIEW
-   ============================================================ */
 .balance-hero{
   background:
     linear-gradient(135deg,rgba(124,58,237,0.28) 0%,rgba(34,211,238,0.12) 100%),
@@ -647,8 +600,7 @@ select.input{
   border:1px solid var(--border-strong);
   border-radius:var(--radius-xl);
   padding:28px 24px;
-  position:relative;
-  overflow:hidden;
+  position:relative;overflow:hidden;
   box-shadow:0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 .balance-hero::before{
@@ -666,10 +618,8 @@ select.input{
 }
 .balance-label i{color:var(--cyan);}
 .balance-value{
-  font-size:52px;
-  font-weight:900;
-  letter-spacing:-0.04em;
-  line-height:1.05;
+  font-size:52px;font-weight:900;
+  letter-spacing:-0.04em;line-height:1.05;
   color:#fff;
   text-shadow:0 0 40px rgba(124,58,237,0.35);
   word-break:break-all;
@@ -683,7 +633,6 @@ select.input{
   position:relative;z-index:1;
 }
 
-/* Currency chips */
 .cur-chips{
   display:flex;gap:8px;overflow-x:auto;
   padding:4px 4px 12px;margin:18px -4px 0;
@@ -702,14 +651,10 @@ select.input{
 }
 .cur-chip.active{
   background:linear-gradient(135deg,var(--violet),var(--cyan));
-  border-color:transparent;
-  color:#fff;
+  border-color:transparent;color:#fff;
   box-shadow:0 0 18px rgba(124,58,237,0.45);
 }
 
-/* ============================================================
-   UTILITIES VIEW
-   ============================================================ */
 .biller-group{margin-bottom:22px;}
 .biller-head{
   font-size:12px;font-weight:800;
@@ -736,8 +681,7 @@ select.input{
 .biller-btn:hover,.biller-btn:active{
   background:rgba(124,58,237,0.10);
   border-color:var(--border-strong);
-  color:#fff;
-  transform:translateY(-1px);
+  color:#fff;transform:translateY(-1px);
 }
 .biller-logo{
   width:34px;height:34px;border-radius:10px;
@@ -747,21 +691,15 @@ select.input{
   font-size:14px;flex-shrink:0;font-weight:900;
 }
 
-/* ============================================================
-   BOTTOM NAV
-   ============================================================ */
 .bottom-nav{
   position:fixed;bottom:0;left:0;right:0;
-  z-index:80;
-  display:flex;
+  z-index:80;display:flex;
   background:rgba(8,11,20,0.88);
   backdrop-filter:blur(24px) saturate(180%);
   -webkit-backdrop-filter:blur(24px) saturate(180%);
   border-top:1px solid var(--border);
   padding-bottom:env(safe-area-inset-bottom);
-  padding-top:8px;
-  padding-left:8px;
-  padding-right:8px;
+  padding-top:8px;padding-left:8px;padding-right:8px;
 }
 .nav-item{
   flex:1;
@@ -775,9 +713,7 @@ select.input{
   position:relative;
 }
 .nav-item .nav-icon{
-  font-size:20px;
-  transition:all .2s ease;
-  line-height:1;
+  font-size:20px;transition:all .2s ease;line-height:1;
 }
 .nav-item .nav-label{font-weight:800;letter-spacing:0.05em;}
 .nav-item.active{color:#fff;}
@@ -787,16 +723,12 @@ select.input{
   transform:translateY(-2px);
 }
 .nav-item.active::before{
-  content:'';
-  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
   width:32px;height:3px;border-radius:0 0 4px 4px;
   background:linear-gradient(90deg,var(--violet),var(--cyan));
   box-shadow:0 0 12px rgba(124,58,237,0.85);
 }
 
-/* ============================================================
-   SHEETS & MODALS
-   ============================================================ */
 .sheet-backdrop{
   position:fixed;inset:0;z-index:200;
   background:rgba(8,11,20,0.72);
@@ -841,12 +773,7 @@ select.input{
 }
 .sheet-relative{position:relative;}
 
-/* ============================================================
-   USER MENU (from avatar)
-   ============================================================ */
-.user-menu-list{
-  display:flex;flex-direction:column;gap:2px;
-}
+.user-menu-list{display:flex;flex-direction:column;gap:2px;}
 .um-item{
   display:flex;align-items:center;gap:14px;
   padding:15px 12px;
@@ -869,9 +796,6 @@ select.input{
 .um-item.danger i{background:rgba(244,63,94,0.12);color:var(--danger);}
 .um-item.danger:hover{background:rgba(244,63,94,0.08);}
 
-/* ============================================================
-   TOAST
-   ============================================================ */
 #toastWrap{
   position:fixed;
   top:calc(env(safe-area-inset-top) + 76px);
@@ -885,8 +809,7 @@ select.input{
   background:rgba(20,26,45,0.96);
   backdrop-filter:blur(20px);
   border:1px solid var(--border-strong);
-  color:#fff;
-  font-size:13.5px;font-weight:600;
+  color:#fff;font-size:13.5px;font-weight:600;
   box-shadow:0 12px 32px rgba(0,0,0,0.55);
   display:flex;align-items:center;gap:10px;
   animation:toastIn .35s cubic-bezier(0.34,1.56,0.64,1);
@@ -904,9 +827,6 @@ select.input{
   to{opacity:1;transform:translateY(0);}
 }
 
-/* ============================================================
-   SPINNER
-   ============================================================ */
 .spinner{
   display:inline-block;
   width:14px;height:14px;
@@ -919,8 +839,357 @@ select.input{
 @keyframes spin{to{transform:rotate(360deg);}}
 
 /* ============================================================
-   RESPONSIVE
+   CHAT WIDGET
    ============================================================ */
+.chat-fab{
+  position:fixed;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  right:16px;
+  width:52px;height:52px;border-radius:50%;
+  border:none;
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  color:#fff;font-size:20px;cursor:pointer;
+  box-shadow:0 8px 28px rgba(124,58,237,0.55);
+  z-index:90;transition:transform .2s ease;
+  display:none;
+}
+.chat-fab.show{display:flex;align-items:center;justify-content:center;}
+.chat-fab:active{transform:scale(0.92);}
+
+.chat-widget{
+  display:none;
+  position:fixed;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  right:16px;left:16px;
+  max-width:420px;margin:0 auto;
+  height:min(520px, calc(100vh - 140px));
+  background:var(--bg-2);
+  border:1px solid var(--border-strong);
+  border-radius:24px;
+  box-shadow:0 30px 80px rgba(0,0,0,0.6);
+  z-index:100;flex-direction:column;overflow:hidden;
+  animation:sheetUp .3s cubic-bezier(0.16,1,0.3,1);
+}
+.chat-widget.show{display:flex;}
+.chat-header{
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  color:#fff;padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.chat-body{
+  flex:1;overflow-y:auto;padding:16px;
+  display:flex;flex-direction:column;gap:10px;
+  background:rgba(8,11,20,0.4);
+}
+.chat-msg{
+  max-width:82%;padding:10px 14px;
+  border-radius:16px;font-size:13.5px;line-height:1.45;font-weight:500;
+}
+.chat-msg.support{
+  background:rgba(148,163,184,0.10);
+  color:var(--text-0);
+  align-self:flex-start;
+  border-bottom-left-radius:4px;
+  border:1px solid rgba(148,163,184,0.12);
+}
+.chat-msg.user{
+  background:linear-gradient(135deg,var(--violet),var(--violet-bright));
+  color:#fff;align-self:flex-end;
+  border-bottom-right-radius:4px;
+}
+.chat-footer{
+  display:flex;gap:8px;padding:10px;
+  border-top:1px solid var(--border);
+  background:rgba(8,11,20,0.6);
+}
+.chat-footer input{
+  flex:1;padding:12px 16px;
+  border-radius:14px;
+  border:1.5px solid rgba(148,163,184,0.16);
+  background:rgba(8,11,20,0.6);
+  color:#fff;font-family:inherit;font-size:14px;
+  outline:none;
+}
+.chat-footer input:focus{border-color:var(--violet-bright);}
+.chat-footer button{
+  width:44px;border-radius:14px;border:none;
+  background:linear-gradient(135deg,var(--violet),var(--cyan));
+  color:#fff;font-size:15px;cursor:pointer;
+}
+
+/* ============================================================
+   MOMENT AD — Payment Success Overlay
+   ============================================================ */
+.moment-ad-backdrop{
+  position:fixed;inset:0;z-index:3000;
+  background:rgba(4,6,14,0.90);
+  backdrop-filter:blur(14px) saturate(180%);
+  -webkit-backdrop-filter:blur(14px) saturate(180%);
+  display:none;
+  align-items:flex-end;justify-content:center;
+  padding:0;
+  animation:momentBackdropIn .3s ease;
+}
+.moment-ad-backdrop.show{display:flex;}
+@keyframes momentBackdropIn{from{opacity:0;}to{opacity:1;}}
+
+.moment-ad-sheet{
+  width:100%;max-width:520px;
+  background:linear-gradient(180deg,#0D1224 0%,#0A0E1A 100%);
+  border-radius:32px 32px 0 0;
+  padding:12px 22px calc(28px + env(safe-area-inset-bottom));
+  max-height:92vh;overflow-y:auto;
+  border-top:1px solid var(--border-strong);
+  box-shadow:0 -20px 60px rgba(124,58,237,0.30), 0 -1px 0 rgba(255,255,255,0.05);
+  animation:momentSheetUp .5s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes momentSheetUp{
+  from{transform:translateY(100%);}
+  to{transform:translateY(0);}
+}
+.moment-ad-sheet::before{
+  content:'';display:block;
+  width:44px;height:4px;border-radius:99px;
+  background:rgba(148,163,184,0.28);
+  margin:4px auto 20px;
+}
+
+.success-hero{
+  text-align:center;padding:8px 0 24px;
+}
+.success-ring{
+  width:80px;height:80px;
+  margin:0 auto 18px;
+  position:relative;
+  filter:drop-shadow(0 0 24px rgba(34,197,94,0.55));
+}
+.success-check{
+  width:100%;height:100%;
+  transform:rotate(-90deg);
+}
+.success-check-circle{
+  stroke:var(--success);
+  stroke-width:2;
+  stroke-dasharray:151;
+  stroke-dashoffset:151;
+  animation:successCircle .5s ease-out forwards;
+}
+.success-check-mark{
+  stroke:var(--success);
+  stroke-width:3.5;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-dasharray:48;
+  stroke-dashoffset:48;
+  animation:successCheck .35s .4s ease-out forwards;
+}
+@keyframes successCircle{to{stroke-dashoffset:0;}}
+@keyframes successCheck{to{stroke-dashoffset:0;}}
+.success-title{
+  font-size:13px;font-weight:800;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--success);
+  margin-bottom:10px;
+}
+.success-amount{
+  font-size:44px;font-weight:900;
+  letter-spacing:-0.035em;line-height:1;
+  color:#fff;
+  text-shadow:0 0 32px rgba(34,197,94,0.35);
+  margin-bottom:6px;
+}
+.success-sub{
+  font-size:13px;color:var(--text-2);
+  font-weight:500;
+}
+
+.moment-divider{
+  display:flex;align-items:center;gap:14px;
+  padding:6px 0 18px;
+}
+.moment-divider::before,
+.moment-divider::after{
+  content:'';flex:1;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(124,58,237,0.35),transparent);
+}
+.moment-divider-label{
+  font-size:9.5px;font-weight:900;
+  letter-spacing:0.20em;
+  color:var(--violet-bright);
+  opacity:0.85;
+}
+
+.moment-ad-slot{padding:0 0 8px;}
+.moment-card{
+  border-radius:22px;
+  padding:22px;
+  position:relative;
+  overflow:hidden;
+  animation:momentCardIn .45s .25s both cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes momentCardIn{
+  from{opacity:0;transform:translateY(12px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.moment-card .m-icon{
+  width:52px;height:52px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;
+  margin-bottom:14px;
+  position:relative;z-index:1;
+}
+.moment-card .m-title{
+  font-size:20px;font-weight:900;
+  letter-spacing:-0.02em;line-height:1.2;
+  color:#fff;
+  margin-bottom:8px;
+  position:relative;z-index:1;
+}
+.moment-card .m-body{
+  font-size:14px;line-height:1.55;
+  font-weight:500;
+  margin-bottom:18px;
+  position:relative;z-index:1;
+}
+.moment-card .m-cta{
+  display:inline-flex;align-items:center;gap:9px;
+  padding:14px 22px;
+  border-radius:999px;
+  font-size:14px;font-weight:900;
+  font-family:inherit;
+  letter-spacing:0.01em;
+  border:none;
+  cursor:pointer;
+  position:relative;z-index:1;
+  transition:transform .15s ease, box-shadow .25s ease;
+}
+.moment-card .m-cta:active{transform:scale(0.96);}
+.moment-card .m-footer{
+  font-size:11px;
+  margin-top:14px;
+  position:relative;z-index:1;
+  font-weight:600;
+  opacity:0.85;
+}
+
+.moment-cashback{
+  background:
+    radial-gradient(circle at 100% 0%, rgba(34,197,94,0.28) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(34,197,94,0.14), rgba(124,58,237,0.14));
+  border:1px solid rgba(34,197,94,0.32);
+}
+.moment-cashback .m-icon{
+  background:linear-gradient(135deg,var(--success),#16A34A);
+  color:#fff;
+  box-shadow:0 8px 24px rgba(34,197,94,0.50);
+}
+.moment-cashback .m-body{color:rgba(255,255,255,0.80);}
+.moment-cashback .m-cta{
+  background:linear-gradient(135deg,var(--success),#16A34A);
+  color:#fff;
+  box-shadow:0 10px 28px rgba(34,197,94,0.45);
+}
+.moment-cashback .m-footer{color:rgba(34,197,94,0.85);}
+
+.moment-cross{
+  background:
+    radial-gradient(circle at 100% 0%, rgba(34,211,238,0.28) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(34,211,238,0.10), rgba(124,58,237,0.14));
+  border:1px solid rgba(34,211,238,0.32);
+}
+.moment-cross .m-icon{
+  background:linear-gradient(135deg,var(--cyan),#0891B2);
+  color:#fff;
+  box-shadow:0 8px 24px rgba(34,211,238,0.45);
+}
+.moment-cross .m-body{color:rgba(255,255,255,0.80);}
+.moment-cross .m-cta{
+  background:linear-gradient(135deg,var(--cyan),var(--violet));
+  color:#fff;
+  box-shadow:0 10px 28px rgba(34,211,238,0.42);
+}
+.moment-cross .m-footer{color:rgba(34,211,238,0.85);}
+
+.moment-referral{
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,63,94,0.24) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(124,58,237,0.16), rgba(244,63,94,0.10));
+  border:1px solid rgba(139,92,246,0.35);
+}
+.moment-referral .m-icon{
+  background:linear-gradient(135deg,var(--violet),var(--danger));
+  color:#fff;
+  box-shadow:0 8px 24px rgba(139,92,246,0.45);
+}
+.moment-referral .m-body{color:rgba(255,255,255,0.80);}
+.moment-referral .m-cta{
+  background:linear-gradient(135deg,var(--violet),var(--danger));
+  color:#fff;
+  box-shadow:0 10px 28px rgba(139,92,246,0.42);
+}
+.moment-referral .m-footer{color:rgba(244,63,94,0.85);}
+.moment-progress{
+  height:8px;border-radius:99px;
+  background:rgba(255,255,255,0.10);
+  overflow:hidden;
+  margin-bottom:14px;
+  position:relative;z-index:1;
+}
+.moment-progress-fill{
+  height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--violet),var(--cyan));
+  box-shadow:0 0 16px rgba(124,58,237,0.60);
+  animation:progressGrow .8s .4s both cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes progressGrow{from{width:0;}to{width:var(--progress-target,66%);}}
+
+.moment-scheduled{
+  background:
+    radial-gradient(circle at 100% 0%, rgba(245,158,11,0.26) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(245,158,11,0.10), rgba(124,58,237,0.14));
+  border:1px solid rgba(245,158,11,0.32);
+}
+.moment-scheduled .m-icon{
+  background:linear-gradient(135deg,var(--warning),#D97706);
+  color:#fff;
+  box-shadow:0 8px 24px rgba(245,158,11,0.45);
+}
+.moment-scheduled .m-body{color:rgba(255,255,255,0.80);}
+.moment-scheduled .m-cta{
+  background:linear-gradient(135deg,var(--warning),var(--violet));
+  color:#fff;
+  box-shadow:0 10px 28px rgba(245,158,11,0.42);
+}
+.moment-scheduled .m-footer{color:rgba(245,158,11,0.85);}
+
+.moment-dismiss{
+  width:100%;margin-top:16px;
+  padding:14px;
+  background:transparent;
+  border:none;
+  color:var(--text-3);
+  font-family:inherit;
+  font-size:13px;font-weight:700;
+  cursor:pointer;
+  letter-spacing:0.02em;
+}
+.moment-dismiss:hover{color:var(--text-1);}
+
+.confetti{
+  position:absolute;
+  width:8px;height:8px;
+  border-radius:2px;
+  opacity:0;
+  pointer-events:none;
+  z-index:0;
+  animation:confettiFall 1.6s ease-out forwards;
+}
+@keyframes confettiFall{
+  0%{opacity:0;transform:translateY(0) rotate(0deg);}
+  10%{opacity:1;}
+  100%{opacity:0;transform:translateY(120px) rotate(360deg);}
+}
+
 @media (min-width:600px){
   .app-view{max-width:520px;margin:0 auto;}
   .bottom-nav{max-width:520px;margin:0 auto;left:50%;transform:translateX(-50%);border-radius:22px 22px 0 0;border-left:1px solid var(--border);border-right:1px solid var(--border);}
@@ -942,6 +1211,9 @@ select.input{
       <i class="fas fa-wallet"></i>
       <span id="walletChipValue">₦0.00</span>
     </div>
+    <button class="avatar-btn" onclick="openSheet('supportSheet')" aria-label="Support">
+      <i class="fas fa-headset"></i>
+    </button>
     <button class="avatar-btn" id="avatarBtn" onclick="onAvatarTap()" aria-label="Account">
       <i class="fas fa-user"></i>
     </button>
@@ -955,7 +1227,6 @@ select.input{
        ============================================================ -->
   <section class="view active" id="view-home">
 
-    <!-- Quick Actions -->
     <div class="qa-scroll">
       <button class="qa-item" onclick="openSheet('addMoneyModal')">
         <div class="qa-icon"><i class="fas fa-plus"></i></div>
@@ -983,18 +1254,35 @@ select.input{
       </button>
     </div>
 
-    <!-- RECHARGE CARD -->
     <div class="card">
       <div class="field">
         <label class="field-label"><i class="fas fa-mobile-alt"></i> Phone Number</label>
         <input type="tel" id="phoneInput" class="input" placeholder="08012345678" autocomplete="tel" oninput="onPhoneInput()" />
       </div>
 
+      <div class="field" style="margin-top:-4px;">
+        <label class="field-label" style="text-transform:none; letter-spacing:0; font-size:11.5px; font-weight:600;">
+          <i class="fas fa-globe"></i> Not in Nigeria? Choose your country
+        </label>
+        <select id="countryOverrideSelect" class="input" onchange="setManualCountry(this.value)" style="padding:12px 14px; font-size:14px;">
+          <option value="">Auto-detect from number</option>
+          <option value="NG">🇳🇬 Nigeria</option>
+          <option value="GH">🇬🇭 Ghana</option>
+          <option value="KE">🇰🇪 Kenya</option>
+          <option value="UG">🇺🇬 Uganda</option>
+          <option value="TZ">🇹🇿 Tanzania</option>
+          <option value="ZA">🇿🇦 South Africa</option>
+          <option value="US">🇺🇸 United States</option>
+          <option value="GB">🇬🇧 United Kingdom</option>
+          <option value="IN">🇮🇳 India</option>
+        </select>
+      </div>
+
       <div class="detect-card" id="detectCard">
         <div class="detect-icon" id="detectIcon"><i class="fas fa-satellite-dish"></i></div>
         <div class="detect-info">
-          <div class="detect-name" id="detectName">Detecting…</div>
-          <div class="detect-sub" id="detectSub">Please wait</div>
+          <div class="detect-name" id="detectName">Ready to detect</div>
+          <div class="detect-sub" id="detectSub">Enter your number above</div>
         </div>
         <div class="detect-badge" id="detectBadge">AUTO</div>
       </div>
@@ -1012,35 +1300,31 @@ select.input{
       <div class="field" style="margin-top:20px;">
         <label class="field-label"><i class="fas fa-coins"></i> Amount</label>
         <div class="amount-wrap">
-          <span class="amount-symbol" id="amtSymbol"></span>
+          <span class="amount-symbol" id="amtSymbol">₦</span>
           <input type="tel" id="amountInput" class="amount-input" placeholder="0" inputmode="decimal" oninput="onAmountInput()" />
         </div>
         <div class="quick-row">
-          <button class="quick-pill" onclick="setQuick(100,event)">100</button>
-          <button class="quick-pill" onclick="setQuick(200,event)">200</button>
-          <button class="quick-pill" onclick="setQuick(500,event)">500</button>
-          <button class="quick-pill" onclick="setQuick(1000,event)">1,000</button>
-          <button class="quick-pill" onclick="setQuick(2000,event)">2,000</button>
-          <button class="quick-pill" onclick="setQuick(5000,event)">5,000</button>
+          <button class="quick-pill" onclick="setQuick(100,event)">₦100</button>
+          <button class="quick-pill" onclick="setQuick(200,event)">₦200</button>
+          <button class="quick-pill" onclick="setQuick(500,event)">₦500</button>
+          <button class="quick-pill" onclick="setQuick(1000,event)">₦1,000</button>
+          <button class="quick-pill" onclick="setQuick(2000,event)">₦2,000</button>
+          <button class="quick-pill" onclick="setQuick(5000,event)">₦5,000</button>
         </div>
       </div>
 
       <div class="breakdown">
         <div class="bd-row">
           <span class="lbl">Recharge</span>
-          <span class="val" id="bdAirtime">0.00</span>
+          <span class="val" id="bdAirtime">₦0.00</span>
         </div>
         <div class="bd-row">
           <span class="lbl">Service Fee <span class="fee-tag">COT</span></span>
-          <span class="val" id="bdFee">0.00</span>
-        </div>
-        <div class="bd-row discount" id="bdDiscRow" style="display:none;">
-          <span class="lbl">Referral Discount</span>
-          <span class="val" id="bdDiscount">-0.00</span>
+          <span class="val" id="bdFee">₦0.00</span>
         </div>
         <div class="bd-row total">
           <span class="lbl">You Pay</span>
-          <span class="val" id="bdTotal">0.00</span>
+          <span class="val" id="bdTotal">₦0.00</span>
         </div>
       </div>
 
@@ -1064,13 +1348,12 @@ select.input{
         </button>
       </div>
 
-      <button class="btn-hero" id="payBtn" disabled onclick="handlePay()">
+      <button class="btn-hero" id="payBtn" disabled onclick="openPaymentModal()">
         <span id="payBtnLabel">Enter details</span>
         <span class="btn-hint" id="payBtnHint">Complete the form to continue</span>
       </button>
     </div>
 
-    <!-- Recent Transactions Preview -->
     <div class="section-title">
       Recent Activity
       <a onclick="showView('transactions')">View all <i class="fas fa-arrow-right" style="font-size:10px;"></i></a>
@@ -1191,7 +1474,118 @@ select.input{
   </button>
 </nav>
 
-<!-- ============ SHEETS ============ -->
+<!-- ============ SUPPORT SHEET ============ -->
+<div class="sheet-backdrop" id="supportSheet" onclick="if(event.target===this) closeSheet('supportSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('supportSheet')"><i class="fas fa-times"></i></button>
+      <div class="sheet-title">How can we help?</div>
+      <div class="sheet-sub">We typically reply within a few minutes.</div>
+    </div>
+    <div class="user-menu-list">
+      <button class="um-item" onclick="closeSheet('supportSheet'); openLiveChat();">
+        <i class="fas fa-comments"></i> Live Chat
+      </button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); window.location.href='mailto:support@net365co.com?subject=Net365%20Support';">
+        <i class="fas fa-envelope"></i> Email Support
+      </button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); window.open('https://wa.me/2348150450890','_blank');">
+        <i class="fab fa-whatsapp"></i> WhatsApp
+      </button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); toast('Help Center coming soon','info');">
+        <i class="fas fa-book-open"></i> Help Center
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BILLER SHEET (In-app utilities) ============ -->
+<div class="sheet-backdrop" id="billerSheet" onclick="if(event.target===this) closeSheet('billerSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('billerSheet')"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="billerSheetTitle">Pay Bill</div>
+      <div class="sheet-sub" id="billerSheetSub">Enter your account details</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><i class="fas fa-hashtag"></i> <span id="billerAccountLabel">Meter / Account Number</span></label>
+      <input type="tel" id="billerAccount" class="input" placeholder="Enter account number" inputmode="numeric" />
+    </div>
+
+    <button class="btn-ghost" id="billerValidateBtn" onclick="validateBillerAccount()" style="margin-bottom:14px;">
+      <i class="fas fa-check-circle" style="margin-right:6px;"></i> Validate Account
+    </button>
+
+    <div id="billerCustomerBox" style="display:none;padding:14px 16px;border-radius:14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.30);margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:0.10em;color:var(--success);text-transform:uppercase;">Account Verified</div>
+      <div style="font-size:15px;font-weight:800;color:#fff;margin-top:4px;" id="billerCustomerName">—</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><i class="fas fa-coins"></i> Amount</label>
+      <div class="amount-wrap">
+        <span class="amount-symbol">₦</span>
+        <input type="tel" id="billerAmount" class="amount-input" placeholder="0" inputmode="decimal" />
+      </div>
+    </div>
+
+    <button class="btn-hero" id="billerPayBtn" onclick="payBiller()">
+      <span id="billerPayLabel">Pay Bill</span>
+      <span class="btn-hint">Amount will be debited from your Net365 wallet</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ PAYMENT MODAL (two-step) ============ -->
+<div class="sheet-backdrop" id="paymentModal" onclick="if(event.target===this) closePaymentModal()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closePaymentModal()"><i class="fas fa-times"></i></button>
+      <div class="sheet-title">Review your payment</div>
+      <div class="sheet-sub">Confirm the details before we take you to the gateway.</div>
+    </div>
+
+    <div class="breakdown" style="margin-top:0;">
+      <div class="bd-row">
+        <span class="lbl">Operator</span>
+        <span class="val" id="modalOperator" style="font-size:15px;">—</span>
+      </div>
+      <div class="bd-row">
+        <span class="lbl">Phone</span>
+        <span class="val" id="modalPhone" style="font-size:15px;">—</span>
+      </div>
+      <div class="bd-row">
+        <span class="lbl">Airtime</span>
+        <span class="val" id="modalAirtime">₦0.00</span>
+      </div>
+      <div class="bd-row">
+        <span class="lbl">Service Fee</span>
+        <span class="val" id="modalFee">₦0.00</span>
+      </div>
+      <div class="bd-row total">
+        <span class="lbl">Total</span>
+        <span class="val" id="modalTotal">₦0.00</span>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:var(--text-2);margin:14px 2px 0;font-weight:600;">
+      <i class="fas fa-shield-halved" style="color:var(--cyan);margin-right:6px;"></i>
+      You'll be redirected to <span id="modalProvider" style="color:#fff;font-weight:800;">Paystack</span> to complete payment securely.
+    </div>
+
+    <button class="btn-hero" id="confirmPayBtn" onclick="processPayment()">
+      <span>Confirm & Pay</span>
+      <span class="btn-hint">Opens the payment gateway</span>
+    </button>
+    <div id="modalStatus" style="margin-top:12px;font-size:13px;color:var(--text-2);text-align:center;font-weight:600;"></div>
+  </div>
+</div>
+
+<!-- ============ ADD MONEY ============ -->
 <div class="sheet-backdrop" id="addMoneyModal" onclick="if(event.target===this) closeSheet('addMoneyModal')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1229,6 +1623,7 @@ select.input{
   </div>
 </div>
 
+<!-- ============ SEND MONEY ============ -->
 <div class="sheet-backdrop" id="sendMoneyModal" onclick="if(event.target===this) closeSheet('sendMoneyModal')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1246,7 +1641,7 @@ select.input{
     <div class="field">
       <label class="field-label"><i class="fas fa-coins"></i> Amount</label>
       <div class="amount-wrap">
-        <span class="amount-symbol">₦</span>
+        <span class="amount-symbol" id="transferSymbol">₦</span>
         <input type="tel" id="transferAmount" class="amount-input" placeholder="0" inputmode="decimal" />
       </div>
     </div>
@@ -1258,6 +1653,7 @@ select.input{
   </div>
 </div>
 
+<!-- ============ AUTH MODAL ============ -->
 <div class="sheet-backdrop" id="authModal" onclick="if(event.target===this) closeSheet('authModal')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1297,6 +1693,7 @@ select.input{
   </div>
 </div>
 
+<!-- ============ USER MENU ============ -->
 <div class="sheet-backdrop" id="userMenuModal" onclick="if(event.target===this) closeSheet('userMenuModal')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1308,8 +1705,8 @@ select.input{
 
     <div class="user-menu-list">
       <button class="um-item" id="umAuthToggle" onclick="fromUserMenuAuth()">
-        <i class="fas fa-sign-in-alt"></i>
-        <span id="umAuthLabel">Sign In / Register</span>
+        <i class="fas fa-user-gear"></i>
+        <span id="umAuthLabel">Account Settings</span>
       </button>
       <button class="um-item" onclick="closeSheet('userMenuModal'); showView('wallet');">
         <i class="fas fa-wallet"></i> My Wallet
@@ -1336,6 +1733,7 @@ select.input{
   </div>
 </div>
 
+<!-- ============ REFERRAL ============ -->
 <div class="sheet-backdrop" id="referralSheet" onclick="if(event.target===this) closeSheet('referralSheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1354,12 +1752,62 @@ select.input{
   </div>
 </div>
 
-<!-- ============ TOAST WRAP ============ -->
+<!-- ============ LIVE CHAT ============ -->
+<button class="chat-fab" id="chatFab" onclick="openLiveChat()" title="Chat with Support">
+  <i class="fas fa-comment-dots"></i>
+</button>
+
+<div class="chat-widget" id="chatWidget">
+  <div class="chat-header">
+    <div>
+      <h3 style="margin:0;font-size:15px;font-weight:800;">
+        <span style="display:inline-block;width:7px;height:7px;background:#22C55E;border-radius:50%;margin-right:7px;"></span>
+        Net365 Support
+      </h3>
+      <div style="font-size:11px;opacity:0.75;margin-top:2px;">Typically replies in minutes</div>
+    </div>
+    <button onclick="closeLiveChat()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:4px;">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="chat-body" id="chatBody">
+    <div class="chat-msg support">👋 Hi! Welcome to Net365 Support. How can we help you today?</div>
+  </div>
+  <div class="chat-footer">
+    <input type="text" id="chatInput" placeholder="Type a message…" onkeypress="if(event.key==='Enter') sendChatMessage()" />
+    <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+  </div>
+</div>
+
+<!-- ============ MOMENT AD (Payment Success Overlay) ============ -->
+<div class="moment-ad-backdrop" id="momentAdBackdrop">
+  <div class="moment-ad-sheet" id="momentAdSheet">
+    <div class="success-hero">
+      <div class="success-ring">
+        <svg viewBox="0 0 52 52" class="success-check">
+          <circle class="success-check-circle" cx="26" cy="26" r="25" fill="none"/>
+          <path class="success-check-mark" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+        </svg>
+      </div>
+      <div class="success-title">Payment successful</div>
+      <div class="success-amount" id="momentSuccessAmount">₦0.00</div>
+      <div class="success-sub" id="momentSuccessSub">Recharge completed</div>
+    </div>
+
+    <div class="moment-divider">
+      <span class="moment-divider-label">WHILE YOU'RE HERE</span>
+    </div>
+
+    <div class="moment-ad-slot" id="momentAdSlot"></div>
+
+    <button class="moment-dismiss" onclick="dismissMomentAd()">
+      Maybe later
+    </button>
+  </div>
+</div>
+
 <div id="toastWrap"></div>
 
-<!-- ============================================================
-     JAVASCRIPT
-     ============================================================ -->
 <script>
 // ============================================================
 // STATE
@@ -1380,9 +1828,11 @@ const COUNTRY_CURRENCY = {
   AU:'AUD', NZ:'NZD', JP:'JPY', SG:'SGD', IN:'INR'
 };
 const PREFIX_COUNTRY = {
-  '234':'NG','233':'GH','254':'KE','27':'ZA','1':'US','44':'GB','91':'IN'
+  '234':'NG','233':'GH','254':'KE','256':'UG','255':'TZ','27':'ZA',
+  '1':'US','44':'GB','91':'IN'
 };
 
+let manualCountryOverride = null;
 let currentCountry = 'NG';
 let currentCurrency = 'NGN';
 let currentSymbol = '₦';
@@ -1395,6 +1845,8 @@ let allTransactions = [];
 let txFilter = 'all';
 let activeWalletCurrency = 'NGN';
 let isAuthRegisterMode = false;
+let pendingPayment = null;
+let isProcessing = false;
 
 // ============================================================
 // VIEW MANAGER
@@ -1407,7 +1859,6 @@ function showView(name){
     n.classList.toggle('active', n.dataset.view === name);
   });
   window.scrollTo({top:0, behavior:'smooth'});
-
   if (name === 'wallet') refreshWalletView();
   if (name === 'transactions') renderTransactions();
 }
@@ -1443,20 +1894,63 @@ function toast(msg, type='info'){
 }
 
 // ============================================================
-// PHONE / COUNTRY DETECTION
+// COUNTRY DETECTION — explicit codes first, leading-0 fallback
 // ============================================================
 function detectCountryFromPhone(phone){
+  if (manualCountryOverride) return manualCountryOverride;
   let digits = String(phone||'').replace(/\D/g,'');
   if (!digits) return null;
-  if (digits.startsWith('0') && !digits.startsWith('00') && digits.length >= 10) return 'NG';
-  if (digits.startsWith('00')) digits = digits.slice(2);
-  for (const len of [3,2,1]) {
-    const p = digits.slice(0,len);
-    if (PREFIX_COUNTRY[p]) return PREFIX_COUNTRY[p];
-  }
-  return null;
+  if (digits.startsWith('234')) return 'NG';
+  if (digits.startsWith('233')) return 'GH';
+  if (digits.startsWith('254')) return 'KE';
+  if (digits.startsWith('256')) return 'UG';
+  if (digits.startsWith('255')) return 'TZ';
+  if (digits.startsWith('27')) return 'ZA';
+  if (digits.startsWith('44')) return 'GB';
+  if (digits.startsWith('91')) return 'IN';
+  if (digits.startsWith('1')) return 'US';
+  if (digits.startsWith('0')) return 'NG';
+  return 'NG';
 }
 
+function setManualCountry(code){
+  manualCountryOverride = code || null;
+  const phone = document.getElementById('phoneInput').value.trim();
+  if (phone.length >= 5){
+    onPhoneInput();
+  }
+}
+
+// ============================================================
+// AUTO-SELECT PAYMENT METHOD per country
+// ============================================================
+async function autoSelectPaymentMethod(){
+  const country = currentCountry || 'NG';
+  try{
+    const res = await fetch(`${API_BASE}/payment/preferences`, {
+      credentials: 'include',
+      headers: { 'X-Country-Code': country }
+    });
+    const data = await res.json();
+    if (data.success){
+      if (data.recommended_provider){
+        selectPM(data.recommended_provider);
+      }
+      if (data.currency){
+        currentCurrency = data.currency;
+        currentSymbol = CURRENCY_SYMBOLS[currentCurrency] || data.currency;
+        const symEl = document.getElementById('amtSymbol');
+        if (symEl) symEl.textContent = currentSymbol;
+      }
+    }
+  } catch(e){
+    console.warn('Payment preference lookup failed, keeping current selection', e);
+  }
+}
+
+// ============================================================
+// PHONE INPUT
+// ============================================================
 function onPhoneInput(){
   const phone = document.getElementById('phoneInput').value.trim();
   if (phone.replace(/\D/g,'').length < 8){
@@ -1475,6 +1969,7 @@ function onPhoneInput(){
     currentSymbol = CURRENCY_SYMBOLS[currentCurrency] || '$';
     document.getElementById('amtSymbol').textContent = currentSymbol;
     loadManualOperators();
+    autoSelectPaymentMethod();
   }
 
   clearTimeout(window._detectTimer);
@@ -1512,7 +2007,7 @@ async function runAutoDetect(phone){
         : '<i class="fas fa-check"></i>';
       document.getElementById('detectName').textContent = op.name || 'Network detected';
       document.getElementById('detectSub').textContent = isGuess
-        ? 'Guessed — tap "Change" below to pick manually'
+        ? 'Guessed — pick manually below if wrong'
         : 'Auto-detected from your number';
       document.getElementById('detectBadge').textContent = isGuess ? 'GUESS' : 'AUTO';
 
@@ -1522,7 +2017,7 @@ async function runAutoDetect(phone){
       updatePayButton();
       return;
     }
-  } catch(e){ /* fallthrough to manual */ }
+  } catch(e){ /* fallthrough */ }
 
   card.classList.add('warn');
   document.getElementById('detectIcon').innerHTML = '<i class="fas fa-exclamation"></i>';
@@ -1538,6 +2033,7 @@ async function runAutoDetect(phone){
 
 async function loadManualOperators(){
   const sel = document.getElementById('networkSelect');
+  if (!sel) return;
   sel.innerHTML = '<option value="">Loading…</option>';
   try{
     const res = await fetch(`${API_BASE}/operators/country/${encodeURIComponent(currentCountry)}`);
@@ -1577,24 +2073,18 @@ function selectManualOperator(id){
 }
 
 // ============================================================
-// AMOUNT / BREAKDOWN
+// AMOUNT
 // ============================================================
-function onAmountInput(){
-  updateBreakdown();
-}
+function onAmountInput(){ updateBreakdown(); }
 function setQuick(v, evt){
   document.getElementById('amountInput').value = v;
   document.querySelectorAll('.quick-pill').forEach(p => p.classList.remove('active'));
   if (evt && evt.target) evt.target.classList.add('active');
   updateBreakdown();
 }
-
 function getFee(){
-  return SERVICE_FEES[currentCurrency] !== undefined
-    ? SERVICE_FEES[currentCurrency]
-    : 100;
+  return SERVICE_FEES[currentCurrency] !== undefined ? SERVICE_FEES[currentCurrency] : 100;
 }
-
 function updateBreakdown(){
   const amt = parseFloat(document.getElementById('amountInput').value) || 0;
   const fee = amt > 0 ? getFee() : 0;
@@ -1604,7 +2094,6 @@ function updateBreakdown(){
   document.getElementById('bdTotal').textContent = `${currentSymbol}${total.toFixed(2)}`;
   updatePayButton();
 }
-
 function updatePayButton(){
   const btn = document.getElementById('payBtn');
   const lbl = document.getElementById('payBtnLabel');
@@ -1617,7 +2106,7 @@ function updatePayButton(){
   if (!phone || phone.replace(/\D/g,'').length < 8){
     btn.disabled = true;
     lbl.textContent = 'Enter phone number';
-    hint.textContent = 'We need a valid phone number to send airtime';
+    hint.textContent = 'We need a valid number to send airtime';
     return;
   }
   if (!selectedOperator){
@@ -1646,13 +2135,17 @@ function selectPM(method){
   document.querySelectorAll('.pm-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.method === method);
   });
+  const sub = document.getElementById('walletSub');
+  if (sub) sub.textContent = currentUser
+    ? `${CURRENCY_SYMBOLS[activeWalletCurrency]||'₦'}${(walletBalances[activeWalletCurrency]||0).toFixed(2)}`
+    : 'Sign in';
   updatePayButton();
 }
 
 // ============================================================
-// PAY
+// PAYMENT MODAL — two step
 // ============================================================
-async function handlePay(){
+function openPaymentModal(){
   if (!currentUser){
     toast('Please sign in to continue', 'warning');
     openSheet('authModal');
@@ -1663,25 +2156,59 @@ async function handlePay(){
   const fee = getFee();
   const total = amt + fee;
 
-  const btn = document.getElementById('payBtn');
+  document.getElementById('modalOperator').textContent = selectedOperator.name || '—';
+  document.getElementById('modalPhone').textContent = phone;
+  document.getElementById('modalAirtime').textContent = `${currentSymbol}${amt.toFixed(2)}`;
+  document.getElementById('modalFee').textContent = `${currentSymbol}${fee.toFixed(2)}`;
+  document.getElementById('modalTotal').textContent = `${currentSymbol}${total.toFixed(2)}`;
+  const providerNames = {paystack:'Paystack',stripe:'Stripe',flutterwave:'Flutterwave',wallet:'Net365 Wallet'};
+  document.getElementById('modalProvider').textContent = providerNames[selectedPaymentMethod] || selectedPaymentMethod;
+  document.getElementById('modalStatus').textContent = '';
+
+  pendingPayment = {
+    phone,
+    amount: total,
+    airtimeAmount: amt,
+    fee,
+    currency: currentCurrency,
+    country_code: currentCountry,
+    operator_id: selectedOperator.operatorId,
+    operator_name: selectedOperator.name,
+    provider: selectedPaymentMethod
+  };
+
+  openSheet('paymentModal');
+}
+
+function closePaymentModal(){
+  closeSheet('paymentModal');
+  pendingPayment = null;
+}
+
+async function processPayment(){
+  if (!pendingPayment || isProcessing) return;
+  isProcessing = true;
+  const btn = document.getElementById('confirmPayBtn');
+  const status = document.getElementById('modalStatus');
+  const originalHtml = btn.innerHTML;
   btn.disabled = true;
-  document.getElementById('payBtnLabel').innerHTML = '<span class="spinner"></span>Initializing…';
-  document.getElementById('payBtnHint').textContent = 'Contacting payment gateway';
+  btn.innerHTML = '<span class="spinner"></span>Redirecting…';
+  status.textContent = 'Connecting to payment gateway…';
 
   try{
-    const cleanPhone = phone.replace(/\s/g,'').replace(/^\+?234/,'').replace(/^0/,'');
+    const cleanPhone = pendingPayment.phone.replace(/\s/g,'').replace(/^\+?234/,'').replace(/^0/,'');
     const res = await fetch(`${API_BASE}/payment/init`, {
       method:'POST',
       credentials:'include',
       headers:{'Content-Type':'application/json','Accept':'application/json'},
       body:JSON.stringify({
         type:'topup',
-        amount: total,
-        currency: currentCurrency,
-        operator_id: selectedOperator.operatorId,
-        phone: cleanPhone || phone,
-        country_code: currentCountry,
-        provider: selectedPaymentMethod,
+        amount: pendingPayment.amount,
+        currency: pendingPayment.currency,
+        operator_id: pendingPayment.operator_id,
+        phone: cleanPhone || pendingPayment.phone,
+        country_code: pendingPayment.country_code,
+        provider: pendingPayment.provider,
         return_url: window.location.origin + '/payment/success'
       })
     });
@@ -1691,9 +2218,12 @@ async function handlePay(){
     if (url){ window.location.href = url; return; }
     throw new Error('No checkout URL received');
   } catch(e){
-    toast(e.message || 'Payment failed', 'error');
+    status.textContent = `❌ ${e.message}`;
     btn.disabled = false;
-    updatePayButton();
+    btn.innerHTML = originalHtml;
+    toast(e.message || 'Payment failed', 'error');
+  } finally {
+    isProcessing = false;
   }
 }
 
@@ -1706,7 +2236,6 @@ function onAvatarTap(){
     document.getElementById('userMenuName').textContent = `Hi, ${currentUser.full_name || 'friend'} 👋`;
     document.getElementById('userMenuEmail').textContent = currentUser.email || '';
     document.getElementById('umLogout').style.display = 'flex';
-    document.getElementById('umAuthLabel').textContent = 'Account Settings';
   } else {
     openSheet('authModal');
   }
@@ -1740,10 +2269,7 @@ async function submitAuth(){
 
   try{
     const endpoint = isAuthRegisterMode ? '/api/auth/register' : '/api/auth/login';
-    const body = isAuthRegisterMode
-      ? { email, password, full_name: name }
-      : { email, password };
-
+    const body = isAuthRegisterMode ? { email, password, full_name: name } : { email, password };
     const res = await fetch(endpoint, {
       method:'POST',
       credentials:'include',
@@ -1751,15 +2277,14 @@ async function submitAuth(){
       body:JSON.stringify(body)
     });
     const data = await res.json();
-    if (!res.ok || !data.success){
-      throw new Error(data.error || 'Authentication failed');
-    }
+    if (!res.ok || !data.success) throw new Error(data.error || 'Authentication failed');
 
     currentUser = data.user || null;
     closeSheet('authModal');
     toast(isAuthRegisterMode ? 'Account created! 🎉' : `Welcome back, ${currentUser?.full_name || 'friend'}`, 'success');
     await refreshUserData();
     updateAuthUI();
+    selectPM(selectedPaymentMethod);
   } catch(e){
     errEl.textContent = e.message;
     errEl.style.display = 'block';
@@ -1779,9 +2304,7 @@ function fromUserMenuAuth(){
 }
 
 async function doLogout(){
-  try{
-    await fetch('/api/auth/logout', {method:'POST', credentials:'include'});
-  }catch(e){}
+  try{ await fetch('/api/auth/logout', {method:'POST', credentials:'include'}); }catch(e){}
   currentUser = null;
   closeSheet('userMenuModal');
   updateAuthUI();
@@ -1827,6 +2350,7 @@ async function refreshUserData(){
       renderHomeTx();
       renderTransactions();
     }
+    selectPM(selectedPaymentMethod);
   } catch(e){ console.warn('refreshUserData', e); }
 }
 
@@ -1913,7 +2437,7 @@ function renderTxList(containerId, list, emptyMsg){
           </div>
         </div>
         <div class="tx-amount">
-          <div class="amt ${isCredit ? 'positive' : 'negative'}">${isCredit ? '+' : ''}${sym}${amt.toFixed(2)}</div>
+          <div class="amt ${isCredit ? 'positive' : ''}">${isCredit ? '+' : ''}${sym}${amt.toFixed(2)}</div>
         </div>
       </div>`;
   }).join('');
@@ -1927,13 +2451,7 @@ function exportTransactionsCSV(){
   if (!allTransactions.length){ toast('Nothing to export', 'warning'); return; }
   let csv = 'Date,Type,Description,Amount,Currency,Status,Reference\n';
   allTransactions.forEach(t => {
-    csv += `"${t.created_at||''}",`;
-    csv += `"${t.tx_type||''}",`;
-    csv += `"${(t.description||'').replace(/"/g,'""')}",`;
-    csv += `${t.amount||0},`;
-    csv += `"${t.currency||'NGN'}",`;
-    csv += `"${t.status||''}",`;
-    csv += `"${t.reference||''}"\n`;
+    csv += `"${t.created_at||''}","${t.tx_type||''}","${(t.description||'').replace(/"/g,'""')}",${t.amount||0},"${t.currency||'NGN'}","${t.status||''}","${t.reference||''}"\n`;
   });
   const blob = new Blob([csv], {type:'text/csv'});
   const url = URL.createObjectURL(blob);
@@ -1952,7 +2470,6 @@ function formatDate(s){
   if (isNaN(d.getTime())) return s;
   return d.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
 }
-
 function escapeHtml(s){
   const d = document.createElement('div');
   d.textContent = String(s||'');
@@ -1977,10 +2494,7 @@ async function submitAddMoney(){
       method:'POST',
       credentials:'include',
       headers:{'Content-Type':'application/json','Accept':'application/json'},
-      body:JSON.stringify({
-        amount, currency,
-        return_url: window.location.origin + '/payment/success'
-      })
+      body:JSON.stringify({ amount, currency, return_url: window.location.origin + '/payment/success' })
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Could not initialize funding');
@@ -2066,7 +2580,7 @@ function shareReferral(){
 }
 
 // ============================================================
-// UTILITIES
+// UTILITIES — IN-APP BILLER FLOW
 // ============================================================
 function renderUtilities(){
   const electricity = [
@@ -2088,9 +2602,9 @@ function renderUtilities(){
     {id:51, name:'Airtel', short:'Airtel'},
     {id:52, name:'9mobile', short:'9mb'},
   ];
-  document.getElementById('electricityGrid').innerHTML = electricity.map(b => billerBtn(b)).join('');
-  document.getElementById('cableGrid').innerHTML = cable.map(b => billerBtn(b)).join('');
-  document.getElementById('airtimeGrid').innerHTML = airtime.map(b => billerBtn(b)).join('');
+  document.getElementById('electricityGrid').innerHTML = electricity.map(billerBtn).join('');
+  document.getElementById('cableGrid').innerHTML = cable.map(billerBtn).join('');
+  document.getElementById('airtimeGrid').innerHTML = airtime.map(billerBtn).join('');
 }
 
 function billerBtn(b){
@@ -2100,13 +2614,469 @@ function billerBtn(b){
   </button>`;
 }
 
+let currentBiller = null;
+
 function openBiller(id, name){
-  toast(`Opening ${name}…`, 'info');
-  window.location.href = `/utilities?biller=${id}`;
+  if (!currentUser){
+    toast('Please sign in to pay bills', 'warning');
+    openSheet('authModal');
+    return;
+  }
+  currentBiller = { id: id, name: name };
+  document.getElementById('billerSheetTitle').textContent = name;
+  document.getElementById('billerSheetSub').textContent = 'Enter your account details to continue';
+  document.getElementById('billerAccount').value = '';
+  document.getElementById('billerAmount').value = '';
+  document.getElementById('billerCustomerBox').style.display = 'none';
+  document.getElementById('billerPayBtn').disabled = true;
+  document.getElementById('billerPayLabel').textContent = 'Pay Bill';
+
+  const isCable = [53,54,55].includes(id);
+  const isAirtime = [49,50,51,52].includes(id);
+  const label = isCable ? 'Smartcard / IUC Number'
+             : isAirtime ? 'Phone Number'
+             : 'Meter / Account Number';
+  document.getElementById('billerAccountLabel').textContent = label;
+
+  openSheet('billerSheet');
+}
+
+async function validateBillerAccount(){
+  if (!currentBiller) return;
+  const account = document.getElementById('billerAccount').value.trim();
+  if (!account || account.length < 6){
+    toast('Enter a valid account number', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('billerValidateBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Validating…';
+
+  try{
+    const res = await fetch(`${API_BASE}/utilities/validate`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        biller_id: currentBiller.id,
+        subscriber_account: account
+      })
+    });
+    const data = await res.json();
+
+    // ⚠️ VERIFY: field names returned by /api/utilities/validate
+    const customerName =
+      data.customerName || data.customer_name || data.name ||
+      data.accountName || data.account_name;
+
+    if (data.valid === true || customerName){
+      document.getElementById('billerCustomerName').textContent =
+        customerName || `Account ••••${account.slice(-4)}`;
+      document.getElementById('billerCustomerBox').style.display = 'block';
+      document.getElementById('billerPayBtn').disabled = false;
+      toast('Account verified', 'success');
+    } else {
+      toast(data.error || data.message || 'Could not verify account', 'error');
+    }
+  } catch(e){
+    toast('Validation failed. Try again.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check-circle" style="margin-right:6px;"></i> Validate Account';
+  }
+}
+
+async function payBiller(){
+  if (!currentBiller) return;
+  const account = document.getElementById('billerAccount').value.trim();
+  const amount = parseFloat(document.getElementById('billerAmount').value);
+
+  if (!account || !amount || amount <= 0){
+    toast('Enter account and amount', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('billerPayBtn');
+  const lbl = document.getElementById('billerPayLabel');
+  btn.disabled = true;
+  lbl.innerHTML = '<span class="spinner"></span>Processing…';
+
+  try{
+    const res = await fetch(`${API_BASE}/utilities/pay`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        biller_id: currentBiller.id,
+        subscriber_account: account,
+        amount: amount,
+        currency: 'NGN',
+        provider: 'wallet'
+      })
+    });
+    const data = await res.json();
+
+    if (data.success){
+      toast('Payment successful!', 'success');
+      closeSheet('billerSheet');
+      await refreshUserData();
+      showView('transactions');
+      return;
+    }
+
+    if (data.error && data.error.toLowerCase().includes('insufficient')){
+      const useGateway = confirm('Insufficient wallet balance. Pay via Paystack instead?');
+      if (useGateway){
+        const gw = await fetch(`${API_BASE}/utilities/pay`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            biller_id: currentBiller.id,
+            subscriber_account: account,
+            amount: amount,
+            currency: 'NGN',
+            provider: 'paystack'
+          })
+        });
+        const gwd = await gw.json();
+        if (gwd.success && gwd.authorization_url){
+          window.location.href = gwd.authorization_url;
+          return;
+        }
+      }
+    }
+
+    throw new Error(data.error || 'Payment failed');
+  } catch(e){
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    lbl.textContent = 'Pay Bill';
+  }
 }
 
 // ============================================================
-// INIT
+// LIVE CHAT
+// ============================================================
+let chatConversationId = null;
+let chatPollTimer = null;
+
+function openLiveChat(){
+  document.getElementById('chatWidget').classList.add('show');
+  document.getElementById('chatFab').classList.remove('show');
+  ensureChatSession().then(loadChatMessages);
+  clearInterval(chatPollTimer);
+  chatPollTimer = setInterval(loadChatMessages, 3500);
+}
+
+function closeLiveChat(){
+  document.getElementById('chatWidget').classList.remove('show');
+  document.getElementById('chatFab').classList.add('show');
+  clearInterval(chatPollTimer);
+}
+
+async function ensureChatSession(){
+  if (chatConversationId) return chatConversationId;
+  try{
+    const phone = document.getElementById('phoneInput')?.value?.trim() || '';
+    const res = await fetch(`${API_BASE}/chat/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        phone,
+        country_code: currentCountry,
+        name: currentUser?.full_name || '',
+        email: currentUser?.email || ''
+      })
+    });
+    const data = await res.json();
+    if (data.success){
+      chatConversationId = data.conversation_id;
+      return chatConversationId;
+    }
+  } catch(e){ console.warn('Chat session failed', e); }
+  return null;
+}
+
+async function loadChatMessages(){
+  if (!chatConversationId) return;
+  try{
+    const res = await fetch(`${API_BASE}/chat/messages?conversation_id=${chatConversationId}`);
+    const data = await res.json();
+    if (!data.success) return;
+    const body = document.getElementById('chatBody');
+    body.innerHTML = '';
+    (data.messages || []).forEach(msg => {
+      const el = document.createElement('div');
+      el.className = `chat-msg ${msg.sender_type === 'customer' ? 'user' : 'support'}`;
+      el.textContent = msg.message;
+      body.appendChild(el);
+    });
+    if (!data.messages?.length){
+      body.innerHTML = '<div class="chat-msg support">👋 Hi! Welcome to Net365 Support. How can we help you today?</div>';
+    }
+    body.scrollTop = body.scrollHeight;
+  } catch(e){ console.warn('Chat refresh failed', e); }
+}
+
+async function sendChatMessage(){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const cid = await ensureChatSession();
+  if (!cid){ toast('Unable to connect to support. Try again.', 'error'); return; }
+
+  const body = document.getElementById('chatBody');
+  const el = document.createElement('div');
+  el.className = 'chat-msg user';
+  el.textContent = text;
+  body.appendChild(el);
+  body.scrollTop = body.scrollHeight;
+  input.value = '';
+
+  try{
+    const res = await fetch(`${API_BASE}/chat/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ conversation_id: cid, message: text })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Send failed');
+    await loadChatMessages();
+  } catch(e){
+    toast(e.message, 'error');
+  }
+}
+
+// ============================================================
+// MOMENT ADS — Payment success page advertising engine
+// ============================================================
+const MOMENT_AD_CONFIG = {
+  MIN_INTERVAL_MS: 1000 * 60 * 5,
+  DELAY_MS: 600
+};
+let lastMomentAdShownAt = 0;
+let currentMomentAd = null;
+
+function buildMomentAdContext(paymentDetails){
+  const history = allTransactions || [];
+  const now = Date.now();
+  const daysSince = (isoString) => {
+    if (!isoString) return 9999;
+    const t = new Date(String(isoString).replace(' ', 'T') + 'Z').getTime();
+    if (isNaN(t)) return 9999;
+    return Math.floor((now - t) / (1000 * 60 * 60 * 24));
+  };
+
+  const airtimeTx = history.filter(t => t.tx_type === 'topup');
+  const utilityTx = history.filter(t => t.tx_type === 'utility');
+
+  const lastFunding = history
+    .filter(t => t.tx_type === 'wallet_funding' && (t.status === 'fulfilled' || t.status === 'completed'))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+  const balance = walletBalances[currentCurrency] || 0;
+
+  return {
+    tx_type: paymentDetails?.tx_type || 'topup',
+    amount: paymentDetails?.amount || 0,
+    currency: paymentDetails?.currency || currentCurrency,
+    phone: paymentDetails?.phone || '',
+    airtime_count: airtimeTx.length,
+    utility_count: utilityTx.length,
+    wallet_balance: balance,
+    last_wallet_funding_days: lastFunding ? daysSince(lastFunding.created_at) : 9999,
+    has_referral_code: !!(currentUser?.referral_code),
+    is_logged_in: !!currentUser
+  };
+}
+
+function pickMomentAdType(ctx){
+  if (ctx.is_logged_in && (ctx.wallet_balance < 200 || ctx.last_wallet_funding_days > 30)){
+    return 'cashback_boost';
+  }
+  if (ctx.airtime_count >= 3 && ctx.utility_count === 0){
+    return 'cross_service';
+  }
+  if (ctx.has_referral_code && ctx.airtime_count >= 1){
+    return 'referral_race';
+  }
+  return 'cashback_boost';
+}
+
+const MOMENT_AD_TEMPLATES = {
+
+  cashback_boost: (ctx) => {
+    const rewardAmount = ctx.currency === 'NGN' ? 50
+                        : ctx.currency === 'USD' ? 2
+                        : ctx.currency === 'GBP' ? 1.5 : 50;
+    const sym = CURRENCY_SYMBOLS[ctx.currency] || '₦';
+    return {
+      type: 'cashback_boost',
+      html: `
+        <div class="moment-card moment-cashback">
+          <div class="m-icon"><i class="fas fa-gift"></i></div>
+          <div class="m-title">Get ${sym}${rewardAmount} back</div>
+          <div class="m-body">
+            Fund your Net365 wallet in the next 24 hours and we'll
+            add ${sym}${rewardAmount} to your balance — free money to spend
+            on your next recharge or bill.
+          </div>
+          <button class="m-cta" onclick="momentAdClick('cashback')">
+            Claim my ${sym}${rewardAmount} <i class="fas fa-arrow-right"></i>
+          </button>
+          <div class="m-footer">Available once per account</div>
+        </div>
+      `,
+      onClick: () => {
+        dismissMomentAd();
+        openSheet('addMoneyModal');
+      }
+    };
+  },
+
+  cross_service: (ctx) => ({
+    type: 'cross_service',
+    html: `
+      <div class="moment-card moment-cross">
+        <div class="m-icon"><i class="fas fa-bolt"></i></div>
+        <div class="m-title">Now try paying a bill</div>
+        <div class="m-body">
+          You're already comfortable with airtime. Pay your electricity,
+          DSTV, or internet in the same place — takes 30 seconds and
+          you'll get 5% off your first bill this month.
+        </div>
+        <button class="m-cta" onclick="momentAdClick('cross_service')">
+          Pay a bill <i class="fas fa-arrow-right"></i>
+        </button>
+        <div class="m-footer">5% off your first utility payment</div>
+      </div>
+    `,
+    onClick: () => {
+      dismissMomentAd();
+      showView('utilities');
+    }
+  }),
+
+  referral_race: (ctx) => ({
+    type: 'referral_race',
+    html: `
+      <div class="moment-card moment-referral">
+        <div class="m-icon"><i class="fas fa-users"></i></div>
+        <div class="m-title">Invite 3, earn ₦1,500</div>
+        <div class="m-body">
+          You've already recharged. Now earn from friends who do the same.
+          Share your code — every friend who recharges earns you a bonus.
+        </div>
+        <div class="moment-progress" style="--progress-target:33%;">
+          <div class="moment-progress-fill"></div>
+        </div>
+        <button class="m-cta" onclick="momentAdClick('referral')">
+          Share my code <i class="fas fa-share-nodes"></i>
+        </button>
+        <div class="m-footer">1 of 3 — invite 2 more</div>
+      </div>
+    `,
+    onClick: () => {
+      dismissMomentAd();
+      openSheet('referralSheet');
+    }
+  })
+};
+
+function showMomentAd(paymentDetails){
+  if (Date.now() - lastMomentAdShownAt < MOMENT_AD_CONFIG.MIN_INTERVAL_MS) return;
+  const ctx = buildMomentAdContext(paymentDetails);
+  const type = pickMomentAdType(ctx);
+  const template = MOMENT_AD_TEMPLATES[type];
+  if (typeof template === 'function'){
+    renderMomentAd(template(ctx), ctx, paymentDetails);
+  }
+}
+
+function renderMomentAd(adDef, ctx, paymentDetails){
+  const backdrop = document.getElementById('momentAdBackdrop');
+  const slot = document.getElementById('momentAdSlot');
+  const amtEl = document.getElementById('momentSuccessAmount');
+  const subEl = document.getElementById('momentSuccessSub');
+
+  const sym = CURRENCY_SYMBOLS[paymentDetails?.currency] || currentSymbol || '₦';
+  const amt = parseFloat(paymentDetails?.amount || 0);
+  amtEl.textContent = `${sym}${amt.toFixed(2)}`;
+
+  const txTypeLabels = {
+    topup: 'Airtime recharge completed',
+    utility: 'Bill payment completed',
+    wallet_funding: 'Wallet funded successfully',
+    transfer: 'Transfer sent successfully'
+  };
+  subEl.textContent = txTypeLabels[paymentDetails?.tx_type] || 'Transaction completed';
+
+  slot.innerHTML = adDef.html;
+
+  const card = slot.querySelector('.moment-card');
+  if (card){
+    const colors = ['#22C55E', '#7C3AED', '#22D3EE', '#F59E0B', '#F43F5E'];
+    for (let i = 0; i < 14; i++){
+      const conf = document.createElement('div');
+      conf.className = 'confetti';
+      conf.style.left = Math.random() * 100 + '%';
+      conf.style.top = Math.random() * 30 + '%';
+      conf.style.background = colors[i % colors.length];
+      conf.style.animationDelay = (Math.random() * 0.4) + 's';
+      card.appendChild(conf);
+    }
+  }
+
+  const cta = slot.querySelector('.m-cta');
+  if (cta && adDef.onClick) cta.onclick = adDef.onClick;
+
+  requestAnimationFrame(() => {
+    backdrop.classList.add('show');
+    lastMomentAdShownAt = Date.now();
+    currentMomentAd = { ...adDef, context: ctx, paymentDetails };
+    trackMomentAdEvent('impression', adDef.type);
+  });
+}
+
+function dismissMomentAd(){
+  document.getElementById('momentAdBackdrop').classList.remove('show');
+  currentMomentAd = null;
+}
+
+function momentAdClick(action){
+  trackMomentAdEvent('click', action);
+  if (currentMomentAd && typeof currentMomentAd.onClick === 'function'){
+    currentMomentAd.onClick();
+  }
+}
+
+function trackMomentAdEvent(eventType, adType){
+  try{
+    fetch(`${API_BASE}/ads/moment/track`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: eventType,
+        ad_type: adType,
+        tx_type: currentMomentAd?.paymentDetails?.tx_type || null,
+        amount: currentMomentAd?.paymentDetails?.amount || null,
+        currency: currentMomentAd?.paymentDetails?.currency || null,
+        user_id: currentUser?.id || null,
+        timestamp: new Date().toISOString()
+      })
+    }).catch(() => {});
+  } catch(e){ /* silent */ }
+}
+
+// ============================================================
+// SESSION
 // ============================================================
 async function checkSession(){
   try{
@@ -2118,24 +3088,60 @@ async function checkSession(){
         updateAuthUI();
         await refreshUserData();
         loadReferralCode();
-      } else {
-        updateAuthUI();
+        return;
       }
-    } else {
-      updateAuthUI();
     }
+    updateAuthUI();
   } catch(e){
     updateAuthUI();
   }
 }
 
+// ============================================================
+// INIT
+// ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
   renderUtilities();
-  selectPM('paystack');
   await checkSession();
+  await autoSelectPaymentMethod();
+  selectPM(selectedPaymentMethod);
   updateBreakdown();
 
-  console.log('%cNET365 Mobile', 'font-size:16px;font-weight:900;color:#7C3AED;');
+  // Reveal floating chat button
+  setTimeout(() => {
+    const fab = document.getElementById('chatFab');
+    if (fab) fab.classList.add('show');
+  }, 800);
+
+  // Wire Moment Ad to payment success URL params
+  // ⚠️ VERIFY: /payment/success must redirect to /?status=success&reference=XXX
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('status');
+  const reference = params.get('reference');
+  if (status === 'success' && reference){
+    setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/transaction/${reference}`, { credentials: 'include' });
+        const data = await res.json();
+        if (data.success && data.transaction){
+          const tx = data.transaction;
+          const payload = typeof tx.payload === 'object' ? tx.payload : {};
+          showMomentAd({
+            tx_type: tx.tx_type,
+            amount: tx.amount,
+            currency: tx.currency,
+            phone: payload.phone || ''
+          });
+        } else {
+          showMomentAd({ tx_type: 'topup', amount: 0, currency: currentCurrency });
+        }
+      } catch(e) {
+        showMomentAd({ tx_type: 'topup', amount: 0, currency: currentCurrency });
+      }
+    }, MOMENT_AD_CONFIG.DELAY_MS);
+  }
+
+  console.log('%cNET365 Mobile v3.0', 'font-size:16px;font-weight:900;color:#7C3AED;');
   console.log('Ready.');
 });
 </script>
