@@ -1474,15 +1474,24 @@ select.input{
         <span>Country</span>
         <select id="countryOverrideSelect" onchange="setManualCountry(this.value)">
           <option value="">Auto-detect</option>
-          <option value="NG">🇳🇬 Nigeria</option>
-          <option value="GH">🇬🇭 Ghana</option>
-          <option value="KE">🇰🇪 Kenya</option>
-          <option value="UG">🇺🇬 Uganda</option>
-          <option value="TZ">🇹🇿 Tanzania</option>
-          <option value="ZA">🇿🇦 South Africa</option>
-          <option value="US">🇺🇸 United States</option>
-          <option value="GB">🇬🇧 United Kingdom</option>
-          <option value="IN">🇮🇳 India</option>
+          <optgroup label="Africa">
+            <option value="NG">🇳🇬 Nigeria</option>
+            <option value="GH">🇬🇭 Ghana</option>
+            <option value="KE">🇰🇪 Kenya</option>
+            <option value="UG">🇺🇬 Uganda</option>
+            <option value="TZ">🇹🇿 Tanzania</option>
+            <option value="ZA">🇿🇦 South Africa</option>
+          </optgroup>
+          <optgroup label="North America">
+            <option value="US">🇺🇸 United States</option>
+            <option value="CA">🇨🇦 Canada</option>
+          </optgroup>
+          <optgroup label="Europe">
+            <option value="GB">🇬🇧 United Kingdom</option>
+          </optgroup>
+          <optgroup label="Asia">
+            <option value="IN">🇮🇳 India</option>
+          </optgroup>
         </select>
       </div>
 
@@ -1780,6 +1789,7 @@ select.input{
       <select id="addMoneyCurrency" class="input">
         <option value="NGN">₦ Nigerian Naira (NGN)</option>
         <option value="USD">$ US Dollar (USD)</option>
+        <option value="CAD">CA$ Canadian Dollar (CAD)</option>
         <option value="GBP">£ Pound Sterling (GBP)</option>
         <option value="EUR">€ Euro (EUR)</option>
         <option value="GHS">₵ Ghanaian Cedi (GHS)</option>
@@ -1995,11 +2005,11 @@ select.input{
 const API_BASE = '/api';
 
 const SERVICE_FEES = {
-  NGN: 100, USD: 0.25, GBP: 0.20, EUR: 0.25,
+  NGN: 100, USD: 0.25, CAD: 0.35, GBP: 0.20, EUR: 0.25,
   GHS: 2.00, KES: 25.00, ZAR: 5.00
 };
 const CURRENCY_SYMBOLS = {
-  NGN:'₦', USD:'$', GBP:'£', EUR:'€', GHS:'₵', KES:'KSh', ZAR:'R'
+  NGN:'₦', USD:'$', CAD:'CA$', GBP:'£', EUR:'€', GHS:'₵', KES:'KSh', ZAR:'R'
 };
 const COUNTRY_CURRENCY = {
   NG:'NGN', GH:'GHS', KE:'KES', ZA:'ZAR',
@@ -2009,6 +2019,8 @@ const COUNTRY_CURRENCY = {
 };
 const PREFIX_COUNTRY = {
   '234':'NG','233':'GH','254':'KE','256':'UG','255':'TZ','27':'ZA',
+  // +1 is shared by US and Canada. We default to US (majority);
+  // Canadian users override via the country dropdown.
   '1':'US','44':'GB','91':'IN'
 };
 
