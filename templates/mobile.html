@@ -1375,7 +1375,37 @@ select.input{
 .n365-discover-card{position:relative;overflow:hidden;margin-top:12px;min-height:170px;border-radius:22px;padding:20px;background:linear-gradient(135deg,#16132B,#0D1728);border:1px solid rgba(167,139,250,.13);display:flex}.n365-discover-copy{position:relative;z-index:2;max-width:72%}.n365-discover-copy h3{font-size:23px;line-height:1.05;letter-spacing:-.04em;margin:7px 0}.n365-discover-copy p{font-size:10px;line-height:1.55;color:#94A3B8;margin:0}.n365-discover-orb{position:absolute;right:-12px;top:24px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#22D3EE,transparent 10%),radial-gradient(circle at 60% 60%,#7C3AED,transparent 48%),rgba(124,58,237,.13);box-shadow:0 0 55px rgba(124,58,237,.28)}.n365-discover-orb i{position:absolute;font-size:11px;color:#fff}.n365-discover-orb i:nth-child(1){top:20px;right:25px}.n365-discover-orb i:nth-child(2){bottom:23px;left:25px}.n365-discover-orb i:nth-child(3){top:48px;left:47px;color:#67E8F9}
 .n365-business-card{margin-top:12px;padding:19px;border-radius:22px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);cursor:pointer}.n365-business-card h3{font-size:18px;letter-spacing:-.03em;margin:6px 0}.n365-business-card p{font-size:10px;line-height:1.5;color:#94A3B8;margin:0;max-width:300px}.n365-api-flow{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;font-size:9px;font-weight:900;color:#CBD5E1}.n365-api-flow span{padding:7px 10px;border-radius:9px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.18)}.n365-api-flow i{font-size:8px;color:#22D3EE}.n365-activity-title{margin-top:25px}
 @media(min-width:600px){.n365-welcome h1{font-size:42px}.n365-service-grid{grid-template-columns:repeat(6,1fr)}.n365-service-grid button{min-height:120px}.n365-hero-card{padding:24px}}
-
+/* Amount input goes hero when typing */
+.n365-hero-card.is-typing .n365-phone-wrap,
+.n365-hero-card.is-typing .n365-detected,
+.n365-hero-card.is-typing .n365-country-row,
+.n365-hero-card.is-typing .n365-amount-label,
+.n365-hero-card.is-typing .n365-quick-row,
+.n365-hero-card.is-typing .n365-payment-strip > span {
+  opacity: 0.25;
+  transition: opacity .35s ease;
+}
+.n365-hero-card.is-typing .n365-amount-box {
+  border-color: rgba(124,58,237,0.7);
+  background: rgba(124,58,237,0.06);
+  box-shadow: 0 0 0 5px rgba(124,58,237,0.10), 0 20px 45px rgba(124,58,237,0.14);
+  transform: translateY(-2px);
+  transition: all .35s cubic-bezier(.16,1,.3,1);
+}
+.n365-hero-card.is-typing .n365-amount-input {
+  font-size: 36px !important;
+  transition: font-size .3s cubic-bezier(.16,1,.3,1);
+}
+.n365-hero-card.is-typing .n365-total {
+  background: rgba(124,58,237,0.12);
+  border-color: rgba(124,58,237,0.24);
+  transition: all .35s ease;
+}
+.n365-hero-card.is-typing .n365-main-cta {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 48px rgba(79,70,229,0.35);
+  transition: all .35s cubic-bezier(.16,1,.3,1);
+}
 </style>
 </head>
 <body>
@@ -3473,6 +3503,30 @@ document.addEventListener('input', function(e){
   if(e.target && e.target.id === 'amountInput'){
     const cur=document.getElementById('n365CurrencyHint');
     if(cur && typeof currentCurrency !== 'undefined') cur.textContent=currentCurrency || 'NGN';
+  }
+});
+
+// Amount-in-focus mode
+document.addEventListener('focusin', function(e){
+  if (e.target && e.target.id === 'amountInput'){
+    document.querySelector('.n365-hero-card')?.classList.add('is-typing');
+  }
+});
+document.addEventListener('focusout', function(e){
+  if (e.target && e.target.id === 'amountInput'){
+    const v = (e.target.value || '').trim();
+    if (!v) document.querySelector('.n365-hero-card')?.classList.remove('is-typing');
+  }
+});
+document.addEventListener('input', function(e){
+  if (e.target && e.target.id === 'amountInput'){
+    const card = document.querySelector('.n365-hero-card');
+    if (!card) return;
+    if ((e.target.value || '').trim().length > 0){
+      card.classList.add('is-typing');
+    } else {
+      card.classList.remove('is-typing');
+    }
   }
 });
 
