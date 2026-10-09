@@ -433,6 +433,9 @@
                 <button class="admin-tab active" data-tab="overview" onclick="switchTab('overview')">
                     <i class="fas fa-chart-pie"></i> Overview
                 </button>
+                <button class="admin-tab" data-tab="companies" onclick="switchTab('companies')">
+                    <i class="fas fa-building"></i> Companies
+                </button>
                 <button class="admin-tab" data-tab="referrals" onclick="switchTab('referrals')">
                     <i class="fas fa-users"></i> Referrals <span class="badge" id="pendingReferralBadge">0</span>
                 </button>
@@ -549,6 +552,8 @@
                                     <th>Visited</th>
                                     <th>Visitor</th>
                                     <th>Path</th>
+                                    <th>Organization</th>
+                                    <th>Kind</th>
                                     <th>Device</th>
                                     <th>OS</th>
                                     <th>Browser</th>
@@ -565,6 +570,60 @@
                         <button class="btn btn-sm" onclick="prevPage()" id="prevBtn">← Prev</button>
                         <span id="pageLabel" style="align-self:center;color:var(--text-secondary);font-size:13px;"></span>
                         <button class="btn btn-sm" onclick="nextPage()" id="nextBtn">Next →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: COMPANIES (NEW) -->
+            <div class="tab-panel" id="tab-companies">
+                <div class="panel">
+                    <h3><i class="fas fa-robot"></i> Bot vs Human Traffic (30 days)</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                        How much of your traffic is bots vs humans. Useful for filtering out crawler noise from your funnel.
+                    </p>
+                    <div class="metric-grid" id="botMetrics">
+                        <div class="metric-card"><div class="value" id="mHumanVisits">-</div><div class="label">Human Visits</div></div>
+                        <div class="metric-card"><div class="value" id="mBotVisits">-</div><div class="label">Bot Visits</div></div>
+                        <div class="metric-card"><div class="value" id="mTotalVisits30">-</div><div class="label">Total Visits</div></div>
+                    </div>
+                    <div id="botBreakdown"><div class="empty-state">Loading bot data…</div></div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-building"></i> Traffic by Organization</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                        Every visitor IP is resolved to the company, ISP, cloud provider, VPN, or AI crawler behind it — in the background, without slowing down any request. Enrichment data is cached for 90 days.
+                    </p>
+                    <div class="filters">
+                        <select id="companyDays" onchange="loadCompanies()">
+                            <option value="7">Last 7 days</option>
+                            <option value="30" selected>Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="365">Last year</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary" onclick="loadCompanies()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Organization</th>
+                                    <th>ASN</th>
+                                    <th>Kind</th>
+                                    <th>Visits</th>
+                                    <th>Unique IPs</th>
+                                    <th>Unique Users</th>
+                                    <th>Countries</th>
+                                    <th>First Seen</th>
+                                    <th>Last Seen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="companyTableBody">
+                                <tr><td colspan="9"><div class="empty-state">Loading organizations…</div></td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -1095,7 +1154,74 @@
                     <label>Title *</label>
                     <input type="text" id="promoTitle" required maxlength="80" placeholder="e.g., Get 10% Extra Data" />
                 </div>
+                <div class="form-group">
+                  <label>Kicker (small line above the title)</label>
+                  <input type="text" id="promoKicker" maxlength="60"
+                         placeholder="Because you just paid a utility bill" />
+                  <span class="form-hint">Sets the context — this is what makes the ad feel personalized.</span>
+                </div>
 
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Offer Value (big number)</label>
+                    <input type="text" id="promoOfferValue" maxlength="20" placeholder="Save up to 60%" />
+                  </div>
+                  <div class="form-group">
+                    <label>Offer Label</label>
+                    <input type="text" id="promoOfferLabel" maxlength="40" placeholder="on your monthly power spend" />
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Hero Image URL</label>
+                    <input type="text" id="promoImageUrl" placeholder="https://..." />
+                  </div>
+                  <div class="form-group">
+                    <label>Logo URL</label>
+                    <input type="text" id="promoLogoUrl" placeholder="https://..." />
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Accent Color 2</label>
+                    <input type="color" id="promoAccentColor" value="#22D3EE" />
+                  </div>
+                  <div class="form-group">
+                    <label>In-App Action (instead of URL)</label>
+                    <select id="promoAction">
+                      <option value="">Open URL above</option>
+                      <option value="utilities">Go to Utilities</option>
+                      <option value="wallet">Fund Wallet</option>
+                      <option value="referral">Open Referral</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Footer / Disclaimer</label>
+                  <input type="text" id="promoFooter" maxlength="120"
+                         placeholder="Sponsored by SolarCo · terms apply" />
+                </div>
+
+                <h4 style="font-size:13px;margin:16px 0 8px;">📍 Location Targeting</h4>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Country (ISO code or blank for global)</label>
+                    <input type="text" id="promoTargetCountry" maxlength="2"
+                           placeholder="NG" style="text-transform:uppercase;" />
+                  </div>
+                  <div class="form-group">
+                    <label>City (optional)</label>
+                    <input type="text" id="promoTargetCity" placeholder="Lagos" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Operator ID (optional — only show to users on this operator)</label>
+                  <input type="text" id="promoTargetOperator" placeholder="e.g. 341" />
+                </div>
                 <div class="form-group">
                     <label>Body *</label>
                     <textarea id="promoBody" required maxlength="400" placeholder="Describe your promotion..."></textarea>
@@ -1515,6 +1641,7 @@
             const tabBtn = document.querySelector(`.admin-tab[data-tab="${tab}"]`);
             if (tabBtn) tabBtn.classList.add('active');
 
+            if (tab === 'companies') { loadCompanies(); loadBotSummary(); }
             if (tab === 'referrals') { loadReferrals(); }
             if (tab === 'bonus') { loadBonusConfig(); loadBonusHistory(); loadSeasonalPromo(); }
             if (tab === 'ads') { loadPendingAds(); loadModeratedAds(); }
@@ -1534,6 +1661,8 @@
         function refreshAll() {
             loadStats();
             loadVisitors(0);
+            loadCompanies();
+            loadBotSummary();
             loadReferrals();
             loadBonusConfig();
             loadBonusHistory();
@@ -1669,10 +1798,21 @@
         function renderVisitorTable(visitors) {
             const tbody = document.getElementById('visitorTableBody');
             if (!visitors.length) {
-                tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No visits recorded for this filter</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="empty-state">No visits recorded for this filter</td></tr>';
                 return;
             }
             const badgeClass = { Desktop: 'badge-desktop', Mobile: 'badge-mobile', Tablet: 'badge-tablet' };
+            // Kind badge palette — matches the company tab
+            const kindBadge = {
+                cloud: 'badge-info',
+                vpn: 'badge-warning',
+                hosting: 'badge-warning',
+                cdn: 'badge-info',
+                ai: 'badge-success',
+                bot: 'badge-danger',
+                isp: 'badge-desktop',
+                private: 'badge-unknown'
+            };
             const flagEmoji = (code) => {
                 if (!code || code.length !== 2) return '';
                 try {
@@ -1689,11 +1829,22 @@
                 const cityCell = v.city
                     ? escapeHtml(v.city)
                     : '<span style="color:var(--text-secondary)">—</span>';
+
+                // NEW: Organization + Kind cells
+                const orgCell = v.org_name
+                    ? `<span title="${escapeHtml(v.asn || '')}">${escapeHtml(v.org_name)}</span>`
+                    : '<span style="color:var(--text-secondary)">…</span>';
+                const kindCell = v.ip_kind
+                    ? `<span class="badge ${kindBadge[v.ip_kind] || 'badge-unknown'}">${escapeHtml(v.ip_kind)}</span>`
+                    : '<span style="color:var(--text-secondary)">—</span>';
+
                 return `
                 <tr>
                     <td>${formatDate(v.visited_at)}</td>
                     <td>${v.visitor_name ? escapeHtml(v.visitor_name) : '<span style="color:var(--text-secondary)">Guest</span>'}</td>
                     <td>${escapeHtml(v.path || '')}</td>
+                    <td>${orgCell}</td>
+                    <td>${kindCell}</td>
                     <td><span class="badge ${badgeClass[v.device_type] || 'badge-unknown'}">${v.device_type || 'Unknown'}</span></td>
                     <td>${escapeHtml(v.os_name || v.os || '')}</td>
                     <td>${escapeHtml(v.browser || '')}</td>
@@ -1738,6 +1889,99 @@
         // ============================================
         function exportVisitorCSV() {
             showToast('Exporting visitor data...', 'info');
+        }
+
+        // ============================================
+        // COMPANIES TAB — ORG INTELLIGENCE
+        // ============================================
+        async function loadCompanies() {
+            const days = document.getElementById('companyDays').value;
+            const tbody = document.getElementById('companyTableBody');
+            tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">Loading organizations…</div></td></tr>';
+
+            try {
+                const data = await adminFetch(`/api/admin/companies?days=${days}&limit=100`);
+                if (!data.success) throw new Error(data.error || 'Failed to load');
+
+                const kindBadge = {
+                    cloud: 'badge-info',
+                    vpn: 'badge-warning',
+                    hosting: 'badge-warning',
+                    cdn: 'badge-info',
+                    ai: 'badge-success',
+                    bot: 'badge-danger',
+                    isp: 'badge-desktop',
+                    private: 'badge-unknown'
+                };
+
+                if (!data.companies || !data.companies.length) {
+                    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No organizations yet. IP enrichment runs in the background — refresh in a moment.</div></td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.companies.map(c => `
+                    <tr>
+                        <td><strong>${escapeHtml(c.org_name || '—')}</strong></td>
+                        <td style="color:var(--text-secondary);">${escapeHtml(c.asn || '—')}</td>
+                        <td><span class="badge ${kindBadge[c.ip_kind] || 'badge-unknown'}">${escapeHtml(c.ip_kind || 'unknown')}</span></td>
+                        <td>${(c.visit_count || 0).toLocaleString()}</td>
+                        <td>${(c.unique_ips || 0).toLocaleString()}</td>
+                        <td>${(c.unique_users || 0).toLocaleString()}</td>
+                        <td style="color:var(--text-secondary);">${escapeHtml(c.countries || '—')}</td>
+                        <td>${formatDate(c.first_seen)}</td>
+                        <td>${formatDate(c.last_seen)}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">${escapeHtml(e.message)}</div></td></tr>`;
+            }
+        }
+
+        async function loadBotSummary() {
+            try {
+                const data = await adminFetch('/api/admin/bots/summary');
+                if (!data.success) return;
+
+                const t = data.totals || {};
+                document.getElementById('mHumanVisits').textContent = (t.human_visits || 0).toLocaleString();
+                document.getElementById('mBotVisits').textContent = (t.bot_visits || 0).toLocaleString();
+                document.getElementById('mTotalVisits30').textContent = (t.total_visits || 0).toLocaleString();
+
+                const box = document.getElementById('botBreakdown');
+                if (!data.by_bot || !data.by_bot.length) {
+                    box.innerHTML = '<div class="empty-state">No bot traffic detected in the last 30 days.</div>';
+                    return;
+                }
+                const max = Math.max(...data.by_bot.map(b => b.count), 1);
+                box.innerHTML = data.by_bot.map(b => {
+                    const pct = Math.round((b.count / max) * 100);
+                    return `<div class="device-row">
+                        <span style="width:200px;"><i class="fas fa-robot"></i> ${escapeHtml(b.bot_name)}</span>
+                        <div class="device-bar-bg"><div class="device-bar-fill" style="width:${pct}%;"></div></div>
+                        <span style="width:70px;text-align:right;">${b.count.toLocaleString()}</span>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                // Non-fatal — companies tab still works
+                console.warn('Bot summary failed:', e);
+            }
+        }
+
+        async function resolveIP(ip) {
+            try {
+                const data = await adminFetch(`/api/admin/companies/${encodeURIComponent(ip)}/resolve`, {
+                    method: 'POST'
+                });
+                if (data.success && data.intel) {
+                    showToast(`${ip} → ${data.intel.org_name || 'unknown'}`, 'success');
+                    loadCompanies();
+                    loadVisitors(currentOffset);
+                } else {
+                    showToast(data.error || 'Could not resolve IP', 'error');
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
         }
 
         // ============================================
@@ -2548,6 +2792,17 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
                 max_discount: document.getElementById('promoMaxDiscount').value ? parseFloat(document.getElementById('promoMaxDiscount').value) : null,
                 min_purchase: document.getElementById('promoMinPurchase').value ? parseFloat(document.getElementById('promoMinPurchase').value) : null,
                 service_types: selectedServices.length > 0 ? selectedServices.join(',') : null,
+                kicker:         document.getElementById('promoKicker').value.trim(),
+                offer_value:    document.getElementById('promoOfferValue').value.trim(),
+                offer_label:    document.getElementById('promoOfferLabel').value.trim(),
+                image_url:      document.getElementById('promoImageUrl').value.trim() || null,
+                logo_url:       document.getElementById('promoLogoUrl').value.trim() || null,
+                accent_color:   document.getElementById('promoAccentColor').value,
+                action:         document.getElementById('promoAction').value || null,
+                footer:         document.getElementById('promoFooter').value.trim(),
+                target_country: document.getElementById('promoTargetCountry').value.trim().toUpperCase() || null,
+                target_city:    document.getElementById('promoTargetCity').value.trim() || null,
+                target_operator:document.getElementById('promoTargetOperator').value.trim() || null,
                 target_tx_type: document.getElementById('promoTargetTxType').value || null,
                 target_customer_type: document.getElementById('promoTargetCustomer').value || null,
                 target_min_amount: document.getElementById('promoTargetMin').value ? parseFloat(document.getElementById('promoTargetMin').value) : null,
@@ -3634,7 +3889,7 @@ Payload: ${JSON.stringify(tx.payload || {}, null, 2)}
         // ============================================
         // INITIAL LOAD
         // ============================================
-        console.log('Net365 Admin Panel loaded with visitor geo analytics (country/city columns)');
+        console.log('Net365 Admin Panel loaded with visitor geo analytics + company intelligence');
     </script>
 </body>
 </html>
