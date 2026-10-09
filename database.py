@@ -1553,23 +1553,8 @@ def init_db():
             FOREIGN KEY (advertiser_user_id) REFERENCES users(id)
         )
     """)
+    
 
-    # ============ AD CLICKS LOG ============
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS receipt_ad_clicks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            promo_id INTEGER NOT NULL,
-            transaction_reference TEXT,
-            user_id INTEGER,
-            ip_address TEXT,
-            user_agent TEXT,
-            clicked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (promo_id) REFERENCES receipt_promos(id)
-        )
-    """)
-    c.execute(
-        "CREATE INDEX IF NOT EXISTS idx_receipt_ad_clicks_promo ON receipt_ad_clicks(promo_id)"
-    )
 
     # ============ SETTINGS TABLE ============
     c.execute("""
@@ -1697,7 +1682,11 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     """)
+   
+   
 
+
+   
     # ============ SCHEDULER SCHEDULES TABLE ============
     c.execute("""
         CREATE TABLE IF NOT EXISTS scheduler_schedules (
@@ -6741,7 +6730,6 @@ def record_webhook(webhook_id: str, reference: str = None) -> bool:
 # ============ VISITOR TRACKING FUNCTIONS ============
 
 # In database.py - Replace the visitor tracking functions with these:
-
 @retry_on_lock
 def log_visitor(
     user_id: Optional[int] = None,
@@ -6758,12 +6746,19 @@ def log_visitor(
     city: str = "",
     region: str = "",
     timezone: str = "",
+    # ── NEW: bot / crawler classification ─────────────────────────────
+    # Passed in by log_page_visit() in app.py after running detect_bot()
+    # on the request's User-Agent. Cheap offline string matching — no
+    # external call, no reason to leave it blank.
+    is_bot: int = 0,
+    bot_name: Optional[str] = None,
 ) -> bool:
     """Log a page visit for analytics.
 
     All parameters after user_id are optional so that old call sites —
     tests, scripts, other modules — keep working even after the geo
-    fields (country, city, region, timezone) are added later.
+    fields (country, city, region, timezone) and bot fields
+    (is_bot, bot_name) are added later.
     """
     conn = get_db_connection()
     c = conn.cursor()
@@ -6786,6 +6781,8 @@ def log_visitor(
             city TEXT,
             region TEXT,
             timezone TEXT,
+            is_bot INTEGER DEFAULT 0,
+            bot_name TEXT,
             visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
@@ -6810,13 +6807,20 @@ def log_visitor(
         "city",
         "region",
         "timezone",
+        "is_bot",
+        "bot_name",
         "visited_at",
     ]
     for col in required_columns:
         if col not in columns and col != "id":
-            col_type = "INTEGER" if col in ["user_id"] else "TEXT"
-            if col == "visited_at":
+            if col == "user_id":
+                col_type = "INTEGER"
+            elif col == "is_bot":
+                col_type = "INTEGER DEFAULT 0"
+            elif col == "visited_at":
                 col_type = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+            else:
+                col_type = "TEXT"
             try:
                 c.execute(f"ALTER TABLE visitor_logs ADD COLUMN {col} {col_type}")
             except sqlite3.OperationalError:
@@ -6842,6 +6846,15 @@ def log_visitor(
     c.execute(
         "CREATE INDEX IF NOT EXISTS idx_visitor_logs_country ON visitor_logs(country)"
     )
+    # NEW: index for bot aggregation queries used by /api/admin/bots/summary
+    c.execute(
+        "CREATE INDEX IF NOT EXISTS idx_visitor_logs_is_bot ON visitor_logs(is_bot)"
+    )
+
+    # Normalize is_bot so both True/False and 1/0 come through cleanly as
+    # INTEGER, and so the SQL aggregates in admin_bot_summary (`= 1` / `= 0`)
+    # always match.
+    is_bot_int = 1 if is_bot else 0
 
     try:
         c.execute(
@@ -6849,8 +6862,9 @@ def log_visitor(
             INSERT INTO visitor_logs
             (user_id, visitor_name, ip_address, user_agent, device_type,
              os_name, browser, path, referrer, session_id,
-             country, city, region, timezone)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             country, city, region, timezone,
+             is_bot, bot_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 user_id,
@@ -6867,12 +6881,15 @@ def log_visitor(
                 city,
                 region,
                 timezone,
+                is_bot_int,
+                bot_name,
             ),
         )
         conn.commit()
         logger.info(
             f"Visitor logged: path={path}, user_id={user_id}, "
-            f"ip={ip_address}, country={country or '?'}, city={city or '?'}"
+            f"ip={ip_address}, country={country or '?'}, city={city or '?'}, "
+            f"is_bot={is_bot_int}{' (' + bot_name + ')' if bot_name else ''}"
         )
         return True
     except Exception as e:
@@ -7670,6 +7687,237 @@ def get_receipt_promo_for_slot(
     return dict(house[idx])
 
 
+# ============================================================
+# AD ENGINE — PLACEMENT CONFIG
+# ============================================================
+@retry_on_lock
+def get_ad_placement(surface: str, platform: str) -> Optional[Dict]:
+    """
+    Look up the placement config for a surface/platform.
+    Falls back to platform='all' if no platform-specific row exists.
+    Returns None if the surface is disabled entirely.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    row = c.execute(
+        """
+        SELECT * FROM ad_placement_config
+        WHERE surface = ? AND platform = ?
+        LIMIT 1
+        """,
+        (surface, platform),
+    ).fetchone()
+
+    if not row:
+        row = c.execute(
+            """
+            SELECT * FROM ad_placement_config
+            WHERE surface = ? AND platform = 'all'
+            LIMIT 1
+            """,
+            (surface,),
+        ).fetchone()
+
+    conn.close()
+    return dict(row) if row else None
+
+
+@retry_on_lock
+def update_ad_placement(surface: str, platform: str, **fields) -> bool:
+    """Update one placement row. Admin-facing."""
+    allowed = {
+        "enabled", "design", "fallback_mode",
+        "max_ads_per_session", "min_seconds_between_ads", "delay_ms",
+    }
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return False
+
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [surface, platform]
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        f"UPDATE ad_placement_config SET {set_clause} WHERE surface = ? AND platform = ?",
+        values,
+    )
+    conn.commit()
+    changed = c.rowcount
+    conn.close()
+    return changed > 0
+
+
+@retry_on_lock
+def list_ad_placements() -> List[Dict]:
+    """Admin UI list."""
+    conn = get_db_connection()
+    c = conn.cursor()
+    rows = c.execute("SELECT * FROM ad_placement_config ORDER BY surface, platform").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ============================================================
+# AD ENGINE — TARGETING RULES
+# ============================================================
+@retry_on_lock
+def match_ad_targeting_rule(ctx: Dict) -> Optional[Dict]:
+    """
+    Find the highest-priority active rule that matches the context.
+    All match_* fields are optional; NULL means "any".
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    tx_type        = (ctx.get("tx_type") or "").lower()
+    country        = (ctx.get("country") or "").upper()
+    city           = (ctx.get("city") or "").strip()
+    operator_id    = str(ctx.get("operator_id") or "")
+    amount         = float(ctx.get("amount") or 0)
+    currency       = (ctx.get("currency") or "").upper()
+    customer_type  = (ctx.get("customer_type") or "").lower()
+    hour           = int(ctx.get("hour") if ctx.get("hour") is not None else datetime.now().hour)
+    day_of_week    = int(ctx.get("day_of_week") if ctx.get("day_of_week") is not None else datetime.now().weekday())
+
+    rules = c.execute("""
+        SELECT * FROM ad_targeting_rules
+        WHERE active = 1
+        ORDER BY priority DESC, id DESC
+    """).fetchall()
+
+    for rule in rules:
+        r = dict(rule)
+
+        # Each match_* is checked only when set. NULL = "any".
+        if r["match_tx_type"] and r["match_tx_type"].lower() != tx_type:
+            continue
+        if r["match_country"] and r["match_country"].upper() != country:
+            continue
+        if r["match_city"] and r["match_city"].strip().lower() != city.lower():
+            continue
+        if r["match_operator"] and str(r["match_operator"]) != operator_id:
+            continue
+        if r["match_currency"] and r["match_currency"].upper() != currency:
+            continue
+        if r["match_min_amount"] is not None and amount < float(r["match_min_amount"]):
+            continue
+        if r["match_max_amount"] is not None and amount > float(r["match_max_amount"]):
+            continue
+        if r["match_customer_type"] and r["match_customer_type"].lower() != customer_type:
+            continue
+
+        # Hour window (wraps if start > end)
+        if r["match_hour_start"] is not None and r["match_hour_end"] is not None:
+            s, e = int(r["match_hour_start"]), int(r["match_hour_end"])
+            if s <= e:
+                if not (s <= hour <= e):
+                    continue
+            else:
+                if not (hour >= s or hour <= e):
+                    continue
+
+        # Day of week list, e.g. "1,2,3,4,5"
+        if r["match_days"]:
+            allowed_days = [d.strip() for d in str(r["match_days"]).split(",") if d.strip()]
+            if str(day_of_week) not in allowed_days:
+                continue
+
+        # All checks passed — this is our rule.
+        conn.close()
+        return r
+
+    conn.close()
+    return None
+
+
+@retry_on_lock
+def create_ad_targeting_rule(**fields) -> Optional[int]:
+    """Admin-facing. Insert a new rule."""
+    allowed = [
+        "name", "priority", "active",
+        "match_tx_type", "match_country", "match_city", "match_operator",
+        "match_min_amount", "match_max_amount", "match_currency",
+        "match_customer_type", "match_hour_start", "match_hour_end", "match_days",
+        "ad_title", "ad_kicker", "ad_body", "ad_icon",
+        "ad_image_url", "ad_logo_url", "ad_offer_value", "ad_offer_label",
+        "ad_cta", "ad_landing_url", "ad_action",
+        "ad_accent", "ad_accent2", "ad_footer", "ad_sponsored",
+    ]
+    row = {k: fields.get(k) for k in allowed}
+
+    if not row.get("name") or not row.get("ad_title"):
+        return None
+
+    cols = ", ".join(row.keys())
+    placeholders = ", ".join("?" for _ in row)
+    values = list(row.values())
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        f"INSERT INTO ad_targeting_rules ({cols}) VALUES ({placeholders})",
+        values,
+    )
+    conn.commit()
+    new_id = c.lastrowid
+    conn.close()
+    return new_id
+
+
+@retry_on_lock
+def update_ad_targeting_rule(rule_id: int, **fields) -> bool:
+    allowed = [
+        "name", "priority", "active",
+        "match_tx_type", "match_country", "match_city", "match_operator",
+        "match_min_amount", "match_max_amount", "match_currency",
+        "match_customer_type", "match_hour_start", "match_hour_end", "match_days",
+        "ad_title", "ad_kicker", "ad_body", "ad_icon",
+        "ad_image_url", "ad_logo_url", "ad_offer_value", "ad_offer_label",
+        "ad_cta", "ad_landing_url", "ad_action",
+        "ad_accent", "ad_accent2", "ad_footer", "ad_sponsored",
+    ]
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return False
+
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [rule_id]
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        f"UPDATE ad_targeting_rules SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        values,
+    )
+    conn.commit()
+    changed = c.rowcount
+    conn.close()
+    return changed > 0
+
+
+@retry_on_lock
+def delete_ad_targeting_rule(rule_id: int) -> bool:
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM ad_targeting_rules WHERE id = ?", (rule_id,))
+    conn.commit()
+    changed = c.rowcount
+    conn.close()
+    return changed > 0
+
+
+@retry_on_lock
+def list_ad_targeting_rules() -> List[Dict]:
+    conn = get_db_connection()
+    c = conn.cursor()
+    rows = c.execute(
+        "SELECT * FROM ad_targeting_rules ORDER BY priority DESC, id DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
 # Add these functions to your database.py - place them near the other receipt promo functions
 
 # ============ SPONSORED CAMPAIGN FUNCTIONS ============
@@ -8074,6 +8322,134 @@ def create_sponsored_campaign(
         "SELECT * FROM receipt_promos WHERE id = ?", (campaign_id,)
     ).fetchone()
     return dict(row)
+
+
+# ============================================================
+# CONTEXTUAL HOUSE AD SELECTION
+# ============================================================
+@retry_on_lock
+def get_contextual_house_ad(tx_type=None, country=None, city=None,
+                            amount=None, currency=None, operator_id=None):
+    """
+    Pick the best house promo for this exact moment.
+
+    Priority (highest first):
+      1. Exact country + exact tx_type match
+      2. Exact country + 'all services' match
+      3. Global (country NULL) + exact tx_type match
+      4. Any active house promo, newest first
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    # Make sure the targeting columns exist before we query them.
+    cols = {r[1] for r in c.execute("PRAGMA table_info(receipt_promos)").fetchall()}
+    for name, typ, default in [
+        ("kicker",        "TEXT", "NULL"),
+        ("image_url",     "TEXT", "NULL"),
+        ("offer_value",   "TEXT", "NULL"),
+        ("offer_label",   "TEXT", "NULL"),
+        ("action",        "TEXT", "NULL"),
+        ("accent_color",  "TEXT", "NULL"),
+        ("target_country","TEXT", "NULL"),
+        ("target_city",   "TEXT", "NULL"),
+        ("target_operator","TEXT","NULL"),
+        ("footer",        "TEXT", "NULL"),
+    ]:
+        if name not in cols:
+            try:
+                c.execute(f"ALTER TABLE receipt_promos ADD COLUMN {name} {typ} DEFAULT {default}")
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass
+
+    now = datetime.utcnow().isoformat()
+
+    def _query(where_sql, params):
+        sql = f"""
+            SELECT * FROM receipt_promos
+            WHERE source = 'house'
+              AND active = 1
+              AND (start_date IS NULL OR start_date <= ?)
+              AND (end_date   IS NULL OR end_date   >= ?)
+              {where_sql}
+            ORDER BY priority DESC, id DESC
+            LIMIT 1
+        """
+        return c.execute(sql, [now, now] + list(params)).fetchone()
+
+    row = None
+
+    # 1. Country + tx_type
+    if country and tx_type:
+        row = _query(
+            "AND target_country = ? AND (target_tx_type = ? OR target_tx_type IS NULL OR target_tx_type = 'all')",
+            (country, tx_type),
+        )
+    # 2. Country only
+    if not row and country:
+        row = _query("AND target_country = ?", (country,))
+    # 3. Global + tx_type
+    if not row and tx_type:
+        row = _query(
+            "AND (target_country IS NULL OR target_country = '') AND (target_tx_type = ? OR target_tx_type = 'all')",
+            (tx_type,),
+        )
+    # 4. Any active house promo
+    if not row:
+        row = _query("", ())
+
+    conn.close()
+    return dict(row) if row else None
+
+
+# ============================================================
+# AD EVENT LEDGER
+# ============================================================
+@retry_on_lock
+def record_ad_event(event, ad_id=None, ad_type=None, campaign_id=None,
+                    placement=None, tx_type=None, amount=None, currency=None,
+                    country=None, operator_id=None, user_id=None, visitor_id=None):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS ad_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event TEXT NOT NULL,
+            ad_id TEXT,
+            ad_type TEXT,
+            campaign_id INTEGER,
+            placement TEXT,
+            tx_type TEXT,
+            amount REAL,
+            currency TEXT,
+            country TEXT,
+            operator_id TEXT,
+            user_id INTEGER,
+            visitor_id TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    c.execute("""
+        INSERT INTO ad_events
+        (event, ad_id, ad_type, campaign_id, placement, tx_type,
+         amount, currency, country, operator_id, user_id, visitor_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (event, ad_id, ad_type, campaign_id, placement, tx_type,
+          amount, currency, country, operator_id, user_id, visitor_id))
+    conn.commit()
+
+    # Bump the counters the admin UI already reads.
+    if campaign_id:
+        if event == "impression":
+            c.execute("UPDATE receipt_promos SET impressions_delivered = impressions_delivered + 1 WHERE id = ?", (campaign_id,))
+        elif event == "click":
+            c.execute("UPDATE receipt_promos SET clicks_delivered = clicks_delivered + 1 WHERE id = ?", (campaign_id,))
+        elif event == "conversion":
+            c.execute("UPDATE receipt_promos SET conversions_delivered = conversions_delivered + 1 WHERE id = ?", (campaign_id,))
+        conn.commit()
+    conn.close()
+
 
 
 # ============ ADMIN FUNCTIONS ============
