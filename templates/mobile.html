@@ -3578,25 +3578,53 @@ function trackMomentAdEvent(eventType){
 }
 
 async function showMomentAd(paymentDetails) {
+  // Only display a post-payment offer when the payment itself is confirmed.
+  const state = String(paymentDetails?.status || '').toLowerCase();
+  const confirmed = ['success','successful','completed','fulfilled','paid'].includes(state) ||
+    paymentDetails?.payment_confirmed === true;
+  if (!confirmed) return;
   if (Date.now() - lastMomentAdShownAt < MOMENT_AD_CONFIG.MIN_INTERVAL_MS) return;
 
   const ctx = buildMomentAdContext(paymentDetails);
   ctx.surface = 'payment_success';
+  ctx.placement = 'payment_success';
   ctx.platform = 'mobile';
 
-  const res = await fetch(`${API_BASE}/ads/recommend`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(ctx)
-  });
-  const data = await res.json();
+  try {
+    const ad = await fetchSmartAd(ctx);
+    renderSmartAd(ad, ctx, paymentDetails);
+  } catch (err) {
+    // Keep the post-payment experience functional if the ad API is unavailable
+    // or no campaign is eligible. This is a Net365 recommendation, not a paid ad.
+    console.warn('Net365 ad service unavailable; showing local recommendation.', err);
+    renderSmartAd(localSmartAd(ctx), ctx, paymentDetails);
+  }
+}
 
-  if (!data.success || !data.ad) return;              // nothing to show
-  if (!data.placement?.enabled) return;               // admin turned it off
-
-  // The renderer no longer decides *whether* to show — only *how*.
-  renderSmartAd(data.ad, ctx, paymentDetails, data.placement);
+function scheduleMomentAdAfterReceipt(tx, reference) {
+  const state = String(tx?.status || '').toLowerCase();
+  if (!['success','successful','completed','fulfilled','paid'].includes(state)) return;
+  const ref = String(reference || tx.reference || tx.id || '');
+  if (!ref) return;
+  try {
+    const key = `net365_ad_shown_${ref}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+  } catch (e) {}
+  // Let the customer see the receipt first. The offer opens above it after a
+  // short pause and can be dismissed without affecting the receipt/payment.
+  setTimeout(() => {
+    showMomentAd({
+      ...tx,
+      reference: ref,
+      payment_confirmed: true,
+      tx_type: tx.tx_type || tx.type || 'topup',
+      amount: tx.amount,
+      currency: tx.currency || currentCurrency,
+      country_code: tx.country_code || currentCountry,
+      phone: tx.phone || tx.payload?.phone || ''
+    }).catch(err => console.warn('Could not show post-payment offer:', err));
+  }, 2800);
 }
 
 // Optional reusable entry point for future non-transaction placements.
@@ -3709,6 +3737,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (localTx){
             renderReceipt(localTx);
             window.__net365LastSuccessfulPayment = localTx;
+            scheduleMomentAdAfterReceipt(localTx, reference);
             return;
           }
           const res = await fetch(`${API_BASE}/user/transaction/${encodeURIComponent(reference)}`, {credentials:'include',headers:{'Accept':'application/json'}});
@@ -3716,6 +3745,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (res.ok && data.success && data.transaction){
             renderReceipt(data.transaction);
             window.__net365LastSuccessfulPayment = data.transaction;
+            scheduleMomentAdAfterReceipt(data.transaction, reference);
             return;
           }
         }catch(e){ console.warn('Receipt lookup attempt failed', attempt + 1, e); }
