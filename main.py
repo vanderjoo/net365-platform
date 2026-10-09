@@ -97,6 +97,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 
 import database as db
+from ip_intel import IPIntel, detect_bot
 from webhook_security import verify_paystack_signature, verify_flutterwave_signature
 
 # ============ CHECK ENCRYPTION KEY IN PRODUCTION ============
@@ -3962,6 +3963,91 @@ def get_authenticated_user():
             finally:
                 conn.close()
 
+        # ============ ADMIN: COMPANY INTELLIGENCE ============
+        @self.app.route("/api/admin/companies", methods=["GET"])
+        @admin_required
+        def admin_get_companies():
+            """Aggregate visitors by organization — who's actually visiting."""
+            try:
+                limit = min(request.args.get("limit", 50, type=int), 200)
+                days = min(request.args.get("days", 30, type=int), 365)
+
+                conn = db.get_db_connection()
+                c = conn.cursor()
+
+                rows = c.execute("""
+                    SELECT
+                        COALESCE(v.org_name, '(unresolved)') AS org_name,
+                        v.asn,
+                        v.ip_kind,
+                        COUNT(*)                              AS visit_count,
+                        COUNT(DISTINCT v.ip_address)          AS unique_ips,
+                        COUNT(DISTINCT v.visitor_name)        AS unique_users,
+                        MIN(v.visited_at)                     AS first_seen,
+                        MAX(v.visited_at)                     AS last_seen,
+                        GROUP_CONCAT(DISTINCT v.country)      AS countries
+                    FROM visitors v
+                    WHERE v.visited_at >= datetime('now', ?)
+                    GROUP BY COALESCE(v.org_name, '(unresolved)'), v.asn, v.ip_kind
+                    ORDER BY visit_count DESC
+                    LIMIT ?
+                """, (f"-{days} days", limit)).fetchall()
+
+                conn.close()
+                return jsonify({
+                    "success": True,
+                    "companies": [dict(r) for r in rows],
+                    "window_days": days,
+                })
+            except Exception as e:
+                logger.error(f"Company intel query failed: {e}")
+                return jsonify({"success": False, "error": str(e)}), 500
+
+
+        @self.app.route("/api/admin/companies/<path:ip>/resolve", methods=["POST"])
+        @admin_required
+        def admin_resolve_ip(ip):
+            """Force a fresh lookup for one IP (admin 'refresh' button)."""
+            info = IPIntel.lookup(ip, force=True)
+            if not info:
+                return jsonify({"success": False, "error": "Could not resolve this IP"}), 404
+            return jsonify({"success": True, "intel": info})
+
+
+        @self.app.route("/api/admin/bots/summary", methods=["GET"])
+        @admin_required
+        def admin_bot_summary():
+            """How much of your traffic is bots vs humans, and which bots."""
+            try:
+                conn = db.get_db_connection()
+                c = conn.cursor()
+
+                totals = c.execute("""
+                    SELECT
+                        SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_visits,
+                        SUM(CASE WHEN is_bot = 0 OR is_bot IS NULL THEN 1 ELSE 0 END) AS human_visits,
+                        COUNT(*) AS total_visits
+                    FROM visitors
+                    WHERE visited_at >= datetime('now', '-30 days')
+                """).fetchone()
+
+                bots = c.execute("""
+                    SELECT COALESCE(bot_name, 'Unknown bot') AS bot_name, COUNT(*) AS count
+                    FROM visitors
+                    WHERE is_bot = 1 AND visited_at >= datetime('now', '-30 days')
+                    GROUP BY bot_name
+                    ORDER BY count DESC
+                    LIMIT 25
+                """).fetchall()
+
+                conn.close()
+                return jsonify({
+                    "success": True,
+                    "totals": dict(totals) if totals else {},
+                    "by_bot": [dict(b) for b in bots],
+                })
+            except Exception as e:
+                return jsonify({"success": False, "error": str(e)}), 500
 
 def login_required(func):
     @wraps(func)
@@ -4123,10 +4209,23 @@ def log_page_visit():
         print(f"❌ log_page_visit error: {e}", flush=True)
 
 def log_page_visit():
+    """Log one page visit + kick off background IP enrichment.
+
+    Enrichment (org / ASN / ip_kind) runs asynchronously via IPIntel so a
+    slow external lookup can never delay the response to the visitor.
+    Bot classification is done inline from the User-Agent — it's pure
+    string matching, no network, so it's cheap enough to do here.
+    """
     try:
         if request.path not in VISITOR_TRACKED_PATHS:
             return
-        ua_info = parse_user_agent(request.headers.get("User-Agent", ""))
+
+        ua = request.headers.get("User-Agent", "")
+        ua_info = parse_user_agent(ua)
+
+        # Bot classification (offline, no network call)
+        is_bot, bot_name = detect_bot(ua)
+
         user_id = None
         visitor_name = None
         try:
@@ -4137,33 +4236,59 @@ def log_page_visit():
         except Exception:
             pass
 
-        db.log_visitor(
-            user_id=user_id,
-            visitor_name=visitor_name,
-            ip_address=get_client_ip(),
-            user_agent=request.headers.get("User-Agent", ""),
-            device_type=ua_info["device_type"],
-            os_name=ua_info["os"],
-            browser=ua_info["browser"],
-            path=request.path,
-            referrer=request.headers.get("Referer", ""),
-            session_id=request.cookies.get(SESSION_COOKIE_NAME, ""),
-            # From Cloudflare headers. None (not "") when absent so the DB
-            # stores a real NULL, which is what the aggregate queries above
-            # filter on (`country IS NOT NULL AND country != ''`).
-            country=request.headers.get("CF-IPCountry") or None,
-            city=request.headers.get("CF-IPCity") or None,
-            region=request.headers.get("CF-IPRegion") or None,
-            timezone=request.headers.get("CF-IPTimezone") or None,
-        )
+        ip = get_client_ip()
+
+        # Build the payload once. If db.log_visitor doesn't yet accept the
+        # new is_bot / bot_name kwargs, we retry without them below rather
+        # than losing the whole visit record.
+        payload = {
+            "user_id": user_id,
+            "visitor_name": visitor_name,
+            "ip_address": ip,
+            "user_agent": ua,
+            "device_type": ua_info["device_type"],
+            "os_name": ua_info["os"],
+            "browser": ua_info["browser"],
+            "path": request.path,
+            "referrer": request.headers.get("Referer", ""),
+            "session_id": request.cookies.get(SESSION_COOKIE_NAME, ""),
+            # Cloudflare headers — None (not "") when absent so the DB
+            # stores a real NULL, which the aggregate queries filter on
+            # (`country IS NOT NULL AND country != ''`).
+            "country": request.headers.get("CF-IPCountry") or None,
+            "city": request.headers.get("CF-IPCity") or None,
+            "region": request.headers.get("CF-IPRegion") or None,
+            "timezone": request.headers.get("CF-IPTimezone") or None,
+            # --- NEW: bot classification ---
+            "is_bot": 1 if is_bot else 0,
+            "bot_name": bot_name,
+        }
+
+        try:
+            db.log_visitor(**payload)
+        except TypeError:
+            # db.log_visitor hasn't been updated yet to accept is_bot/bot_name.
+            # Strip them and try once more so we still record the visit.
+            payload.pop("is_bot", None)
+            payload.pop("bot_name", None)
+            db.log_visitor(**payload)
+
+        # Fire-and-forget enrichment. Never blocks the request path.
+        # IPIntel.enqueue() dedupes in-memory and short-circuits on cache hits,
+        # so calling it on every visit is cheap.
+        if ip and ip != "unknown":
+            try:
+                IPIntel.enqueue(ip)
+            except Exception as e:
+                # Enrichment failures must never break visitor logging.
+                logger.debug(f"IPIntel.enqueue failed for {ip}: {e}")
+
     except TypeError as e:
-        # A TypeError here is almost always a signature mismatch between
-        # this caller and db.log_visitor. That's a bug, not a transient
-        # failure, so log at ERROR with a traceback.
+        # A TypeError that reaches here means something other than the
+        # is_bot/bot_name kwargs mismatch — treat as a real bug.
         logger.error(f"Visitor logging signature mismatch (BUG): {e}", exc_info=True)
     except Exception as e:
         logger.warning(f"Visitor logging failed (non-fatal): {e}")
-
 
 def admin_required(func):
     """Gates admin-only endpoints behind ADMIN_SECRET. Denies access by default if
@@ -7039,6 +7164,9 @@ class ReloadlyWebApp:
         self.app.config["SESSION_COOKIE_PATH"] = "/"
 
         db.init_db()
+        # ---- IP intelligence (org / ASN / bot detection) ----
+        IPIntel.ensure_schema(db.get_db_connection)
+        IPIntel.start_worker()
         # Net365 Smart Media: initialize the ad campaign/event tables and expose
         # /api/ads/recommend, /api/ads/event and /api/ads/health.
         # The module is deployed alongside app.py; ad failures must never affect payments.
