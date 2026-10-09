@@ -9,9 +9,27 @@
 <meta name="theme-color" content="#0A0E1A" />
 <title>Net365 — Recharge, Wallet, Utilities</title>
 
+<!--
+============================================================
+NET365 MOBILE — CHANGELOG
+============================================================
+v3.0 — Integrated build
+  - Midnight Neon design (kept)
+  - Country override dropdown (restored)
+  - Correct phone/country detection (explicit codes first)
+  - Payment auto-select per country via /api/payment/preferences
+  - Support button + support sheet (Email, Chat, WhatsApp)
+  - Floating live chat widget (wired to /api/chat/*)
+  - In-app biller sheet for utilities (uses /api/utilities/*)
+  - Two-step payment modal (review -> confirm)
+  - Moment ad engine on payment success page (5 ad types)
+  - All sheets from previous build kept (auth, wallet, transfer, referral)
+============================================================
+-->
+
 <link rel="manifest" href='data:application/json,{
   "name":"Net365","short_name":"Net365","start_url":"./","display":"standalone",
-  "background_color":"#0A0E1A","theme_color":"#ff5a1f",
+  "background_color":"#0A0E1A","theme_color":"#0A0E1A",
   "icons":[{"src":"https://img.icons8.com/color/512/wifi.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
 }' />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,80 +39,50 @@
 
 <style>
 /* ============================================================
-   NET365 MOBILE — FIRE BRAND PALETTE (RED → ORANGE)
-   Light + Dark mode fully supported
+   NET365 MOBILE — CALM LUXURY DESIGN SYSTEM
    ============================================================ */
 :root{
-  /* Surfaces (dark) */
-  --bg-0:#05070d;
-  --bg-1:#080c15;
-  --bg-2:#0d1220;
-  --surface:rgba(18,24,40,0.78);
-  --surface-2:rgba(26,32,52,0.68);
+  --bg-0:#080B14;
+  --bg-1:#0A0E1A;
+  --bg-2:#0D1224;
+  --surface:rgba(20,26,45,0.72);
+  --surface-2:rgba(28,34,56,0.65);
+  --border:rgba(255,255,255,0.085);
+  --border-strong:rgba(255,109,0,0.28);
 
-  /* Borders */
-  --border:rgba(255,122,0,0.14);
-  --border-strong:rgba(255,122,0,0.38);
+  /* Net365 signature: confident ember, warm amber, quiet signal-cyan */
+  --violet:#E53935;
+  --violet-bright:#FF6D00;
+  --violet-soft:rgba(229,57,53,0.13);
+  --cyan:#65D9E8;
+  --cyan-soft:rgba(101,217,232,0.10);
+  --brand-ember:#E53935;
+  --brand-orange:#FF6D00;
+  --brand-gold:#FFB454;
 
-  /* NET365 BRAND CORE */
-  --nx-red:#ff3b30;
-  --nx-orange:#ff7a00;
-  --nx-orange-bright:#ffa640;
-  --nx-fire:linear-gradient(135deg,#ff3b30 0%,#ff7a00 55%,#ffa640 100%);
-  --nx-fire-soft:rgba(255,90,31,0.14);
+  --success:#22C55E;
+  --success-soft:rgba(34,197,94,0.12);
+  --warning:#F59E0B;
+  --warning-soft:rgba(245,158,11,0.12);
+  --danger:#F43F5E;
+  --danger-soft:rgba(244,63,94,0.12);
 
-  /* Accent partners */
-  --nx-cyan:#35d9ff;
-  --nx-cyan-soft:rgba(53,217,255,0.12);
-  --nx-green:#39e58c;
-  --nx-green-soft:rgba(57,229,140,0.12);
-  --nx-violet:#9b7cff;
-  --nx-violet-soft:rgba(155,124,255,0.12);
+  --text-0:#F8FAFC;
+  --text-1:#CBD5E1;
+  --text-2:#94A3B8;
+  --text-3:#64748B;
 
-  /* Semantic */
-  --success:#39e58c;
-  --success-soft:rgba(57,229,140,0.12);
-  --warning:#ffa640;
-  --warning-soft:rgba(255,166,64,0.12);
-  --danger:#ff3b30;
-  --danger-soft:rgba(255,59,48,0.14);
-
-  /* Text */
-  --text-0:#f5f7fb;
-  --text-1:#c8d2e0;
-  --text-2:#8c98ad;
-  --text-3:#5b6779;
-
-  /* Radii + motion */
   --radius-xl:28px;
   --radius-lg:20px;
   --radius-md:14px;
   --radius-sm:10px;
+
   --shadow-card:0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
 
   --nav-h:70px;
   --top-h:64px;
+
   --font:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
-}
-
-/* ============================================================
-   LIGHT MODE
-   ============================================================ */
-body.light-mode{
-  --bg-0:#eef2f7;
-  --bg-1:#f5f7fb;
-  --bg-2:#ffffff;
-  --surface:rgba(255,255,255,0.92);
-  --surface-2:rgba(248,250,252,0.85);
-  --border:rgba(15,23,42,0.08);
-  --border-strong:rgba(255,122,0,0.30);
-
-  --text-0:#0f172a;
-  --text-1:#334155;
-  --text-2:#64748b;
-  --text-3:#94a3b8;
-
-  --shadow-card:0 16px 40px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.9);
 }
 
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -110,22 +98,19 @@ body{
   padding-top:env(safe-area-inset-top);
   padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
   -webkit-font-smoothing:antialiased;
-  transition:background .35s ease,color .35s ease;
 }
 
 body::before{
   content:'';
   position:fixed;inset:0;
   background:
-    radial-gradient(ellipse 800px 500px at 15% -10%, rgba(255,59,48,0.28), transparent 60%),
-    radial-gradient(ellipse 700px 500px at 100% 15%, rgba(255,122,0,0.22), transparent 60%),
-    radial-gradient(ellipse 500px 500px at 50% 100%, rgba(255,59,48,0.14), transparent 65%);
+    radial-gradient(ellipse 760px 460px at 12% -12%, rgba(229,57,53,0.15), transparent 62%),
+    radial-gradient(ellipse 680px 440px at 100% 8%, rgba(101,217,232,0.085), transparent 64%),
+    radial-gradient(ellipse 520px 480px at 50% 105%, rgba(255,109,0,0.075), transparent 68%);
   pointer-events:none;
   z-index:0;
   animation:auroraDrift 24s ease-in-out infinite alternate;
-  transition:opacity .35s ease;
 }
-body.light-mode::before{opacity:0.40;}
 @keyframes auroraDrift{
   0%{transform:translate3d(0,0,0) scale(1);}
   100%{transform:translate3d(-3%,2%,0) scale(1.06);}
@@ -139,65 +124,52 @@ body.light-mode::before{opacity:0.40;}
   height:var(--top-h);
   display:flex;align-items:center;justify-content:space-between;
   padding:0 18px;
-  background:rgba(5,7,13,0.78);
+  background:rgba(8,11,20,0.72);
   backdrop-filter:blur(20px) saturate(180%);
   -webkit-backdrop-filter:blur(20px) saturate(180%);
   border-bottom:1px solid var(--border);
-  transition:background .35s ease,border-color .35s ease;
 }
-body.light-mode .topbar{background:rgba(255,255,255,0.90);}
 .brand{display:flex;align-items:center;gap:9px;cursor:pointer;}
 .brand-mark{
   width:34px;height:34px;border-radius:11px;
   display:flex;align-items:center;justify-content:center;
-  background:var(--nx-fire);
-  box-shadow:0 0 22px rgba(255,90,31,0.55);
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
+  box-shadow:0 0 20px rgba(124,58,237,0.45);
   font-size:16px;color:#fff;
 }
 .brand-name{
   font-weight:900;font-size:18px;letter-spacing:-0.02em;
-  background:linear-gradient(90deg,#fff,#ffb88c);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-}
-body.light-mode .brand-name{
-  background:linear-gradient(90deg,#0f172a,#ff5a1f);
+  background:linear-gradient(90deg,#fff,#CBD5E1);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
 }
 .topbar-actions{display:flex;align-items:center;gap:8px;}
-
 .wallet-chip{
   display:none;align-items:center;gap:8px;
   padding:8px 14px;border-radius:999px;
-  background:var(--nx-fire-soft);
+  background:rgba(124,58,237,0.14);
   border:1px solid var(--border-strong);
   font-weight:800;font-size:14px;
-  color:var(--text-0);cursor:pointer;
+  color:#fff;cursor:pointer;
   transition:all .2s ease;
 }
 .wallet-chip.show{display:inline-flex;}
-.wallet-chip:hover{background:rgba(255,122,0,0.24);}
-.wallet-chip i{color:var(--nx-orange-bright);font-size:13px;}
+.wallet-chip:hover{background:rgba(124,58,237,0.24);}
+.wallet-chip i{color:var(--cyan);font-size:13px;}
 
-.avatar-btn,.theme-btn{
+.avatar-btn{
   width:38px;height:38px;border-radius:50%;
   border:1px solid var(--border-strong);
   background:var(--surface);
   color:var(--text-1);cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   font-size:16px;font-weight:700;
-  transition:all .25s cubic-bezier(.16,1,.3,1);
+  transition:all .2s ease;
 }
-.avatar-btn:hover,.theme-btn:hover{
-  border-color:var(--nx-orange);
-  color:var(--text-0);
-}
-.theme-btn:hover{transform:rotate(12deg);}
-.theme-btn i{transition:transform .4s cubic-bezier(.16,1,.3,1),opacity .25s ease;}
-.theme-btn.switching i{transform:rotate(360deg) scale(0.6);opacity:0;}
+.avatar-btn:hover{border-color:var(--violet);color:#fff;}
 .avatar-btn.logged-in{
-  background:var(--nx-fire);
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
   color:#fff;border-color:transparent;
-  box-shadow:0 0 18px rgba(255,90,31,0.55);
+  box-shadow:0 0 18px rgba(124,58,237,0.5);
 }
 
 /* ============================================================
@@ -212,7 +184,26 @@ body.light-mode .brand-name{
 }
 
 /* ============================================================
-   TYPOGRAPHY / TITLES
+   CARDS
+   ============================================================ */
+.card{
+  background:var(--surface);
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  padding:24px 22px;
+  box-shadow:var(--shadow-card);
+  position:relative;
+  overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(124,58,237,0.6),transparent);
+}
+
+/* ============================================================
+   TYPOGRAPHY
    ============================================================ */
 .section-title{
   font-size:12px;font-weight:800;letter-spacing:0.14em;
@@ -221,7 +212,7 @@ body.light-mode .brand-name{
   display:flex;align-items:center;justify-content:space-between;
 }
 .section-title a{
-  font-size:12px;color:var(--nx-orange-bright);text-decoration:none;
+  font-size:12px;color:var(--cyan);text-decoration:none;
   font-weight:700;letter-spacing:0;cursor:pointer;
 }
 .field-label{
@@ -231,7 +222,7 @@ body.light-mode .brand-name{
   text-transform:uppercase;
   margin-bottom:9px;
 }
-.field-label i{color:var(--nx-orange);font-size:12px;}
+.field-label i{color:var(--violet-bright);font-size:12px;}
 
 /* ============================================================
    INPUTS
@@ -240,7 +231,7 @@ body.light-mode .brand-name{
 .input, select.input{
   width:100%;
   padding:16px 18px;
-  background:rgba(5,7,13,0.65);
+  background:rgba(8,11,20,0.6);
   border:1.5px solid rgba(148,163,184,0.16);
   border-radius:var(--radius-md);
   color:var(--text-0);
@@ -250,44 +241,37 @@ body.light-mode .brand-name{
   outline:none;
   transition:border-color .2s ease, box-shadow .2s ease, background .2s ease;
 }
-body.light-mode .input,
-body.light-mode select.input{
-  background:#ffffff;
-  border-color:rgba(15,23,42,0.12);
-}
 .input::placeholder{color:var(--text-3);font-weight:500;}
 .input:focus{
-  border-color:var(--nx-orange);
-  background:rgba(255,122,0,0.06);
-  box-shadow:0 0 0 4px rgba(255,122,0,0.16);
+  border-color:var(--violet-bright);
+  background:rgba(124,58,237,0.06);
+  box-shadow:0 0 0 4px rgba(124,58,237,0.16);
 }
 select.input{
-  appearance:none;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23ff7a00' d='M6 8L0 0h12z'/></svg>");
+  appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%2394A3B8' d='M6 8L0 0h12z'/></svg>");
   background-repeat:no-repeat;background-position:right 18px center;
   padding-right:44px;
 }
 
 .amount-wrap{
   display:flex;align-items:center;
-  background:rgba(5,7,13,0.72);
+  background:rgba(8,11,20,0.72);
   border:1.5px solid rgba(148,163,184,0.16);
   border-radius:var(--radius-lg);
   padding:8px 20px 8px 22px;
-  transition:border-color .2s ease, box-shadow .2s ease,background .35s ease;
+  transition:border-color .2s ease, box-shadow .2s ease;
   position:relative;overflow:hidden;
 }
-body.light-mode .amount-wrap{background:#ffffff;border-color:rgba(15,23,42,0.12);}
 .amount-wrap::after{
   content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
-  background:var(--nx-fire);
+  background:linear-gradient(90deg,var(--violet),var(--cyan));
   transform:scaleX(0);transform-origin:left;
   transition:transform .35s cubic-bezier(0.16,1,0.3,1);
 }
 .amount-wrap:focus-within::after{transform:scaleX(1);}
 .amount-wrap:focus-within{
-  border-color:var(--nx-orange);
-  box-shadow:0 0 0 4px rgba(255,122,0,0.16);
+  border-color:var(--violet-bright);
+  box-shadow:0 0 0 4px rgba(124,58,237,0.16);
 }
 .amount-symbol{
   font-size:26px;font-weight:900;color:var(--text-2);
@@ -295,11 +279,11 @@ body.light-mode .amount-wrap{background:#ffffff;border-color:rgba(15,23,42,0.12)
 }
 .amount-input{
   flex:1;background:none;border:none;outline:none;
-  color:var(--text-0);font-family:inherit;
+  color:#fff;font-family:inherit;
   font-size:44px !important;font-weight:900;
   letter-spacing:-0.03em;line-height:1.1;
   padding:8px 0;width:100%;
-  caret-color:var(--nx-orange);
+  caret-color:var(--cyan);
 }
 .amount-input::placeholder{color:var(--text-3);font-weight:900;}
 
@@ -317,31 +301,30 @@ body.light-mode .amount-wrap{background:#ffffff;border-color:rgba(15,23,42,0.12)
   font-family:inherit;font-size:13px;font-weight:800;
   cursor:pointer;transition:all .18s ease;
 }
-body.light-mode .quick-pill{background:rgba(15,23,42,0.04);border-color:rgba(15,23,42,0.08);}
 .quick-pill:hover,.quick-pill:active{
-  background:var(--nx-fire-soft);
-  border-color:var(--nx-orange);
-  color:var(--text-0);transform:translateY(-1px);
+  background:var(--violet-soft);
+  border-color:var(--violet);
+  color:#fff;transform:translateY(-1px);
 }
 .quick-pill.active{
-  background:var(--nx-fire);
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
   border-color:transparent;color:#fff;
-  box-shadow:0 0 20px rgba(255,90,31,0.55);
+  box-shadow:0 0 20px rgba(124,58,237,0.5);
 }
 
 .detect-card{
   display:none;align-items:center;gap:12px;
   padding:14px 16px;
   border-radius:var(--radius-md);
-  background:linear-gradient(135deg,rgba(57,229,140,0.10),rgba(53,217,255,0.06));
-  border:1px solid rgba(57,229,140,0.28);
+  background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(34,211,238,0.06));
+  border:1px solid rgba(34,197,94,0.28);
   margin-top:14px;
   animation:slideDown .3s ease;
 }
 .detect-card.show{display:flex;}
 .detect-card.warn{
-  background:linear-gradient(135deg,rgba(255,166,64,0.10),rgba(255,59,48,0.06));
-  border-color:rgba(255,166,64,0.30);
+  background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(244,63,94,0.06));
+  border-color:rgba(245,158,11,0.30);
 }
 @keyframes slideDown{
   from{opacity:0;transform:translateY(-6px);}
@@ -350,55 +333,52 @@ body.light-mode .quick-pill{background:rgba(15,23,42,0.04);border-color:rgba(15,
 .detect-icon{
   width:40px;height:40px;border-radius:12px;
   display:flex;align-items:center;justify-content:center;
-  background:rgba(57,229,140,0.18);
+  background:rgba(34,197,94,0.18);
   color:var(--success);
   font-size:16px;flex-shrink:0;
 }
 .detect-card.warn .detect-icon{
-  background:rgba(255,166,64,0.18);color:var(--warning);
+  background:rgba(245,158,11,0.18);color:var(--warning);
 }
 .detect-info{flex:1;min-width:0;}
-.detect-name{font-size:15px;font-weight:800;color:var(--text-0);letter-spacing:-0.01em;}
+.detect-name{font-size:15px;font-weight:800;color:#fff;letter-spacing:-0.01em;}
 .detect-sub{font-size:11.5px;color:var(--text-2);margin-top:2px;font-weight:500;}
 .detect-badge{
   font-size:10px;font-weight:900;letter-spacing:0.1em;
   padding:5px 10px;border-radius:999px;
-  background:rgba(57,229,140,0.16);
+  background:rgba(34,197,94,0.16);
   color:var(--success);
 }
 .detect-card.warn .detect-badge{
-  background:rgba(255,166,64,0.16);color:var(--warning);
+  background:rgba(245,158,11,0.16);color:var(--warning);
 }
 
 .manual-block{
   display:none;margin-top:10px;
   padding:14px;
   border-radius:var(--radius-md);
-  background:rgba(255,122,0,0.08);
+  background:rgba(124,58,237,0.08);
   border:1px solid var(--border-strong);
 }
-body.light-mode .manual-block{background:rgba(255,122,0,0.05);}
 .manual-block.show{display:block;animation:slideDown .3s ease;}
 .manual-head{
   display:flex;align-items:center;justify-content:space-between;
   margin-bottom:10px;
 }
-.manual-head strong{font-size:13px;color:var(--text-0);font-weight:800;}
+.manual-head strong{font-size:13px;color:#fff;font-weight:800;}
 .manual-head button{
-  background:none;border:none;color:var(--nx-orange-bright);
+  background:none;border:none;color:var(--cyan);
   font-family:inherit;font-size:12px;font-weight:700;
   cursor:pointer;padding:0;
 }
 
 .breakdown{
-  background:rgba(5,7,13,0.55);
+  background:rgba(8,11,20,0.55);
   border:1px solid rgba(148,163,184,0.10);
   border-radius:var(--radius-lg);
   padding:16px 18px;
   margin-top:14px;
-  transition:background .35s ease;
 }
-body.light-mode .breakdown{background:rgba(15,23,42,0.03);border-color:rgba(15,23,42,0.06);}
 .bd-row{
   display:flex;justify-content:space-between;align-items:center;
   padding:8px 0;
@@ -409,7 +389,7 @@ body.light-mode .breakdown{background:rgba(15,23,42,0.03);border-color:rgba(15,2
 }
 .bd-row .lbl .fee-tag{
   font-size:9.5px;padding:3px 8px;border-radius:6px;
-  background:rgba(255,166,64,0.14);
+  background:rgba(245,158,11,0.14);
   color:var(--warning);font-weight:800;letter-spacing:0.05em;
 }
 .bd-row .val{
@@ -420,15 +400,22 @@ body.light-mode .breakdown{background:rgba(15,23,42,0.03);border-color:rgba(15,2
   border-top:1px solid rgba(148,163,184,0.14);
   margin-top:8px;padding-top:14px;
 }
-body.light-mode .bd-row.total{border-top-color:rgba(15,23,42,0.08);}
-.bd-row.total .lbl{font-size:14px;color:var(--text-0);font-weight:800;}
+.bd-row.total .lbl{font-size:14px;color:#fff;font-weight:800;}
 .bd-row.total .val{
   font-size:32px;font-weight:900;
   letter-spacing:-0.03em;
-  background:var(--nx-fire);
+  background:linear-gradient(90deg,var(--brand-orange),var(--brand-gold));
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
 }
+.bd-row.discount .val{color:var(--success);}
 
+.pm-label{
+  font-size:12px;font-weight:700;letter-spacing:0.05em;
+  color:var(--text-2);text-transform:uppercase;
+  margin:18px 0 10px;display:flex;align-items:center;gap:8px;
+}
+.pm-label i{color:var(--violet-bright);font-size:12px;}
+.pm-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
 .pm-btn{
   display:flex;align-items:center;gap:10px;
   padding:13px 14px;
@@ -440,22 +427,21 @@ body.light-mode .bd-row.total{border-top-color:rgba(15,23,42,0.08);}
   cursor:pointer;transition:all .18s ease;
   text-align:left;position:relative;
 }
-body.light-mode .pm-btn{background:rgba(15,23,42,0.03);border-color:rgba(15,23,42,0.08);}
-.pm-btn:hover{border-color:var(--nx-orange);color:var(--text-0);}
+.pm-btn:hover{border-color:var(--violet);color:#fff;}
 .pm-btn.active{
-  background:linear-gradient(135deg,rgba(255,59,48,0.20),rgba(255,122,0,0.15));
-  border-color:var(--nx-orange);color:var(--text-0);
-  box-shadow:0 0 20px rgba(255,90,31,0.35);
+  background:linear-gradient(135deg,rgba(124,58,237,0.20),rgba(34,211,238,0.10));
+  border-color:var(--violet);color:#fff;
+  box-shadow:0 0 20px rgba(124,58,237,0.30);
 }
 .pm-btn .pm-icon{
   width:28px;height:28px;border-radius:8px;
   display:flex;align-items:center;justify-content:center;
-  background:rgba(255,122,0,0.16);
-  color:var(--nx-orange-bright);
+  background:rgba(124,58,237,0.16);
+  color:var(--violet-bright);
   font-size:13px;flex-shrink:0;
 }
 .pm-btn.active .pm-icon{
-  background:var(--nx-fire);
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
   color:#fff;
 }
 .pm-btn small{
@@ -470,14 +456,14 @@ body.light-mode .pm-btn{background:rgba(15,23,42,0.03);border-color:rgba(15,23,4
   padding:20px 24px;
   border-radius:var(--radius-lg);
   border:none;
-  background:linear-gradient(100deg,#ff3b30 0%,#ff7a00 55%,#ffa640 100%);
+  background:linear-gradient(115deg,#E53935 0%,#FF6D00 58%,#FFB454 100%);
   background-size:200% 200%;
   color:#fff;
   font-family:inherit;
   font-size:17px;font-weight:900;
   letter-spacing:0.01em;
   cursor:pointer;position:relative;overflow:hidden;
-  box-shadow:0 12px 32px rgba(255,90,31,0.42), inset 0 1px 0 rgba(255,255,255,0.20);
+  box-shadow:0 12px 32px rgba(124,58,237,0.42), inset 0 1px 0 rgba(255,255,255,0.20);
   transition:transform .12s ease, box-shadow .25s ease;
   animation:heroShift 8s ease-in-out infinite;
 }
@@ -486,7 +472,7 @@ body.light-mode .pm-btn{background:rgba(15,23,42,0.03);border-color:rgba(15,23,4
   50%{background-position:100% 50%;}
 }
 .btn-hero:not(:disabled):active{transform:scale(0.97);}
-.btn-hero:not(:disabled):hover{box-shadow:0 16px 44px rgba(255,90,31,0.55);}
+.btn-hero:not(:disabled):hover{box-shadow:0 16px 44px rgba(124,58,237,0.55);}
 .btn-hero:disabled{
   opacity:0.42;cursor:not-allowed;
   box-shadow:none;animation:none;
@@ -507,24 +493,54 @@ body.light-mode .pm-btn{background:rgba(15,23,42,0.03);border-color:rgba(15,23,4
   font-family:inherit;font-size:14px;font-weight:700;
   cursor:pointer;transition:all .2s ease;
 }
-body.light-mode .btn-ghost{background:rgba(15,23,42,0.04);border-color:rgba(15,23,42,0.10);}
-.btn-ghost:hover{background:rgba(148,163,184,0.12);color:var(--text-0);}
-
+.btn-ghost:hover{background:rgba(148,163,184,0.12);color:#fff;}
 .btn-secondary{
   flex:1;padding:16px;
   border-radius:var(--radius-md);
   border:none;
-  background:var(--nx-fire);
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
   color:#fff;font-family:inherit;font-size:14px;font-weight:800;
   cursor:pointer;
-  box-shadow:0 8px 24px rgba(255,90,31,0.42);
+  box-shadow:0 8px 24px rgba(124,58,237,0.32);
   transition:transform .12s ease;
 }
 .btn-secondary:active{transform:scale(0.97);}
 
-/* ============================================================
-   TRANSACTIONS
-   ============================================================ */
+.qa-scroll{
+  display:flex;gap:10px;overflow-x:auto;
+  padding:4px 4px 12px;margin:0 -4px;
+  scrollbar-width:none;
+}
+.qa-scroll::-webkit-scrollbar{display:none;}
+.qa-item{
+  flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:0;background:none;border:none;
+  font-family:inherit;cursor:pointer;
+  width:72px;color:var(--text-1);
+}
+.qa-icon{
+  width:56px;height:56px;border-radius:18px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(124,58,237,0.10);
+  border:1px solid rgba(124,58,237,0.20);
+  color:var(--violet-bright);
+  font-size:20px;
+  transition:all .2s ease;
+}
+.qa-item:hover .qa-icon,
+.qa-item:active .qa-icon{
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
+  color:#fff;border-color:transparent;
+  box-shadow:0 8px 24px rgba(124,58,237,0.42);
+  transform:translateY(-3px);
+}
+.qa-label{
+  font-size:10.5px;font-weight:700;
+  letter-spacing:0.02em;text-align:center;
+  line-height:1.2;color:var(--text-2);
+}
+
 .tx-list{display:flex;flex-direction:column;gap:6px;}
 .tx-row{
   display:flex;align-items:center;gap:14px;
@@ -535,9 +551,8 @@ body.light-mode .btn-ghost{background:rgba(15,23,42,0.04);border-color:rgba(15,2
   cursor:pointer;
   transition:all .18s ease;
 }
-body.light-mode .tx-row{background:rgba(15,23,42,0.02);}
 .tx-row:hover,.tx-row:active{
-  background:rgba(255,122,0,0.08);
+  background:rgba(124,58,237,0.08);
   border-color:var(--border);
 }
 .tx-icon{
@@ -545,48 +560,57 @@ body.light-mode .tx-row{background:rgba(15,23,42,0.02);}
   display:flex;align-items:center;justify-content:center;
   font-size:16px;flex-shrink:0;
 }
-.tx-icon.credit{background:rgba(57,229,140,0.14);color:var(--success);}
-.tx-icon.debit{background:rgba(255,59,48,0.14);color:var(--danger);}
-.tx-icon.neutral{background:rgba(255,122,0,0.14);color:var(--nx-orange-bright);}
+.tx-icon.credit{background:rgba(34,197,94,0.14);color:var(--success);}
+.tx-icon.debit{background:rgba(244,63,94,0.14);color:var(--danger);}
+.tx-icon.neutral{background:rgba(124,58,237,0.14);color:var(--violet-bright);}
 .tx-body{flex:1;min-width:0;}
-.tx-title{font-size:14px;font-weight:700;color:var(--text-0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.tx-sub{font-size:11.5px;color:var(--text-2);font-weight:500;margin-top:3px;display:flex;align-items:center;gap:8px;}
-.status-pill{padding:2px 8px;border-radius:999px;font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;}
+.tx-title{
+  font-size:14px;font-weight:700;color:var(--text-0);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tx-sub{
+  font-size:11.5px;color:var(--text-2);font-weight:500;
+  margin-top:3px;
+  display:flex;align-items:center;gap:8px;
+}
+.status-pill{
+  padding:2px 8px;border-radius:999px;
+  font-size:9.5px;font-weight:800;
+  letter-spacing:0.06em;text-transform:uppercase;
+}
 .status-pill.success{background:var(--success-soft);color:var(--success);}
 .status-pill.pending{background:var(--warning-soft);color:var(--warning);}
 .status-pill.failed{background:var(--danger-soft);color:var(--danger);}
 .tx-amount{text-align:right;flex-shrink:0;}
-.tx-amount .amt{font-size:18px;font-weight:800;letter-spacing:-0.02em;color:var(--text-0);}
+.tx-amount .amt{
+  font-size:18px;font-weight:800;
+  letter-spacing:-0.02em;color:var(--text-0);
+}
 .tx-amount .amt.positive{color:var(--success);}
 
-.empty-state{text-align:center;padding:36px 20px;color:var(--text-2);}
-.empty-state i{font-size:36px;color:var(--text-3);margin-bottom:12px;display:block;}
+.empty-state{
+  text-align:center;padding:36px 20px;color:var(--text-2);
+}
+.empty-state i{
+  font-size:36px;color:var(--text-3);
+  margin-bottom:12px;display:block;
+}
 .empty-state p{font-size:13px;font-weight:500;}
 
-/* ============================================================
-   BALANCE HERO
-   ============================================================ */
 .balance-hero{
   background:
-    linear-gradient(135deg,rgba(255,59,48,0.24) 0%,rgba(255,122,0,0.16) 100%),
-    rgba(5,7,13,0.85);
+    linear-gradient(135deg,rgba(124,58,237,0.28) 0%,rgba(34,211,238,0.12) 100%),
+    rgba(8,11,20,0.85);
   border:1px solid var(--border-strong);
   border-radius:var(--radius-xl);
   padding:28px 24px;
   position:relative;overflow:hidden;
   box-shadow:0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
-  transition:background .35s ease,box-shadow .35s ease;
-}
-body.light-mode .balance-hero{
-  background:
-    linear-gradient(135deg,rgba(255,59,48,0.14) 0%,rgba(255,122,0,0.10) 100%),
-    #ffffff;
-  box-shadow:0 16px 40px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.9);
 }
 .balance-hero::before{
   content:'';position:absolute;
   width:280px;height:280px;border-radius:50%;
-  background:radial-gradient(circle,rgba(255,90,31,0.35) 0%,transparent 70%);
+  background:radial-gradient(circle,rgba(124,58,237,0.35) 0%,transparent 70%);
   top:-100px;right:-80px;pointer-events:none;
 }
 .balance-label{
@@ -596,22 +620,23 @@ body.light-mode .balance-hero{
   margin-bottom:10px;
   display:flex;align-items:center;gap:8px;
 }
-body.light-mode .balance-label{color:rgba(15,23,42,0.6);}
-.balance-label i{color:var(--nx-orange-bright);}
+.balance-label i{color:var(--cyan);}
 .balance-value{
   font-size:52px;font-weight:900;
   letter-spacing:-0.04em;line-height:1.05;
   color:#fff;
-  text-shadow:0 0 40px rgba(255,90,31,0.35);
+  text-shadow:0 0 40px rgba(124,58,237,0.35);
   word-break:break-all;
 }
-body.light-mode .balance-value{color:#0f172a;text-shadow:none;}
-.balance-currency{font-size:14px;font-weight:700;color:var(--text-2);margin-top:6px;}
-.balance-actions{display:flex;gap:10px;margin-top:22px;position:relative;z-index:1;}
+.balance-currency{
+  font-size:14px;font-weight:700;
+  color:var(--text-2);margin-top:6px;
+}
+.balance-actions{
+  display:flex;gap:10px;margin-top:22px;
+  position:relative;z-index:1;
+}
 
-/* ============================================================
-   CURRENCY CHIPS
-   ============================================================ */
 .cur-chips{
   display:flex;gap:8px;overflow-x:auto;
   padding:4px 4px 12px;margin:18px -4px 0;
@@ -628,16 +653,12 @@ body.light-mode .balance-value{color:#0f172a;text-shadow:none;}
   letter-spacing:0.04em;
   cursor:pointer;transition:all .2s ease;
 }
-body.light-mode .cur-chip{background:rgba(15,23,42,0.03);border-color:rgba(15,23,42,0.08);}
 .cur-chip.active{
-  background:var(--nx-fire);
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
   border-color:transparent;color:#fff;
-  box-shadow:0 0 18px rgba(255,90,31,0.5);
+  box-shadow:0 0 18px rgba(124,58,237,0.45);
 }
 
-/* ============================================================
-   UTILITIES
-   ============================================================ */
 .biller-group{margin-bottom:22px;}
 .biller-head{
   font-size:12px;font-weight:800;
@@ -646,8 +667,10 @@ body.light-mode .cur-chip{background:rgba(15,23,42,0.03);border-color:rgba(15,23
   margin:0 4px 12px;
   display:flex;align-items:center;gap:8px;
 }
-.biller-head i{color:var(--nx-orange);font-size:13px;}
-.biller-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.biller-head i{color:var(--cyan);font-size:13px;}
+.biller-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:10px;
+}
 .biller-btn{
   display:flex;align-items:center;gap:12px;
   padding:14px;
@@ -659,35 +682,29 @@ body.light-mode .cur-chip{background:rgba(15,23,42,0.03);border-color:rgba(15,23
   cursor:pointer;transition:all .18s ease;
   text-align:left;
 }
-body.light-mode .biller-btn{background:rgba(15,23,42,0.02);border-color:rgba(15,23,42,0.06);}
 .biller-btn:hover,.biller-btn:active{
-  background:rgba(255,122,0,0.10);
+  background:rgba(124,58,237,0.10);
   border-color:var(--border-strong);
-  color:var(--text-0);transform:translateY(-1px);
+  color:#fff;transform:translateY(-1px);
 }
 .biller-logo{
   width:34px;height:34px;border-radius:10px;
   display:flex;align-items:center;justify-content:center;
-  background:rgba(255,122,0,0.16);
-  color:var(--nx-orange-bright);
+  background:rgba(124,58,237,0.16);
+  color:var(--violet-bright);
   font-size:14px;flex-shrink:0;font-weight:900;
 }
 
-/* ============================================================
-   BOTTOM NAV
-   ============================================================ */
 .bottom-nav{
   position:fixed;bottom:0;left:0;right:0;
   z-index:80;display:flex;
-  background:rgba(5,7,13,0.90);
+  background:rgba(8,11,20,0.88);
   backdrop-filter:blur(24px) saturate(180%);
   -webkit-backdrop-filter:blur(24px) saturate(180%);
   border-top:1px solid var(--border);
   padding-bottom:env(safe-area-inset-bottom);
   padding-top:8px;padding-left:8px;padding-right:8px;
-  transition:background .35s ease,border-color .35s ease;
 }
-body.light-mode .bottom-nav{background:rgba(255,255,255,0.94);}
 .nav-item{
   flex:1;
   display:flex;flex-direction:column;align-items:center;gap:3px;
@@ -699,32 +716,30 @@ body.light-mode .bottom-nav{background:rgba(255,255,255,0.94);}
   cursor:pointer;transition:all .2s ease;
   position:relative;
 }
-.nav-item .nav-icon{font-size:20px;transition:all .2s ease;line-height:1;}
+.nav-item .nav-icon{
+  font-size:20px;transition:all .2s ease;line-height:1;
+}
 .nav-item .nav-label{font-weight:800;letter-spacing:0.05em;}
-.nav-item.active{color:var(--text-0);}
+.nav-item.active{color:#fff;}
 .nav-item.active .nav-icon{
-  color:var(--nx-orange-bright);
-  filter:drop-shadow(0 0 10px rgba(255,122,0,0.85));
+  color:var(--violet-bright);
+  filter:drop-shadow(0 0 10px rgba(124,58,237,0.85));
   transform:translateY(-2px);
 }
 .nav-item.active::before{
   content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
   width:32px;height:3px;border-radius:0 0 4px 4px;
-  background:var(--nx-fire);
-  box-shadow:0 0 12px rgba(255,122,0,0.85);
+  background:linear-gradient(90deg,var(--violet),var(--cyan));
+  box-shadow:0 0 12px rgba(124,58,237,0.85);
 }
 
-/* ============================================================
-   SHEETS
-   ============================================================ */
 .sheet-backdrop{
   position:fixed;inset:0;z-index:200;
-  background:rgba(3,5,12,0.78);
+  background:rgba(8,11,20,0.72);
   backdrop-filter:blur(6px);
   display:none;align-items:flex-end;justify-content:center;
   animation:fadeIn .2s ease;
 }
-body.light-mode .sheet-backdrop{background:rgba(15,23,42,0.45);}
 .sheet-backdrop.show{display:flex;}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 .sheet{
@@ -735,7 +750,6 @@ body.light-mode .sheet-backdrop{background:rgba(15,23,42,0.45);}
   max-height:88vh;overflow-y:auto;
   border-top:1px solid var(--border-strong);
   animation:sheetUp .32s cubic-bezier(0.16,1,0.3,1);
-  transition:background .35s ease,border-color .35s ease;
 }
 @keyframes sheetUp{
   from{transform:translateY(100%);}
@@ -747,10 +761,13 @@ body.light-mode .sheet-backdrop{background:rgba(15,23,42,0.45);}
   margin:6px auto 16px;
 }
 .sheet-title{
-  font-size:19px;font-weight:900;color:var(--text-0);
+  font-size:19px;font-weight:900;color:#fff;
   letter-spacing:-0.02em;margin-bottom:4px;
 }
-.sheet-sub{font-size:13px;color:var(--text-2);margin-bottom:20px;font-weight:500;}
+.sheet-sub{
+  font-size:13px;color:var(--text-2);
+  margin-bottom:20px;font-weight:500;
+}
 .sheet-close{
   position:absolute;top:16px;right:18px;
   width:32px;height:32px;border-radius:50%;
@@ -758,7 +775,6 @@ body.light-mode .sheet-backdrop{background:rgba(15,23,42,0.45);}
   border:none;color:var(--text-2);
   font-size:15px;cursor:pointer;
 }
-body.light-mode .sheet-close{background:rgba(15,23,42,0.05);}
 .sheet-relative{position:relative;}
 
 .user-menu-list{display:flex;flex-direction:column;gap:2px;}
@@ -772,21 +788,18 @@ body.light-mode .sheet-close{background:rgba(15,23,42,0.05);}
   cursor:pointer;transition:all .16s ease;
   text-align:left;width:100%;
 }
-.um-item:hover{background:rgba(255,122,0,0.10);color:var(--text-0);}
+.um-item:hover{background:rgba(124,58,237,0.10);color:#fff;}
 .um-item i{
   width:34px;height:34px;border-radius:10px;
   display:flex;align-items:center;justify-content:center;
-  background:rgba(255,122,0,0.12);
-  color:var(--nx-orange-bright);
+  background:rgba(124,58,237,0.12);
+  color:var(--violet-bright);
   font-size:13px;flex-shrink:0;
 }
 .um-item.danger{color:var(--danger);}
-.um-item.danger i{background:rgba(255,59,48,0.12);color:var(--danger);}
-.um-item.danger:hover{background:rgba(255,59,48,0.08);}
+.um-item.danger i{background:rgba(244,63,94,0.12);color:var(--danger);}
+.um-item.danger:hover{background:rgba(244,63,94,0.08);}
 
-/* ============================================================
-   TOAST
-   ============================================================ */
 #toastWrap{
   position:fixed;
   top:calc(env(safe-area-inset-top) + 76px);
@@ -797,7 +810,7 @@ body.light-mode .sheet-close{background:rgba(15,23,42,0.05);}
 }
 .toast{
   padding:14px 18px;border-radius:14px;
-  background:rgba(18,24,40,0.96);
+  background:rgba(20,26,45,0.96);
   backdrop-filter:blur(20px);
   border:1px solid var(--border-strong);
   color:#fff;font-size:13.5px;font-weight:600;
@@ -806,14 +819,13 @@ body.light-mode .sheet-close{background:rgba(15,23,42,0.05);}
   animation:toastIn .35s cubic-bezier(0.34,1.56,0.64,1);
   pointer-events:auto;
 }
-body.light-mode .toast{background:rgba(255,255,255,0.98);color:#0f172a;box-shadow:0 12px 32px rgba(15,23,42,0.18);}
-.toast.success{border-color:rgba(57,229,140,0.45);}
+.toast.success{border-color:rgba(34,197,94,0.45);}
 .toast.success i{color:var(--success);}
-.toast.error{border-color:rgba(255,59,48,0.45);}
+.toast.error{border-color:rgba(244,63,94,0.45);}
 .toast.error i{color:var(--danger);}
-.toast.warning{border-color:rgba(255,166,64,0.45);}
+.toast.warning{border-color:rgba(245,158,11,0.45);}
 .toast.warning i{color:var(--warning);}
-.toast.info i{color:var(--nx-orange-bright);}
+.toast.info i{color:var(--cyan);}
 @keyframes toastIn{
   from{opacity:0;transform:translateY(-14px);}
   to{opacity:1;transform:translateY(0);}
@@ -839,9 +851,9 @@ body.light-mode .toast{background:rgba(255,255,255,0.98);color:#0f172a;box-shado
   right:16px;
   width:52px;height:52px;border-radius:50%;
   border:none;
-  background:var(--nx-fire);
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
   color:#fff;font-size:20px;cursor:pointer;
-  box-shadow:0 8px 28px rgba(255,90,31,0.55);
+  box-shadow:0 8px 28px rgba(124,58,237,0.55);
   z-index:90;transition:transform .2s ease;
   display:none;
 }
@@ -862,20 +874,17 @@ body.light-mode .toast{background:rgba(255,255,255,0.98);color:#0f172a;box-shado
   z-index:100;flex-direction:column;overflow:hidden;
   animation:sheetUp .3s cubic-bezier(0.16,1,0.3,1);
 }
-body.light-mode .chat-widget{box-shadow:0 30px 80px rgba(15,23,42,0.18);}
 .chat-widget.show{display:flex;}
 .chat-header{
-  background:var(--nx-fire);
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
   color:#fff;padding:14px 16px;
   display:flex;align-items:center;justify-content:space-between;
 }
 .chat-body{
   flex:1;overflow-y:auto;padding:16px;
   display:flex;flex-direction:column;gap:10px;
-  background:rgba(5,7,13,0.4);
-  transition:background .35s ease;
+  background:rgba(8,11,20,0.4);
 }
-body.light-mode .chat-body{background:rgba(15,23,42,0.02);}
 .chat-msg{
   max-width:82%;padding:10px 14px;
   border-radius:16px;font-size:13.5px;line-height:1.45;font-weight:500;
@@ -887,32 +896,28 @@ body.light-mode .chat-body{background:rgba(15,23,42,0.02);}
   border-bottom-left-radius:4px;
   border:1px solid rgba(148,163,184,0.12);
 }
-body.light-mode .chat-msg.support{background:#fff;border-color:rgba(15,23,42,0.08);}
 .chat-msg.user{
-  background:var(--nx-fire);
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
   color:#fff;align-self:flex-end;
   border-bottom-right-radius:4px;
 }
 .chat-footer{
   display:flex;gap:8px;padding:10px;
   border-top:1px solid var(--border);
-  background:rgba(5,7,13,0.6);
-  transition:background .35s ease;
+  background:rgba(8,11,20,0.6);
 }
-body.light-mode .chat-footer{background:#fff;}
 .chat-footer input{
   flex:1;padding:12px 16px;
   border-radius:14px;
   border:1.5px solid rgba(148,163,184,0.16);
-  background:rgba(5,7,13,0.6);
-  color:var(--text-0);font-family:inherit;font-size:14px;
+  background:rgba(8,11,20,0.6);
+  color:#fff;font-family:inherit;font-size:14px;
   outline:none;
 }
-body.light-mode .chat-footer input{background:#f8fafc;border-color:rgba(15,23,42,0.10);}
-.chat-footer input:focus{border-color:var(--nx-orange);}
+.chat-footer input:focus{border-color:var(--violet-bright);}
 .chat-footer button{
   width:44px;border-radius:14px;border:none;
-  background:var(--nx-fire);
+  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
   color:#fff;font-size:15px;cursor:pointer;
 }
 
@@ -921,9 +926,7 @@ body.light-mode .chat-footer input{background:#f8fafc;border-color:rgba(15,23,42
    ============================================================ */
 .moment-ad-backdrop{
   position:fixed;inset:0;z-index:3000;
-  background:
-    radial-gradient(circle at 50% 15%, rgba(255,122,0,.16), transparent 38%),
-    rgba(3,5,12,.92);
+  background:rgba(4,6,14,0.90);
   backdrop-filter:blur(14px) saturate(180%);
   -webkit-backdrop-filter:blur(14px) saturate(180%);
   display:none;
@@ -931,21 +934,19 @@ body.light-mode .chat-footer input{background:#f8fafc;border-color:rgba(15,23,42
   padding:0;
   animation:momentBackdropIn .3s ease;
 }
-body.light-mode .moment-ad-backdrop{background:radial-gradient(circle at 50% 15%, rgba(255,122,0,.10), transparent 38%),rgba(15,23,42,.7);}
 .moment-ad-backdrop.show{display:flex;}
 @keyframes momentBackdropIn{from{opacity:0;}to{opacity:1;}}
 
 .moment-ad-sheet{
-  width:100%;max-width:560px;
-  background:linear-gradient(180deg,#0d1220 0%,#05070d 100%);
+  width:100%;max-width:520px;
+  background:linear-gradient(180deg,#0D1224 0%,#0A0E1A 100%);
   border-radius:32px 32px 0 0;
   padding:12px 22px calc(28px + env(safe-area-inset-bottom));
   max-height:92vh;overflow-y:auto;
   border-top:1px solid var(--border-strong);
-  box-shadow:0 -20px 60px rgba(255,90,31,0.30), 0 -1px 0 rgba(255,255,255,0.05);
+  box-shadow:0 -20px 60px rgba(124,58,237,0.30), 0 -1px 0 rgba(255,255,255,0.05);
   animation:momentSheetUp .5s cubic-bezier(0.16,1,0.3,1);
 }
-body.light-mode .moment-ad-sheet{background:linear-gradient(180deg,#ffffff 0%,#f5f7fb 100%);}
 @keyframes momentSheetUp{
   from{transform:translateY(100%);}
   to{transform:translateY(0);}
@@ -957,14 +958,19 @@ body.light-mode .moment-ad-sheet{background:linear-gradient(180deg,#ffffff 0%,#f
   margin:4px auto 20px;
 }
 
-.success-hero{text-align:center;padding:8px 0 24px;}
+.success-hero{
+  text-align:center;padding:8px 0 24px;
+}
 .success-ring{
   width:80px;height:80px;
   margin:0 auto 18px;
   position:relative;
-  filter:drop-shadow(0 0 24px rgba(57,229,140,0.55));
+  filter:drop-shadow(0 0 24px rgba(34,197,94,0.55));
 }
-.success-check{width:100%;height:100%;transform:rotate(-90deg);}
+.success-check{
+  width:100%;height:100%;
+  transform:rotate(-90deg);
+}
 .success-check-circle{
   stroke:var(--success);
   stroke-width:2;
@@ -992,27 +998,223 @@ body.light-mode .moment-ad-sheet{background:linear-gradient(180deg,#ffffff 0%,#f
 .success-amount{
   font-size:44px;font-weight:900;
   letter-spacing:-0.035em;line-height:1;
-  color:var(--text-0);
-  text-shadow:0 0 32px rgba(57,229,140,0.35);
+  color:#fff;
+  text-shadow:0 0 32px rgba(34,197,94,0.35);
   margin-bottom:6px;
 }
-body.light-mode .success-amount{text-shadow:none;}
-.success-sub{font-size:13px;color:var(--text-2);font-weight:500;}
+.success-sub{
+  font-size:13px;color:var(--text-2);
+  font-weight:500;
+}
 
-.moment-divider{display:flex;align-items:center;gap:14px;padding:6px 0 18px;}
+.moment-divider{
+  display:flex;align-items:center;gap:14px;
+  padding:6px 0 18px;
+}
 .moment-divider::before,
 .moment-divider::after{
   content:'';flex:1;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,122,0,0.4),transparent);
+  background:linear-gradient(90deg,transparent,rgba(124,58,237,0.35),transparent);
 }
 .moment-divider-label{
   font-size:9.5px;font-weight:900;
   letter-spacing:0.20em;
-  color:var(--nx-orange-bright);
-  opacity:0.9;
+  color:var(--violet-bright);
+  opacity:0.85;
 }
 
 .moment-ad-slot{padding:0 0 8px;}
+.moment-card{
+  border-radius:22px;
+  padding:22px;
+  position:relative;
+  overflow:hidden;
+  animation:momentCardIn .45s .25s both cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes momentCardIn{
+  from{opacity:0;transform:translateY(12px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.moment-card .m-icon{
+  width:52px;height:52px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;
+  margin-bottom:14px;
+  position:relative;z-index:1;
+}
+.moment-card .m-title{
+  font-size:20px;font-weight:900;
+  letter-spacing:-0.02em;line-height:1.2;
+  color:#fff;
+  margin-bottom:8px;
+  position:relative;z-index:1;
+}
+.moment-card .m-body{
+  font-size:14px;line-height:1.55;
+  font-weight:500;
+  margin-bottom:18px;
+  position:relative;z-index:1;
+}
+.moment-card .m-cta{
+  display:inline-flex;align-items:center;gap:9px;
+  padding:14px 22px;
+  border-radius:999px;
+  font-size:14px;font-weight:900;
+  font-family:inherit;
+  letter-spacing:0.01em;
+  border:none;
+  cursor:pointer;
+  position:relative;z-index:1;
+  transition:transform .15s ease, box-shadow .25s ease;
+}
+.moment-card .m-cta:active{transform:scale(0.96);}
+.moment-card .m-footer{
+  font-size:11px;
+  margin-top:14px;
+  position:relative;z-index:1;
+  font-weight:600;
+  opacity:0.85;
+}
+
+.moment-cashback{
+  background:
+    radial-gradient(circle at 100% 0%, rgba(34,197,94,0.28) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(34,197,94,0.14), rgba(124,58,237,0.14));
+  border:1px solid rgba(34,197,94,0.32);
+}
+.moment-cashback .m-icon{
+  background:linear-gradient(135deg,var(--success),#16A34A);
+  color:#fff;
+  box-shadow:0 8px 24px rgba(34,197,94,0.50);
+}
+.moment-cashback .m-body{color:rgba(255,255,255,0.80);}
+.moment-cashback .m-cta{
+  background:linear-gradient(135deg,var(--success),#16A34A);
+  color:#fff;
+  box-shadow:0 10px 28px rgba(34,197,94,0.45);
+}
+.moment-cashback .m-footer{color:rgba(34,197,94,0.85);}
+
+.moment-cross{
+  background:
+    radial-gradient(circle at 100% 0%, rgba(34,211,238,0.28) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(34,211,238,0.10), rgba(124,58,237,0.14));
+  border:1px solid rgba(34,211,238,0.32);
+}
+.moment-cross .m-icon{
+  background:linear-gradient(135deg,var(--cyan),#0891B2);
+  color:#fff;
+  box-shadow:0 8px 24px rgba(34,211,238,0.45);
+}
+.moment-cross .m-body{color:rgba(255,255,255,0.80);}
+.moment-cross .m-cta{
+  background:linear-gradient(135deg,var(--cyan),var(--violet));
+  color:#fff;
+  box-shadow:0 10px 28px rgba(34,211,238,0.42);
+}
+.moment-cross .m-footer{color:rgba(34,211,238,0.85);}
+
+.moment-referral{
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,63,94,0.24) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(124,58,237,0.16), rgba(244,63,94,0.10));
+  border:1px solid rgba(139,92,246,0.35);
+}
+.moment-referral .m-icon{
+  background:linear-gradient(135deg,var(--violet),var(--danger));
+  color:#fff;
+  box-shadow:0 8px 24px rgba(139,92,246,0.45);
+}
+.moment-referral .m-body{color:rgba(255,255,255,0.80);}
+.moment-referral .m-cta{
+  background:linear-gradient(135deg,var(--violet),var(--danger));
+  color:#fff;
+  box-shadow:0 10px 28px rgba(139,92,246,0.42);
+}
+.moment-referral .m-footer{color:rgba(244,63,94,0.85);}
+.moment-progress{
+  height:8px;border-radius:99px;
+  background:rgba(255,255,255,0.10);
+  overflow:hidden;
+  margin-bottom:14px;
+  position:relative;z-index:1;
+}
+.moment-progress-fill{
+  height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--violet),var(--cyan));
+  box-shadow:0 0 16px rgba(124,58,237,0.60);
+  animation:progressGrow .8s .4s both cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes progressGrow{from{width:0;}to{width:var(--progress-target,66%);}}
+
+.moment-scheduled{
+  background:
+    radial-gradient(circle at 100% 0%, rgba(245,158,11,0.26) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(245,158,11,0.10), rgba(124,58,237,0.14));
+  border:1px solid rgba(245,158,11,0.32);
+}
+.moment-scheduled .m-icon{
+  background:linear-gradient(135deg,var(--warning),#D97706);
+  color:#fff;
+  box-shadow:0 8px 24px rgba(245,158,11,0.45);
+}
+.moment-scheduled .m-body{color:rgba(255,255,255,0.80);}
+.moment-scheduled .m-cta{
+  background:linear-gradient(135deg,var(--warning),var(--violet));
+  color:#fff;
+  box-shadow:0 10px 28px rgba(245,158,11,0.42);
+}
+.moment-scheduled .m-footer{color:rgba(245,158,11,0.85);}
+
+.moment-dismiss{
+  width:100%;margin-top:16px;
+  padding:14px;
+  background:transparent;
+  border:none;
+  color:var(--text-3);
+  font-family:inherit;
+  font-size:13px;font-weight:700;
+  cursor:pointer;
+  letter-spacing:0.02em;
+}
+.moment-dismiss:hover{color:var(--text-1);}
+
+.confetti{
+  position:absolute;
+  width:8px;height:8px;
+  border-radius:2px;
+  opacity:0;
+  pointer-events:none;
+  z-index:0;
+  animation:confettiFall 1.6s ease-out forwards;
+}
+@keyframes confettiFall{
+  0%{opacity:0;transform:translateY(0) rotate(0deg);}
+  10%{opacity:1;}
+  100%{opacity:0;transform:translateY(120px) rotate(360deg);}
+}
+
+@media (min-width:600px){
+  .app-view{max-width:520px;margin:0 auto;}
+  .bottom-nav{max-width:520px;margin:0 auto;left:50%;transform:translateX(-50%);border-radius:22px 22px 0 0;border-left:1px solid var(--border);border-right:1px solid var(--border);}
+  .biller-grid{grid-template-columns:repeat(3,1fr);}
+  .pm-grid{grid-template-columns:repeat(4,1fr);}
+}
+
+/* ============================================================
+   NET365 SMART MEDIA — SCALABLE AD UI v4
+   ============================================================ */
+.moment-ad-backdrop{
+  z-index:3000;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(124,58,237,.16), transparent 38%),
+    rgba(3,5,12,.92);
+}
+.moment-ad-sheet{
+  max-width:560px;
+  padding:12px 18px calc(24px + env(safe-area-inset-bottom));
+}
+.moment-ad-slot{min-height:120px;}
 
 .smart-ad{
   position:relative;
@@ -1021,17 +1223,10 @@ body.light-mode .success-amount{text-shadow:none;}
   padding:0;
   border:1px solid rgba(255,255,255,.10);
   background:
-    radial-gradient(circle at 100% 0%, var(--ad-accent-soft,rgba(255,122,0,.20)), transparent 48%),
-    linear-gradient(145deg,rgba(25,31,54,.98),rgba(8,12,21,.98));
+    radial-gradient(circle at 100% 0%, var(--ad-accent-soft,rgba(124,58,237,.20)), transparent 48%),
+    linear-gradient(145deg,rgba(25,31,54,.98),rgba(10,14,26,.98));
   box-shadow:0 18px 55px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.06);
   animation:smartAdIn .45s cubic-bezier(.16,1,.3,1);
-}
-body.light-mode .smart-ad{
-  background:
-    radial-gradient(circle at 100% 0%, var(--ad-accent-soft,rgba(255,122,0,.14)), transparent 48%),
-    linear-gradient(145deg,#FFFFFF,#F5F7FB);
-  border-color:rgba(15,23,42,.08);
-  box-shadow:0 18px 45px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.9);
 }
 @keyframes smartAdIn{
   from{opacity:0;transform:translateY(12px) scale(.985);}
@@ -1041,17 +1236,19 @@ body.light-mode .smart-ad{
   content:"";
   position:absolute;inset:-40% auto auto -15%;
   width:180px;height:180px;border-radius:50%;
-  background:var(--ad-accent, #ff7a00);
+  background:var(--ad-accent, #7C3AED);
   filter:blur(70px);opacity:.18;pointer-events:none;
 }
 .smart-ad-media{
   position:relative;height:145px;overflow:hidden;
-  background:linear-gradient(135deg,rgba(255,59,48,.28),rgba(255,122,0,.16));
+  background:linear-gradient(135deg,rgba(124,58,237,.28),rgba(34,211,238,.16));
 }
-.smart-ad-media img{width:100%;height:100%;object-fit:cover;display:block;}
+.smart-ad-media img{
+  width:100%;height:100%;object-fit:cover;display:block;
+}
 .smart-ad-media::after{
   content:"";position:absolute;inset:0;
-  background:linear-gradient(180deg,transparent 35%,rgba(5,7,13,.82) 100%);
+  background:linear-gradient(180deg,transparent 35%,rgba(8,11,20,.82) 100%);
 }
 .smart-ad-top{
   position:absolute;z-index:2;top:12px;left:12px;right:12px;
@@ -1064,7 +1261,7 @@ body.light-mode .smart-ad{
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
 .smart-ad-badge{
-  color:#fff;background:rgba(255,59,48,.72);
+  color:#fff;background:rgba(124,58,237,.72);
   border:1px solid rgba(255,255,255,.12);
 }
 .smart-ad-sponsored{
@@ -1084,33 +1281,36 @@ body.light-mode .smart-ad{
 .smart-ad-body{position:relative;padding:18px 17px 16px;}
 .smart-ad-kicker{
   font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--ad-accent,#ffa640);margin-bottom:7px;
+  color:var(--ad-accent,#A78BFA);margin-bottom:7px;
 }
 .smart-ad-title{
   font-size:22px;line-height:1.12;font-weight:900;letter-spacing:-.03em;
-  color:var(--text-0);margin-bottom:8px;
+  color:#fff;margin-bottom:8px;
 }
-.smart-ad-description{font-size:13px;line-height:1.55;color:var(--text-2);margin-bottom:14px;}
+.smart-ad-description{
+  font-size:13px;line-height:1.55;color:rgba(255,255,255,.72);
+  margin-bottom:14px;
+}
 .smart-ad-offer{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:12px 13px;margin-bottom:14px;border-radius:16px;
   background:rgba(255,255,255,.055);
   border:1px solid rgba(255,255,255,.075);
 }
-body.light-mode .smart-ad-offer{background:rgba(15,23,42,.03);border-color:rgba(15,23,42,.06);}
-.smart-ad-offer strong{font-size:18px;color:var(--text-0);}
-.smart-ad-offer span{font-size:10px;color:var(--text-2);text-align:right;}
+.smart-ad-offer strong{font-size:18px;color:#fff;}
+.smart-ad-offer span{font-size:10px;color:rgba(255,255,255,.58);text-align:right;}
 .smart-ad-cta{
   width:100%;border:0;border-radius:15px;padding:14px 16px;
   display:flex;align-items:center;justify-content:center;gap:9px;
   font:900 13px var(--font);color:#fff;cursor:pointer;
-  background:linear-gradient(135deg,var(--ad-accent,#ff3b30),var(--ad-accent-2,#ff7a00));
+  background:linear-gradient(135deg,var(--ad-accent,#7C3AED),var(--ad-accent-2,#22D3EE));
+  box-shadow:0 12px 28px color-mix(in srgb,var(--ad-accent,#7C3AED) 30%, transparent);
   transition:transform .15s ease,filter .15s ease;
 }
 .smart-ad-cta:active{transform:scale(.985);filter:brightness(.95);}
 .smart-ad-meta{
   display:flex;justify-content:space-between;align-items:center;gap:8px;
-  margin-top:10px;font-size:9.5px;color:var(--text-3);
+  margin-top:10px;font-size:9.5px;color:rgba(255,255,255,.43);
 }
 .smart-ad-close{
   position:absolute;z-index:5;right:12px;top:12px;
@@ -1118,27 +1318,17 @@ body.light-mode .smart-ad-offer{background:rgba(15,23,42,.03);border-color:rgba(
   border-radius:50%;background:rgba(0,0,0,.34);color:#fff;
   display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
+.smart-ad-compact{
+  padding:16px;border-radius:22px;
+  display:flex;gap:13px;align-items:center;
+}
+.smart-ad-compact .smart-ad-logo{position:static;flex:0 0 48px;}
+.smart-ad-compact .smart-ad-body{padding:0;flex:1;min-width:0;}
+.smart-ad-compact .smart-ad-title{font-size:17px;}
+.smart-ad-compact .smart-ad-description{font-size:11.5px;margin-bottom:8px;}
+.smart-ad-compact .smart-ad-cta{width:auto;padding:10px 13px;font-size:11px;}
 .smart-ad-disclaimer{
-  margin-top:11px;text-align:center;font-size:9px;color:var(--text-3);
-}
-
-.moment-dismiss{
-  width:100%;margin-top:16px;
-  padding:14px;
-  background:transparent;
-  border:none;
-  color:var(--text-3);
-  font-family:inherit;
-  font-size:13px;font-weight:700;
-  cursor:pointer;
-  letter-spacing:0.02em;
-}
-.moment-dismiss:hover{color:var(--text-1);}
-
-@media (min-width:600px){
-  .app-view{max-width:520px;margin:0 auto;}
-  .bottom-nav{max-width:520px;margin:0 auto;left:50%;transform:translateX(-50%);border-radius:22px 22px 0 0;border-left:1px solid var(--border);border-right:1px solid var(--border);}
-  .biller-grid{grid-template-columns:repeat(3,1fr);}
+  margin-top:11px;text-align:center;font-size:9px;color:rgba(255,255,255,.38);
 }
 @media(max-width:380px){
   .smart-ad-title{font-size:19px;}
@@ -1146,302 +1336,105 @@ body.light-mode .smart-ad-offer{background:rgba(15,23,42,.03);border-color:rgba(
   .moment-ad-sheet{padding-left:13px;padding-right:13px;}
 }
 
+
 /* ============================================================
-   NET365 PREMIUM CONSUMER SHELL
+   NET365 PREMIUM CONSUMER SHELL — v4
+   Presentation layer only; existing business logic/IDs retained.
    ============================================================ */
 .n365-welcome{padding:10px 2px 22px;position:relative}
-.n365-eyebrow{
-  font-size:10px;letter-spacing:.16em;font-weight:900;
-  color:var(--text-2);margin-bottom:11px;
-  display:flex;align-items:center;gap:7px;
-}
-.n365-live-dot{
-  width:7px;height:7px;border-radius:50%;
-  background:var(--nx-green);box-shadow:0 0 12px rgba(57,229,140,.7);
-  animation:n365Pulse 2s infinite;
-}
+.n365-eyebrow{font-size:10px;letter-spacing:.16em;font-weight:900;color:#94A3B8;margin-bottom:11px;display:flex;align-items:center;gap:7px}
+.n365-live-dot{width:7px;height:7px;border-radius:50%;background:#22C55E;box-shadow:0 0 12px rgba(34,197,94,.7);animation:n365Pulse 2s infinite}
 @keyframes n365Pulse{50%{opacity:.35;transform:scale(.75)}}
-.n365-welcome h1{
-  font-size:34px;line-height:1.02;letter-spacing:-.055em;margin:0;font-weight:900;
-  color:var(--text-0);
-}
-.n365-welcome h1 span{
-  background:var(--nx-fire);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-}
-.n365-welcome p{margin:12px 0 0;color:var(--text-2);font-size:14px;line-height:1.55;max-width:330px}
-
-.n365-hero-card{
-  position:relative;overflow:hidden;padding:20px;border-radius:28px;
-  background:linear-gradient(145deg,rgba(24,29,52,.96),rgba(8,12,21,.96));
-  border:1px solid rgba(255,255,255,.09);
-  box-shadow:0 25px 70px rgba(0,0,0,.35),0 0 50px rgba(255,90,31,.08);
-  transition:background .35s ease,border-color .35s ease,box-shadow .35s ease;
-}
-body.light-mode .n365-hero-card{
-  background:linear-gradient(145deg,#FFFFFF,#F5F7FB);
-  border-color:rgba(15,23,42,.08);
-  box-shadow:0 20px 50px rgba(15,23,42,.06),0 0 50px rgba(255,90,31,.04);
-}
-.n365-hero-card:after{
-  content:'';position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(120deg,rgba(255,90,31,.09),transparent 42%,rgba(255,166,64,.05));
-}
-.n365-hero-glow{
-  position:absolute;width:170px;height:170px;right:-80px;top:-90px;
-  border-radius:50%;background:var(--nx-orange);filter:blur(70px);opacity:.25;
-}
+.n365-welcome h1{font-size:34px;line-height:1.02;letter-spacing:-.055em;margin:0;font-weight:900;color:#F8FAFC}
+.n365-welcome h1 span{background:linear-gradient(90deg,#A78BFA,#22D3EE);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.n365-welcome p{margin:12px 0 0;color:#94A3B8;font-size:14px;line-height:1.55;max-width:330px}
+.n365-hero-card{position:relative;overflow:hidden;padding:20px;border-radius:28px;background:linear-gradient(145deg,rgba(24,29,52,.96),rgba(12,16,30,.96));border:1px solid rgba(255,255,255,.09);box-shadow:0 25px 70px rgba(0,0,0,.35),0 0 50px rgba(124,58,237,.08)}
+.n365-hero-card:after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(124,58,237,.09),transparent 42%,rgba(34,211,238,.05))}
+.n365-hero-glow{position:absolute;width:170px;height:170px;right:-80px;top:-90px;border-radius:50%;background:#7C3AED;filter:blur(70px);opacity:.25}
 .n365-hero-top,.n365-phone-wrap,.n365-detected,.n365-country-row,.n365-amount-label,.n365-amount-box,.n365-quick-row,.n365-total,.n365-payment-strip,.n365-main-cta,.n365-cta-hint{position:relative;z-index:1}
 .n365-hero-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
-.n365-card-kicker,.n365-services-head span,.n365-discover-copy span,.n365-business-card span{font-size:9px;letter-spacing:.16em;font-weight:900;color:var(--text-2)}
-.n365-card-title{font-size:20px;font-weight:900;letter-spacing:-.03em;margin-top:4px;color:var(--text-0)}
-.n365-secure-pill{
-  font-size:10px;font-weight:800;padding:7px 9px;border-radius:99px;
-  color:#86efac;background:rgba(57,229,140,.1);
-  border:1px solid rgba(57,229,140,.2);
-}
-body.light-mode .n365-secure-pill{color:#047857;background:rgba(57,229,140,.08)}
+.n365-card-kicker,.n365-services-head span,.n365-discover-copy span,.n365-business-card span{font-size:9px;letter-spacing:.16em;font-weight:900;color:#94A3B8}
+.n365-card-title{font-size:20px;font-weight:900;letter-spacing:-.03em;margin-top:4px}
+.n365-secure-pill{font-size:10px;font-weight:800;padding:7px 9px;border-radius:99px;color:#A7F3D0;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2)}
 .n365-secure-pill i{margin-right:4px}
-.n365-phone-wrap{
-  display:flex;align-items:center;height:58px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(3,5,12,.72);border-radius:18px;padding:0 14px;
-  transition:.2s;
-}
-body.light-mode .n365-phone-wrap{background:#ffffff;border-color:rgba(15,23,42,.10)}
-.n365-phone-wrap:focus-within{
-  border-color:var(--nx-orange);
-  box-shadow:0 0 0 4px rgba(255,122,0,.14);
-}
-.n365-phone-prefix{color:var(--nx-orange-bright);font-size:17px;width:29px}
-.n365-phone-input{
-  flex:1;min-width:0;border:0;outline:0;background:transparent;
-  color:var(--text-0);font:700 17px Inter,sans-serif;
-}
-.n365-phone-input::placeholder{color:var(--text-3);font-weight:600}
-.n365-check{
-  width:27px;height:27px;border-radius:50%;
-  display:none;align-items:center;justify-content:center;
-  background:var(--nx-green);color:#fff;font-size:11px;
-}
-.n365-check.show{display:flex}
-.n365-detected{
-  display:flex;align-items:center;gap:10px;margin-top:11px;
-  padding:10px 11px;border-radius:15px;
-  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06);
-}
-body.light-mode .n365-detected{background:rgba(15,23,42,.03);border-color:rgba(15,23,42,.06)}
-.n365-detected .detect-icon{
-  width:32px;height:32px;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(255,122,0,.15);color:var(--nx-orange-bright);
-}
-.n365-detected .detect-info{flex:1;min-width:0}
-.n365-detected .detect-name{font-size:12px;font-weight:850;color:var(--text-0)}
-.n365-detected .detect-sub{font-size:10px;color:var(--text-3);margin-top:2px}
-.n365-detected .detect-badge{
-  font-size:8px;font-weight:900;letter-spacing:.08em;
-  color:var(--nx-orange-bright);
-  background:rgba(255,122,0,.08);
-  border:1px solid rgba(255,122,0,.16);
-  padding:5px 7px;border-radius:7px;
-}
-.n365-country-row{
-  display:flex;align-items:center;gap:8px;margin-top:10px;
-  color:var(--text-3);font-size:11px;font-weight:700;
-}
-.n365-country-row i{color:var(--nx-orange)}
-.n365-country-row select{
-  margin-left:auto;background:transparent;border:0;
-  color:var(--text-1);outline:0;font:700 11px Inter;
-}
-.n365-country-row option{background:#0d1220;color:#fff}
-body.light-mode .n365-country-row option{background:#fff;color:#0f172a}
-.n365-manual{margin-top:10px}
-.n365-amount-label{
-  display:flex;justify-content:space-between;margin-top:18px;margin-bottom:7px;
-  color:var(--text-2);font-size:11px;font-weight:800;
-}
-.n365-amount-label span:last-child{color:var(--nx-orange-bright);font-size:10px}
-.n365-amount-box{
-  height:62px;display:flex;align-items:center;padding:0 15px;
-  border-radius:18px;background:rgba(3,5,12,.72);
-  border:1px solid rgba(255,255,255,.1);
-}
-body.light-mode .n365-amount-box{background:#ffffff;border-color:rgba(15,23,42,.10)}
-.n365-amount-box:focus-within{border-color:rgba(255,122,0,.6)}
-.n365-amount-box .amount-symbol{font-size:22px;color:var(--text-1);font-weight:900}
-.n365-amount-input{
-  flex:1;min-width:0;border:0;outline:0;background:transparent;
-  color:var(--text-0);font:900 26px Inter,sans-serif;padding-left:8px;
-}
-.n365-amount-input::placeholder{color:var(--text-3)}
-.n365-quick-row{
-  display:flex;gap:7px;overflow:auto;padding:9px 0 2px;
-  scrollbar-width:none;
-}
-.n365-quick-row button{
-  flex:0 0 auto;border:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.045);color:var(--text-1);
-  padding:7px 10px;border-radius:10px;font:800 10px Inter;
-}
-body.light-mode .n365-quick-row button{background:rgba(15,23,42,.03);border-color:rgba(15,23,42,.08)}
-.n365-quick-row button:active{transform:scale(.96);background:rgba(255,122,0,.15)}
-.n365-total{
-  margin-top:15px;padding:12px 13px;border-radius:14px;
-  background:rgba(255,122,0,.07);border:1px solid rgba(255,122,0,.13);
-}
-.n365-total>div{display:flex;align-items:center;justify-content:space-between}
-.n365-total span{font-size:11px;color:var(--text-2)}
-.n365-total strong{font-size:16px;color:var(--text-0)}
-.n365-total small{font-size:9px;color:var(--text-3)}
-.n365-hidden-value{display:none!important}
-.n365-payment-strip{margin-top:14px}
-.n365-payment-strip>span{
-  display:block;font-size:10px;font-weight:800;color:var(--text-3);
-  margin-bottom:7px;
-}
-.n365-payment-strip>span i{margin-right:5px;color:var(--nx-green)}
-.n365-pm-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.n365-pm-mini .pm-btn{
-  min-width:0;padding:8px 3px;border-radius:12px;
-  border:1px solid rgba(255,255,255,.07);
-  background:rgba(255,255,255,.035);
-  color:var(--text-1);font-size:8px;
-}
-body.light-mode .n365-pm-mini .pm-btn{background:rgba(15,23,42,.03);border-color:rgba(15,23,42,.07)}
-.n365-pm-mini .pm-btn .pm-icon{display:none}
-.n365-pm-mini .pm-btn small{display:block;color:var(--text-3);font-size:7px;margin-top:2px}
-.n365-pm-mini .pm-btn.selected{
-  border-color:var(--nx-orange);
-  background:rgba(255,122,0,.13);color:var(--text-0);
-}
-.n365-main-cta{
-  width:100%;margin-top:14px;height:55px;border:0;border-radius:17px;
-  background:linear-gradient(100deg,#ff3b30,#ff7a00 55%,#ffa640);
-  color:#fff;display:flex;align-items:center;justify-content:center;
-  gap:10px;font:900 14px Inter;
-  box-shadow:0 14px 35px rgba(255,90,31,.32);cursor:pointer;
-}
-.n365-main-cta:disabled{opacity:.48;box-shadow:none;cursor:not-allowed}
-.n365-main-cta i{font-size:12px}
-.n365-cta-hint{text-align:center;color:var(--text-3);font-size:9px;margin-top:8px}
-.n365-services-head{
-  display:flex;align-items:flex-end;justify-content:space-between;
-  margin:27px 2px 12px;
-}
-.n365-services-head h2{font-size:19px;letter-spacing:-.035em;margin:4px 0 0;color:var(--text-0)}
-.n365-services-head a{font-size:10px;font-weight:800;color:var(--nx-orange-bright);cursor:pointer}
-.n365-services-head a i{margin-left:4px}
-.n365-service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.n365-service-grid button{
-  min-height:108px;border:1px solid rgba(255,255,255,.07);
-  border-radius:18px;background:rgba(18,24,40,.6);
-  padding:13px 10px;text-align:left;color:var(--text-0);
-  display:flex;flex-direction:column;align-items:flex-start;
-  cursor:pointer;transition:.2s;
-}
-body.light-mode .n365-service-grid button{
-  background:#ffffff;border-color:rgba(15,23,42,.07);
-  box-shadow:0 6px 18px rgba(15,23,42,.04);
-}
-.n365-service-grid button:active{transform:translateY(2px);background:rgba(255,122,0,.12)}
-.n365-service-grid i{
-  width:32px;height:32px;border-radius:11px;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(255,122,0,.12);color:var(--nx-orange-bright);
-  font-size:13px;margin-bottom:13px;
-}
-.n365-service-grid b{font-size:11px}
-.n365-service-grid small{font-size:8px;color:var(--text-3);margin-top:3px}
-.n365-discover-card{
-  position:relative;overflow:hidden;margin-top:12px;min-height:170px;
-  border-radius:22px;padding:20px;
-  background:linear-gradient(135deg,#1a1226,#0d1728);
-  border:1px solid rgba(255,122,0,.13);display:flex;
-}
-body.light-mode .n365-discover-card{
-  background:linear-gradient(135deg,#FFF3E8,#EAF6FB);
-  border-color:rgba(255,122,0,.15);
-}
-.n365-discover-copy{position:relative;z-index:2;max-width:72%}
-.n365-discover-copy h3{
-  font-size:23px;line-height:1.05;letter-spacing:-.04em;
-  margin:7px 0;color:var(--text-0);
-}
-.n365-discover-copy p{font-size:10px;line-height:1.55;color:var(--text-2);margin:0}
-.n365-discover-orb{
-  position:absolute;right:-12px;top:24px;width:110px;height:110px;
-  border-radius:50%;
-  background:
-    radial-gradient(circle at 35% 30%,var(--nx-orange),transparent 10%),
-    radial-gradient(circle at 60% 60%,var(--nx-red),transparent 48%),
-    rgba(255,90,31,.13);
-  box-shadow:0 0 55px rgba(255,90,31,.3);
-}
-.n365-discover-orb i{position:absolute;font-size:11px;color:#fff}
-.n365-discover-orb i:nth-child(1){top:20px;right:25px}
-.n365-discover-orb i:nth-child(2){bottom:23px;left:25px}
-.n365-discover-orb i:nth-child(3){top:48px;left:47px;color:#fff}
-.n365-business-card{
-  margin-top:12px;padding:19px;border-radius:22px;
-  background:rgba(255,255,255,.035);
-  border:1px solid rgba(255,255,255,.07);cursor:pointer;
-}
-body.light-mode .n365-business-card{
-  background:#ffffff;border-color:rgba(15,23,42,.07);
-  box-shadow:0 6px 18px rgba(15,23,42,.04);
-}
-.n365-business-card h3{font-size:18px;letter-spacing:-.03em;margin:6px 0;color:var(--text-0)}
-.n365-business-card p{font-size:10px;line-height:1.5;color:var(--text-2);margin:0;max-width:300px}
-.n365-api-flow{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  margin-top:18px;font-size:9px;font-weight:900;color:var(--text-1);
-}
-.n365-api-flow span{
-  padding:7px 10px;border-radius:9px;
-  background:rgba(255,122,0,.12);border:1px solid rgba(255,122,0,.18);
-}
-.n365-api-flow i{font-size:8px;color:var(--nx-orange)}
-.n365-activity-title{margin-top:25px}
-@media(min-width:600px){
-  .n365-welcome h1{font-size:42px}
-  .n365-service-grid{grid-template-columns:repeat(6,1fr)}
-  .n365-service-grid button{min-height:120px}
-  .n365-hero-card{padding:24px}
-}
-
-/* Amount input hero mode */
+.n365-phone-wrap{display:flex;align-items:center;height:58px;border:1px solid rgba(255,255,255,.12);background:rgba(5,8,17,.72);border-radius:18px;padding:0 14px;transition:.2s}
+.n365-phone-wrap:focus-within{border-color:rgba(124,58,237,.8);box-shadow:0 0 0 4px rgba(124,58,237,.1)}
+.n365-phone-prefix{color:#A78BFA;font-size:17px;width:29px}
+.n365-phone-input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:700 17px Inter,sans-serif}
+.n365-phone-input::placeholder{color:#64748B;font-weight:600}
+.n365-check{width:27px;height:27px;border-radius:50%;display:none;align-items:center;justify-content:center;background:#22C55E;color:#fff;font-size:11px}.n365-check.show{display:flex}
+.n365-detected{display:flex;align-items:center;gap:10px;margin-top:11px;padding:10px 11px;border-radius:15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06)}
+.n365-detected .detect-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(124,58,237,.15);color:#A78BFA}
+.n365-detected .detect-info{flex:1;min-width:0}.n365-detected .detect-name{font-size:12px;font-weight:850;color:#F8FAFC}.n365-detected .detect-sub{font-size:10px;color:#64748B;margin-top:2px}.n365-detected .detect-badge{font-size:8px;font-weight:900;letter-spacing:.08em;color:#67E8F9;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.16);padding:5px 7px;border-radius:7px}
+.n365-country-row{display:flex;align-items:center;gap:8px;margin-top:10px;color:#64748B;font-size:11px;font-weight:700}.n365-country-row i{color:#22D3EE}.n365-country-row select{margin-left:auto;background:transparent;border:0;color:#CBD5E1;outline:0;font:700 11px Inter}.n365-country-row option{background:#0D1224;color:#fff}
+.n365-manual{margin-top:10px}.n365-amount-label{display:flex;justify-content:space-between;margin-top:18px;margin-bottom:7px;color:#94A3B8;font-size:11px;font-weight:800}.n365-amount-label span:last-child{color:#A78BFA;font-size:10px}
+.n365-amount-box{height:62px;display:flex;align-items:center;padding:0 15px;border-radius:18px;background:rgba(5,8,17,.72);border:1px solid rgba(255,255,255,.1)}.n365-amount-box:focus-within{border-color:rgba(34,211,238,.55)}
+.n365-amount-box .amount-symbol{font-size:22px;color:#CBD5E1;font-weight:900}.n365-amount-input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:900 26px Inter,sans-serif;padding-left:8px}.n365-amount-input::placeholder{color:#334155}
+.n365-quick-row{display:flex;gap:7px;overflow:auto;padding:9px 0 2px;scrollbar-width:none}.n365-quick-row button{flex:0 0 auto;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:#CBD5E1;padding:7px 10px;border-radius:10px;font:800 10px Inter}.n365-quick-row button:active{transform:scale(.96);background:rgba(124,58,237,.15)}
+.n365-total{margin-top:15px;padding:12px 13px;border-radius:14px;background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.13)}.n365-total>div{display:flex;align-items:center;justify-content:space-between}.n365-total span{font-size:11px;color:#94A3B8}.n365-total strong{font-size:16px;color:#fff}.n365-total small{font-size:9px;color:#64748B}.n365-hidden-value{display:none!important}
+.n365-payment-strip{margin-top:14px}.n365-payment-strip>span{display:block;font-size:10px;font-weight:800;color:#64748B;margin-bottom:7px}.n365-payment-strip>span i{margin-right:5px;color:#22C55E}.n365-pm-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.n365-pm-mini .pm-btn{min-width:0;padding:8px 3px;border-radius:12px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.035);color:#CBD5E1;font-size:8px}.n365-pm-mini .pm-btn .pm-icon{display:none}.n365-pm-mini .pm-btn small{display:block;color:#64748B;font-size:7px;margin-top:2px}.n365-pm-mini .pm-btn.selected{border-color:#7C3AED;background:rgba(124,58,237,.13);color:#fff}
+.n365-main-cta{width:100%;margin-top:14px;height:55px;border:0;border-radius:17px;background:linear-gradient(100deg,#7C3AED,#4F46E5 55%,#06B6D4);color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font:900 14px Inter;box-shadow:0 14px 35px rgba(79,70,229,.24);cursor:pointer}.n365-main-cta:disabled{opacity:.48;box-shadow:none;cursor:not-allowed}.n365-main-cta i{font-size:12px}.n365-cta-hint{text-align:center;color:#64748B;font-size:9px;margin-top:8px}
+.n365-services-head{display:flex;align-items:flex-end;justify-content:space-between;margin:27px 2px 12px}.n365-services-head h2{font-size:19px;letter-spacing:-.035em;margin:4px 0 0}.n365-services-head a{font-size:10px;font-weight:800;color:#22D3EE;cursor:pointer}.n365-services-head a i{margin-left:4px}
+.n365-service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.n365-service-grid button{min-height:108px;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(20,26,45,.6);padding:13px 10px;text-align:left;color:#fff;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer;transition:.2s}.n365-service-grid button:active{transform:translateY(2px);background:rgba(124,58,237,.12)}.n365-service-grid i{width:32px;height:32px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(124,58,237,.12);color:#A78BFA;font-size:13px;margin-bottom:13px}.n365-service-grid b{font-size:11px}.n365-service-grid small{font-size:8px;color:#64748B;margin-top:3px}
+.n365-discover-card{position:relative;overflow:hidden;margin-top:12px;min-height:170px;border-radius:22px;padding:20px;background:linear-gradient(135deg,#16132B,#0D1728);border:1px solid rgba(167,139,250,.13);display:flex}.n365-discover-copy{position:relative;z-index:2;max-width:72%}.n365-discover-copy h3{font-size:23px;line-height:1.05;letter-spacing:-.04em;margin:7px 0}.n365-discover-copy p{font-size:10px;line-height:1.55;color:#94A3B8;margin:0}.n365-discover-orb{position:absolute;right:-12px;top:24px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#22D3EE,transparent 10%),radial-gradient(circle at 60% 60%,#7C3AED,transparent 48%),rgba(124,58,237,.13);box-shadow:0 0 55px rgba(124,58,237,.28)}.n365-discover-orb i{position:absolute;font-size:11px;color:#fff}.n365-discover-orb i:nth-child(1){top:20px;right:25px}.n365-discover-orb i:nth-child(2){bottom:23px;left:25px}.n365-discover-orb i:nth-child(3){top:48px;left:47px;color:#67E8F9}
+.n365-business-card{margin-top:12px;padding:19px;border-radius:22px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);cursor:pointer}.n365-business-card h3{font-size:18px;letter-spacing:-.03em;margin:6px 0}.n365-business-card p{font-size:10px;line-height:1.5;color:#94A3B8;margin:0;max-width:300px}.n365-api-flow{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;font-size:9px;font-weight:900;color:#CBD5E1}.n365-api-flow span{padding:7px 10px;border-radius:9px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.18)}.n365-api-flow i{font-size:8px;color:#22D3EE}.n365-activity-title{margin-top:25px}
+@media(min-width:600px){.n365-welcome h1{font-size:42px}.n365-service-grid{grid-template-columns:repeat(6,1fr)}.n365-service-grid button{min-height:120px}.n365-hero-card{padding:24px}}
+/* Amount input goes hero when typing */
 .n365-hero-card.is-typing .n365-phone-wrap,
 .n365-hero-card.is-typing .n365-detected,
 .n365-hero-card.is-typing .n365-country-row,
 .n365-hero-card.is-typing .n365-amount-label,
 .n365-hero-card.is-typing .n365-quick-row,
-.n365-hero-card.is-typing .n365-payment-strip > span{
-  opacity:0.25;
-  transition:opacity .35s ease;
+.n365-hero-card.is-typing .n365-payment-strip > span {
+  opacity: 0.25;
+  transition: opacity .35s ease;
 }
-.n365-hero-card.is-typing .n365-amount-box{
-  border-color:rgba(255,122,0,0.7);
-  background:rgba(255,122,0,0.06);
-  box-shadow:0 0 0 5px rgba(255,122,0,0.10),0 20px 45px rgba(255,122,0,0.14);
-  transform:translateY(-2px);
-  transition:all .35s cubic-bezier(.16,1,.3,1);
+.n365-hero-card.is-typing .n365-amount-box {
+  border-color: rgba(124,58,237,0.7);
+  background: rgba(124,58,237,0.06);
+  box-shadow: 0 0 0 5px rgba(124,58,237,0.10), 0 20px 45px rgba(124,58,237,0.14);
+  transform: translateY(-2px);
+  transition: all .35s cubic-bezier(.16,1,.3,1);
 }
-.n365-hero-card.is-typing .n365-amount-input{
-  font-size:36px !important;
-  transition:font-size .3s cubic-bezier(.16,1,.3,1);
+.n365-hero-card.is-typing .n365-amount-input {
+  font-size: 36px !important;
+  transition: font-size .3s cubic-bezier(.16,1,.3,1);
 }
-.n365-hero-card.is-typing .n365-total{
-  background:rgba(255,122,0,0.12);
-  border-color:rgba(255,122,0,0.24);
-  transition:all .35s ease;
+.n365-hero-card.is-typing .n365-total {
+  background: rgba(124,58,237,0.12);
+  border-color: rgba(124,58,237,0.24);
+  transition: all .35s ease;
 }
-.n365-hero-card.is-typing .n365-main-cta{
-  transform:translateY(-1px);
-  box-shadow:0 20px 48px rgba(255,90,31,0.42);
-  transition:all .35s cubic-bezier(.16,1,.3,1);
+.n365-hero-card.is-typing .n365-main-cta {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 48px rgba(79,70,229,0.35);
+  transition: all .35s cubic-bezier(.16,1,.3,1);
 }
+
+/* ============================================================
+   TRUST-CENTRED RECEIPT — stable, printable, accessible
+   ============================================================ */
+.receipt-backdrop{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(3,6,12,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.receipt-backdrop.show{display:flex;}
+.receipt-card{width:100%;max-width:440px;max-height:88vh;overflow:auto;background:linear-gradient(160deg,#111827,#0A0E18);border:1px solid rgba(255,255,255,.12);border-radius:26px;padding:24px;box-shadow:0 32px 100px rgba(0,0,0,.6);color:#F8FAFC;animation:receiptIn .28s cubic-bezier(.16,1,.3,1)}
+@keyframes receiptIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+.receipt-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+.receipt-brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:-.03em;font-size:18px}
+.receipt-brand-mark{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(135deg,#E53935,#FF6D00);box-shadow:0 8px 24px rgba(255,109,0,.18)}
+.receipt-close{width:36px;height:36px;border:1px solid rgba(255,255,255,.12);border-radius:50%;background:rgba(255,255,255,.05);color:#CBD5E1;font-size:16px;cursor:pointer}
+.receipt-status{display:flex;align-items:center;justify-content:center;gap:8px;color:#78E5A4;font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;margin:10px 0 12px}
+.receipt-total{text-align:center;font-size:36px;line-height:1.1;font-weight:900;letter-spacing:-.04em;margin-bottom:5px;overflow-wrap:anywhere}
+.receipt-caption{text-align:center;color:#94A3B8;font-size:12px;margin-bottom:22px}
+.receipt-divider{border-top:1px dashed rgba(148,163,184,.24);margin:16px 0}
+.receipt-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:9px 0;font-size:12px}
+.receipt-row .k{color:#94A3B8;flex:0 0 38%}.receipt-row .v{color:#F8FAFC;text-align:right;font-weight:700;overflow-wrap:anywhere;max-width:62%}
+.receipt-note{border:1px solid rgba(101,217,232,.15);background:rgba(101,217,232,.05);color:#AFC6D1;padding:11px 12px;border-radius:12px;font-size:11px;line-height:1.5;margin-top:14px}
+.receipt-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.receipt-action{border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:13px 10px;background:rgba(255,255,255,.045);color:#F8FAFC;font:700 12px var(--font);cursor:pointer}
+.receipt-action.primary{border:0;background:linear-gradient(120deg,#E53935,#FF6D00);}
+@media print{body *{visibility:hidden!important}.receipt-backdrop,.receipt-backdrop *{visibility:visible!important}.receipt-backdrop{display:block!important;position:static;background:#fff;padding:0}.receipt-card{max-width:none;max-height:none;box-shadow:none;background:#fff;color:#111;border:0}.receipt-row .k,.receipt-caption,.receipt-note{color:#555}.receipt-row .v,.receipt-total,.receipt-brand{color:#111}.receipt-actions,.receipt-close{display:none!important}}
+@media(max-width:390px){.receipt-card{padding:19px;border-radius:22px}.receipt-total{font-size:30px}}
+
 </style>
 </head>
 <body>
@@ -1457,9 +1450,6 @@ body.light-mode .n365-business-card{
       <i class="fas fa-wallet"></i>
       <span id="walletChipValue">₦0.00</span>
     </div>
-    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark">
-      <i class="fas fa-moon" id="themeIcon"></i>
-    </button>
     <button class="avatar-btn" onclick="openSheet('supportSheet')" aria-label="Support">
       <i class="fas fa-headset"></i>
     </button>
@@ -1471,8 +1461,12 @@ body.light-mode .n365-business-card{
 
 <main class="app-view">
 
-  <!-- HOME -->
+  <!-- ============================================================
+       VIEW: HOME
+       ============================================================ -->
   <section class="view active" id="view-home">
+
+    <!-- Premium consumer landing / recharge experience -->
     <section class="n365-welcome">
       <div class="n365-eyebrow"><span class="n365-live-dot"></span> NET365 · DIGITAL LIFE, SIMPLIFIED</div>
       <h1>Everything you need.<br><span>One Net365.</span></h1>
@@ -1531,13 +1525,8 @@ body.light-mode .n365-business-card{
       </div>
 
       <div class="manual-block n365-manual" id="manualBlock">
-        <div class="manual-head">
-          <strong><i class="fas fa-list" style="margin-right:6px;"></i>Choose Network</strong>
-          <button onclick="loadManualOperators()">Refresh</button>
-        </div>
-        <select id="networkSelect" class="input" onchange="selectManualOperator(this.value)">
-          <option value="">Select operator</option>
-        </select>
+        <div class="manual-head"><strong><i class="fas fa-list" style="margin-right:6px;"></i>Choose Network</strong><button onclick="loadManualOperators()">Refresh</button></div>
+        <select id="networkSelect" class="input" onchange="selectManualOperator(this.value)"><option value="">Select operator</option></select>
       </div>
 
       <div class="n365-amount-label"><span>Amount</span><span id="n365CurrencyHint">NGN</span></div>
@@ -1546,11 +1535,7 @@ body.light-mode .n365-business-card{
         <input type="tel" id="amountInput" class="n365-amount-input" placeholder="0" inputmode="decimal" oninput="onAmountInput()" />
       </div>
       <div class="n365-quick-row">
-        <button onclick="setQuick(100,event)">₦100</button>
-        <button onclick="setQuick(200,event)">₦200</button>
-        <button onclick="setQuick(500,event)">₦500</button>
-        <button onclick="setQuick(1000,event)">₦1k</button>
-        <button onclick="setQuick(2000,event)">₦2k</button>
+        <button onclick="setQuick(100,event)">₦100</button><button onclick="setQuick(200,event)">₦200</button><button onclick="setQuick(500,event)">₦500</button><button onclick="setQuick(1000,event)">₦1k</button><button onclick="setQuick(2000,event)">₦2k</button>
       </div>
 
       <div class="n365-total" id="n365TotalRow">
@@ -1575,10 +1560,7 @@ body.light-mode .n365-business-card{
       <div class="n365-cta-hint" id="payBtnHint">Your operator and payment option are selected automatically.</div>
     </div>
 
-    <div class="n365-services-head">
-      <div><span>DO MORE</span><h2>One app. Many possibilities.</h2></div>
-      <a onclick="showView('utilities')">See all <i class="fas fa-arrow-right"></i></a>
-    </div>
+    <div class="n365-services-head"><div><span>DO MORE</span><h2>One app. Many possibilities.</h2></div><a onclick="showView('utilities')">See all <i class="fas fa-arrow-right"></i></a></div>
     <div class="n365-service-grid">
       <button onclick="showView('home');document.getElementById('phoneInput')?.focus()"><i class="fas fa-mobile-screen-button"></i><b>Airtime</b><small>Instant top-up</small></button>
       <button onclick="showView('utilities')"><i class="fas fa-bolt"></i><b>Utilities</b><small>Power & bills</small></button>
@@ -1589,39 +1571,22 @@ body.light-mode .n365-business-card{
     </div>
 
     <section class="n365-discover-card">
-      <div class="n365-discover-copy">
-        <span>SMART DISCOVERY</span>
-        <h3>Useful offers,<br>not noisy ads.</h3>
-        <p>After you recharge or pay, Net365 can surface relevant offers based on what you actually use.</p>
-      </div>
-      <div class="n365-discover-orb">
-        <i class="fas fa-sparkles"></i><i class="fas fa-bolt"></i><i class="fas fa-gift"></i>
-      </div>
+      <div class="n365-discover-copy"><span>SMART DISCOVERY</span><h3>Useful offers,<br>not noisy ads.</h3><p>After you recharge or pay, Net365 can surface relevant offers based on what you actually use.</p></div>
+      <div class="n365-discover-orb"><i class="fas fa-sparkles"></i><i class="fas fa-bolt"></i><i class="fas fa-gift"></i></div>
     </section>
 
     <section class="n365-business-card" onclick="window.location.href='/business'">
-      <div>
-        <span>NET365 FOR BUSINESS</span>
-        <h3>One API. High-volume distribution.</h3>
-        <p>Distribute airtime, data, utilities and digital value to customers, agents and beneficiaries at scale.</p>
-      </div>
-      <div class="n365-api-flow">
-        <span>API</span><i class="fas fa-arrow-right"></i>
-        <span>NET365</span><i class="fas fa-arrow-right"></i>
-        <span>∞</span>
-      </div>
+      <div><span>NET365 FOR BUSINESS</span><h3>One API. High-volume distribution.</h3><p>Distribute airtime, data, utilities and digital value to customers, agents and beneficiaries at scale.</p></div>
+      <div class="n365-api-flow"><span>API</span><i class="fas fa-arrow-right"></i><span>NET365</span><i class="fas fa-arrow-right"></i><span>∞</span></div>
     </section>
 
-    <div class="section-title n365-activity-title">
-      Recent Activity
-      <a onclick="showView('transactions')">View all <i class="fas fa-arrow-right" style="font-size:10px;"></i></a>
-    </div>
-    <div class="tx-list" id="homeTxList">
-      <div class="empty-state"><i class="fas fa-clock"></i><p>Sign in to see your transactions</p></div>
-    </div>
+    <div class="section-title n365-activity-title">Recent Activity <a onclick="showView('transactions')">View all <i class="fas fa-arrow-right" style="font-size:10px;"></i></a></div>
+    <div class="tx-list" id="homeTxList"><div class="empty-state"><i class="fas fa-clock"></i><p>Sign in to see your transactions</p></div></div>
   </section>
 
-  <!-- WALLET -->
+  <!-- ============================================================
+       VIEW: WALLET
+       ============================================================ -->
   <section class="view" id="view-wallet">
     <div class="balance-hero">
       <div class="balance-label">
@@ -1652,11 +1617,16 @@ body.light-mode .n365-business-card{
 
     <div class="section-title">Wallet Activity</div>
     <div class="tx-list" id="walletTxList">
-      <div class="empty-state"><i class="fas fa-receipt"></i><p>No wallet activity yet</p></div>
+      <div class="empty-state">
+        <i class="fas fa-receipt"></i>
+        <p>No wallet activity yet</p>
+      </div>
     </div>
   </section>
 
-  <!-- TRANSACTIONS -->
+  <!-- ============================================================
+       VIEW: TRANSACTIONS
+       ============================================================ -->
   <section class="view" id="view-transactions">
     <div class="section-title" style="margin-top:0;">
       All Activity
@@ -1675,11 +1645,16 @@ body.light-mode .n365-business-card{
     <input type="text" id="txSearch" class="input" placeholder="Search by reference, phone, or amount" oninput="renderTransactions()" style="margin-bottom:14px;" />
 
     <div class="tx-list" id="fullTxList">
-      <div class="empty-state"><i class="fas fa-inbox"></i><p>No transactions to show</p></div>
+      <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <p>No transactions to show</p>
+      </div>
     </div>
   </section>
 
-  <!-- UTILITIES -->
+  <!-- ============================================================
+       VIEW: UTILITIES
+       ============================================================ -->
   <section class="view" id="view-utilities">
     <div class="biller-group">
       <div class="biller-head"><i class="fas fa-bolt"></i> Electricity</div>
@@ -1697,7 +1672,7 @@ body.light-mode .n365-business-card{
 
 </main>
 
-<!-- BOTTOM NAV -->
+<!-- ============ BOTTOM NAV ============ -->
 <nav class="bottom-nav">
   <button class="nav-item active" data-view="home" onclick="showView('home')">
     <span class="nav-icon"><i class="fas fa-house"></i></span>
@@ -1717,7 +1692,7 @@ body.light-mode .n365-business-card{
   </button>
 </nav>
 
-<!-- SUPPORT SHEET -->
+<!-- ============ SUPPORT SHEET ============ -->
 <div class="sheet-backdrop" id="supportSheet" onclick="if(event.target===this) closeSheet('supportSheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1727,15 +1702,23 @@ body.light-mode .n365-business-card{
       <div class="sheet-sub">We typically reply within a few minutes.</div>
     </div>
     <div class="user-menu-list">
-      <button class="um-item" onclick="closeSheet('supportSheet'); openLiveChat();"><i class="fas fa-comments"></i> Live Chat</button>
-      <button class="um-item" onclick="closeSheet('supportSheet'); window.location.href='mailto:support@net365co.com?subject=Net365%20Support';"><i class="fas fa-envelope"></i> Email Support</button>
-      <button class="um-item" onclick="closeSheet('supportSheet'); window.open('https://wa.me/2348150450890','_blank');"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-      <button class="um-item" onclick="closeSheet('supportSheet'); toast('Help Center coming soon','info');"><i class="fas fa-book-open"></i> Help Center</button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); openLiveChat();">
+        <i class="fas fa-comments"></i> Live Chat
+      </button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); window.location.href='mailto:support@net365co.com?subject=Net365%20Support';">
+        <i class="fas fa-envelope"></i> Email Support
+      </button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); window.open('https://wa.me/2348150450890','_blank');">
+        <i class="fab fa-whatsapp"></i> WhatsApp
+      </button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); toast('Help Center coming soon','info');">
+        <i class="fas fa-book-open"></i> Help Center
+      </button>
     </div>
   </div>
 </div>
 
-<!-- BILLER SHEET -->
+<!-- ============ BILLER SHEET (In-app utilities) ============ -->
 <div class="sheet-backdrop" id="billerSheet" onclick="if(event.target===this) closeSheet('billerSheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1744,17 +1727,21 @@ body.light-mode .n365-business-card{
       <div class="sheet-title" id="billerSheetTitle">Pay Bill</div>
       <div class="sheet-sub" id="billerSheetSub">Enter your account details</div>
     </div>
+
     <div class="field">
       <label class="field-label"><i class="fas fa-hashtag"></i> <span id="billerAccountLabel">Meter / Account Number</span></label>
       <input type="tel" id="billerAccount" class="input" placeholder="Enter account number" inputmode="numeric" />
     </div>
+
     <button class="btn-ghost" id="billerValidateBtn" onclick="validateBillerAccount()" style="margin-bottom:14px;">
       <i class="fas fa-check-circle" style="margin-right:6px;"></i> Validate Account
     </button>
-    <div id="billerCustomerBox" style="display:none;padding:14px 16px;border-radius:14px;background:rgba(57,229,140,0.08);border:1px solid rgba(57,229,140,0.30);margin-bottom:14px;">
+
+    <div id="billerCustomerBox" style="display:none;padding:14px 16px;border-radius:14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.30);margin-bottom:14px;">
       <div style="font-size:11px;font-weight:800;letter-spacing:0.10em;color:var(--success);text-transform:uppercase;">Account Verified</div>
-      <div style="font-size:15px;font-weight:800;color:var(--text-0);margin-top:4px;" id="billerCustomerName">—</div>
+      <div style="font-size:15px;font-weight:800;color:#fff;margin-top:4px;" id="billerCustomerName">—</div>
     </div>
+
     <div class="field">
       <label class="field-label"><i class="fas fa-coins"></i> Amount</label>
       <div class="amount-wrap">
@@ -1762,6 +1749,7 @@ body.light-mode .n365-business-card{
         <input type="tel" id="billerAmount" class="amount-input" placeholder="0" inputmode="decimal" />
       </div>
     </div>
+
     <button class="btn-hero" id="billerPayBtn" onclick="payBiller()">
       <span id="billerPayLabel">Pay Bill</span>
       <span class="btn-hint">Amount will be debited from your Net365 wallet</span>
@@ -1769,7 +1757,7 @@ body.light-mode .n365-business-card{
   </div>
 </div>
 
-<!-- PAYMENT MODAL -->
+<!-- ============ PAYMENT MODAL (two-step) ============ -->
 <div class="sheet-backdrop" id="paymentModal" onclick="if(event.target===this) closePaymentModal()">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1778,17 +1766,35 @@ body.light-mode .n365-business-card{
       <div class="sheet-title">Review your payment</div>
       <div class="sheet-sub">Confirm the details before we take you to the gateway.</div>
     </div>
+
     <div class="breakdown" style="margin-top:0;">
-      <div class="bd-row"><span class="lbl">Operator</span><span class="val" id="modalOperator" style="font-size:15px;">—</span></div>
-      <div class="bd-row"><span class="lbl">Phone</span><span class="val" id="modalPhone" style="font-size:15px;">—</span></div>
-      <div class="bd-row"><span class="lbl">Airtime</span><span class="val" id="modalAirtime">₦0.00</span></div>
-      <div class="bd-row"><span class="lbl">Service Fee</span><span class="val" id="modalFee">₦0.00</span></div>
-      <div class="bd-row total"><span class="lbl">Total</span><span class="val" id="modalTotal">₦0.00</span></div>
+      <div class="bd-row">
+        <span class="lbl">Operator</span>
+        <span class="val" id="modalOperator" style="font-size:15px;">—</span>
+      </div>
+      <div class="bd-row">
+        <span class="lbl">Phone</span>
+        <span class="val" id="modalPhone" style="font-size:15px;">—</span>
+      </div>
+      <div class="bd-row">
+        <span class="lbl">Airtime</span>
+        <span class="val" id="modalAirtime">₦0.00</span>
+      </div>
+      <div class="bd-row">
+        <span class="lbl">Service Fee</span>
+        <span class="val" id="modalFee">₦0.00</span>
+      </div>
+      <div class="bd-row total">
+        <span class="lbl">Total</span>
+        <span class="val" id="modalTotal">₦0.00</span>
+      </div>
     </div>
+
     <div style="font-size:12px;color:var(--text-2);margin:14px 2px 0;font-weight:600;">
-      <i class="fas fa-shield-halved" style="color:var(--nx-orange-bright);margin-right:6px;"></i>
-      You'll be redirected to <span id="modalProvider" style="color:var(--text-0);font-weight:800;">Paystack</span> to complete payment securely.
+      <i class="fas fa-shield-halved" style="color:var(--cyan);margin-right:6px;"></i>
+      You'll be redirected to <span id="modalProvider" style="color:#fff;font-weight:800;">Paystack</span> to complete payment securely.
     </div>
+
     <button class="btn-hero" id="confirmPayBtn" onclick="processPayment()">
       <span>Confirm & Pay</span>
       <span class="btn-hint">Opens the payment gateway</span>
@@ -1797,7 +1803,7 @@ body.light-mode .n365-business-card{
   </div>
 </div>
 
-<!-- ADD MONEY -->
+<!-- ============ ADD MONEY ============ -->
 <div class="sheet-backdrop" id="addMoneyModal" onclick="if(event.target===this) closeSheet('addMoneyModal')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1806,6 +1812,7 @@ body.light-mode .n365-business-card{
       <div class="sheet-title">Add Money to Wallet</div>
       <div class="sheet-sub">Fund your Net365 wallet to pay for recharges, utilities and transfers.</div>
     </div>
+
     <div class="field">
       <label class="field-label"><i class="fas fa-coins"></i> Wallet Currency</label>
       <select id="addMoneyCurrency" class="input">
@@ -1819,6 +1826,7 @@ body.light-mode .n365-business-card{
         <option value="ZAR">R South African Rand (ZAR)</option>
       </select>
     </div>
+
     <div class="field">
       <label class="field-label"><i class="fas fa-money-bill-wave"></i> Amount</label>
       <div class="amount-wrap">
@@ -1826,6 +1834,7 @@ body.light-mode .n365-business-card{
         <input type="tel" id="addMoneyAmount" class="amount-input" placeholder="0" inputmode="decimal" />
       </div>
     </div>
+
     <button class="btn-hero" onclick="submitAddMoney()">
       <span id="addMoneyBtnLabel">Continue to Checkout</span>
       <span class="btn-hint">You'll be redirected to the payment gateway</span>
@@ -1833,7 +1842,7 @@ body.light-mode .n365-business-card{
   </div>
 </div>
 
-<!-- SEND MONEY -->
+<!-- ============ SEND MONEY ============ -->
 <div class="sheet-backdrop" id="sendMoneyModal" onclick="if(event.target===this) closeSheet('sendMoneyModal')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1842,10 +1851,12 @@ body.light-mode .n365-business-card{
       <div class="sheet-title">Send Money</div>
       <div class="sheet-sub">Transfer funds to another Net365 user by email or phone.</div>
     </div>
+
     <div class="field">
       <label class="field-label"><i class="fas fa-user"></i> Recipient</label>
       <input type="text" id="transferRecipient" class="input" placeholder="email@example.com or 08012345678" />
     </div>
+
     <div class="field">
       <label class="field-label"><i class="fas fa-coins"></i> Amount</label>
       <div class="amount-wrap">
@@ -1853,6 +1864,7 @@ body.light-mode .n365-business-card{
         <input type="tel" id="transferAmount" class="amount-input" placeholder="0" inputmode="decimal" />
       </div>
     </div>
+
     <button class="btn-hero" onclick="submitTransfer()">
       <span>Send Money</span>
       <span class="btn-hint">Instant wallet-to-wallet transfer</span>
@@ -1860,7 +1872,7 @@ body.light-mode .n365-business-card{
   </div>
 </div>
 
-<!-- AUTH MODAL -->
+<!-- ============ AUTH MODAL ============ -->
 <div class="sheet-backdrop" id="authModal" onclick="if(event.target===this) closeSheet('authModal')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1869,32 +1881,38 @@ body.light-mode .n365-business-card{
       <div class="sheet-title" id="authTitle">Welcome back</div>
       <div class="sheet-sub" id="authSub">Sign in to your Net365 account</div>
     </div>
+
     <div class="field" id="authNameField" style="display:none;">
       <label class="field-label"><i class="fas fa-user"></i> Full Name</label>
       <input type="text" id="authName" class="input" placeholder="Your full name" autocomplete="name" />
     </div>
+
     <div class="field">
       <label class="field-label"><i class="fas fa-envelope"></i> Email</label>
       <input type="email" id="authEmail" class="input" placeholder="you@example.com" autocomplete="email" />
     </div>
+
     <div class="field">
       <label class="field-label"><i class="fas fa-lock"></i> Password</label>
       <input type="password" id="authPassword" class="input" placeholder="••••••••" autocomplete="current-password" />
     </div>
-    <div id="authError" style="display:none;padding:12px;border-radius:12px;background:rgba(255,59,48,0.10);border:1px solid rgba(255,59,48,0.3);color:#ff8a80;font-size:13px;margin-bottom:14px;font-weight:500;"></div>
+
+    <div id="authError" style="display:none;padding:12px;border-radius:12px;background:rgba(244,63,94,0.10);border:1px solid rgba(244,63,94,0.3);color:#FCA5A5;font-size:13px;margin-bottom:14px;font-weight:500;"></div>
+
     <button class="btn-hero" id="authSubmitBtn" onclick="submitAuth()">
       <span id="authSubmitLabel">Sign In</span>
     </button>
+
     <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-2);">
       <span id="authSwitchText">New to Net365?</span>
-      <button onclick="toggleAuthMode()" style="background:none;border:none;color:var(--nx-orange-bright);font-family:inherit;font-weight:800;cursor:pointer;font-size:13px;padding:0;margin-left:4px;">
+      <button onclick="toggleAuthMode()" style="background:none;border:none;color:var(--violet-bright);font-family:inherit;font-weight:800;cursor:pointer;font-size:13px;padding:0;margin-left:4px;">
         <span id="authSwitchAction">Create an account</span>
       </button>
     </div>
   </div>
 </div>
 
-<!-- USER MENU -->
+<!-- ============ USER MENU ============ -->
 <div class="sheet-backdrop" id="userMenuModal" onclick="if(event.target===this) closeSheet('userMenuModal')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1903,20 +1921,38 @@ body.light-mode .n365-business-card{
       <div class="sheet-sub" id="userMenuEmail">Welcome to Net365</div>
       <button class="sheet-close" onclick="closeSheet('userMenuModal')"><i class="fas fa-times"></i></button>
     </div>
+
     <div class="user-menu-list">
-      <button class="um-item" id="umAuthToggle" onclick="fromUserMenuAuth()"><i class="fas fa-user-gear"></i><span id="umAuthLabel">Account Settings</span></button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); showView('wallet');"><i class="fas fa-wallet"></i> My Wallet</button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); showView('transactions');"><i class="fas fa-list"></i> Transaction History</button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); openSheet('referralSheet');"><i class="fas fa-user-plus"></i> Refer & Earn</button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/scheduler';"><i class="fas fa-calendar-check"></i> Scheduled Payments</button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/business';"><i class="fas fa-briefcase"></i> Business Tools</button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/';"> <i class="fas fa-desktop"></i> Full Platform</button>
-      <button class="um-item danger" id="umLogout" style="display:none;" onclick="doLogout()"><i class="fas fa-right-from-bracket"></i> Sign Out</button>
+      <button class="um-item" id="umAuthToggle" onclick="fromUserMenuAuth()">
+        <i class="fas fa-user-gear"></i>
+        <span id="umAuthLabel">Account Settings</span>
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); showView('wallet');">
+        <i class="fas fa-wallet"></i> My Wallet
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); showView('transactions');">
+        <i class="fas fa-list"></i> Transaction History
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); openSheet('referralSheet');">
+        <i class="fas fa-user-plus"></i> Refer & Earn
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/scheduler';">
+        <i class="fas fa-calendar-check"></i> Scheduled Payments
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/business';">
+        <i class="fas fa-briefcase"></i> Business Tools
+      </button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/';">
+        <i class="fas fa-desktop"></i> Full Platform
+      </button>
+      <button class="um-item danger" id="umLogout" style="display:none;" onclick="doLogout()">
+        <i class="fas fa-right-from-bracket"></i> Sign Out
+      </button>
     </div>
   </div>
 </div>
 
-<!-- REFERRAL -->
+<!-- ============ REFERRAL ============ -->
 <div class="sheet-backdrop" id="referralSheet" onclick="if(event.target===this) closeSheet('referralSheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1925,9 +1961,9 @@ body.light-mode .n365-business-card{
       <div class="sheet-title">Refer & Earn 🎁</div>
       <div class="sheet-sub">Share your referral code and earn rewards when your friends recharge.</div>
     </div>
-    <div style="padding:20px;border-radius:20px;background:rgba(255,122,0,0.10);border:1px solid var(--border-strong);text-align:center;">
+    <div style="padding:20px;border-radius:20px;background:rgba(124,58,237,0.10);border:1px solid var(--border-strong);text-align:center;">
       <div style="font-size:11px;color:var(--text-2);font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px;">Your Referral Code</div>
-      <div style="font-size:32px;font-weight:900;letter-spacing:0.05em;color:var(--text-0);" id="referralCodeDisplay">NET-XXXXX</div>
+      <div style="font-size:32px;font-weight:900;letter-spacing:0.05em;color:#fff;" id="referralCodeDisplay">NET-XXXXX</div>
     </div>
     <button class="btn-hero" style="margin-top:18px;" onclick="shareReferral()">
       <span><i class="fas fa-share-nodes" style="margin-right:8px;"></i>Share Invite Link</span>
@@ -1935,7 +1971,7 @@ body.light-mode .n365-business-card{
   </div>
 </div>
 
-<!-- LIVE CHAT -->
+<!-- ============ LIVE CHAT ============ -->
 <button class="chat-fab" id="chatFab" onclick="openLiveChat()" title="Chat with Support">
   <i class="fas fa-comment-dots"></i>
 </button>
@@ -1944,7 +1980,7 @@ body.light-mode .n365-business-card{
   <div class="chat-header">
     <div>
       <h3 style="margin:0;font-size:15px;font-weight:800;">
-        <span style="display:inline-block;width:7px;height:7px;background:#39e58c;border-radius:50%;margin-right:7px;"></span>
+        <span style="display:inline-block;width:7px;height:7px;background:#22C55E;border-radius:50%;margin-right:7px;"></span>
         Net365 Support
       </h3>
       <div style="font-size:11px;opacity:0.75;margin-top:2px;">Typically replies in minutes</div>
@@ -1962,7 +1998,27 @@ body.light-mode .n365-business-card{
   </div>
 </div>
 
-<!-- MOMENT AD -->
+<!-- ============ NET365 TRANSACTION RECEIPT ============ -->
+<div class="receipt-backdrop" id="receiptBackdrop" role="dialog" aria-modal="true" aria-labelledby="receiptTitle" onclick="if(event.target===this)closeReceipt()">
+  <section class="receipt-card" id="receiptCard">
+    <div class="receipt-top">
+      <div class="receipt-brand"><span class="receipt-brand-mark"><i class="fas fa-bolt"></i></span><span>NET365</span></div>
+      <button class="receipt-close" type="button" onclick="closeReceipt()" aria-label="Close receipt"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="receipt-status" id="receiptStatus"><i class="fas fa-circle-check"></i><span>Transaction receipt</span></div>
+    <h2 id="receiptTitle" class="receipt-total">—</h2>
+    <div class="receipt-caption" id="receiptCaption">Transaction details</div>
+    <div class="receipt-divider"></div>
+    <div id="receiptRows"></div>
+    <div class="receipt-note">Keep this reference for your records. A successful payment confirmation does not necessarily mean the purchased service has been fulfilled; check the transaction status shown above.</div>
+    <div class="receipt-actions">
+      <button class="receipt-action" type="button" onclick="closeReceipt()">Close</button>
+      <button class="receipt-action primary" type="button" onclick="printReceipt()"><i class="fas fa-print"></i> Print / Save PDF</button>
+    </div>
+  </section>
+</div>
+
+<!-- ============ MOMENT AD (Payment Success Overlay) ============ -->
 <div class="moment-ad-backdrop" id="momentAdBackdrop">
   <div class="moment-ad-sheet" id="momentAdSheet">
     <div class="success-hero">
@@ -1983,7 +2039,9 @@ body.light-mode .n365-business-card{
 
     <div class="moment-ad-slot" id="momentAdSlot"></div>
 
-    <button class="moment-dismiss" onclick="dismissMomentAd()">Maybe later</button>
+    <button class="moment-dismiss" onclick="dismissMomentAd()">
+      Maybe later
+    </button>
   </div>
 </div>
 
@@ -1991,46 +2049,28 @@ body.light-mode .n365-business-card{
 
 <script>
 // ============================================================
-// THEME
-// ============================================================
-function applyTheme(theme){
-  const isLight = theme === 'light';
-  document.body.classList.toggle('light-mode', isLight);
-  const icon = document.getElementById('themeIcon');
-  if (icon) icon.className = isLight ? 'fas fa-sun' : 'fas fa-moon';
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', isLight ? '#f5f7fb' : '#0A0E1A');
-  try { localStorage.setItem('net365_mobile_theme', theme); } catch(e){}
-}
-
-function toggleTheme(){
-  const btn = document.getElementById('themeBtn');
-  if (btn){
-    btn.classList.add('switching');
-    setTimeout(() => btn.classList.remove('switching'), 400);
-  }
-  const next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
-  applyTheme(next);
-}
-
-(function initTheme(){
-  let saved = 'dark';
-  try { saved = localStorage.getItem('net365_mobile_theme') || 'dark'; } catch(e){}
-  applyTheme(saved === 'light' ? 'light' : 'dark');
-})();
-
-// ============================================================
 // STATE
 // ============================================================
 const API_BASE = '/api';
 
-const SERVICE_FEES = { NGN:100, USD:0.25, CAD:0.35, GBP:0.20, EUR:0.25, GHS:2.00, KES:25.00, ZAR:5.00 };
-const CURRENCY_SYMBOLS = { NGN:'₦', USD:'$', CAD:'CA$', GBP:'£', EUR:'€', GHS:'₵', KES:'KSh', ZAR:'R' };
+const SERVICE_FEES = {
+  NGN: 100, USD: 0.25, CAD: 0.35, GBP: 0.20, EUR: 0.25,
+  GHS: 2.00, KES: 25.00, ZAR: 5.00
+};
+const CURRENCY_SYMBOLS = {
+  NGN:'₦', USD:'$', CAD:'CA$', GBP:'£', EUR:'€', GHS:'₵', KES:'KSh', ZAR:'R'
+};
 const COUNTRY_CURRENCY = {
   NG:'NGN', GH:'GHS', KE:'KES', ZA:'ZAR',
   US:'USD', CA:'CAD', GB:'GBP',
   FR:'EUR', DE:'EUR', IT:'EUR', ES:'EUR', NL:'EUR', IE:'EUR', PT:'EUR',
   AU:'AUD', NZ:'NZD', JP:'JPY', SG:'SGD', IN:'INR'
+};
+const PREFIX_COUNTRY = {
+  '234':'NG','233':'GH','254':'KE','256':'UG','255':'TZ','27':'ZA',
+  // +1 is shared by US and Canada. We default to US (majority);
+  // Canadian users override via the country dropdown.
+  '1':'US','44':'GB','91':'IN'
 };
 
 let manualCountryOverride = null;
@@ -2067,29 +2107,41 @@ function showView(name){
 // ============================================================
 // SHEETS
 // ============================================================
-function openSheet(id){ const el = document.getElementById(id); if (el) el.classList.add('show'); }
-function closeSheet(id){ const el = document.getElementById(id); if (el) el.classList.remove('show'); }
+function openSheet(id){
+  const el = document.getElementById(id);
+  if (el) el.classList.add('show');
+}
+function closeSheet(id){
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('show');
+}
 
 // ============================================================
 // TOAST
 // ============================================================
 function toast(msg, type='info'){
   const wrap = document.getElementById('toastWrap');
+  if (!wrap) return;
   const icons = {success:'fa-circle-check',error:'fa-circle-xmark',warning:'fa-triangle-exclamation',info:'fa-circle-info'};
   const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<i class="fas ${icons[type]||icons.info}"></i><span>${msg}</span>`;
+  el.className = `toast ${['success','error','warning','info'].includes(type) ? type : 'info'}`;
+  const icon = document.createElement('i');
+  icon.className = `fas ${icons[type] || icons.info}`;
+  const text = document.createElement('span');
+  // Always render notification content as text. Never interpret API/error strings as HTML.
+  text.textContent = String(msg ?? '');
+  el.append(icon, text);
   wrap.appendChild(el);
-  setTimeout(() => {
-    el.style.transition = 'opacity .3s, transform .3s';
+  window.setTimeout(() => {
+    el.style.transition = 'opacity .25s ease, transform .25s ease';
     el.style.opacity = '0';
-    el.style.transform = 'translateY(-10px)';
-    setTimeout(() => el.remove(), 320);
-  }, 4200);
+    el.style.transform = 'translateY(-8px)';
+    window.setTimeout(() => el.remove(), 280);
+  }, 3600);
 }
 
 // ============================================================
-// COUNTRY DETECTION
+// COUNTRY DETECTION — explicit codes first, leading-0 fallback
 // ============================================================
 function detectCountryFromPhone(phone){
   if (manualCountryOverride) return manualCountryOverride;
@@ -2111,11 +2163,13 @@ function detectCountryFromPhone(phone){
 function setManualCountry(code){
   manualCountryOverride = code || null;
   const phone = document.getElementById('phoneInput').value.trim();
-  if (phone.length >= 5) onPhoneInput();
+  if (phone.length >= 5){
+    onPhoneInput();
+  }
 }
 
 // ============================================================
-// PAYMENT PREFERENCE
+// AUTO-SELECT PAYMENT METHOD per country
 // ============================================================
 async function autoSelectPaymentMethod(){
   const country = currentCountry || 'NG';
@@ -2126,7 +2180,9 @@ async function autoSelectPaymentMethod(){
     });
     const data = await res.json();
     if (data.success){
-      if (data.recommended_provider) selectPM(data.recommended_provider);
+      if (data.recommended_provider){
+        selectPM(data.recommended_provider);
+      }
       if (data.currency){
         currentCurrency = data.currency;
         currentSymbol = CURRENCY_SYMBOLS[currentCurrency] || data.currency;
@@ -2134,7 +2190,9 @@ async function autoSelectPaymentMethod(){
         if (symEl) symEl.textContent = currentSymbol;
       }
     }
-  } catch(e){ console.warn('Payment preference lookup failed', e); }
+  } catch(e){
+    console.warn('Payment preference lookup failed, keeping current selection', e);
+  }
 }
 
 // ============================================================
@@ -2145,10 +2203,12 @@ function onPhoneInput(){
   if (phone.replace(/\D/g,'').length < 8){
     document.getElementById('detectCard').classList.remove('show');
     document.getElementById('manualBlock').classList.remove('show');
-    detectedOperator = null; selectedOperator = null;
+    detectedOperator = null;
+    selectedOperator = null;
     updatePayButton();
     return;
   }
+
   const detected = detectCountryFromPhone(phone);
   if (detected && detected !== currentCountry && COUNTRY_CURRENCY[detected]){
     currentCountry = detected;
@@ -2158,6 +2218,7 @@ function onPhoneInput(){
     loadManualOperators();
     autoSelectPaymentMethod();
   }
+
   clearTimeout(window._detectTimer);
   window._detectTimer = setTimeout(() => runAutoDetect(phone), 450);
   updatePayButton();
@@ -2186,17 +2247,24 @@ async function runAutoDetect(phone){
         currency: op.currencyCode || op.localCurrencyCode || currentCurrency
       };
       detectedOperator = selectedOperator;
+
       card.classList.toggle('warn', isGuess);
-      document.getElementById('detectIcon').innerHTML = isGuess ? '<i class="fas fa-question"></i>' : '<i class="fas fa-check"></i>';
+      document.getElementById('detectIcon').innerHTML = isGuess
+        ? '<i class="fas fa-question"></i>'
+        : '<i class="fas fa-check"></i>';
       document.getElementById('detectName').textContent = op.name || 'Network detected';
-      document.getElementById('detectSub').textContent = isGuess ? 'Guessed — pick manually below if wrong' : 'Auto-detected from your number';
+      document.getElementById('detectSub').textContent = isGuess
+        ? 'Guessed — pick manually below if wrong'
+        : 'Auto-detected from your number';
       document.getElementById('detectBadge').textContent = isGuess ? 'GUESS' : 'AUTO';
+
       document.getElementById('manualBlock').classList.toggle('show', isGuess);
       if (isGuess) loadManualOperators();
+
       updatePayButton();
       return;
     }
-  } catch(e){}
+  } catch(e){ /* fallthrough */ }
 
   card.classList.add('warn');
   document.getElementById('detectIcon').innerHTML = '<i class="fas fa-exclamation"></i>';
@@ -2204,7 +2272,8 @@ async function runAutoDetect(phone){
   document.getElementById('detectSub').textContent = 'Choose your network below';
   document.getElementById('detectBadge').textContent = 'MANUAL';
   document.getElementById('manualBlock').classList.add('show');
-  selectedOperator = null; detectedOperator = null;
+  selectedOperator = null;
+  detectedOperator = null;
   loadManualOperators();
   updatePayButton();
 }
@@ -2235,7 +2304,12 @@ function selectManualOperator(id){
   const sel = document.getElementById('networkSelect');
   if (!id){ selectedOperator = null; updatePayButton(); return; }
   const opt = sel.options[sel.selectedIndex];
-  selectedOperator = { operatorId:String(id), name:opt.textContent, countryCode:currentCountry, currency:currentCurrency };
+  selectedOperator = {
+    operatorId: String(id),
+    name: opt.textContent,
+    countryCode: currentCountry,
+    currency: currentCurrency
+  };
   detectedOperator = selectedOperator;
   document.getElementById('detectCard').classList.remove('warn');
   document.getElementById('detectIcon').innerHTML = '<i class="fas fa-check"></i>';
@@ -2255,7 +2329,9 @@ function setQuick(v, evt){
   if (evt && evt.target) evt.target.classList.add('active');
   updateBreakdown();
 }
-function getFee(){ return SERVICE_FEES[currentCurrency] !== undefined ? SERVICE_FEES[currentCurrency] : 100; }
+function getFee(){
+  return SERVICE_FEES[currentCurrency] !== undefined ? SERVICE_FEES[currentCurrency] : 100;
+}
 function updateBreakdown(){
   const amt = parseFloat(document.getElementById('amountInput').value) || 0;
   const fee = amt > 0 ? getFee() : 0;
@@ -2275,20 +2351,24 @@ function updatePayButton(){
   const total = amt + fee;
 
   if (!phone || phone.replace(/\D/g,'').length < 8){
-    btn.disabled = true; lbl.textContent = 'Enter phone number';
+    btn.disabled = true;
+    lbl.textContent = 'Enter phone number';
     hint.textContent = 'We need a valid number to send airtime';
     return;
   }
   if (!selectedOperator){
-    btn.disabled = true; lbl.textContent = 'Select network';
+    btn.disabled = true;
+    lbl.textContent = 'Select network';
     hint.textContent = 'Choose the mobile network operator';
     return;
   }
   if (amt <= 0){
-    btn.disabled = true; lbl.textContent = 'Enter amount';
+    btn.disabled = true;
+    lbl.textContent = 'Enter amount';
     hint.textContent = 'How much airtime do you want to send?';
     return;
   }
+
   btn.disabled = false;
   lbl.textContent = `Pay ${currentSymbol}${total.toFixed(2)}`;
   hint.textContent = `Via ${selectedPaymentMethod.replace(/^./, c => c.toUpperCase())}`;
@@ -2301,7 +2381,6 @@ function selectPM(method){
   selectedPaymentMethod = method;
   document.querySelectorAll('.pm-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.method === method);
-    b.classList.toggle('selected', b.dataset.method === method);
   });
   const sub = document.getElementById('walletSub');
   if (sub) sub.textContent = currentUser
@@ -2311,10 +2390,14 @@ function selectPM(method){
 }
 
 // ============================================================
-// PAYMENT MODAL
+// PAYMENT MODAL — two step
 // ============================================================
 function openPaymentModal(){
-  if (!currentUser){ toast('Please sign in to continue', 'warning'); openSheet('authModal'); return; }
+  if (!currentUser){
+    toast('Please sign in to continue', 'warning');
+    openSheet('authModal');
+    return;
+  }
   const phone = document.getElementById('phoneInput').value.trim();
   const amt = parseFloat(document.getElementById('amountInput').value) || 0;
   const fee = getFee();
@@ -2340,10 +2423,14 @@ function openPaymentModal(){
     operator_name: selectedOperator.name,
     provider: selectedPaymentMethod
   };
+
   openSheet('paymentModal');
 }
 
-function closePaymentModal(){ closeSheet('paymentModal'); pendingPayment = null; }
+function closePaymentModal(){
+  closeSheet('paymentModal');
+  pendingPayment = null;
+}
 
 async function processPayment(){
   if (!pendingPayment || isProcessing) return;
@@ -2431,12 +2518,14 @@ async function submitAuth(){
     const endpoint = isAuthRegisterMode ? '/api/auth/register' : '/api/auth/login';
     const body = isAuthRegisterMode ? { email, password, full_name: name } : { email, password };
     const res = await fetch(endpoint, {
-      method:'POST', credentials:'include',
+      method:'POST',
+      credentials:'include',
       headers:{'Content-Type':'application/json','Accept':'application/json'},
       body:JSON.stringify(body)
     });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Authentication failed');
+
     currentUser = data.user || null;
     closeSheet('authModal');
     toast(isAuthRegisterMode ? 'Account created! 🎉' : `Welcome back, ${currentUser?.full_name || 'friend'}`, 'success');
@@ -2444,7 +2533,8 @@ async function submitAuth(){
     updateAuthUI();
     selectPM(selectedPaymentMethod);
   } catch(e){
-    errEl.textContent = e.message; errEl.style.display = 'block';
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
     btn.innerHTML = `<span id="authSubmitLabel">${isAuthRegisterMode ? 'Create Account' : 'Sign In'}</span>`;
@@ -2453,8 +2543,11 @@ async function submitAuth(){
 
 function fromUserMenuAuth(){
   closeSheet('userMenuModal');
-  if (currentUser) toast('Account settings coming soon', 'info');
-  else openSheet('authModal');
+  if (currentUser){
+    toast('Account settings coming soon', 'info');
+  } else {
+    openSheet('authModal');
+  }
 }
 
 async function doLogout(){
@@ -2520,6 +2613,7 @@ function refreshWalletView(){
   const sym = CURRENCY_SYMBOLS[activeWalletCurrency] || '₦';
   document.getElementById('walletBalanceValue').textContent = `${sym}${bal.toFixed(2)}`;
   document.getElementById('walletCurrencyLabel').textContent = `${activeWalletCurrency} · Net365 Wallet`;
+
   const wtx = allTransactions.filter(t => t.tx_type === 'wallet_funding' || t.tx_type === 'transfer' || t.tx_type === 'referral');
   renderTxList('walletTxList', wtx.slice(0,10), 'No wallet activity yet');
 }
@@ -2585,7 +2679,7 @@ function renderTxList(containerId, list, emptyMsg){
         <div class="tx-body">
           <div class="tx-title">${escapeHtml(t.description || t.tx_type || 'Transaction')}</div>
           <div class="tx-sub">
-            <span class="status-pill ${statusClass}">${t.status || 'pending'}</span>
+            <span class="status-pill ${statusClass}">${escapeHtml(t.status || 'pending')}</span>
             <span>${formatDate(t.created_at)}</span>
           </div>
         </div>
@@ -2596,7 +2690,68 @@ function renderTxList(containerId, list, emptyMsg){
   }).join('');
 }
 
-function openReceipt(ref){ toast(`Receipt: ${ref}`, 'info'); }
+function openReceipt(ref){
+  const tx = (allTransactions || []).find(t => String(t.reference || t.id) === String(ref));
+  if (tx){ renderReceipt(tx); return; }
+  loadReceipt(ref);
+}
+
+async function loadReceipt(ref){
+  if (!ref){ toast('This transaction has no reference number yet.', 'warning'); return; }
+  try{
+    const res = await fetch(`${API_BASE}/transaction/${encodeURIComponent(ref)}`, {credentials:'include', headers:{'Accept':'application/json'}});
+    const data = await res.json();
+    if (!res.ok || !data.success || !data.transaction) throw new Error(data.error || 'Receipt details are not available yet.');
+    renderReceipt(data.transaction);
+  }catch(e){
+    toast(e.message || 'Could not load receipt. Please try again.', 'error');
+  }
+}
+
+function renderReceipt(tx){
+  const backdrop = document.getElementById('receiptBackdrop');
+  const title = document.getElementById('receiptTitle');
+  const caption = document.getElementById('receiptCaption');
+  const rows = document.getElementById('receiptRows');
+  const status = document.getElementById('receiptStatus');
+  if (!backdrop || !title || !rows || !status) return;
+  const currency = String(tx.currency || 'NGN').toUpperCase();
+  const symbols = CURRENCY_SYMBOLS[currency] || `${currency} `;
+  const amount = Number(tx.amount || 0);
+  const state = String(tx.status || 'pending').toLowerCase();
+  const good = ['success','successful','completed','fulfilled','paid'].includes(state);
+  const pending = ['pending','processing','initiated','authorized'].includes(state);
+  const label = good ? 'Payment confirmed' : pending ? 'Payment pending' : 'Payment not completed';
+  status.innerHTML = `<i class="fas ${good?'fa-circle-check':pending?'fa-clock':'fa-circle-xmark'}"></i><span></span>`;
+  status.lastElementChild.textContent = label;
+  status.style.color = good ? '#78E5A4' : pending ? '#FFCA75' : '#FF8191';
+  title.textContent = `${symbols}${amount.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  caption.textContent = String(tx.description || tx.tx_type || 'Net365 transaction').replace(/_/g,' ');
+  const payload = tx.payload && typeof tx.payload === 'object' ? tx.payload : {};
+  const details = [
+    ['Status', label],
+    ['Service', tx.description || tx.tx_type || 'Transaction'],
+    ['Reference', tx.reference || tx.id || 'Not provided'],
+    ['Date', formatDate(tx.created_at || tx.timestamp || tx.updated_at) || 'Not available'],
+    ['Payment method', tx.provider || payload.provider || payload.payment_method || 'Not provided'],
+    ['Recipient', payload.phone || payload.subscriber_account || payload.account_number || payload.recipient || 'Not provided']
+  ];
+  rows.replaceChildren();
+  details.forEach(([k,v])=>{
+    const row=document.createElement('div'); row.className='receipt-row';
+    const key=document.createElement('span'); key.className='k'; key.textContent=k;
+    const val=document.createElement('span'); val.className='v'; val.textContent=String(v ?? 'Not provided');
+    row.append(key,val); rows.appendChild(row);
+  });
+  backdrop.classList.add('show');
+  document.body.style.overflow='hidden';
+}
+
+function closeReceipt(){
+  document.getElementById('receiptBackdrop')?.classList.remove('show');
+  document.body.style.overflow='';
+}
+function printReceipt(){ window.print(); }
 
 function exportTransactionsCSV(){
   if (!allTransactions.length){ toast('Nothing to export', 'warning'); return; }
@@ -2621,7 +2776,11 @@ function formatDate(s){
   if (isNaN(d.getTime())) return s;
   return d.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
 }
-function escapeHtml(s){ const d = document.createElement('div'); d.textContent = String(s||''); return d.innerHTML; }
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = String(s||'');
+  return d.innerHTML;
+}
 
 // ============================================================
 // WALLET MODALS
@@ -2635,9 +2794,11 @@ async function submitAddMoney(){
   const btn = document.querySelector('#addMoneyModal .btn-hero');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Redirecting…';
+
   try{
     const res = await fetch('/api/wallet/fund', {
-      method:'POST', credentials:'include',
+      method:'POST',
+      credentials:'include',
       headers:{'Content-Type':'application/json','Accept':'application/json'},
       body:JSON.stringify({ amount, currency, return_url: window.location.origin + '/payment/success' })
     });
@@ -2665,6 +2826,7 @@ async function submitTransfer(){
   const btn = document.querySelector('#sendMoneyModal .btn-hero');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Sending…';
+
   try{
     const isEmail = recipient.includes('@');
     const lookup = await fetch(isEmail
@@ -2675,7 +2837,8 @@ async function submitTransfer(){
     if (!lookupData.success) throw new Error('Recipient not found');
 
     const res = await fetch('/api/wallet/transfer', {
-      method:'POST', credentials:'include',
+      method:'POST',
+      credentials:'include',
       headers:{'Content-Type':'application/json','Accept':'application/json'},
       body:JSON.stringify({
         to_user_id: lookupData.user.id,
@@ -2723,7 +2886,7 @@ function shareReferral(){
 }
 
 // ============================================================
-// UTILITIES
+// UTILITIES — IN-APP BILLER FLOW
 // ============================================================
 function renderUtilities(){
   const electricity = [
@@ -2760,7 +2923,11 @@ function billerBtn(b){
 let currentBiller = null;
 
 function openBiller(id, name){
-  if (!currentUser){ toast('Please sign in to pay bills', 'warning'); openSheet('authModal'); return; }
+  if (!currentUser){
+    toast('Please sign in to pay bills', 'warning');
+    openSheet('authModal');
+    return;
+  }
   currentBiller = { id: id, name: name };
   document.getElementById('billerSheetTitle').textContent = name;
   document.getElementById('billerSheetSub').textContent = 'Enter your account details to continue';
@@ -2776,26 +2943,42 @@ function openBiller(id, name){
              : isAirtime ? 'Phone Number'
              : 'Meter / Account Number';
   document.getElementById('billerAccountLabel').textContent = label;
+
   openSheet('billerSheet');
 }
 
 async function validateBillerAccount(){
   if (!currentBiller) return;
   const account = document.getElementById('billerAccount').value.trim();
-  if (!account || account.length < 6){ toast('Enter a valid account number', 'warning'); return; }
+  if (!account || account.length < 6){
+    toast('Enter a valid account number', 'warning');
+    return;
+  }
+
   const btn = document.getElementById('billerValidateBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Validating…';
+
   try{
     const res = await fetch(`${API_BASE}/utilities/validate`, {
-      method: 'POST', credentials: 'include',
+      method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ biller_id: currentBiller.id, subscriber_account: account })
+      body: JSON.stringify({
+        biller_id: currentBiller.id,
+        subscriber_account: account
+      })
     });
     const data = await res.json();
-    const customerName = data.customerName || data.customer_name || data.name || data.accountName || data.account_name;
+
+    // ⚠️ VERIFY: field names returned by /api/utilities/validate
+    const customerName =
+      data.customerName || data.customer_name || data.name ||
+      data.accountName || data.account_name;
+
     if (data.valid === true || customerName){
-      document.getElementById('billerCustomerName').textContent = customerName || `Account ••••${account.slice(-4)}`;
+      document.getElementById('billerCustomerName').textContent =
+        customerName || `Account ••••${account.slice(-4)}`;
       document.getElementById('billerCustomerBox').style.display = 'block';
       document.getElementById('billerPayBtn').disabled = false;
       toast('Account verified', 'success');
@@ -2814,19 +2997,32 @@ async function payBiller(){
   if (!currentBiller) return;
   const account = document.getElementById('billerAccount').value.trim();
   const amount = parseFloat(document.getElementById('billerAmount').value);
-  if (!account || !amount || amount <= 0){ toast('Enter account and amount', 'warning'); return; }
+
+  if (!account || !amount || amount <= 0){
+    toast('Enter account and amount', 'warning');
+    return;
+  }
 
   const btn = document.getElementById('billerPayBtn');
   const lbl = document.getElementById('billerPayLabel');
   btn.disabled = true;
   lbl.innerHTML = '<span class="spinner"></span>Processing…';
+
   try{
     const res = await fetch(`${API_BASE}/utilities/pay`, {
-      method: 'POST', credentials: 'include',
+      method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ biller_id: currentBiller.id, subscriber_account: account, amount: amount, currency: 'NGN', provider: 'wallet' })
+      body: JSON.stringify({
+        biller_id: currentBiller.id,
+        subscriber_account: account,
+        amount: amount,
+        currency: 'NGN',
+        provider: 'wallet'
+      })
     });
     const data = await res.json();
+
     if (data.success){
       toast('Payment successful!', 'success');
       closeSheet('billerSheet');
@@ -2834,18 +3030,30 @@ async function payBiller(){
       showView('transactions');
       return;
     }
+
     if (data.error && data.error.toLowerCase().includes('insufficient')){
       const useGateway = confirm('Insufficient wallet balance. Pay via Paystack instead?');
       if (useGateway){
         const gw = await fetch(`${API_BASE}/utilities/pay`, {
-          method: 'POST', credentials: 'include',
+          method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ biller_id: currentBiller.id, subscriber_account: account, amount: amount, currency: 'NGN', provider: 'paystack' })
+          body: JSON.stringify({
+            biller_id: currentBiller.id,
+            subscriber_account: account,
+            amount: amount,
+            currency: 'NGN',
+            provider: 'paystack'
+          })
         });
         const gwd = await gw.json();
-        if (gwd.success && gwd.authorization_url){ window.location.href = gwd.authorization_url; return; }
+        if (gwd.success && gwd.authorization_url){
+          window.location.href = gwd.authorization_url;
+          return;
+        }
       }
     }
+
     throw new Error(data.error || 'Payment failed');
   } catch(e){
     toast(e.message, 'error');
@@ -2881,11 +3089,20 @@ async function ensureChatSession(){
     const phone = document.getElementById('phoneInput')?.value?.trim() || '';
     const res = await fetch(`${API_BASE}/chat/session`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-      body: JSON.stringify({ phone, country_code: currentCountry, name: currentUser?.full_name || '', email: currentUser?.email || '' })
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        phone,
+        country_code: currentCountry,
+        name: currentUser?.full_name || '',
+        email: currentUser?.email || ''
+      })
     });
     const data = await res.json();
-    if (data.success){ chatConversationId = data.conversation_id; return chatConversationId; }
+    if (data.success){
+      chatConversationId = data.conversation_id;
+      return chatConversationId;
+    }
   } catch(e){ console.warn('Chat session failed', e); }
   return null;
 }
@@ -2915,6 +3132,7 @@ async function sendChatMessage(){
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text) return;
+
   const cid = await ensureChatSession();
   if (!cid){ toast('Unable to connect to support. Try again.', 'error'); return; }
 
@@ -2929,22 +3147,27 @@ async function sendChatMessage(){
   try{
     const res = await fetch(`${API_BASE}/chat/messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ conversation_id: cid, message: text })
     });
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Send failed');
     await loadChatMessages();
-  } catch(e){ toast(e.message, 'error'); }
+  } catch(e){
+    toast(e.message, 'error');
+  }
 }
 
 // ============================================================
-// NET365 SMART MEDIA
+// NET365 SMART MEDIA — Universal Advertising & Smart Offers Engine
+// v4: operator/country/currency agnostic, server-driven, scalable
 // ============================================================
 const MOMENT_AD_CONFIG = {
   MIN_INTERVAL_MS: 1000 * 60 * 5,
   DELAY_MS: 650,
-  API_TIMEOUT_MS: 3500
+  API_TIMEOUT_MS: 3500,
+  DEFAULT_FREQUENCY_HOURS: 24
 };
 
 let lastMomentAdShownAt = 0;
@@ -2962,7 +3185,9 @@ function smartAdEscape(value){
   }[ch]));
 }
 
-function smartAdCurrencyCode(currency){ return String(currency || currentCurrency || 'NGN').toUpperCase(); }
+function smartAdCurrencyCode(currency){
+  return String(currency || currentCurrency || 'NGN').toUpperCase();
+}
 
 function smartAdSymbol(currency){
   const code = smartAdCurrencyCode(currency);
@@ -2986,7 +3211,13 @@ function smartAdMoney(amount, currency){
 }
 
 function smartAdCountry(paymentDetails){
-  return String(paymentDetails?.country_code || paymentDetails?.country || paymentDetails?.countryCode || window.currentCountry || 'NG').toUpperCase();
+  return String(
+    paymentDetails?.country_code ||
+    paymentDetails?.country ||
+    paymentDetails?.countryCode ||
+    window.currentCountry ||
+    'NG'
+  ).toUpperCase();
 }
 
 function smartAdOperator(paymentDetails){
@@ -3003,15 +3234,23 @@ function buildMomentAdContext(paymentDetails = {}){
   const history = Array.isArray(window.allTransactions) ? window.allTransactions : [];
   const currency = smartAdCurrencyCode(paymentDetails.currency);
   const operator = smartAdOperator(paymentDetails);
-  const airtimeTx = history.filter(t => String(t.tx_type || t.type || '').toLowerCase() === 'topup');
-  const utilityTx = history.filter(t => String(t.tx_type || t.type || '').toLowerCase() === 'utility');
+
+  const airtimeTx = history.filter(t =>
+    String(t.tx_type || t.type || '').toLowerCase() === 'topup'
+  );
+  const utilityTx = history.filter(t =>
+    String(t.tx_type || t.type || '').toLowerCase() === 'utility'
+  );
+
   const country = smartAdCountry(paymentDetails);
   const amount = Number(paymentDetails.amount || 0);
+
   return {
     placement: 'payment_success',
     tx_type: paymentDetails.tx_type || 'topup',
     amount: Number.isFinite(amount) ? amount : 0,
-    currency, country,
+    currency,
+    country,
     phone: paymentDetails.phone || '',
     operator_id: operator.id,
     operator_name: operator.name,
@@ -3025,13 +3264,20 @@ function buildMomentAdContext(paymentDetails = {}){
   };
 }
 
+/* First-party anonymous visitor ID.
+   It identifies a browser/session, not a person's real identity. */
 function getNet365VisitorId(){
   try{
     const key = 'net365_visitor_id';
     let id = localStorage.getItem(key);
-    if (!id){ id = 'N365-V-' + cryptoRandomId(); localStorage.setItem(key, id); }
+    if (!id){
+      id = 'N365-V-' + cryptoRandomId();
+      localStorage.setItem(key, id);
+    }
     return id;
-  }catch(e){ return 'N365-V-' + cryptoRandomId(); }
+  }catch(e){
+    return 'N365-V-' + cryptoRandomId();
+  }
 }
 
 function cryptoRandomId(){
@@ -3050,56 +3296,87 @@ function smartAdWithTimeout(promise, timeoutMs){
   ]);
 }
 
+/* Server-driven recommendation. */
 async function fetchSmartAd(ctx){
   const res = await smartAdWithTimeout(fetch(`${API_BASE}/ads/recommend`, {
-    method:'POST', credentials:'include',
+    method:'POST',
+    credentials:'include',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify(ctx)
   }), MOMENT_AD_CONFIG.API_TIMEOUT_MS);
+
   if (!res.ok) throw new Error(`ad_api_${res.status}`);
   const data = await res.json();
   if (!data?.success || !data?.ad) throw new Error(data?.error || 'no_ad');
   return data.ad;
 }
 
+/* Safe local fallback so the customer still gets a polished experience
+   when the ad service is unavailable. */
 function localSmartAd(ctx){
   if (ctx.tx_type === 'utility'){
     return {
-      id:'local-utility-cross-sell', type:'smart_offer', category:'energy',
-      badge:'SMART OFFER', sponsored:false,
-      accent:'#ff7a00', accent2:'#ff3b30', icon:'fa-solar-panel',
+      id:'local-utility-cross-sell',
+      type:'smart_offer',
+      category:'energy',
+      badge:'SMART OFFER',
+      sponsored:false,
+      accent:'#F59E0B',
+      accent2:'#22D3EE',
+      icon:'fa-solar-panel',
       kicker:'Because you just paid a bill',
       title:'Explore solar & backup power',
       description:'See energy-saving options and solar solutions that could help reduce future power costs.',
-      offer_value:'Explore options', offer_label:'Energy solutions',
-      cta:'Explore Energy', landing_url:'#',
-      footer:'Net365 recommendation', compact:false
+      offer_value:'Explore options',
+      offer_label:'Energy solutions',
+      cta:'Explore Energy',
+      landing_url:'#',
+      footer:'Net365 recommendation',
+      compact:false
     };
   }
+
   if (ctx.tx_type === 'topup'){
     const op = ctx.operator_name ? ` on ${ctx.operator_name}` : '';
     return {
-      id:'local-topup-cross-sell', type:'smart_offer', category:'electronics',
-      badge:'SMART OFFER', sponsored:false,
-      accent:'#ff3b30', accent2:'#ff7a00', icon:'fa-mobile-screen-button',
+      id:'local-topup-cross-sell',
+      type:'smart_offer',
+      category:'electronics',
+      badge:'SMART OFFER',
+      sponsored:false,
+      accent:'#7C3AED',
+      accent2:'#22D3EE',
+      icon:'fa-mobile-screen-button',
       kicker:`Because you just recharged${op}`,
       title:'Save on your next smartphone',
       description:'Explore selected phones, accessories and connectivity deals from Net365 partners.',
-      offer_value:'Up to 25% OFF', offer_label:'Selected devices',
-      cta:'Explore Offers', landing_url:'#',
-      footer:'Net365 recommendation', compact:false
+      offer_value:'Up to 25% OFF',
+      offer_label:'Selected devices',
+      cta:'Explore Offers',
+      landing_url:'#',
+      footer:'Net365 recommendation',
+      compact:false
     };
   }
+
   return {
-    id:'local-generic-offer', type:'smart_offer', category:'discovery',
-    badge:'SMART OFFER', sponsored:false,
-    accent:'#ff7a00', accent2:'#35d9ff', icon:'fa-sparkles',
+    id:'local-generic-offer',
+    type:'smart_offer',
+    category:'discovery',
+    badge:'SMART OFFER',
+    sponsored:false,
+    accent:'#22D3EE',
+    accent2:'#7C3AED',
+    icon:'fa-sparkles',
     kicker:'Picked for you',
     title:'Discover something useful',
     description:'Explore current Net365 offers and recommendations.',
-    offer_value:'Discover', offer_label:'Net365 offers',
-    cta:'Explore Offers', landing_url:'#',
-    footer:'Net365 recommendation', compact:false
+    offer_value:'Discover',
+    offer_label:'Net365 offers',
+    cta:'Explore Offers',
+    landing_url:'#',
+    footer:'Net365 recommendation',
+    compact:false
   };
 }
 
@@ -3108,10 +3385,12 @@ function renderSmartAd(ad, ctx, paymentDetails){
   const slot = document.getElementById('momentAdSlot');
   const amtEl = document.getElementById('momentSuccessAmount');
   const subEl = document.getElementById('momentSuccessSub');
+
   if (!backdrop || !slot) return;
 
   const currency = smartAdCurrencyCode(paymentDetails?.currency || ctx.currency);
   const amount = Number(paymentDetails?.amount ?? ctx.amount ?? 0);
+
   if (amtEl) amtEl.textContent = smartAdMoney(amount, currency);
 
   const labels = {
@@ -3122,7 +3401,8 @@ function renderSmartAd(ad, ctx, paymentDetails){
     subscription:'Subscription payment completed'
   };
   if (subEl){
-    subEl.textContent = labels[paymentDetails?.tx_type] || labels[ctx.tx_type] || 'Transaction completed';
+    subEl.textContent = labels[paymentDetails?.tx_type] ||
+      labels[ctx.tx_type] || 'Transaction completed';
   }
 
   const safe = {
@@ -3138,14 +3418,16 @@ function renderSmartAd(ad, ctx, paymentDetails){
     image_url:ad.image_url ? smartAdEscape(ad.image_url) : '',
     logo_url:ad.logo_url ? smartAdEscape(ad.logo_url) : '',
     icon:smartAdEscape(ad.icon || 'fa-sparkles'),
-    accent:smartAdEscape(ad.accent || '#ff7a00'),
-    accent2:smartAdEscape(ad.accent2 || '#ff3b30'),
+    accent:smartAdEscape(ad.accent || '#7C3AED'),
+    accent2:smartAdEscape(ad.accent2 || '#22D3EE'),
     landing_url:ad.landing_url ? String(ad.landing_url) : '#'
   };
 
   const image = safe.image_url
     ? `<img src="${safe.image_url}" alt="" loading="lazy" referrerpolicy="no-referrer">`
-    : `<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:52px;color:rgba(255,255,255,.9);"><i class="fas ${safe.icon}"></i></div>`;
+    : `<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:52px;color:rgba(255,255,255,.9);">
+         <i class="fas ${safe.icon}"></i>
+       </div>`;
 
   const logo = safe.logo_url
     ? `<img src="${safe.logo_url}" alt="">`
@@ -3156,11 +3438,13 @@ function renderSmartAd(ad, ctx, paymentDetails){
     : `<span class="smart-ad-sponsored"><i class="fas fa-wand-magic-sparkles"></i> Net365</span>`;
 
   slot.innerHTML = `
-    <article class="smart-ad" data-ad-id="${safe.id}"
+    <article class="smart-ad"
+      data-ad-id="${safe.id}"
       style="--ad-accent:${safe.accent};--ad-accent-2:${safe.accent2};--ad-accent-soft:${safe.accent}33;">
       <button class="smart-ad-close" type="button" aria-label="Close offer" onclick="dismissMomentAd()">
         <i class="fas fa-xmark"></i>
       </button>
+
       <div class="smart-ad-media">
         <div class="smart-ad-top">
           <span class="smart-ad-badge">${safe.badge}</span>
@@ -3169,20 +3453,29 @@ function renderSmartAd(ad, ctx, paymentDetails){
         ${image}
         <div class="smart-ad-logo">${logo}</div>
       </div>
+
       <div class="smart-ad-body">
         ${safe.kicker ? `<div class="smart-ad-kicker">${safe.kicker}</div>` : ''}
         <div class="smart-ad-title">${safe.title}</div>
         <div class="smart-ad-description">${safe.description}</div>
-        ${safe.offer_value ? `<div class="smart-ad-offer"><strong>${safe.offer_value}</strong><span>${safe.offer_label}</span></div>` : ''}
+
+        ${safe.offer_value ? `
+          <div class="smart-ad-offer">
+            <strong>${safe.offer_value}</strong>
+            <span>${safe.offer_label}</span>
+          </div>` : ''}
+
         <button class="smart-ad-cta" type="button" onclick="smartAdClick()">
           ${safe.cta} <i class="fas fa-arrow-right"></i>
         </button>
+
         <div class="smart-ad-meta">
           <span>${safe.footer}</span>
           <span>${ad.expires_at ? `Ends ${formatSmartAdExpiry(ad.expires_at)}` : 'Personalized for you'}</span>
         </div>
       </div>
     </article>
+
     <div class="smart-ad-disclaimer">
       ${ad.sponsored ? 'Sponsored content. Availability and offer terms may vary.' : 'Recommendations are selected to keep your Net365 experience useful.'}
     </div>
@@ -3204,14 +3497,29 @@ function formatSmartAdExpiry(value){
 
 function smartAdClick(){
   if (!currentMomentAd) return;
+
   trackMomentAdEvent('click');
+
   const ad = currentMomentAd.ad || {};
   const url = ad.landing_url || '#';
+
   dismissMomentAd();
-  if (ad.action === 'wallet'){ if (typeof openSheet === 'function') openSheet('addMoneyModal'); return; }
-  if (ad.action === 'utilities'){ if (typeof showView === 'function') showView('utilities'); return; }
-  if (ad.action === 'referral'){ if (typeof openSheet === 'function') openSheet('referralSheet'); return; }
-  if (url && url !== '#'){ window.open(url, '_blank', 'noopener,noreferrer'); }
+
+  if (ad.action === 'wallet'){
+    if (typeof openSheet === 'function') openSheet('addMoneyModal');
+    return;
+  }
+  if (ad.action === 'utilities'){
+    if (typeof showView === 'function') showView('utilities');
+    return;
+  }
+  if (ad.action === 'referral'){
+    if (typeof openSheet === 'function') openSheet('referralSheet');
+    return;
+  }
+  if (url && url !== '#'){
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
 }
 
 function dismissMomentAd(){
@@ -3224,14 +3532,17 @@ function trackMomentAdEvent(eventType){
   const ad = currentMomentAd?.ad || {};
   const ctx = currentMomentAd?.context || {};
   const tx = currentMomentAd?.paymentDetails || {};
+
   try{
     fetch(`${API_BASE}/ads/event`, {
-      method:'POST', credentials:'include',
+      method:'POST',
+      credentials:'include',
       headers:{'Content-Type':'application/json'},
       keepalive:true,
       body:JSON.stringify({
         event:eventType,
-        ad_id:ad.id || null, ad_type:ad.type || null,
+        ad_id:ad.id || null,
+        ad_type:ad.type || null,
         campaign_id:ad.campaign_id || null,
         placement:ctx.placement || 'payment_success',
         tx_type:ctx.tx_type || tx.tx_type || null,
@@ -3248,16 +3559,29 @@ function trackMomentAdEvent(eventType){
   }catch(e){}
 }
 
-async function showMomentAd(paymentDetails){
+async function showMomentAd(paymentDetails) {
   if (Date.now() - lastMomentAdShownAt < MOMENT_AD_CONFIG.MIN_INTERVAL_MS) return;
+
   const ctx = buildMomentAdContext(paymentDetails);
-  let ad;
-  try{ ad = await fetchSmartAd(ctx); }
-  catch(e){ ad = localSmartAd(ctx); }
-  if (!ad) return;
-  renderSmartAd(ad, ctx, paymentDetails);
+  ctx.surface = 'payment_success';
+  ctx.platform = 'mobile';
+
+  const res = await fetch(`${API_BASE}/ads/recommend`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(ctx)
+  });
+  const data = await res.json();
+
+  if (!data.success || !data.ad) return;              // nothing to show
+  if (!data.placement?.enabled) return;               // admin turned it off
+
+  // The renderer no longer decides *whether* to show — only *how*.
+  renderSmartAd(data.ad, ctx, paymentDetails, data.placement);
 }
 
+// Optional reusable entry point for future non-transaction placements.
 async function showSmartAdForPlacement(placement, extraContext = {}){
   const ctx = buildMomentAdContext({
     tx_type:extraContext.tx_type || 'discovery',
@@ -3267,6 +3591,7 @@ async function showSmartAdForPlacement(placement, extraContext = {}){
   });
   ctx.placement = placement;
   Object.assign(ctx, extraContext);
+
   try{
     const ad = await fetchSmartAd(ctx);
     renderSmartAd(ad, ctx, extraContext);
@@ -3293,7 +3618,9 @@ async function checkSession(){
       }
     }
     updateAuthUI();
-  } catch(e){ updateAuthUI(); }
+  } catch(e){
+    updateAuthUI();
+  }
 }
 
 // ============================================================
@@ -3302,15 +3629,16 @@ async function checkSession(){
 document.addEventListener('input', function(e){
   if(e.target && e.target.id === 'phoneInput'){
     const ok = (e.target.value || '').replace(/\D/g,'').length >= 7;
-    const el = document.getElementById('n365PhoneCheck');
+    const el=document.getElementById('n365PhoneCheck');
     if(el) el.classList.toggle('show', ok);
   }
   if(e.target && e.target.id === 'amountInput'){
-    const cur = document.getElementById('n365CurrencyHint');
-    if(cur && typeof currentCurrency !== 'undefined') cur.textContent = currentCurrency || 'NGN';
+    const cur=document.getElementById('n365CurrencyHint');
+    if(cur && typeof currentCurrency !== 'undefined') cur.textContent=currentCurrency || 'NGN';
   }
 });
 
+// Amount-in-focus mode
 document.addEventListener('focusin', function(e){
   if (e.target && e.target.id === 'amountInput'){
     document.querySelector('.n365-hero-card')?.classList.add('is-typing');
@@ -3326,8 +3654,11 @@ document.addEventListener('input', function(e){
   if (e.target && e.target.id === 'amountInput'){
     const card = document.querySelector('.n365-hero-card');
     if (!card) return;
-    if ((e.target.value || '').trim().length > 0) card.classList.add('is-typing');
-    else card.classList.remove('is-typing');
+    if ((e.target.value || '').trim().length > 0){
+      card.classList.add('is-typing');
+    } else {
+      card.classList.remove('is-typing');
+    }
   }
 });
 
@@ -3338,43 +3669,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   selectPM(selectedPaymentMethod);
   updateBreakdown();
 
+  // Reveal floating chat button
   setTimeout(() => {
     const fab = document.getElementById('chatFab');
     if (fab) fab.classList.add('show');
   }, 800);
 
+  // Wire Moment Ad to payment success URL params
+  // ⚠️ VERIFY: /payment/success must redirect to /?status=success&reference=XXX
   const params = new URLSearchParams(window.location.search);
-  const status = params.get('status');
-  const reference = params.get('reference');
-  if (status === 'success' && reference){
+  const paymentStatus = (params.get('status') || params.get('payment_status') || '').toLowerCase();
+  const reference = params.get('reference') || params.get('trxref') || params.get('transaction_reference');
+  // Payment return: show a real receipt first. Never show an ad or a vague toast as the receipt.
+  if (reference && ['success','successful','completed','paid'].includes(paymentStatus)){
     setTimeout(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/transaction/${reference}`, { credentials: 'include' });
+      try{
+        const res = await fetch(`${API_BASE}/transaction/${encodeURIComponent(reference)}`, {credentials:'include',headers:{'Accept':'application/json'}});
         const data = await res.json();
         if (data.success && data.transaction){
           const tx = data.transaction;
-          const payload = typeof tx.payload === 'object' ? tx.payload : {};
-          showMomentAd({
-            tx_type: tx.tx_type,
-            amount: tx.amount,
-            currency: tx.currency,
-            phone: payload.phone || '',
-            country_code: payload.country_code || payload.country || payload.countryCode || tx.country_code || '',
-            operator_id: payload.operator_id || payload.operatorId || tx.operator_id || null,
-            operator_name: payload.operator_name || payload.operatorName || tx.operator_name || '',
-            operator_brand: payload.operator_brand || payload.operatorBrand || '',
-            payload: payload
-          });
+          renderReceipt(tx);
+          // Ads are deliberately not auto-opened on top of the receipt. They remain optional after dismissal.
+          window.__net365LastSuccessfulPayment = tx;
         } else {
-          showMomentAd({ tx_type: 'topup', amount: 0, currency: currentCurrency, country_code: currentCountry });
+          toast('Payment returned successfully, but receipt details are still syncing. Check Transactions shortly.', 'info');
         }
-      } catch(e) {
-        showMomentAd({ tx_type: 'topup', amount: 0, currency: currentCurrency, country_code: currentCountry });
+      }catch(e){
+        toast('Payment returned. We could not load the receipt yet; check Transactions shortly.', 'info');
       }
-    }, MOMENT_AD_CONFIG.DELAY_MS);
+    }, 250);
   }
 
-  console.log('%cNET365 Mobile v5 — Fire Brand', 'font-size:16px;font-weight:900;color:#ff5a1f;');
+  console.log('%cNET365 Mobile · Calm Luxury', 'font-size:16px;font-weight:900;color:#FF6D00;');
   console.log('Ready.');
 });
 </script>
