@@ -346,20 +346,42 @@ class IPIntel:
             c.execute("CREATE INDEX IF NOT EXISTS idx_ip_intel_org ON ip_intel(org_name)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_ip_intel_kind ON ip_intel(ip_kind)")
 
-            # Add enrichment columns to the existing visitors table if missing.
-            existing = {row[1] for row in c.execute("PRAGMA table_info(visitors)").fetchall()}
+            # ── Add enrichment columns to visitor_logs if missing. ─────
+            # NOTE: the app's visit table is named `visitor_logs`, not
+            # `visitors`. An earlier version of this file targeted the wrong
+            # table, so the ALTERs silently failed and the columns never
+            # got created. Fixed here.
+            existing = {
+                row[1] for row in c.execute("PRAGMA table_info(visitor_logs)").fetchall()
+            }
             for col, typ in [
                 ("org_name",  "TEXT"),
                 ("asn",       "TEXT"),
                 ("ip_kind",   "TEXT"),
+                # is_bot / bot_name are also added by db.log_visitor's own
+                # auto-migration, but listing them here is harmless (idempotent).
                 ("is_bot",    "INTEGER DEFAULT 0"),
                 ("bot_name",  "TEXT"),
             ]:
                 if col not in existing:
                     try:
-                        c.execute(f"ALTER TABLE visitors ADD COLUMN {col} {typ}")
+                        c.execute(f"ALTER TABLE visitor_logs ADD COLUMN {col} {typ}")
                     except sqlite3.OperationalError:
                         pass
+
+            # Indexes for the companies aggregation query
+            try:
+                c.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_visitor_logs_org_name "
+                    "ON visitor_logs(org_name)"
+                )
+                c.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_visitor_logs_ip_kind "
+                    "ON visitor_logs(ip_kind)"
+                )
+            except sqlite3.OperationalError:
+                pass
+
             conn.commit()
             conn.close()
             logger.info("ip_intel: schema ready")
@@ -426,9 +448,10 @@ class IPIntel:
                 info.get("source"),
             ))
 
-            # Fan the answer out to every visitor row from this IP
+            # Fan the answer out to every visitor row from this IP.
+            # NOTE: visitor_logs (matches db.log_visitor), not visitors.
             c.execute("""
-                UPDATE visitors
+                UPDATE visitor_logs
                    SET org_name = ?, asn = ?, ip_kind = ?
                  WHERE ip_address = ?
             """, (info.get("org_name"), info.get("asn"), info.get("ip_kind"), ip))
