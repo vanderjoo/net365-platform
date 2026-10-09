@@ -2698,14 +2698,32 @@ function openReceipt(ref){
 
 async function loadReceipt(ref){
   if (!ref){ toast('This transaction has no reference number yet.', 'warning'); return; }
-  try{
-    const res = await fetch(`${API_BASE}/transaction/${encodeURIComponent(ref)}`, {credentials:'include', headers:{'Accept':'application/json'}});
-    const data = await res.json();
-    if (!res.ok || !data.success || !data.transaction) throw new Error(data.error || 'Receipt details are not available yet.');
-    renderReceipt(data.transaction);
-  }catch(e){
-    toast(e.message || 'Could not load receipt. Please try again.', 'error');
+  // Prefer the customer-scoped endpoint. The legacy /api/transaction/<ref>
+  // endpoint is admin-only and returns 403 to ordinary customers.
+  const endpoints = [
+    `${API_BASE}/user/transaction/${encodeURIComponent(ref)}`,
+    `${API_BASE}/transaction/${encodeURIComponent(ref)}`
+  ];
+  let lastError = 'Receipt details are not available yet.';
+  for (const endpoint of endpoints){
+    try{
+      const res = await fetch(endpoint, {credentials:'include', headers:{'Accept':'application/json'}});
+      const data = await res.json().catch(()=>({}));
+      if (res.ok && data.success && data.transaction){ renderReceipt(data.transaction); return; }
+      lastError = data.error || (res.status === 403 ? 'Receipt access was denied.' : lastError);
+      // Do not keep trying the admin-only endpoint after a customer-scoped 404.
+      if (endpoint.includes('/user/transaction/') && res.status === 404) break;
+    }catch(e){ lastError = e.message || lastError; }
   }
+  // Last fallback: the user's transaction list may already contain this record.
+  try{
+    const res = await fetch(`${API_BASE}/user/transactions?limit=100`, {credentials:'include',headers:{'Accept':'application/json'}});
+    const data = await res.json().catch(()=>({}));
+    const list = Array.isArray(data.transactions) ? data.transactions : [];
+    const tx = list.find(t => String(t.reference || t.id || '') === String(ref));
+    if (res.ok && tx){ allTransactions = list; renderReceipt(tx); return; }
+  }catch(e){}
+  toast(lastError || 'Could not load receipt. Please try again.', 'error');
 }
 
 function renderReceipt(tx){
@@ -3675,29 +3693,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (fab) fab.classList.add('show');
   }, 800);
 
-  // Wire Moment Ad to payment success URL params
-  // ⚠️ VERIFY: /payment/success must redirect to /?status=success&reference=XXX
+  // Payment return: render a receipt for confirmed and processing returns.
+  // /payment/success redirects to /?status=success|processing&reference=XXX.
   const params = new URLSearchParams(window.location.search);
   const paymentStatus = (params.get('status') || params.get('payment_status') || '').toLowerCase();
   const reference = params.get('reference') || params.get('trxref') || params.get('transaction_reference');
-  // Payment return: show a real receipt first. Never show an ad or a vague toast as the receipt.
-  if (reference && ['success','successful','completed','paid'].includes(paymentStatus)){
+  if (reference && ['success','successful','completed','paid','processing','pending'].includes(paymentStatus)){
+    // Let session + transaction refresh settle, then retry briefly because the
+    // payment callback may arrive before the transaction is visible to the UI.
     setTimeout(async () => {
-      try{
-        const res = await fetch(`${API_BASE}/transaction/${encodeURIComponent(reference)}`, {credentials:'include',headers:{'Accept':'application/json'}});
-        const data = await res.json();
-        if (data.success && data.transaction){
-          const tx = data.transaction;
-          renderReceipt(tx);
-          // Ads are deliberately not auto-opened on top of the receipt. They remain optional after dismissal.
-          window.__net365LastSuccessfulPayment = tx;
-        } else {
-          toast('Payment returned successfully, but receipt details are still syncing. Check Transactions shortly.', 'info');
-        }
-      }catch(e){
-        toast('Payment returned. We could not load the receipt yet; check Transactions shortly.', 'info');
+      for (let attempt = 0; attempt < 5; attempt++){
+        try{
+          await refreshUserData();
+          const localTx = (allTransactions || []).find(t => String(t.reference || t.id || '') === String(reference));
+          if (localTx){
+            renderReceipt(localTx);
+            window.__net365LastSuccessfulPayment = localTx;
+            return;
+          }
+          const res = await fetch(`${API_BASE}/user/transaction/${encodeURIComponent(reference)}`, {credentials:'include',headers:{'Accept':'application/json'}});
+          const data = await res.json().catch(()=>({}));
+          if (res.ok && data.success && data.transaction){
+            renderReceipt(data.transaction);
+            window.__net365LastSuccessfulPayment = data.transaction;
+            return;
+          }
+        }catch(e){ console.warn('Receipt lookup attempt failed', attempt + 1, e); }
+        await new Promise(resolve => setTimeout(resolve, 900));
       }
-    }, 250);
+      toast('Payment returned, but the receipt is not available yet. Open Transactions and tap the payment to view it.', 'info');
+    }, 300);
   }
 
   console.log('%cNET365 Mobile · Calm Luxury', 'font-size:16px;font-weight:900;color:#FF6D00;');
