@@ -3749,6 +3749,8 @@ def get_authenticated_user():
             except Exception as e:
                 logger.error(f"Error getting visitor stats: {e}")
                 return jsonify({"success": False, "error": str(e)}), 500
+               
+               
 
         # ============ ADMIN: ALL RECEIPT ADS ============
         @self.app.route("/api/admin/receipt-ads/all", methods=["GET"])
@@ -3963,91 +3965,7 @@ def get_authenticated_user():
             finally:
                 conn.close()
 
-        # ============ ADMIN: COMPANY INTELLIGENCE ============
-        @self.app.route("/api/admin/companies", methods=["GET"])
-        @admin_required
-        def admin_get_companies():
-            """Aggregate visitors by organization — who's actually visiting."""
-            try:
-                limit = min(request.args.get("limit", 50, type=int), 200)
-                days = min(request.args.get("days", 30, type=int), 365)
 
-                conn = db.get_db_connection()
-                c = conn.cursor()
-
-                rows = c.execute("""
-                    SELECT
-                        COALESCE(v.org_name, '(unresolved)') AS org_name,
-                        v.asn,
-                        v.ip_kind,
-                        COUNT(*)                              AS visit_count,
-                        COUNT(DISTINCT v.ip_address)          AS unique_ips,
-                        COUNT(DISTINCT v.visitor_name)        AS unique_users,
-                        MIN(v.visited_at)                     AS first_seen,
-                        MAX(v.visited_at)                     AS last_seen,
-                        GROUP_CONCAT(DISTINCT v.country)      AS countries
-                    FROM visitors v
-                    WHERE v.visited_at >= datetime('now', ?)
-                    GROUP BY COALESCE(v.org_name, '(unresolved)'), v.asn, v.ip_kind
-                    ORDER BY visit_count DESC
-                    LIMIT ?
-                """, (f"-{days} days", limit)).fetchall()
-
-                conn.close()
-                return jsonify({
-                    "success": True,
-                    "companies": [dict(r) for r in rows],
-                    "window_days": days,
-                })
-            except Exception as e:
-                logger.error(f"Company intel query failed: {e}")
-                return jsonify({"success": False, "error": str(e)}), 500
-
-
-        @self.app.route("/api/admin/companies/<path:ip>/resolve", methods=["POST"])
-        @admin_required
-        def admin_resolve_ip(ip):
-            """Force a fresh lookup for one IP (admin 'refresh' button)."""
-            info = IPIntel.lookup(ip, force=True)
-            if not info:
-                return jsonify({"success": False, "error": "Could not resolve this IP"}), 404
-            return jsonify({"success": True, "intel": info})
-
-
-        @self.app.route("/api/admin/bots/summary", methods=["GET"])
-        @admin_required
-        def admin_bot_summary():
-            """How much of your traffic is bots vs humans, and which bots."""
-            try:
-                conn = db.get_db_connection()
-                c = conn.cursor()
-
-                totals = c.execute("""
-                    SELECT
-                        SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_visits,
-                        SUM(CASE WHEN is_bot = 0 OR is_bot IS NULL THEN 1 ELSE 0 END) AS human_visits,
-                        COUNT(*) AS total_visits
-                    FROM visitors
-                    WHERE visited_at >= datetime('now', '-30 days')
-                """).fetchone()
-
-                bots = c.execute("""
-                    SELECT COALESCE(bot_name, 'Unknown bot') AS bot_name, COUNT(*) AS count
-                    FROM visitors
-                    WHERE is_bot = 1 AND visited_at >= datetime('now', '-30 days')
-                    GROUP BY bot_name
-                    ORDER BY count DESC
-                    LIMIT 25
-                """).fetchall()
-
-                conn.close()
-                return jsonify({
-                    "success": True,
-                    "totals": dict(totals) if totals else {},
-                    "by_bot": [dict(b) for b in bots],
-                })
-            except Exception as e:
-                return jsonify({"success": False, "error": str(e)}), 500
 
 def login_required(func):
     @wraps(func)
@@ -16360,6 +16278,96 @@ web_app = ReloadlyWebApp(_credentials)
 app = web_app.app  # <-- this is what `gunicorn main:app` binds to
 # ============================================================
 
+# ============================================================
+# LATE ROUTE REGISTRATION — Company Intelligence
+# ------------------------------------------------------------
+# Module-level: registered after `app = web_app.app` so the
+# decorators are guaranteed to run at import time, before Flask
+# starts serving. Inside setup_routes() the decorator @app.route
+# would raise NameError (only self.app is in scope there), which
+# was silently swallowing these registrations.
+# ============================================================
+from flask import request as _flask_request, jsonify as _flask_jsonify
+
+
+@app.route("/api/admin/companies", methods=["GET"])
+@admin_required
+def _admin_get_companies():
+    """Aggregate visitors by organization — who's actually visiting."""
+    try:
+        _limit = min(_flask_request.args.get("limit", 50, type=int), 200)
+        _days = min(_flask_request.args.get("days", 30, type=int), 365)
+        _conn = db.get_db_connection()
+        _c = _conn.cursor()
+        _rows = _c.execute("""
+            SELECT
+                COALESCE(v.org_name, '(unresolved)') AS org_name,
+                v.asn,
+                v.ip_kind,
+                COUNT(*)                              AS visit_count,
+                COUNT(DISTINCT v.ip_address)          AS unique_ips,
+                COUNT(DISTINCT v.visitor_name)        AS unique_users,
+                MIN(v.visited_at)                     AS first_seen,
+                MAX(v.visited_at)                     AS last_seen,
+                GROUP_CONCAT(DISTINCT v.country)      AS countries
+            FROM visitor_logs v
+            WHERE v.visited_at >= datetime('now', ?)
+            GROUP BY COALESCE(v.org_name, '(unresolved)'), v.asn, v.ip_kind
+            ORDER BY visit_count DESC
+            LIMIT ?
+        """, (f"-{_days} days", _limit)).fetchall()
+        _conn.close()
+        return _flask_jsonify({
+            "success": True,
+            "companies": [dict(r) for r in _rows],
+            "window_days": _days,
+        })
+    except Exception as _e:
+        logger.error(f"Company intel query failed: {_e}")
+        return _flask_jsonify({"success": False, "error": str(_e)}), 500
+
+
+@app.route("/api/admin/companies/<path:ip>/resolve", methods=["POST"])
+@admin_required
+def _admin_resolve_ip(ip):
+    """Force a fresh lookup for one IP."""
+    _info = IPIntel.lookup(ip, force=True)
+    if not _info:
+        return _flask_jsonify({"success": False, "error": "Could not resolve this IP"}), 404
+    return _flask_jsonify({"success": True, "intel": _info})
+
+
+@app.route("/api/admin/bots/summary", methods=["GET"])
+@admin_required
+def _admin_bot_summary():
+    """Bot vs human traffic summary."""
+    try:
+        _conn = db.get_db_connection()
+        _c = _conn.cursor()
+        _totals = _c.execute("""
+            SELECT
+                SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bot_visits,
+                SUM(CASE WHEN is_bot = 0 OR is_bot IS NULL THEN 1 ELSE 0 END) AS human_visits,
+                COUNT(*) AS total_visits
+            FROM visitor_logs
+            WHERE visited_at >= datetime('now', '-30 days')
+        """).fetchone()
+        _bots = _c.execute("""
+            SELECT COALESCE(bot_name, 'Unknown bot') AS bot_name, COUNT(*) AS count
+            FROM visitor_logs
+            WHERE is_bot = 1 AND visited_at >= datetime('now', '-30 days')
+            GROUP BY bot_name
+            ORDER BY count DESC
+            LIMIT 25
+        """).fetchall()
+        _conn.close()
+        return _flask_jsonify({
+            "success": True,
+            "totals": dict(_totals) if _totals else {},
+            "by_bot": [dict(b) for b in _bots],
+        })
+    except Exception as _e:
+        return _flask_jsonify({"success": False, "error": str(_e)}), 500
 
 def main():
     print("\n" + "=" * 60)
