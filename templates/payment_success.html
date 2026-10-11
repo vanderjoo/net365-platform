@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payment Successful · Net365</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<style>
+  :root {
+    --bg: #07111f;
+    --panel: #0d1829;
+    --text: #f5f7fb;
+    --muted: #94a3b8;
+    --green: #22c55e;
+    --line: rgba(148,163,184,.15);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(900px 500px at 80% -10%, rgba(255,109,0,.14), transparent 60%),
+      radial-gradient(700px 500px at 0% 30%, rgba(53,217,255,.10), transparent 60%),
+      linear-gradient(160deg,#05080f,#0a1423 60%,#05080f);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .page {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── Success banner ────────────────────────────── */
+  .success-banner {
+    background: linear-gradient(135deg,#0e2a1a,#14532d 60%,#0e2a1a);
+    border: 1px solid rgba(34,197,94,.3);
+    border-radius: 22px;
+    padding: 28px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.03) inset;
+    animation: pop .5s cubic-bezier(.2,.9,.3,1.2);
+  }
+  @keyframes pop { from { transform:scale(.94); opacity:0; } to { transform:scale(1); opacity:1; } }
+  .check {
+    width: 68px; height: 68px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #4ade80, #16a34a);
+    display: grid; place-items: center;
+    margin: 0 auto 14px;
+    font-size: 34px; color: #fff;
+    box-shadow: 0 12px 40px rgba(34,197,94,.45), 0 0 0 8px rgba(34,197,94,.08);
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+  @keyframes pulseGlow {
+    0%,100% { box-shadow: 0 12px 40px rgba(34,197,94,.45), 0 0 0 8px rgba(34,197,94,.08); }
+    50%     { box-shadow: 0 12px 40px rgba(34,197,94,.65), 0 0 0 14px rgba(34,197,94,.04); }
+  }
+  .success-banner h1 { font-size: 22px; margin-bottom: 6px; letter-spacing: -.02em; }
+  .success-banner p { color: #bbf7d0; font-size: 14px; }
+  .success-banner .ref {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.25);
+    font-family: ui-monospace, 'Courier New', monospace;
+    font-size: 12px;
+    color: #d1fae5;
+  }
+
+  /* ── Receipt summary ──────────────────────────── */
+  .summary {
+    background: rgba(15,23,42,.72);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 20px 22px;
+    backdrop-filter: blur(14px);
+  }
+  .summary h2 {
+    font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .12em;
+    color: var(--muted); margin-bottom: 14px;
+  }
+  .summary-row {
+    display: flex; justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .summary-row:last-child { border-bottom: none; font-weight: 700; font-size: 16px; }
+  .summary-row .label { color: var(--muted); }
+  .summary-row .value { color: #fff; font-weight: 600; }
+
+  /* ── Ad card (hero) ──────────────────────────── */
+  .ad-card {
+    background: var(--ad-bg, #0b1735);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 22px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.04) inset;
+    animation: fadeUp .6s .15s both;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  .ad-card .sponsored-tag {
+    position: absolute; top: 14px; left: 14px;
+    background: rgba(0,0,0,.4);
+    backdrop-filter: blur(8px);
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 10px; font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #cbd5e1;
+    z-index: 2;
+  }
+  .ad-hero {
+    width: 100%;
+    aspect-ratio: 16/8;
+    background: linear-gradient(135deg, rgba(0,0,0,.4), rgba(0,0,0,.05));
+    background-size: cover;
+    background-position: center;
+    position: relative;
+  }
+  .ad-hero::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 45%, var(--ad-bg, #0b1735) 100%);
+  }
+  .ad-content { padding: 0 26px 26px; margin-top: -20px; position: relative; z-index: 1; }
+  .ad-logo {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    background: var(--ad-accent, #4f8cff);
+    display: grid; place-items: center;
+    font-size: 24px; color: #fff;
+    margin-bottom: 14px;
+    box-shadow: 0 10px 26px rgba(0,0,0,.35);
+    overflow: hidden;
+  }
+  .ad-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .ad-headline {
+    font-size: 24px;
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    margin-bottom: 8px;
+    color: var(--ad-text, #fff);
+  }
+  .ad-sub {
+    font-size: 15px;
+    color: var(--ad-text, #fff);
+    opacity: .82;
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .ad-body {
+    font-size: 14px;
+    color: var(--ad-text, #fff);
+    opacity: .7;
+    line-height: 1.65;
+    margin-bottom: 20px;
+  }
+  .ad-ctas { display: flex; flex-wrap: wrap; gap: 10px; }
+  .ad-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 24px;
+    border-radius: 14px;
+    background: var(--ad-accent, #4f8cff);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 14px;
+    border: none; cursor: pointer;
+    box-shadow: 0 10px 26px rgba(0,0,0,.3);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .ad-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(0,0,0,.4); }
+  .ad-cta.secondary {
+    background: rgba(255,255,255,.08);
+    color: var(--ad-text, #fff);
+    border: 1px solid rgba(255,255,255,.14);
+    box-shadow: none;
+  }
+  .ad-cta.secondary:hover { background: rgba(255,255,255,.14); }
+
+  /* ── Footer actions ──────────────────────────── */
+  .footer-actions {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 22px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--line);
+    color: #cbd5e1;
+    text-decoration: none;
+    font-weight: 600; font-size: 13px;
+    cursor: pointer; transition: all .2s;
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px;
+    border-radius: 14px;
+    background: linear-gradient(135deg,#e53935,#ff6d00);
+    color: #fff; text-decoration: none;
+    font-weight: 700; font-size: 13px;
+    border: none; cursor: pointer;
+    box-shadow: 0 12px 28px rgba(229,57,53,.3);
+    transition: transform .2s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); }
+
+  /* ── Confetti (CSS) ──────────────────────────── */
+  .confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .confetti span {
+    position: absolute; top: -20px;
+    width: 8px; height: 14px;
+    opacity: .9;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+  }
+
+  @media (max-width: 480px) {
+    .ad-headline { font-size: 20px; }
+    .ad-hero { aspect-ratio: 16/10; }
+    .success-banner { padding: 22px 18px; }
+    .summary { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="confetti" id="confetti"></div>
+
+<div class="page">
+
+  <!-- ── SUCCESS BANNER ────────────────────────── -->
+  <div class="success-banner">
+    <div class="check">✓</div>
+    <h1>Payment Successful</h1>
+    <p>Your transaction is being processed. A receipt is on its way.</p>
+    {% if reference %}
+      <div class="ref">Reference: {{ reference }}</div>
+    {% endif %}
+  </div>
+
+  <!-- ── RECEIPT SUMMARY ─────────────────────── -->
+  {% if tx %}
+  <div class="summary">
+    <h2>Transaction Details</h2>
+    <div class="summary-row">
+      <span class="label">Amount</span>
+      <span class="value">{{ tx.currency or 'NGN' }} {{ '%.2f'|format(tx.amount or 0) }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="label">Type</span>
+      <span class="value">{{ (tx.tx_type or 'payment')|replace('_',' ')|title }}</span>
+    </div>
+    <div class="summary-row">
+      <span class="label">Status</span>
+      <span class="value" style="color: {% if result.success %}#4ade80{% else %}#fbbf24{% endif %};">
+        {% if result.success %}Completed{% else %}Processing{% endif %}
+      </span>
+    </div>
+    {% if tx.payload and tx.payload.get('phone') %}
+    <div class="summary-row">
+      <span class="label">Phone</span>
+      <span class="value">{{ tx.payload.phone }}</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── HERO AD ──────────────────────────────── -->
+  {% if ad %}
+  <div class="ad-card"
+       style="--ad-bg: {{ ad.background_color or '#0b1735' }};
+              --ad-accent: {{ ad.accent_color or '#4f8cff' }};
+              --ad-text: {{ ad.text_color or '#ffffff' }};"
+       data-ad-id="{{ ad.id }}">
+
+    {% if ad.sponsored %}
+      <span class="sponsored-tag">Sponsored</span>
+    {% endif %}
+
+    {% if ad.image_url %}
+      <div class="ad-hero" style="background-image: url('{{ ad.image_url }}');"></div>
+    {% else %}
+      <div class="ad-hero"></div>
+    {% endif %}
+
+    <div class="ad-content">
+      <div class="ad-logo">
+        {% if ad.logo_url %}
+          <img src="{{ ad.logo_url }}" alt="{{ ad.advertiser_name or 'Brand' }}" />
+        {% else %}
+          <i class="fas fa-star"></i>
+        {% endif %}
+      </div>
+
+      <div class="ad-headline">{{ ad.headline }}</div>
+
+      {% if ad.subheadline %}
+        <div class="ad-sub">{{ ad.subheadline }}</div>
+      {% endif %}
+
+      {% if ad.body %}
+        <div class="ad-body">{{ ad.body }}</div>
+      {% endif %}
+
+      <div class="ad-ctas">
+        {% if ad.cta_text %}
+          <a href="#" class="ad-cta" data-cta="primary"
+             data-url="{{ ad.cta_url or '' }}"
+             data-action="{{ ad.cta_action or '' }}">
+            {{ ad.cta_text }} <i class="fas fa-arrow-right"></i>
+          </a>
+        {% endif %}
+        {% if ad.secondary_cta_text %}
+          <a href="#" class="ad-cta secondary" data-cta="secondary"
+             data-url="{{ ad.secondary_cta_url or '' }}">
+            {{ ad.secondary_cta_text }}
+          </a>
+        {% endif %}
+      </div>
+
+      {% if ad.advertiser_name %}
+        <div style="margin-top:18px;font-size:11px;color:var(--ad-text);opacity:.5;">
+          From {{ ad.advertiser_name }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── FOOTER ACTIONS ───────────────────────── -->
+  <div class="footer-actions">
+    <a href="{{ frontend_url }}/" class="btn-primary">
+      <i class="fas fa-home"></i> Back to Dashboard
+    </a>
+    <a href="/receipt/{{ reference }}" class="btn-ghost">
+      <i class="fas fa-file-pdf"></i> Download Receipt
+    </a>
+    <a href="{{ frontend_url }}/scheduler" class="btn-ghost">
+      <i class="fas fa-calendar-check"></i> Schedule Again
+    </a>
+  </div>
+
+</div>
+
+<script>
+  // Confetti burst  (function () {
+    const colors = ['#22c55e','#4f8cff','#f59e0b','#ec4899','#8b5cf6','#06b6d4'];
+    const c = document.getElementById('confetti');
+    for (let i = 0; i < 60; i++) {
+      const s = document.createElement('span');
+      s.style.left = Math.random() * 100 + '%';
+      s.style.background = colors[Math.floor(Math.random() * colors.length)];
+      s.style.animationDuration = (2.2 + Math.random() * 2) + 's';
+      s.style.animationDelay = (Math.random() * 0.8) + 's';
+      c.appendChild(s);
+    }
+    setTimeout(() => c.remove(), 6000);
+  })();
+
+  // Ad click tracking + navigation
+  document.querySelectorAll('.ad-cta').forEach(el => {
+    el.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const adCard = el.closest('.ad-card');
+      const adId = adCard?.dataset.adId;
+      const event = el.dataset.cta === 'primary' ? 'click' : 'secondary_click';
+
+      try {
+        await fetch(`/api/success-ad/${adId}/click`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: event,
+            reference: '{{ reference }}',
+          }),
+        });
+      } catch (_) {}
+
+      const action = el.dataset.action;
+      const url = el.dataset.url;
+
+      if (action === 'utilities') { window.location.href = '{{ frontend_url }}/utilities'; return; }
+      if (action === 'wallet')    { window.location.href = '{{ frontend_url }}/?action=add_money'; return; }
+      if (action === 'referral')  { window.location.href = '{{ frontend_url }}/?action=referral'; return; }
+
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    });
+  });
+</script>
+</body>
+</html>
