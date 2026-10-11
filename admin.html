@@ -448,6 +448,9 @@
                 <button class="admin-tab" data-tab="promotions" onclick="switchTab('promotions')">
                     <i class="fas fa-megaphone"></i> Promotions <span class="badge" id="promoCount">0</span>
                 </button>
+                <button class="admin-tab" data-tab="success-ads" onclick="switchTab('success-ads')">
+                    <i class="fas fa-image"></i> Success Page Ads
+                </button>                
                 <button class="admin-tab" data-tab="brands" onclick="switchTab('brands')">
                     <i class="fas fa-palette"></i> Brand Colors
                 </button>
@@ -693,7 +696,22 @@
                     <div id="referralRedemptionsList"></div>
                 </div>
             </div>
-
+            <!-- TAB: SUCCESS PAGE ADS -->
+            <div class="tab-panel" id="tab-success-ads">
+                <div class="panel">
+                    <h3><i class="fas fa-image"></i> Payment Success Page Ads</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                        Full-screen advertisements shown to users after a successful payment — from
+                        both the desktop dashboard and the mobile app. Separate from receipt ads.
+                    </p>
+                    <button class="btn btn-primary" onclick="showCreateSuccessAdModal()">
+                        <i class="fas fa-plus"></i> Create Success Ad
+                    </button>
+                    <div style="margin-top:16px;" id="successAdsList">
+                        <div class="empty-state">Loading success-page ads...</div>
+                    </div>
+                </div>
+            </div>
             <!-- TAB: BONUS/COMMISSION -->
             <div class="tab-panel" id="tab-bonus">
                 <div class="panel">
@@ -1129,7 +1147,153 @@
             </form>
         </div>
     </div>
+    <!-- SUCCESS PAGE AD MODAL -->
+    <div class="modal-overlay" id="successAdModal">
+        <div class="modal-content" style="max-width:720px;">
+            <div class="modal-header">
+                <h2 id="successAdModalTitle">Create Success Page Ad</h2>
+                <button class="modal-close" onclick="closeModal('successAdModal')">✕</button>
+            </div>
+            <form id="successAdForm" onsubmit="saveSuccessAd(event)">
 
+                <h4 style="font-size:13px;margin:8px 0;">📝 Content</h4>
+                <div class="form-group">
+                    <label>Internal Name *</label>
+                    <input type="text" id="successAdName" required placeholder="e.g. Refer-a-friend banner" />
+                    <span class="form-hint">Only visible to admins</span>
+                </div>
+                <div class="form-group">
+                    <label>Headline *</label>
+                    <input type="text" id="successAdHeadline" required maxlength="80" placeholder="Refer a friend, earn ₦500" />
+                </div>
+                <div class="form-group">
+                    <label>Subheadline</label>
+                    <input type="text" id="successAdSubheadline" maxlength="160" placeholder="Both of you get rewarded" />
+                </div>
+                <div class="form-group">
+                    <label>Body Text</label>
+                    <textarea id="successAdBody" maxlength="400" placeholder="Detailed message shown under the headline"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Hero Image URL</label>
+                        <input type="text" id="successAdImageUrl" placeholder="https://..." />
+                    </div>
+                    <div class="form-group">
+                        <label>Logo URL</label>
+                        <input type="text" id="successAdLogoUrl" placeholder="https://..." />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Primary CTA Text</label>
+                        <input type="text" id="successAdCtaText" placeholder="Continue" />
+                    </div>
+                    <div class="form-group">
+                        <label>Primary CTA URL</label>
+                        <input type="text" id="successAdCtaUrl" placeholder="https://..." />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Secondary CTA Text</label>
+                        <input type="text" id="successAdSecondaryCtaText" placeholder="Later" />
+                    </div>
+                    <div class="form-group">
+                        <label>Secondary CTA URL</label>
+                        <input type="text" id="successAdSecondaryCtaUrl" placeholder="https://..." />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Advertiser Name</label>
+                    <input type="text" id="successAdAdvertiserName" placeholder="e.g. Net365" />
+                </div>
+
+                <h4 style="font-size:13px;margin:16px 0 8px;">🎨 Appearance</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Background Color</label>
+                        <input type="color" id="successAdBackgroundColor" value="#0b1735" />
+                    </div>
+                    <div class="form-group">
+                        <label>Accent Color</label>
+                        <input type="color" id="successAdAccentColor" value="#4f8cff" />
+                    </div>
+                    <div class="form-group">
+                        <label>Text Color</label>
+                        <input type="color" id="successAdTextColor" value="#ffffff" />
+                    </div>
+                </div>
+
+                <h4 style="font-size:13px;margin:16px 0 8px;">🎯 Targeting (all optional)</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Transaction Type</label>
+                        <select id="successAdTargetTxType">
+                            <option value="">Any</option>
+                            <option value="topup">Top-up</option>
+                            <option value="utility">Utility</option>
+                            <option value="wallet_funding">Wallet Funding</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Country (ISO code)</label>
+                        <input type="text" id="successAdTargetCountry" maxlength="2" placeholder="NG" style="text-transform:uppercase;" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Device</label>
+                        <select id="successAdTargetDevice">
+                            <option value="">Any device</option>
+                            <option value="Mobile">Mobile only</option>
+                            <option value="Desktop">Desktop only</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority (higher wins)</label>
+                        <input type="number" id="successAdPriority" value="0" min="0" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Min Amount</label>
+                        <input type="number" id="successAdTargetMinAmount" placeholder="e.g. 1000" min="0" />
+                    </div>
+                    <div class="form-group">
+                        <label>Max Amount</label>
+                        <input type="number" id="successAdTargetMaxAmount" placeholder="e.g. 100000" min="0" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Max Impressions</label>
+                        <input type="number" id="successAdMaxImpressions" placeholder="Leave blank for unlimited" min="0" />
+                    </div>
+                    <div class="form-group">
+                        <label>Max Clicks</label>
+                        <input type="number" id="successAdMaxClicks" placeholder="Leave blank for unlimited" min="0" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="successAdSponsored" /> Show "Sponsored" tag
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="successAdActive" checked /> Active
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">
+                    <i class="fas fa-save"></i> Save Success Ad
+                </button>
+                <div id="successAdStatus" style="margin-top:12px;"></div>
+            </form>
+        </div>
+    </div>
     <!-- ========== CREATE/EDIT PROMOTION MODAL (Enhanced) ========== -->
     <div class="modal-overlay" id="promoModal">
         <div class="modal-content" style="max-width:700px;">
@@ -1653,6 +1817,7 @@
             if (tab === 'transactions') loadAdminTransactions();
             if (tab === 'promos') loadPromos();
             if (tab === 'chat') { loadChatConversations(); startAdminChatPolling(); }
+            if (tab === 'success-ads') loadSuccessAds();
         }
 
         // ============================================
@@ -3812,6 +3977,209 @@ Payload: ${JSON.stringify(tx.payload || {}, null, 2)}
                 showToast(e.message, 'error');
             }
         }
+        // ============================================
+        // SUCCESS PAGE ADS
+        // ============================================
+        async function loadSuccessAds() {
+            const container = document.getElementById('successAdsList');
+            try {
+                const data = await adminFetch('/api/admin/success-ads?limit=100');
+                if (!data.success || !data.ads || data.ads.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No success-page ads yet.</div>';
+                    return;
+                }
+                container.innerHTML = data.ads.map(a => `
+                    <div class="ad-campaign-item" style="${a.active ? '' : 'opacity:.5;'}">
+                        <div class="ad-title">
+                            ${escapeHtml(a.headline)}
+                            <span class="badge ${a.active ? 'badge-success' : 'badge-danger'}">
+                                ${a.active ? 'Active' : 'Inactive'}
+                            </span>
+                            ${a.sponsored ? '<span class="badge badge-info">Sponsored</span>' : ''}
+                            <span class="badge badge-warning">Priority ${a.priority || 0}</span>
+                        </div>
+                        <div class="ad-body">${escapeHtml(a.subheadline || a.body || '')}</div>
+                        <div class="ad-meta">
+                            <span>📊 ${(a.impressions_used || 0).toLocaleString()}/${a.max_impressions ? a.max_impressions.toLocaleString() : '∞'} impressions</span>
+                            <span>🖱️ ${(a.clicks_used || 0).toLocaleString()} clicks</span>
+                            ${a.target_tx_type ? `<span>🎯 ${a.target_tx_type}</span>` : ''}
+                            ${a.target_country ? `<span>🌍 ${a.target_country}</span>` : ''}
+                            ${a.target_device ? `<span>📱 ${a.target_device}</span>` : ''}
+                        </div>
+                        <div class="ad-actions">
+                            <button class="btn btn-sm btn-primary" onclick="editSuccessAd(${a.id})">Edit</button>
+                            <button class="btn btn-sm ${a.active ? 'btn-warning' : 'btn-success'}"
+                                    onclick="toggleSuccessAd(${a.id}, ${a.active ? 0 : 1})">
+                                ${a.active ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteSuccessAd(${a.id})">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state">Failed to load ads</div>';
+            }
+        }
+
+        let successAdEditId = null;
+
+        function showCreateSuccessAdModal() {
+            successAdEditId = null;
+            document.getElementById('successAdModalTitle').textContent = 'Create Success Page Ad';
+            ['successAdName','successAdHeadline','successAdSubheadline','successAdBody',
+             'successAdImageUrl','successAdLogoUrl','successAdCtaText','successAdCtaUrl',
+             'successAdSecondaryCtaText','successAdSecondaryCtaUrl','successAdAdvertiserName',
+             'successAdTargetTxType','successAdTargetCountry','successAdTargetMinAmount',
+             'successAdTargetMaxAmount','successAdMaxImpressions','successAdMaxClicks']
+                .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
+            document.getElementById('successAdBackgroundColor').value = '#0b1735';
+            document.getElementById('successAdAccentColor').value = '#4f8cff';
+            document.getElementById('successAdTextColor').value = '#ffffff';
+            document.getElementById('successAdPriority').value = '0';
+            document.getElementById('successAdCtaText').value = 'Continue';
+            document.getElementById('successAdTargetDevice').value = '';
+            document.getElementById('successAdSponsored').checked = false;
+            document.getElementById('successAdActive').checked = true;
+            document.getElementById('successAdStatus').innerHTML = '';
+
+            openModal('successAdModal');
+        }
+
+        async function editSuccessAd(id) {
+            try {
+                const data = await adminFetch(`/api/admin/success-ads/${id}`);
+                if (!data.success || !data.ad) {
+                    showToast('Ad not found', 'error');
+                    return;
+                }
+                const a = data.ad;
+                successAdEditId = id;
+                document.getElementById('successAdModalTitle').textContent = 'Edit Success Page Ad';
+                document.getElementById('successAdName').value = a.name || '';
+                document.getElementById('successAdHeadline').value = a.headline || '';
+                document.getElementById('successAdSubheadline').value = a.subheadline || '';
+                document.getElementById('successAdBody').value = a.body || '';
+                document.getElementById('successAdImageUrl').value = a.image_url || '';
+                document.getElementById('successAdLogoUrl').value = a.logo_url || '';
+                document.getElementById('successAdCtaText').value = a.cta_text || 'Continue';
+                document.getElementById('successAdCtaUrl').value = a.cta_url || '';
+                document.getElementById('successAdSecondaryCtaText').value = a.secondary_cta_text || '';
+                document.getElementById('successAdSecondaryCtaUrl').value = a.secondary_cta_url || '';
+                document.getElementById('successAdAdvertiserName').value = a.advertiser_name || '';
+                document.getElementById('successAdBackgroundColor').value = a.background_color || '#0b1735';
+                document.getElementById('successAdAccentColor').value = a.accent_color || '#4f8cff';
+                document.getElementById('successAdTextColor').value = a.text_color || '#ffffff';
+                document.getElementById('successAdPriority').value = a.priority || 0;
+                document.getElementById('successAdTargetTxType').value = a.target_tx_type || '';
+                document.getElementById('successAdTargetCountry').value = a.target_country || '';
+                document.getElementById('successAdTargetMinAmount').value = a.target_min_amount ?? '';
+                document.getElementById('successAdTargetMaxAmount').value = a.target_max_amount ?? '';
+                document.getElementById('successAdTargetDevice').value = a.target_device || '';
+                document.getElementById('successAdMaxImpressions').value = a.max_impressions ?? '';
+                document.getElementById('successAdMaxClicks').value = a.max_clicks ?? '';
+                document.getElementById('successAdSponsored').checked = !!a.sponsored;
+                document.getElementById('successAdActive').checked = !!a.active;
+                document.getElementById('successAdStatus').innerHTML = '';
+                openModal('successAdModal');
+            } catch (e) {
+                showToast('Failed to load ad: ' + e.message, 'error');
+            }
+        }
+
+        async function saveSuccessAd(event) {
+            event.preventDefault();
+            const status = document.getElementById('successAdStatus');
+            const name = document.getElementById('successAdName').value.trim();
+            const headline = document.getElementById('successAdHeadline').value.trim();
+            if (!name || !headline) {
+                status.innerHTML = '<span style="color:#ef4444;">Name and headline are required.</span>';
+                return;
+            }
+
+            const num = (id) => {
+                const v = document.getElementById(id).value;
+                return v === '' ? null : parseFloat(v);
+            };
+            const int = (id) => {
+                const v = document.getElementById(id).value;
+                return v === '' ? null : parseInt(v, 10);
+            };
+
+            const payload = {
+                name,
+                headline,
+                subheadline: document.getElementById('successAdSubheadline').value.trim() || null,
+                body: document.getElementById('successAdBody').value.trim() || null,
+                image_url: document.getElementById('successAdImageUrl').value.trim() || null,
+                logo_url: document.getElementById('successAdLogoUrl').value.trim() || null,
+                cta_text: document.getElementById('successAdCtaText').value.trim() || 'Continue',
+                cta_url: document.getElementById('successAdCtaUrl').value.trim() || null,
+                secondary_cta_text: document.getElementById('successAdSecondaryCtaText').value.trim() || null,
+                secondary_cta_url: document.getElementById('successAdSecondaryCtaUrl').value.trim() || null,
+                advertiser_name: document.getElementById('successAdAdvertiserName').value.trim() || null,
+                background_color: document.getElementById('successAdBackgroundColor').value,
+                accent_color: document.getElementById('successAdAccentColor').value,
+                text_color: document.getElementById('successAdTextColor').value,
+                priority: int('successAdPriority') || 0,
+                target_tx_type: document.getElementById('successAdTargetTxType').value || null,
+                target_country: document.getElementById('successAdTargetCountry').value.trim().toUpperCase() || null,
+                target_min_amount: num('successAdTargetMinAmount'),
+                target_max_amount: num('successAdTargetMaxAmount'),
+                target_device: document.getElementById('successAdTargetDevice').value || null,
+                max_impressions: int('successAdMaxImpressions'),
+                max_clicks: int('successAdMaxClicks'),
+                sponsored: document.getElementById('successAdSponsored').checked,
+                active: document.getElementById('successAdActive').checked,
+            };
+
+            status.innerHTML = '<span style="color:var(--text-secondary);">Saving...</span>';
+
+            try {
+                const url = successAdEditId
+                    ? `/api/admin/success-ads/${successAdEditId}`
+                    : `/api/admin/success-ads`;
+                const method = successAdEditId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    status.innerHTML = '<span style="color:#22c55e;">Saved successfully!</span>';
+                    showToast(successAdEditId ? 'Ad updated!' : 'Ad created!', 'success');
+                    setTimeout(() => {
+                        closeModal('successAdModal');
+                        loadSuccessAds();
+                    }, 600);
+                } else {
+                    status.innerHTML = `<span style="color:#ef4444;">${data.error || 'Failed to save'}</span>`;
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
+            }
+        }
+        async function toggleSuccessAd(id, active) {
+            const res = await fetch(`/api/admin/success-ads/${id}`, {
+                method: 'PUT',
+                headers: { 'X-Admin-Secret': adminSecret, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ active: !!active })
+            });
+            const data = await res.json();
+            if (data.success) { showToast('Updated', 'success'); loadSuccessAds(); }
+        }
+        async function deleteSuccessAd(id) {
+            if (!confirm('Delete this success-page ad?')) return;
+            const res = await fetch(`/api/admin/success-ads/${id}`, {
+                method: 'DELETE',
+                headers: { 'X-Admin-Secret': adminSecret }
+            });
+            const data = await res.json();
+            if (data.success) { showToast('Deleted', 'success'); loadSuccessAds(); }
+        }
+
 
         // ============================================
         // LIVE SUPPORT / CUSTOMER CHAT
