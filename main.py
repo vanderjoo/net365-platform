@@ -3725,15 +3725,6 @@ def get_authenticated_user():
         return None
 
 
-        # contact Imports
-
-        # ============ CONTACT IMPORT ROUTE ============
-        # ============ CONTACT IMPORT ROUTE - FIXED ============
-        # ============ CONTACT IMPORT ROUTE ============
-        # ============ CONTACT IMPORT ROUTE - FIXED ============
-# This should be at the SAME indentation level as other @self.app.route decorators
-# inside setup_routes()
-
 
                 
                 
@@ -7082,6 +7073,7 @@ class ReloadlyWebApp:
         self.app.config["SESSION_COOKIE_PATH"] = "/"
 
         db.init_db()
+        db.ensure_success_page_ads_schema()
         # ---- IP intelligence (org / ASN / bot detection) ----
         IPIntel.ensure_schema(db.get_db_connection)
         IPIntel.start_worker()
@@ -7090,7 +7082,24 @@ class ReloadlyWebApp:
         # The module is deployed alongside app.py; ad failures must never affect payments.
         try:
             from net365_ads_backend import ads_bp, init_ads_db
-            ads_db_path = os.getenv("NET365_DB_PATH", "/mnt/data/net365.db")
+
+            # Path resolution:
+            #   1. NET365_DB_PATH env var, if set — this is what production
+            #      (Railway) uses, pointing at the mounted persistent volume
+            #      (/mnt/data/net365.db).
+            #   2. Otherwise, fall back to a net365.db sitting next to this
+            #      file — which is correct on any developer machine
+            #      (Windows, macOS, Linux) with no env configuration needed.
+            #
+            # The old hardcoded "/mnt/data/net365.db" default was Linux-only:
+            # on Windows that directory doesn't exist, so SQLite raised
+            # "unable to open database file" every startup, and the Smart
+            # Media subsystem silently stayed offline on dev machines.
+            _default_ads_db = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "net365.db",
+            )
+            ads_db_path = os.getenv("NET365_DB_PATH", _default_ads_db)
             init_ads_db(ads_db_path)
             if "net365_ads" not in self.app.blueprints:
                 self.app.register_blueprint(ads_bp)
@@ -8369,6 +8378,150 @@ class ReloadlyWebApp:
         except Exception as e:
             logger.warning(f"Live chat schema initialization failed (non-fatal): {e}")
 
+        # ============ ADMIN: SUCCESS PAGE ADS ============
+        @self.app.route("/api/admin/success-ads", methods=["GET"])
+        @admin_required
+        def admin_list_success_ads():
+            limit = min(request.args.get("limit", 50, type=int), 200)
+            offset = max(request.args.get("offset", 0, type=int), 0)
+            ads = db.get_all_success_page_ads(limit, offset)
+            return jsonify({"success": True, "ads": ads})
+
+
+        @self.app.route("/api/admin/success-ads", methods=["POST"])
+        @admin_required
+        def admin_create_success_ad():
+            data = request.json or {}
+            if not data.get("name") or not data.get("headline"):
+                return jsonify({"success": False, "error": "Name and headline required"}), 400
+            ad_id = db.create_success_page_ad(
+                name=data["name"],
+                headline=data["headline"],
+                subheadline=data.get("subheadline"),
+                body=data.get("body"),
+                image_url=data.get("image_url"),
+                logo_url=data.get("logo_url"),
+                cta_text=data.get("cta_text", "Continue"),
+                cta_url=data.get("cta_url"),
+                cta_action=data.get("cta_action"),
+                background_color=data.get("background_color", "#0b1735"),
+                accent_color=data.get("accent_color", "#4f8cff"),
+                text_color=data.get("text_color", "#ffffff"),
+                secondary_cta_text=data.get("secondary_cta_text"),
+                secondary_cta_url=data.get("secondary_cta_url"),
+                advertiser_name=data.get("advertiser_name"),
+                sponsored=1 if data.get("sponsored") else 0,
+                active=1 if data.get("active", True) else 0,
+                priority=int(data.get("priority", 0)),
+                target_tx_type=data.get("target_tx_type"),
+                target_country=data.get("target_country"),
+                target_min_amount=data.get("target_min_amount"),
+                target_max_amount=data.get("target_max_amount"),
+                target_device=data.get("target_device"),
+                start_date=data.get("start_date"),
+                end_date=data.get("end_date"),
+                max_impressions=data.get("max_impressions"),
+                max_clicks=data.get("max_clicks"),
+                created_by=g.current_user.get("id") if hasattr(g, "current_user") else None,
+            )
+            if not ad_id:
+                return jsonify({"success": False, "error": "Failed to create ad"}), 500
+            return jsonify({"success": True, "ad_id": ad_id})
+
+
+        @self.app.route("/api/admin/success-ads/<int:ad_id>", methods=["GET"])
+        @admin_required
+        def admin_get_success_ad(ad_id):
+            ad = db.get_success_page_ad(ad_id)
+            if not ad:
+                return jsonify({"success": False, "error": "Ad not found"}), 404
+            ad["analytics"] = db.get_success_page_ad_analytics(ad_id)
+            return jsonify({"success": True, "ad": ad})
+
+
+        @self.app.route("/api/admin/success-ads/<int:ad_id>", methods=["PUT"])
+        @admin_required
+        def admin_update_success_ad(ad_id):
+            data = request.json or {}
+            if db.update_success_page_ad(ad_id, **data):
+                return jsonify({"success": True})
+            return jsonify({"success": False, "error": "Update failed"}), 500
+
+
+        @self.app.route("/api/admin/success-ads/<int:ad_id>", methods=["DELETE"])
+        @admin_required
+        def admin_delete_success_ad(ad_id):
+            if db.delete_success_page_ad(ad_id):
+                return jsonify({"success": True})
+            return jsonify({"success": False, "error": "Delete failed"}), 500
+            
+            
+        @self.app.route("/api/success-ads/recommend", methods=["POST"])
+        def recommend_success_ad():
+            """Return the best success-page ad for this transaction.
+
+            This is the mobile-friendly entry point. Mobile.html calls it after a
+            payment succeeds and renders the returned ad as a moment overlay.
+            """
+            try:
+                db.ensure_success_page_ads_schema()  # self-heal
+                data = request.get_json(silent=True) or {}
+                tx_type = data.get("tx_type")
+                amount = data.get("amount")
+                country = data.get("country")
+                device_type = parse_user_agent(request.headers.get("User-Agent", ""))["device_type"]
+
+                ad = db.select_success_page_ad(
+                    tx_type=tx_type,
+                    country=country,
+                    amount=float(amount) if amount else None,
+                    device_type=device_type or "Mobile",
+                )
+                if not ad:
+                    return jsonify({"success": True, "ad": None})
+
+                # Track impression server-side (fire once per request)
+                try:
+                    db.record_success_page_ad_event(
+                        ad["id"], "impression",
+                        reference=data.get("reference"),
+                        user_id=data.get("user_id"),
+                        device_type=device_type,
+                        country=country,
+                    )
+                except Exception as e:
+                    logger.warning(f"Impression tracking failed: {e}")
+
+                # Translate success_page_ads shape -> the shape mobile.html's renderSmartAd() expects
+                return jsonify({
+                    "success": True,
+                    "ad": {
+                        "id": f"spa-{ad['id']}",
+                        "type": "success_page_ad",
+                        "sponsored": bool(ad.get("sponsored")),
+                        "badge": "SPONSORED" if ad.get("sponsored") else "SMART OFFER",
+                        "accent": ad.get("accent_color") or "#7C3AED",
+                        "accent2": "#22D3EE",
+                        "icon": "fa-sparkles",
+                        "kicker": ad.get("subheadline") or "",
+                        "title": ad.get("headline") or "",
+                        "description": ad.get("body") or "",
+                        "offer_value": "",
+                        "offer_label": "",
+                        "cta": ad.get("cta_text") or "Continue",
+                        "landing_url": ad.get("cta_url") or "#",
+                        "image_url": ad.get("image_url") or "",
+                        "logo_url": ad.get("logo_url") or "",
+                        "footer": ad.get("advertiser_name") or "Net365",
+                        "action": ad.get("cta_action") or None,
+                        "campaign_id": ad["id"],
+                    },
+                })
+            except Exception as e:
+                logger.exception(f"recommend_success_ad failed: {e}")
+                return jsonify({"success": False, "error": str(e)}), 500            
+
+     
         @self.app.route("/api/chat/session", methods=["POST"])
         def chat_session():
             """Create/reuse a lightweight anonymous support conversation."""
@@ -9405,11 +9558,12 @@ class ReloadlyWebApp:
 
         @self.app.route("/payment/success")
         def payment_success():
-            # Whole body wrapped in try/except: this route MUST always redirect
-            # the user's browser somewhere, never return a raw Flask 500 page.
-            # Previously an exception here (DB errors, etc.) escaped uncaught and
-            # the user landed on an "Internal Server Error" page instead of the
-            # app, even when the underlying payment had already succeeded.
+            """Landing page after a successful gateway payment.
+
+            Renders a full-screen, ad-supported success page so the user can
+            confirm their payment, see the receipt, and view a rich advertiser
+            placement — separately configured from receipt ads.
+            """
             frontend_url = FRONTEND_URL
             reference = (
                 request.args.get("reference")
@@ -9422,15 +9576,13 @@ class ReloadlyWebApp:
 
                 logger.info(f"Payment success callback received: reference={reference}")
 
+                # Stripe returns cs_... — resolve to our internal reference
                 stripe_session_id = None
                 if reference.startswith("cs_") or reference.startswith("cs_test_"):
                     stripe_session_id = reference
                     tx = self._find_transaction_by_stripe_session(reference)
                     if tx:
                         reference = tx["reference"]
-                        logger.info(
-                            f"Found transaction {reference} for Stripe session {stripe_session_id}"
-                        )
                         try:
                             payload = tx.get("payload", {})
                             if isinstance(payload, str):
@@ -9443,38 +9595,83 @@ class ReloadlyWebApp:
                                 (json.dumps(payload), reference),
                             )
                             conn.commit()
-                            logger.info(
-                                f"Updated transaction {reference} with Stripe session ID {stripe_session_id}"
-                            )
                         except Exception as e:
-                            logger.error(
-                                f"Failed to update transaction with Stripe session ID: {e}"
-                            )
+                            logger.error(f"Failed to persist Stripe session ID: {e}")
 
-                result = self._finalize_transaction(reference)
+                # Finalize the transaction (idempotent — safe to re-run)
+                try:
+                    result = self._finalize_transaction(reference)
+                except Exception as e:
+                    logger.error(f"payment_success finalize error: {e}")
+                    result = {"success": False, "error": str(e)}
 
-                if result.get("success"):
-                    redirect_url = f"{frontend_url}/?status=success&reference={reference}"
-                    logger.info(f"Payment success - redirecting to: {redirect_url}")
-                else:
-                    redirect_url = (
-                        f"{frontend_url}/?status=processing&reference={reference}"
+                # Fetch transaction for the success page template
+                tx = db.get_transaction(reference) or {}
+                if tx.get("payload") and isinstance(tx["payload"], str):
+                    try:
+                        tx["payload"] = json.loads(tx["payload"])
+                    except Exception:
+                        pass
+
+                # Pick the best success-page ad for this transaction
+                ad = None
+                try:
+                    device_type = parse_user_agent(request.headers.get("User-Agent", ""))["device_type"]
+                    ad = db.select_success_page_ad(
+                        tx_type=tx.get("tx_type"),
+                        country=get_request_country(request),
+                        amount=float(tx.get("amount") or 0) or None,
+                        device_type=device_type,
                     )
-                    logger.info(f"Payment processing - redirecting to: {redirect_url}")
+                    if ad:
+                        db.record_success_page_ad_event(
+                            ad["id"], "impression",
+                            reference=reference,
+                            user_id=tx.get("user_id"),
+                            device_type=device_type,
+                            country=get_request_country(request),
+                        )
+                except Exception as e:
+                    logger.warning(f"Success-page ad lookup failed: {e}")
 
-                return redirect(redirect_url)
+                return render_template(
+                    "payment_success.html",
+                    reference=reference,
+                    tx=tx,
+                    ad=ad,
+                    frontend_url=frontend_url,
+                    result=result,
+                )
 
             except Exception as e:
                 logger.error(f"payment_success crashed for reference={reference}: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
-                # Never show the raw error page — send them back to the app.
-                # The transaction itself (if it succeeded) is unaffected; this
-                # only controls what the browser does next.
-                fallback_ref = reference or ""
-                return redirect(
-                    f"{frontend_url}/?status=error&reference={fallback_ref}"
+                return redirect(f"{frontend_url}/?status=success&reference={reference or ''}")
+
+
+        @self.app.route("/api/success-ad/<int:ad_id>/click", methods=["POST"])
+        def success_ad_click(ad_id):
+            """Track a click on a success-page ad."""
+            data = request.get_json(silent=True) or {}
+            try:
+                db.record_success_page_ad_event(
+                    ad_id, data.get("event") or "click",
+                    reference=data.get("reference"),
+                    user_id=data.get("user_id"),
+                    device_type=parse_user_agent(request.headers.get("User-Agent", ""))["device_type"],
+                    country=get_request_country(request),
                 )
+                return jsonify({"success": True})
+            except Exception as e:
+                return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+
+
+
+
 
         @self.app.route("/payment/cancel")
         def payment_cancel():
@@ -11121,28 +11318,7 @@ class ReloadlyWebApp:
                 }
             )
 
-        # ============ RECEIPT ============
-        @self.app.route("/api/receipt/<reference>", methods=["GET"])
-        @login_required
-        def get_receipt(reference):
-            user_id = g.current_user_id
-            tx, error = require_owned_transaction(reference, user_id)
-            if error:
-                return error
 
-            receipt_pdf = generate_receipt(tx)
-            if receipt_pdf:
-                response = make_response(receipt_pdf)
-                response.headers["Content-Type"] = "application/pdf"
-                response.headers["Content-Disposition"] = (
-                    f"attachment; filename=receipt_{reference}.pdf"
-                )
-                return response
-
-            return (
-                jsonify({"success": False, "error": "Failed to generate receipt"}),
-                500,
-            )
 
         # ============ USER CONTACTS ============
         @self.app.route("/api/user/contacts", methods=["GET"])
@@ -12040,6 +12216,42 @@ class ReloadlyWebApp:
                     "currency": "NGN",
                 }
             )
+
+        # ============ PUBLIC RECEIPT (for the success page) ============
+        @self.app.route("/receipt/<reference>", methods=["GET"])
+        def public_receipt(reference):
+            """Serve a receipt PDF immediately after payment, without requiring login.
+
+            Safe because the reference is an unguessable gateway-issued value
+            (e.g. PSK_20260101_ABC12345 / STR_... / FLW_...). Anyone who has the
+            reference already has the payment details, so this endpoint exposes
+            nothing beyond what the payment page itself already shows.
+
+            Rate-limited to prevent enumeration.
+            """
+            if not reference:
+                return jsonify({"success": False, "error": "Missing reference"}), 400
+
+            tx = db.get_transaction(reference)
+            if not tx:
+                return jsonify({"success": False, "error": "Receipt not found"}), 404
+
+            # Decrypt payload so phone / account fields render correctly
+            if tx.get("payload"):
+                tx["payload"] = decrypt_payload(tx["payload"])
+
+            receipt_pdf = generate_receipt(tx)
+            if not receipt_pdf:
+                return jsonify({"success": False, "error": "Failed to generate receipt"}), 500
+
+            response = make_response(receipt_pdf)
+            response.headers["Content-Type"] = "application/pdf"
+            response.headers["Content-Disposition"] = (
+                f"attachment; filename=receipt_{reference}.pdf"
+            )
+            return response
+        
+
 
         @self.app.route("/api/receipt-ads/campaigns", methods=["GET"])
         @login_required
