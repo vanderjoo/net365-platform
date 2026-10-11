@@ -3316,11 +3316,17 @@ function smartAdWithTimeout(promise, timeoutMs){
 
 /* Server-driven recommendation. */
 async function fetchSmartAd(ctx){
-  const res = await smartAdWithTimeout(fetch(`${API_BASE}/ads/recommend`, {
+  const res = await smartAdWithTimeout(fetch(`${API_BASE}/success-ads/recommend`, {
     method:'POST',
     credentials:'include',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(ctx)
+    body:JSON.stringify({
+      tx_type: ctx.tx_type,
+      amount: ctx.amount,
+      country: ctx.country,
+      reference: ctx.reference,
+      user_id: ctx.user_id,
+    })
   }), MOMENT_AD_CONFIG.API_TIMEOUT_MS);
 
   if (!res.ok) throw new Error(`ad_api_${res.status}`);
