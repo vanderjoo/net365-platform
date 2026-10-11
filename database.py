@@ -6602,6 +6602,279 @@ def complete_referral(referral_id: int) -> bool:
     return changed
 
 
+# ============ SUCCESS PAGE ADS ============
+
+@retry_on_lock
+def get_all_success_page_ads(limit: int = 100, offset: int = 0) -> List[Dict]:
+    conn = get_db_connection()
+    c = conn.cursor()
+    rows = c.execute(
+        """SELECT * FROM success_page_ads 
+           ORDER BY priority DESC, created_at DESC 
+           LIMIT ? OFFSET ?""",
+        (limit, offset),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+@retry_on_lock
+def get_success_page_ad(ad_id: int) -> Optional[Dict]:
+    conn = get_db_connection()
+    c = conn.cursor()
+    row = c.execute("SELECT * FROM success_page_ads WHERE id = ?", (ad_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+@retry_on_lock
+def create_success_page_ad(**fields) -> Optional[int]:
+    allowed = [
+        "name", "headline", "subheadline", "body", "image_url", "logo_url",
+        "cta_text", "cta_url", "cta_action", "background_color", "accent_color",
+        "text_color", "secondary_cta_text", "secondary_cta_url", "advertiser_name",
+        "sponsored", "active", "priority", "target_tx_type", "target_country",
+        "target_min_amount", "target_max_amount", "target_device",
+        "start_date", "end_date", "max_impressions", "max_clicks", "created_by",
+    ]
+    row = {k: fields.get(k) for k in allowed}
+    if not row.get("name") or not row.get("headline"):
+        return None
+    cols = ", ".join(row.keys())
+    placeholders = ", ".join("?" for _ in row)
+    values = list(row.values())
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute(f"INSERT INTO success_page_ads ({cols}) VALUES ({placeholders})", values)
+        conn.commit()
+        return c.lastrowid
+    except Exception as e:
+        logger.error(f"create_success_page_ad failed: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+@retry_on_lock
+def update_success_page_ad(ad_id: int, **fields) -> bool:
+    allowed = [
+        "name", "headline", "subheadline", "body", "image_url", "logo_url",
+        "cta_text", "cta_url", "cta_action", "background_color", "accent_color",
+        "text_color", "secondary_cta_text", "secondary_cta_url", "advertiser_name",
+        "sponsored", "active", "priority", "target_tx_type", "target_country",
+        "target_min_amount", "target_max_amount", "target_device",
+        "start_date", "end_date", "max_impressions", "max_clicks",
+    ]
+    updates = {k: v for k, v in fields.items() if k in allowed}
+    if not updates:
+        return False
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    values = list(updates.values()) + [ad_id]
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute(
+            f"UPDATE success_page_ads SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            values,
+        )
+        conn.commit()
+        return c.rowcount > 0
+    finally:
+        conn.close()
+
+
+@retry_on_lock
+def delete_success_page_ad(ad_id: int) -> bool:
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM success_page_ads WHERE id = ?", (ad_id,))
+    conn.commit()
+    deleted = c.rowcount > 0
+    conn.close()
+    return deleted
+
+
+@retry_on_lock
+def select_success_page_ad(tx_type=None, country=None, amount=None, device_type=None) -> Optional[Dict]:
+    """
+    Pick the best success-page ad for this transaction.
+    Falls back to any active ad if no targeting match.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    now = datetime.utcnow().isoformat()
+
+    base_where = """
+        active = 1
+        AND (start_date IS NULL OR start_date <= ?)
+        AND (end_date IS NULL OR end_date >= ?)
+        AND (max_impressions IS NULL OR impressions_used < max_impressions)
+        AND (max_clicks IS NULL OR clicks_used < max_clicks)
+    """
+    params = [now, now]
+
+    def _query(extra_where="", extra_params=None):
+        sql = f"""SELECT * FROM success_page_ads
+                  WHERE {base_where} {extra_where}
+                  ORDER BY priority DESC, id DESC LIMIT 1"""
+        return c.execute(sql, params + (extra_params or [])).fetchone()
+
+    row = None
+
+    # 1. Full match
+    if tx_type or country or device_type:
+        wheres = []
+        p = []
+        if tx_type:
+            wheres.append("(target_tx_type IS NULL OR target_tx_type = '' OR target_tx_type = ?)")
+            p.append(tx_type)
+        if country:
+            wheres.append("(target_country IS NULL OR target_country = '' OR target_country = ?)")
+            p.append(country)
+        if device_type:
+            wheres.append("(target_device IS NULL OR target_device = '' OR target_device = 'all' OR target_device = ?)")
+            p.append(device_type)
+        if amount is not None:
+            wheres.append("(target_min_amount IS NULL OR target_min_amount <= ?)")
+            p.append(amount)
+            wheres.append("(target_max_amount IS NULL OR target_max_amount >= ?)")
+            p.append(amount)
+        row = _query("AND " + " AND ".join(wheres), p)
+
+    # 2. Any active ad
+    if not row:
+        row = _query()
+
+    conn.close()
+    return dict(row) if row else None
+
+
+@retry_on_lock
+def record_success_page_ad_event(ad_id: int, event: str, reference: str = None,
+                                 user_id: int = None, device_type: str = None,
+                                 country: str = None) -> bool:
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute(
+            """INSERT INTO success_page_ad_events
+               (ad_id, event, reference, user_id, device_type, country)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (ad_id, event, reference, user_id, device_type, country),
+        )
+        if event == "impression":
+            c.execute(
+                "UPDATE success_page_ads SET impressions_used = impressions_used + 1 WHERE id = ?",
+                (ad_id,),
+            )
+        elif event == "click":
+            c.execute(
+                "UPDATE success_page_ads SET clicks_used = clicks_used + 1 WHERE id = ?",
+                (ad_id,),
+            )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"record_success_page_ad_event failed: {e}")
+        return False
+    finally:
+        conn.close()
+
+@retry_on_lock
+def ensure_success_page_ads_schema() -> bool:
+    """Create the success-page ad tables if they don't exist.
+
+    Idempotent — safe to call on every boot, and safe to call from
+    any route that touches these tables, so a fresh deploy, a migrated
+    DB, or a DB that predates the feature all self-heal automatically.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS success_page_ads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                headline TEXT NOT NULL,
+                subheadline TEXT,
+                body TEXT,
+                image_url TEXT,
+                logo_url TEXT,
+                cta_text TEXT DEFAULT 'Continue',
+                cta_url TEXT,
+                cta_action TEXT,
+                background_color TEXT DEFAULT '#0b1735',
+                accent_color TEXT DEFAULT '#4f8cff',
+                text_color TEXT DEFAULT '#ffffff',
+                secondary_cta_text TEXT,
+                secondary_cta_url TEXT,
+                advertiser_name TEXT,
+                sponsored INTEGER DEFAULT 0,
+                active INTEGER DEFAULT 1,
+                priority INTEGER DEFAULT 0,
+                target_tx_type TEXT,
+                target_country TEXT,
+                target_min_amount REAL,
+                target_max_amount REAL,
+                target_device TEXT,
+                start_date TIMESTAMP,
+                end_date TIMESTAMP,
+                max_impressions INTEGER,
+                impressions_used INTEGER DEFAULT 0,
+                max_clicks INTEGER,
+                clicks_used INTEGER DEFAULT 0,
+                created_by INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS success_page_ad_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ad_id INTEGER NOT NULL,
+                event TEXT NOT NULL,
+                reference TEXT,
+                user_id INTEGER,
+                device_type TEXT,
+                country TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_success_ads_active "
+            "ON success_page_ads(active)"
+        )
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_success_ad_events_ad "
+            "ON success_page_ad_events(ad_id)"
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"ensure_success_page_ads_schema failed: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+@retry_on_lock
+def get_success_page_ad_analytics(ad_id: int) -> Dict:
+    conn = get_db_connection()
+    c = conn.cursor()
+    stats = c.execute(
+        """SELECT
+             SUM(CASE WHEN event='impression' THEN 1 ELSE 0 END) AS impressions,
+             SUM(CASE WHEN event='click' THEN 1 ELSE 0 END) AS clicks,
+             SUM(CASE WHEN event='secondary_click' THEN 1 ELSE 0 END) AS secondary_clicks,
+             SUM(CASE WHEN event='dismissed' THEN 1 ELSE 0 END) AS dismissals
+           FROM success_page_ad_events WHERE ad_id = ?""",
+        (ad_id,),
+    ).fetchone()
+    conn.close()
+    return dict(stats) if stats else {}
+
+
 # ============ SUBSCRIPTION FUNCTIONS ============
 
 
