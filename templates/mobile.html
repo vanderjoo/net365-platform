@@ -3765,5 +3765,50 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('Ready.');
 });
 </script>
+<style id="net365-brand-redesign-v1">
+/* NET365 Calm Luxury — brand-alignment layer. Existing markup and JavaScript are preserved. */
+:root{
+ --bg-0:#080B14;--bg-1:#0B1020;--bg-2:#111827;
+ --surface:rgba(18,24,39,.82);--surface-2:rgba(24,31,48,.88);
+ --border:rgba(255,255,255,.085);--border-strong:rgba(255,109,0,.34);
+ --violet:#E53935;--violet-bright:#FF6D00;--violet-soft:rgba(229,57,53,.13);
+ --cyan:#65D9E8;--cyan-soft:rgba(101,217,232,.10);
+ --brand-ember:#E53935;--brand-orange:#FF6D00;--brand-gold:#FFB454;
+ --text-0:#FAFAFB;--text-1:#D5D9E2;--text-2:#9AA4B5;--text-3:#717C90;
+ --shadow-card:0 18px 48px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.045);
+ --radius-xl:26px;--radius-lg:20px;--radius-md:14px;--radius-sm:10px;
+}
+html{background:#080B14;scroll-behavior:smooth}
+body{background:radial-gradient(900px 520px at 100% -8%,rgba(255,109,0,.095),transparent 58%),radial-gradient(700px 450px at -12% 22%,rgba(229,57,53,.075),transparent 62%),linear-gradient(180deg,#080B14 0%,#0B1020 55%,#080B14 100%)!important;color:var(--text-0)}
+body:before{opacity:.28!important;background-size:54px 54px!important}
+button,.btn,.nav-item,[role="button"]{transition:background .2s ease,border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid #FF8A3D!important;outline-offset:3px}
+/* Surfaces: glossy glass, not excessive neon */
+.card,.panel,.sheet,.modal,.wallet-card,.service-card,.transaction-card,.payment-card,.section-card,.balance-card,.form-card,.settings-card,.smart-ad-card,.ad-card,.quick-action,.quick-actions,.stat-card,.history-card,.content-card{
+ background:linear-gradient(145deg,rgba(24,31,48,.92),rgba(13,18,32,.88))!important;border:1px solid rgba(255,255,255,.075)!important;box-shadow:var(--shadow-card)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:var(--radius-lg)}
+header,.topbar,.top-nav,.app-header,.bottom-nav,.mobile-nav{background:rgba(8,11,20,.82)!important;border-color:rgba(255,255,255,.075)!important;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+.logo,.brand,.brand-name,.app-name{letter-spacing:-.035em}
+.brand-mark,.logo-mark,.app-logo{box-shadow:0 7px 24px rgba(229,57,53,.18)!important}
+button.primary,.btn-primary,.primary-btn,.cta-button,.submit-btn,.pay-button,.btn-brand,.button-primary,.action-primary,.checkout-btn,.confirm-btn{
+ color:#fff!important;background:linear-gradient(110deg,#E53935 0%,#FF6D00 100%)!important;border:1px solid rgba(255,255,255,.14)!important;box-shadow:0 8px 24px rgba(229,57,53,.20),inset 0 1px 0 rgba(255,255,255,.18)!important;font-weight:750!important}
+button.primary:hover,.btn-primary:hover,.primary-btn:hover,.cta-button:hover,.submit-btn:hover,.pay-button:hover,.btn-brand:hover,.button-primary:hover,.action-primary:hover,.checkout-btn:hover,.confirm-btn:hover{filter:brightness(1.06);transform:translateY(-1px);box-shadow:0 12px 28px rgba(255,109,0,.22)!important}
+/* Remove competing purple/indigo styling from controls and navigation */
+.nav-item.active,.nav-item[aria-current="page"],.tab.active,.tab-button.active,.payment-method.active,.payment-option.active,.service-item.active,.filter-chip.active,.selected,.is-selected{border-color:rgba(255,109,0,.38)!important}
+.nav-item.active,.nav-item[aria-current="page"],.tab.active,.tab-button.active{background:linear-gradient(100deg,rgba(229,57,53,.18),rgba(255,109,0,.11))!important;color:#fff!important;box-shadow:inset 3px 0 0 #FF6D00!important}
+.payment-method.active,.payment-option.active,.service-item.active,.filter-chip.active,.selected,.is-selected{background:rgba(255,109,0,.09)!important;box-shadow:0 0 0 1px rgba(255,109,0,.08)!important}
+input,select,textarea,.input,.form-control,.search-input{background:rgba(7,11,20,.68)!important;color:#F8FAFC!important;border-color:rgba(255,255,255,.11)!important;border-radius:12px!important}
+input::placeholder,textarea::placeholder{color:#788397!important}
+input:focus,select:focus,textarea:focus,.input:focus,.form-control:focus{border-color:rgba(255,109,0,.65)!important;box-shadow:0 0 0 3px rgba(255,109,0,.11)!important}
+/* Purple icon backgrounds become restrained brand-tinted surfaces */
+.icon-box,.service-icon,.action-icon,.feature-icon,.payment-icon,.quick-icon{background:linear-gradient(145deg,rgba(229,57,53,.14),rgba(255,109,0,.10))!important;border-color:rgba(255,109,0,.16)!important}
+[style*="#7C3AED"],[style*="#7c3aed"],[style*="#4F46E5"],[style*="#4f46e5"],[style*="#8B5CF6"],[style*="#8b5cf6"]{border-color:rgba(255,109,0,.24)}
+.badge,.pill,.eyebrow,.section-label{letter-spacing:.045em}
+.divider,hr{border-color:rgba(255,255,255,.075)!important}
+.success,.status-success{color:#4ADE80}.warning,.status-pending{color:#FBBF24}.error,.status-failed{color:#FB7185}
+/* Restraint: premium depth over glowing neon */
+*{text-shadow:none}
+.card:hover,.service-card:hover,.quick-action:hover{border-color:rgba(255,109,0,.20)!important;box-shadow:0 22px 55px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.05)!important}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
 </body>
 </html>
