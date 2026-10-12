@@ -7150,5 +7150,63 @@ async function importSelectedContacts() {
       </div>
     </div>
   </div>
+<style id="net365-brand-redesign-v1">
+/* NET365 Signature System — premium enterprise dashboard. CSS-only layer; existing logic/IDs are preserved. */
+:root{
+ --n365-bg:#080B14;--n365-panel:rgba(18,24,39,.90);--n365-panel-2:rgba(24,31,48,.94);--n365-line:rgba(148,163,184,.15);
+ --n365-text:#F8FAFC;--n365-muted:#9AA4B5;--n365-blue:#FF6D00;--n365-cyan:#65D9E8;--n365-violet:#E53935;--n365-green:#22C55E;--n365-glow:0 22px 60px rgba(0,0,0,.22);
+ --primary:#FF6D00;--bg-primary:#F4F6FA;--bg-secondary:#FFFFFF;--text-primary:#171D29;--text-secondary:#647084;--border-color:#E4E8EF;--card-shadow:0 12px 35px rgba(20,28,43,.07);
+}
+html{scroll-behavior:smooth}
+body{background:radial-gradient(900px 520px at 100% -8%,rgba(255,109,0,.09),transparent 60%),radial-gradient(700px 480px at 0% 0%,rgba(229,57,53,.055),transparent 62%),#F4F6FA!important;color:#171D29}
+body:before{opacity:.13!important;background-image:linear-gradient(rgba(17,24,39,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(17,24,39,.045) 1px,transparent 1px)!important;background-size:48px 48px!important}
+.app,.main{background:transparent!important}
+.sidebar{background:linear-gradient(180deg,#101622 0%,#0B101A 100%)!important;border-right:1px solid rgba(255,255,255,.07)!important;box-shadow:16px 0 45px rgba(15,23,42,.08)!important}
+.sidebar .logo{padding-top:19px!important}
+.sidebar .logo:after{color:#8B95A6!important}
+.nav-item{color:#A8B1C0!important;border:1px solid transparent!important;border-radius:12px!important;margin:3px 10px!important}
+.nav-item:hover{background:rgba(255,109,0,.09)!important;border-color:rgba(255,109,0,.13)!important;color:#fff!important;transform:translateX(1px)}
+.nav-item.active{background:linear-gradient(100deg,rgba(229,57,53,.20),rgba(255,109,0,.12))!important;border-color:rgba(255,109,0,.20)!important;box-shadow:inset 3px 0 0 #FF6D00!important;color:#fff!important}
+.topbar{background:rgba(255,255,255,.86)!important;border-bottom:1px solid rgba(226,232,240,.88)!important;backdrop-filter:blur(20px)!important}
+.search-box input{background:#F7F8FB!important;border-color:#E5E9F0!important;color:#1E293B!important}
+.search-box input::placeholder{color:#8993A4!important}
+.icon-btn,.theme-toggle{background:#fff!important;border-color:#E5E9F0!important;color:#596579!important;box-shadow:0 3px 10px rgba(15,23,42,.035)!important}
+.user-info .name{color:#1E293B!important}
+.user-dropdown{background:#fff!important;border-color:#E5E9F0!important;box-shadow:0 24px 70px rgba(15,23,42,.16)!important}
+.user-dropdown .dropdown-item{color:#334155!important}.user-dropdown .dropdown-item:hover{background:#FFF3EB!important}
+.guest-banner{background:linear-gradient(100deg,#FFF2EA,#FFF8F3)!important;border:1px solid #F7D8C7!important;color:#713B26!important;backdrop-filter:blur(12px)}
+.welcome-banner{min-height:280px!important;padding:clamp(26px,3.5vw,42px)!important;border:1px solid rgba(255,255,255,.16)!important;background:radial-gradient(circle at 85% 8%,rgba(255,180,84,.22),transparent 28%),radial-gradient(circle at 96% 90%,rgba(229,57,53,.22),transparent 34%),linear-gradient(125deg,#171B27 0%,#25232A 48%,#4A201A 100%)!important;box-shadow:0 26px 70px rgba(21,25,35,.18),inset 0 1px 0 rgba(255,255,255,.14)!important;overflow:hidden}
+.welcome-banner h1{font-size:clamp(32px,3.6vw,52px)!important;letter-spacing:-.045em!important;line-height:1.04!important;color:#fff!important}
+.welcome-banner p{color:#E0E3E9!important;max-width:550px!important}
+.global-network-card,.dashboard-section,.quick-actions,.card,.ai-card,.stat-card,.service-card{background:rgba(255,255,255,.92)!important;border:1px solid rgba(224,229,237,.95)!important;box-shadow:0 12px 34px rgba(19,28,44,.055)!important;backdrop-filter:blur(14px)!important;border-radius:18px!important}
+.global-network-card{overflow:hidden}.quick-actions{padding:14px!important}
+.stat-card,.service-card{background:linear-gradient(145deg,#fff,#FBFCFE)!important}
+.action-item:hover,.service-card:hover{background:#FFF5EF!important;transform:translateY(-2px);box-shadow:0 14px 30px rgba(19,28,44,.08)!important}
+.btn-primary,.button-primary,.primary-btn,.btn-brand,.action-primary,.chat-fab{color:#fff!important;background:linear-gradient(110deg,#E53935 0%,#FF6D00 100%)!important;border:1px solid rgba(255,255,255,.18)!important;box-shadow:0 8px 22px rgba(229,57,53,.17),inset 0 1px 0 rgba(255,255,255,.16)!important;font-weight:750!important}
+.btn-primary:hover,.button-primary:hover,.primary-btn:hover,.btn-brand:hover,.action-primary:hover,.chat-fab:hover{filter:brightness(1.04);transform:translateY(-1px);box-shadow:0 12px 28px rgba(255,109,0,.20)!important}
+.btn-white{background:#fff!important;color:#222B39!important;border:1px solid rgba(255,255,255,.55)!important}
+.btn-outline{background:rgba(255,255,255,.06)!important;color:#fff!important;border:1px solid rgba(255,255,255,.24)!important}
+.invite-card{background:radial-gradient(circle at 85% 8%,rgba(255,180,84,.18),transparent 30%),linear-gradient(135deg,#20232D,#49241D)!important;border:1px solid rgba(255,255,255,.12)!important}
+.footer{background:#111722!important;color:#AAB3C2!important}.footer a{color:#D1D7E1!important}
+.chat-fab{box-shadow:0 12px 30px rgba(229,57,53,.22)!important}
+/* Convert old blue/purple highlight systems to signature red/orange */
+[style*="#3b82f6"],[style*="#3B82F6"],[style*="#1d4ed8"],[style*="#1D4ED8"],[style*="#4f46e5"],[style*="#4F46E5"],[style*="#8b5cf6"],[style*="#8B5CF6"]{border-color:rgba(255,109,0,.24)}
+input:focus,select:focus,textarea:focus,.form-control:focus,.search-box input:focus{border-color:rgba(255,109,0,.62)!important;box-shadow:0 0 0 3px rgba(255,109,0,.11)!important;outline:0}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid #FF8A3D!important;outline-offset:3px}
+/* Dark-mode variant follows the existing toggle state. */
+body.dark-mode{background:radial-gradient(900px 520px at 100% -8%,rgba(255,109,0,.10),transparent 58%),radial-gradient(700px 480px at 0% 0%,rgba(229,57,53,.075),transparent 62%),#080B14!important;color:#F8FAFC!important}
+body.dark-mode:before{opacity:.25!important;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px)!important}
+body.dark-mode .topbar{background:rgba(10,15,26,.84)!important;border-color:rgba(255,255,255,.075)!important}
+body.dark-mode .search-box input,body.dark-mode .icon-btn,body.dark-mode .theme-toggle{background:rgba(18,24,39,.88)!important;color:#F8FAFC!important;border-color:rgba(255,255,255,.10)!important}
+body.dark-mode .user-info .name{color:#F8FAFC!important}
+body.dark-mode .global-network-card,body.dark-mode .dashboard-section,body.dark-mode .quick-actions,body.dark-mode .card,body.dark-mode .ai-card,body.dark-mode .stat-card,body.dark-mode .service-card{background:linear-gradient(145deg,rgba(24,31,48,.94),rgba(13,18,32,.92))!important;border-color:rgba(255,255,255,.08)!important;box-shadow:0 18px 48px rgba(0,0,0,.28)!important;color:#F8FAFC!important}
+body.dark-mode .stat-card,body.dark-mode .service-card{background:linear-gradient(145deg,rgba(24,31,48,.94),rgba(13,18,32,.92))!important}
+body.dark-mode .action-item:hover,body.dark-mode .service-card:hover{background:rgba(255,109,0,.08)!important}
+body.dark-mode .user-dropdown{background:#111827!important;border-color:rgba(255,255,255,.10)!important}
+body.dark-mode .user-dropdown .dropdown-item{color:#D5D9E2!important}
+body.dark-mode .footer{background:#080B14!important}
+@media(max-width:768px){.welcome-banner{padding:25px!important;min-height:unset!important}.welcome-banner h1{font-size:clamp(29px,8vw,40px)!important}.sidebar{box-shadow:20px 0 55px rgba(0,0,0,.24)!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
 </body>
 </html>
