@@ -1147,7 +1147,7 @@
             </form>
         </div>
     </div>
-    <!-- SUCCESS PAGE AD MODAL -->
+   <!-- SUCCESS PAGE AD MODAL -->
     <div class="modal-overlay" id="successAdModal">
         <div class="modal-content" style="max-width:720px;">
             <div class="modal-header">
@@ -1156,7 +1156,21 @@
             </div>
             <form id="successAdForm" onsubmit="saveSuccessAd(event)">
 
-                <h4 style="font-size:13px;margin:8px 0;">📝 Content</h4>
+                <h4 style="font-size:13px;margin:8px 0;">🎯 Placement</h4>
+                <div class="form-group">
+                    <label>Receipt Slot *</label>
+                    <select id="successAdSlot" required>
+                        <option value="primary">Primary — full hero card (top of receipt)</option>
+                        <option value="secondary">Secondary — compact card (below hero)</option>
+                        <option value="tertiary">Tertiary — small text chip (bottom)</option>
+                    </select>
+                    <span class="form-hint">
+                        One primary, one secondary, one tertiary per receipt. Higher-priority ads win.
+                        Primary is usually the paid/sponsored slot; secondary and tertiary are usually house ads.
+                    </span>
+                </div>
+
+                <h4 style="font-size:13px;margin:16px 0 8px;">📝 Content</h4>
                 <div class="form-group">
                     <label>Internal Name *</label>
                     <input type="text" id="successAdName" required placeholder="e.g. Refer-a-friend banner" />
@@ -3990,11 +4004,12 @@ Payload: ${JSON.stringify(tx.payload || {}, null, 2)}
                 }
                 container.innerHTML = data.ads.map(a => `
                     <div class="ad-campaign-item" style="${a.active ? '' : 'opacity:.5;'}">
-                        <div class="ad-title">
-                            ${escapeHtml(a.headline)}
-                            <span class="badge ${a.active ? 'badge-success' : 'badge-danger'}">
-                                ${a.active ? 'Active' : 'Inactive'}
-                            </span>
+                    <div class="ad-title">
+                        ${escapeHtml(a.headline)}
+                        <span class="badge badge-info">${(a.slot || 'primary').toUpperCase()}</span>
+                        <span class="badge ${a.active ? 'badge-success' : 'badge-danger'}">
+                            ${a.active ? 'Active' : 'Inactive'}
+                        </span>
                             ${a.sponsored ? '<span class="badge badge-info">Sponsored</span>' : ''}
                             <span class="badge badge-warning">Priority ${a.priority || 0}</span>
                         </div>
@@ -4023,28 +4038,39 @@ Payload: ${JSON.stringify(tx.payload || {}, null, 2)}
 
         let successAdEditId = null;
 
-        function showCreateSuccessAdModal() {
-            successAdEditId = null;
-            document.getElementById('successAdModalTitle').textContent = 'Create Success Page Ad';
-            ['successAdName','successAdHeadline','successAdSubheadline','successAdBody',
-             'successAdImageUrl','successAdLogoUrl','successAdCtaText','successAdCtaUrl',
-             'successAdSecondaryCtaText','successAdSecondaryCtaUrl','successAdAdvertiserName',
-             'successAdTargetTxType','successAdTargetCountry','successAdTargetMinAmount',
-             'successAdTargetMaxAmount','successAdMaxImpressions','successAdMaxClicks']
-                .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+function showCreateSuccessAdModal() {
+    successAdEditId = null;
+    document.getElementById('successAdModalTitle').textContent = 'Create Success Page Ad';
 
-            document.getElementById('successAdBackgroundColor').value = '#0b1735';
-            document.getElementById('successAdAccentColor').value = '#4f8cff';
-            document.getElementById('successAdTextColor').value = '#ffffff';
-            document.getElementById('successAdPriority').value = '0';
-            document.getElementById('successAdCtaText').value = 'Continue';
-            document.getElementById('successAdTargetDevice').value = '';
-            document.getElementById('successAdSponsored').checked = false;
-            document.getElementById('successAdActive').checked = true;
-            document.getElementById('successAdStatus').innerHTML = '';
+    // Reset text/number/select fields. Note: successAdSlot is deliberately
+    // NOT in this list — it's set explicitly below with a valid default,
+    // not blanked, because an empty select would fail the `required` check
+    // in a confusing way (no visible reason, form just won't submit).
+    ['successAdName','successAdHeadline','successAdSubheadline','successAdBody',
+     'successAdImageUrl','successAdLogoUrl','successAdCtaText','successAdCtaUrl',
+     'successAdSecondaryCtaText','successAdSecondaryCtaUrl','successAdAdvertiserName',
+     'successAdTargetTxType','successAdTargetCountry','successAdTargetMinAmount',
+     'successAdTargetMaxAmount','successAdMaxImpressions','successAdMaxClicks']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
-            openModal('successAdModal');
-        }
+    // New: default the slot to 'primary' so a fresh create always has a
+    // valid placement selected. This is the new field added alongside the
+    // multi-slot layout (primary hero / secondary compact / tertiary chip).
+    const slotEl = document.getElementById('successAdSlot');
+    if (slotEl) slotEl.value = 'primary';
+
+    document.getElementById('successAdBackgroundColor').value = '#0b1735';
+    document.getElementById('successAdAccentColor').value = '#4f8cff';
+    document.getElementById('successAdTextColor').value = '#ffffff';
+    document.getElementById('successAdPriority').value = '0';
+    document.getElementById('successAdCtaText').value = 'Continue';
+    document.getElementById('successAdTargetDevice').value = '';
+    document.getElementById('successAdSponsored').checked = false;
+    document.getElementById('successAdActive').checked = true;
+    document.getElementById('successAdStatus').innerHTML = '';
+
+    openModal('successAdModal');
+}
 
         async function editSuccessAd(id) {
             try {
@@ -4056,6 +4082,7 @@ Payload: ${JSON.stringify(tx.payload || {}, null, 2)}
                 const a = data.ad;
                 successAdEditId = id;
                 document.getElementById('successAdModalTitle').textContent = 'Edit Success Page Ad';
+                document.getElementById('successAdSlot').value = a.slot || 'primary';
                 document.getElementById('successAdName').value = a.name || '';
                 document.getElementById('successAdHeadline').value = a.headline || '';
                 document.getElementById('successAdSubheadline').value = a.subheadline || '';
@@ -4107,6 +4134,7 @@ Payload: ${JSON.stringify(tx.payload || {}, null, 2)}
             };
 
             const payload = {
+                slot: document.getElementById('successAdSlot').value,
                 name,
                 headline,
                 subheadline: document.getElementById('successAdSubheadline').value.trim() || null,
