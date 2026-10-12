@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Payment Successful · Net365</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 <style>
@@ -23,16 +23,17 @@
       linear-gradient(160deg,#05080f,#0a1423 60%,#05080f);
     color: var(--text);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
   .page {
     width: 100%;
     max-width: 720px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 14px;
   }
 
   /* ── Success banner ────────────────────────────── */
@@ -40,19 +41,19 @@
     background: linear-gradient(135deg,#0e2a1a,#14532d 60%,#0e2a1a);
     border: 1px solid rgba(34,197,94,.3);
     border-radius: 22px;
-    padding: 28px;
+    padding: 24px 20px;
     text-align: center;
     box-shadow: 0 20px 60px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.03) inset;
     animation: pop .5s cubic-bezier(.2,.9,.3,1.2);
   }
   @keyframes pop { from { transform:scale(.94); opacity:0; } to { transform:scale(1); opacity:1; } }
   .check {
-    width: 68px; height: 68px;
+    width: 60px; height: 60px;
     border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, #4ade80, #16a34a);
     display: grid; place-items: center;
-    margin: 0 auto 14px;
-    font-size: 34px; color: #fff;
+    margin: 0 auto 12px;
+    font-size: 30px; color: #fff;
     box-shadow: 0 12px 40px rgba(34,197,94,.45), 0 0 0 8px rgba(34,197,94,.08);
     animation: pulseGlow 2s ease-in-out infinite;
   }
@@ -60,17 +61,18 @@
     0%,100% { box-shadow: 0 12px 40px rgba(34,197,94,.45), 0 0 0 8px rgba(34,197,94,.08); }
     50%     { box-shadow: 0 12px 40px rgba(34,197,94,.65), 0 0 0 14px rgba(34,197,94,.04); }
   }
-  .success-banner h1 { font-size: 22px; margin-bottom: 6px; letter-spacing: -.02em; }
-  .success-banner p { color: #bbf7d0; font-size: 14px; }
+  .success-banner h1 { font-size: 21px; margin-bottom: 5px; letter-spacing: -.02em; }
+  .success-banner p { color: #bbf7d0; font-size: 13.5px; }
   .success-banner .ref {
     display: inline-block;
-    margin-top: 12px;
-    padding: 6px 14px;
+    margin-top: 10px;
+    padding: 5px 13px;
     border-radius: 999px;
     background: rgba(0,0,0,.25);
     font-family: ui-monospace, 'Courier New', monospace;
-    font-size: 12px;
+    font-size: 11.5px;
     color: #d1fae5;
+    word-break: break-all;
   }
 
   /* ── Receipt summary ──────────────────────────── */
@@ -78,25 +80,26 @@
     background: rgba(15,23,42,.72);
     border: 1px solid var(--line);
     border-radius: 18px;
-    padding: 20px 22px;
+    padding: 18px 20px;
     backdrop-filter: blur(14px);
   }
   .summary h2 {
-    font-size: 13px; font-weight: 700;
+    font-size: 12px; font-weight: 700;
     text-transform: uppercase; letter-spacing: .12em;
-    color: var(--muted); margin-bottom: 14px;
+    color: var(--muted); margin-bottom: 12px;
   }
   .summary-row {
     display: flex; justify-content: space-between;
-    padding: 9px 0;
+    gap: 12px;
+    padding: 8px 0;
     border-bottom: 1px solid var(--line);
-    font-size: 14px;
+    font-size: 13.5px;
   }
-  .summary-row:last-child { border-bottom: none; font-weight: 700; font-size: 16px; }
+  .summary-row:last-child { border-bottom: none; font-weight: 700; font-size: 15px; }
   .summary-row .label { color: var(--muted); }
-  .summary-row .value { color: #fff; font-weight: 600; }
+  .summary-row .value { color: #fff; font-weight: 600; text-align: right; word-break: break-word; }
 
-  /* ── Ad card (hero) ──────────────────────────── */
+  /* ── Hero ad (primary slot) ──────────────────── */
   .ad-card {
     background: var(--ad-bg, #0b1735);
     border: 1px solid rgba(255,255,255,.08);
@@ -109,7 +112,7 @@
   @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
   .ad-card .sponsored-tag {
     position: absolute; top: 14px; left: 14px;
-    background: rgba(0,0,0,.4);
+    background: rgba(0,0,0,.45);
     backdrop-filter: blur(8px);
     padding: 4px 11px;
     border-radius: 999px;
@@ -132,20 +135,20 @@
     position: absolute; inset: 0;
     background: linear-gradient(180deg, transparent 45%, var(--ad-bg, #0b1735) 100%);
   }
-  .ad-content { padding: 0 26px 26px; margin-top: -20px; position: relative; z-index: 1; }
+  .ad-content { padding: 0 22px 22px; margin-top: -20px; position: relative; z-index: 1; }
   .ad-logo {
-    width: 56px; height: 56px;
+    width: 52px; height: 52px;
     border-radius: 14px;
     background: var(--ad-accent, #4f8cff);
     display: grid; place-items: center;
-    font-size: 24px; color: #fff;
-    margin-bottom: 14px;
+    font-size: 22px; color: #fff;
+    margin-bottom: 12px;
     box-shadow: 0 10px 26px rgba(0,0,0,.35);
     overflow: hidden;
   }
   .ad-logo img { width: 100%; height: 100%; object-fit: cover; }
   .ad-headline {
-    font-size: 24px;
+    font-size: 22px;
     line-height: 1.15;
     font-weight: 800;
     letter-spacing: -.03em;
@@ -153,29 +156,29 @@
     color: var(--ad-text, #fff);
   }
   .ad-sub {
-    font-size: 15px;
+    font-size: 14.5px;
     color: var(--ad-text, #fff);
     opacity: .82;
     line-height: 1.5;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   .ad-body {
-    font-size: 14px;
+    font-size: 13.5px;
     color: var(--ad-text, #fff);
-    opacity: .7;
-    line-height: 1.65;
-    margin-bottom: 20px;
+    opacity: .72;
+    line-height: 1.6;
+    margin-bottom: 16px;
   }
   .ad-ctas { display: flex; flex-wrap: wrap; gap: 10px; }
   .ad-cta {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 13px 24px;
+    padding: 12px 22px;
     border-radius: 14px;
     background: var(--ad-accent, #4f8cff);
     color: #fff;
     font-weight: 700;
     text-decoration: none;
-    font-size: 14px;
+    font-size: 13.5px;
     border: none; cursor: pointer;
     box-shadow: 0 10px 26px rgba(0,0,0,.3);
     transition: transform .2s, box-shadow .2s;
@@ -189,30 +192,107 @@
   }
   .ad-cta.secondary:hover { background: rgba(255,255,255,.14); }
 
+  /* ── Divider "WHILE YOU'RE HERE" ─────────────── */
+  .moment-divider {
+    display: flex; align-items: center; gap: 12px;
+    padding: 4px 0;
+  }
+  .moment-divider::before,
+  .moment-divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(148,163,184,.24), transparent);
+  }
+  .moment-divider-label {
+    font-size: 9.5px; font-weight: 900;
+    letter-spacing: .20em;
+    color: var(--muted);
+    opacity: .85;
+  }
+
+  /* ── Secondary compact card ─────────────────── */
+  .ad-compact {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 15px;
+    border-radius: 16px;
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.08);
+    text-decoration: none;
+    color: inherit;
+    transition: background .18s ease, border-color .18s ease, transform .12s ease;
+    animation: fadeUp .5s .25s both;
+  }
+  .ad-compact:hover,
+  .ad-compact:active {
+    background: rgba(255,255,255,.075);
+    border-color: rgba(255,255,255,.16);
+    transform: translateY(-1px);
+  }
+  .ad-compact-logo {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: var(--ad-accent, #4f8cff);
+    display: grid; place-items: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    color: #fff;
+    font-size: 16px;
+  }
+  .ad-compact-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .ad-compact-body { flex: 1; min-width: 0; }
+  .ad-compact-title {
+    font-size: 13.5px; font-weight: 700; color: #f5f7fb;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ad-compact-sub {
+    font-size: 11.5px; color: var(--muted); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ad-compact-arrow { color: #64748b; font-size: 12px; flex-shrink: 0; }
+
+  /* ── Tertiary chip ──────────────────────────── */
+  .ad-chip {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    padding: 11px 15px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06);
+    font-size: 12.5px;
+    color: #cbd5e1;
+    text-decoration: none;
+    transition: background .18s ease;
+    animation: fadeUp .5s .35s both;
+  }
+  .ad-chip:hover, .ad-chip:active { background: rgba(255,255,255,.06); }
+  .ad-chip span { flex: 1; min-width: 0;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ad-chip i { color: #64748b; font-size: 11px; flex-shrink: 0; }
+
   /* ── Footer actions ──────────────────────────── */
   .footer-actions {
-    display: flex; gap: 12px; flex-wrap: wrap;
+    display: flex; gap: 10px; flex-wrap: wrap;
     justify-content: center;
+    margin-top: 4px;
   }
   .btn-ghost {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 12px 22px;
+    padding: 11px 20px;
     border-radius: 14px;
     background: rgba(255,255,255,.04);
     border: 1px solid var(--line);
     color: #cbd5e1;
     text-decoration: none;
-    font-weight: 600; font-size: 13px;
+    font-weight: 600; font-size: 12.5px;
     cursor: pointer; transition: all .2s;
   }
   .btn-ghost:hover { background: rgba(255,255,255,.08); color: #fff; }
   .btn-primary {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 12px 24px;
+    padding: 11px 22px;
     border-radius: 14px;
     background: linear-gradient(135deg,#e53935,#ff6d00);
     color: #fff; text-decoration: none;
-    font-weight: 700; font-size: 13px;
+    font-weight: 700; font-size: 12.5px;
     border: none; cursor: pointer;
     box-shadow: 0 12px 28px rgba(229,57,53,.3);
     transition: transform .2s;
@@ -231,11 +311,30 @@
     to { transform: translateY(105vh) rotate(720deg); opacity: 0; }
   }
 
+  /* ── Responsive tweaks ──────────────────────── */
   @media (max-width: 480px) {
-    .ad-headline { font-size: 20px; }
-    .ad-hero { aspect-ratio: 16/10; }
-    .success-banner { padding: 22px 18px; }
+    .page { gap: 12px; }
+    .success-banner { padding: 20px 16px; }
+    .check { width: 52px; height: 52px; font-size: 26px; }
+    .success-banner h1 { font-size: 19px; }
     .summary { padding: 16px; }
+    .ad-hero { aspect-ratio: 16/10; }
+    .ad-headline { font-size: 19px; }
+    .ad-content { padding: 0 18px 18px; }
+    .ad-logo { width: 46px; height: 46px; font-size: 20px; }
+    .footer-actions { flex-direction: column; }
+    .footer-actions .btn-primary,
+    .footer-actions .btn-ghost { width: 100%; justify-content: center; }
+  }
+
+  /* Very small phones — drop tertiary visual weight */
+  @media (max-width: 380px) {
+    .ad-chip {
+      background: transparent;
+      border: none;
+      padding: 8px 4px;
+    }
+    .ad-body { font-size: 12.5px; line-height: 1.5; }
   }
 </style>
 </head>
@@ -282,8 +381,9 @@
   </div>
   {% endif %}
 
-  <!-- ── HERO AD ──────────────────────────────── -->
-  {% if ad %}
+  <!-- ── PRIMARY HERO AD ─────────────────────── -->
+  {% if ads and ads.primary %}
+  {% set ad = ads.primary %}
   <div class="ad-card"
        style="--ad-bg: {{ ad.background_color or '#0b1735' }};
               --ad-accent: {{ ad.accent_color or '#4f8cff' }};
@@ -323,25 +423,67 @@
         {% if ad.cta_text %}
           <a href="#" class="ad-cta" data-cta="primary"
              data-url="{{ ad.cta_url or '' }}"
-             data-action="{{ ad.cta_action or '' }}">
+             data-action="{{ ad.cta_action or '' }}"
+             data-slot="primary">
             {{ ad.cta_text }} <i class="fas fa-arrow-right"></i>
           </a>
         {% endif %}
         {% if ad.secondary_cta_text %}
           <a href="#" class="ad-cta secondary" data-cta="secondary"
-             data-url="{{ ad.secondary_cta_url or '' }}">
+             data-url="{{ ad.secondary_cta_url or '' }}"
+             data-slot="primary">
             {{ ad.secondary_cta_text }}
           </a>
         {% endif %}
       </div>
 
       {% if ad.advertiser_name %}
-        <div style="margin-top:18px;font-size:11px;color:var(--ad-text);opacity:.5;">
+        <div style="margin-top:14px;font-size:11px;color:var(--ad-text);opacity:.5;">
           From {{ ad.advertiser_name }}
         </div>
       {% endif %}
     </div>
   </div>
+  {% endif %}
+
+  <!-- ── SECONDARY + TERTIARY WRAPPER ────────── -->
+  {% if (ads and (ads.secondary or ads.tertiary)) %}
+    <div class="moment-divider"><span class="moment-divider-label">WHILE YOU'RE HERE</span></div>
+
+    {% if ads.secondary %}
+    {% set s = ads.secondary %}
+    <a href="#" class="ad-compact"
+       style="--ad-accent: {{ s.accent_color or '#4f8cff' }};"
+       data-ad-id="{{ s.id }}"
+       data-url="{{ s.cta_url or '' }}"
+       data-action="{{ s.cta_action or '' }}"
+       data-slot="secondary">
+      <div class="ad-compact-logo">
+        {% if s.logo_url %}
+          <img src="{{ s.logo_url }}" alt="" />
+        {% else %}
+          <i class="fas fa-star"></i>
+        {% endif %}
+      </div>
+      <div class="ad-compact-body">
+        <div class="ad-compact-title">{{ s.headline }}</div>
+        <div class="ad-compact-sub">{{ s.subheadline or s.body or '' }}</div>
+      </div>
+      <i class="fas fa-chevron-right ad-compact-arrow"></i>
+    </a>
+    {% endif %}
+
+    {% if ads.tertiary %}
+    {% set t = ads.tertiary %}
+    <a href="#" class="ad-chip"
+       data-ad-id="{{ t.id }}"
+       data-url="{{ t.cta_url or '' }}"
+       data-action="{{ t.cta_action or '' }}"
+       data-slot="tertiary">
+      <span>💡 {{ t.headline }}</span>
+      <i class="fas fa-arrow-right"></i>
+    </a>
+    {% endif %}
   {% endif %}
 
   <!-- ── FOOTER ACTIONS ───────────────────────── -->
@@ -360,9 +502,11 @@
 </div>
 
 <script>
-  // Confetti burst  (function () {
+  // Confetti burst
+  (function () {
     const colors = ['#22c55e','#4f8cff','#f59e0b','#ec4899','#8b5cf6','#06b6d4'];
     const c = document.getElementById('confetti');
+    if (!c) return;
     for (let i = 0; i < 60; i++) {
       const s = document.createElement('span');
       s.style.left = Math.random() * 100 + '%';
@@ -374,35 +518,52 @@
     setTimeout(() => c.remove(), 6000);
   })();
 
-  // Ad click tracking + navigation
+  // Ad click tracking + navigation for ALL slots (hero, compact, chip)
+  async function trackAdClick(adId, event, reference) {
+    if (!adId) return;
+    try {
+      await fetch(`/api/success-ad/${adId}/click`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: event, reference: reference || null }),
+      });
+    } catch (_) {}
+  }
+
+  function handleAdNavigation(action, url) {
+    if (action === 'utilities') { window.location.href = '{{ frontend_url }}/utilities'; return; }
+    if (action === 'wallet')    { window.location.href = '{{ frontend_url }}/?action=add_money'; return; }
+    if (action === 'referral')  { window.location.href = '{{ frontend_url }}/?action=referral'; return; }
+    if (url) { window.open(url, '_blank', 'noopener,noreferrer'); }
+  }
+
+  // Hero ad CTA clicks
   document.querySelectorAll('.ad-cta').forEach(el => {
     el.addEventListener('click', async (e) => {
       e.preventDefault();
-      const adCard = el.closest('.ad-card');
-      const adId = adCard?.dataset.adId;
-      const event = el.dataset.cta === 'primary' ? 'click' : 'secondary_click';
+      const card = el.closest('.ad-card');
+      const adId = card?.dataset.adId;
+      const eventName = el.dataset.cta === 'secondary' ? 'secondary_click' : 'click';
+      await trackAdClick(adId, eventName, '{{ reference }}');
+      handleAdNavigation(el.dataset.action, el.dataset.url);
+    });
+  });
 
-      try {
-        await fetch(`/api/success-ad/${adId}/click`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event: event,
-            reference: '{{ reference }}',
-          }),
-        });
-      } catch (_) {}
+  // Compact card clicks
+  document.querySelectorAll('.ad-compact').forEach(el => {
+    el.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await trackAdClick(el.dataset.adId, 'click', '{{ reference }}');
+      handleAdNavigation(el.dataset.action, el.dataset.url);
+    });
+  });
 
-      const action = el.dataset.action;
-      const url = el.dataset.url;
-
-      if (action === 'utilities') { window.location.href = '{{ frontend_url }}/utilities'; return; }
-      if (action === 'wallet')    { window.location.href = '{{ frontend_url }}/?action=add_money'; return; }
-      if (action === 'referral')  { window.location.href = '{{ frontend_url }}/?action=referral'; return; }
-
-      if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
+  // Chip clicks
+  document.querySelectorAll('.ad-chip').forEach(el => {
+    el.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await trackAdClick(el.dataset.adId, 'click', '{{ reference }}');
+      handleAdNavigation(el.dataset.action, el.dataset.url);
     });
   });
 </script>
