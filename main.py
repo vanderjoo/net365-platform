@@ -8395,6 +8395,7 @@ class ReloadlyWebApp:
             if not data.get("name") or not data.get("headline"):
                 return jsonify({"success": False, "error": "Name and headline required"}), 400
             ad_id = db.create_success_page_ad(
+                slot=data.get("slot", "primary"),
                 name=data["name"],
                 headline=data["headline"],
                 subheadline=data.get("subheadline"),
@@ -9617,12 +9618,27 @@ class ReloadlyWebApp:
                 ad = None
                 try:
                     device_type = parse_user_agent(request.headers.get("User-Agent", ""))["device_type"]
-                    ad = db.select_success_page_ad(
+                    ads = db.get_receipt_ads(
                         tx_type=tx.get("tx_type"),
                         country=get_request_country(request),
                         amount=float(tx.get("amount") or 0) or None,
                         device_type=device_type,
                     )
+
+                    # Track an impression for whichever slots actually resolved
+                    for _slot_name in ("primary", "secondary", "tertiary"):
+                        _ad = ads.get(_slot_name)
+                        if _ad:
+                            try:
+                                db.record_success_page_ad_event(
+                                    _ad["id"], "impression",
+                                    reference=reference,
+                                    user_id=tx.get("user_id"),
+                                    device_type=device_type,
+                                    country=get_request_country(request),
+                                )
+                            except Exception as e:
+                                logger.warning(f"Impression tracking failed for {_slot_name}: {e}")
                     if ad:
                         db.record_success_page_ad_event(
                             ad["id"], "impression",
@@ -9638,7 +9654,12 @@ class ReloadlyWebApp:
                     "payment_success.html",
                     reference=reference,
                     tx=tx,
-                    ad=ad,
+                    ads=db.get_receipt_ads(
+                        tx_type=tx.get("tx_type"),
+                        country=get_request_country(request),
+                        amount=float(tx.get("amount") or 0) or None,
+                        device_type=device_type,
+                    ),
                     frontend_url=frontend_url,
                     result=result,
                 )
