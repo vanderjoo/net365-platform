@@ -6616,8 +6616,6 @@ def get_all_success_page_ads(limit: int = 100, offset: int = 0) -> List[Dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
-
-
 @retry_on_lock
 def get_success_page_ad(ad_id: int) -> Optional[Dict]:
     conn = get_db_connection()
@@ -6630,6 +6628,7 @@ def get_success_page_ad(ad_id: int) -> Optional[Dict]:
 @retry_on_lock
 def create_success_page_ad(**fields) -> Optional[int]:
     allowed = [
+        "slot",                                    # ← added
         "name", "headline", "subheadline", "body", "image_url", "logo_url",
         "cta_text", "cta_url", "cta_action", "background_color", "accent_color",
         "text_color", "secondary_cta_text", "secondary_cta_url", "advertiser_name",
@@ -6640,6 +6639,10 @@ def create_success_page_ad(**fields) -> Optional[int]:
     row = {k: fields.get(k) for k in allowed}
     if not row.get("name") or not row.get("headline"):
         return None
+    # Default the slot if the caller didn't supply one, so a legacy request
+    # without the field still gets a sensible placement.
+    if not row.get("slot"):
+        row["slot"] = "primary"
     cols = ", ".join(row.keys())
     placeholders = ", ".join("?" for _ in row)
     values = list(row.values())
@@ -6659,6 +6662,7 @@ def create_success_page_ad(**fields) -> Optional[int]:
 @retry_on_lock
 def update_success_page_ad(ad_id: int, **fields) -> bool:
     allowed = [
+        "slot",                                    # ← added
         "name", "headline", "subheadline", "body", "image_url", "logo_url",
         "cta_text", "cta_url", "cta_action", "background_color", "accent_color",
         "text_color", "secondary_cta_text", "secondary_cta_url", "advertiser_name",
@@ -6698,8 +6702,8 @@ def delete_success_page_ad(ad_id: int) -> bool:
 @retry_on_lock
 def select_success_page_ad(tx_type=None, country=None, amount=None, device_type=None) -> Optional[Dict]:
     """
-    Pick the best success-page ad for this transaction.
-    Falls back to any active ad if no targeting match.
+    Pick the best success-page ad for this transaction (primary slot only).
+    Falls back to any active primary ad if no targeting match.
     """
     conn = get_db_connection()
     c = conn.cursor()
@@ -6707,6 +6711,7 @@ def select_success_page_ad(tx_type=None, country=None, amount=None, device_type=
 
     base_where = """
         active = 1
+        AND (slot IS NULL OR slot = '' OR slot = 'primary')
         AND (start_date IS NULL OR start_date <= ?)
         AND (end_date IS NULL OR end_date >= ?)
         AND (max_impressions IS NULL OR impressions_used < max_impressions)
@@ -6742,13 +6747,134 @@ def select_success_page_ad(tx_type=None, country=None, amount=None, device_type=
             p.append(amount)
         row = _query("AND " + " AND ".join(wheres), p)
 
-    # 2. Any active ad
+    # 2. Any active primary ad
     if not row:
         row = _query()
 
     conn.close()
     return dict(row) if row else None
 
+
+# ============================================================
+# MULTI-SLOT HELPERS — power the primary / secondary / tertiary
+# layout on the payment success page.
+# ============================================================
+
+def _query_ad_by_slot(slot, tx_type=None, country=None, amount=None,
+                      device_type=None, exclude_ids=None) -> Optional[Dict]:
+    """Return the highest-priority active ad for a given slot that matches
+    the transaction targeting, or None if nothing matches.
+
+    This is the internal workhorse behind get_receipt_ads(). It does not
+    touch the slot column's schema — ensure_success_page_ads_schema() is
+    responsible for making sure the column exists.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    now = datetime.utcnow().isoformat()
+
+    wheres = [
+        "slot = ?",
+        "active = 1",
+        "(start_date IS NULL OR start_date <= ?)",
+        "(end_date IS NULL OR end_date >= ?)",
+        "(max_impressions IS NULL OR impressions_used < max_impressions)",
+        "(max_clicks IS NULL OR clicks_used < max_clicks)",
+    ]
+    params = [slot, now, now]
+
+    if tx_type:
+        wheres.append(
+            "(target_tx_type IS NULL OR target_tx_type = '' OR target_tx_type = ?)"
+        )
+        params.append(tx_type)
+    if country:
+        wheres.append(
+            "(target_country IS NULL OR target_country = '' OR target_country = ?)"
+        )
+        params.append(country)
+    if device_type:
+        wheres.append(
+            "(target_device IS NULL OR target_device = '' "
+            "OR target_device = 'all' OR target_device = ?)"
+        )
+        params.append(device_type)
+    if amount is not None:
+        wheres.append("(target_min_amount IS NULL OR target_min_amount <= ?)")
+        params.append(amount)
+        wheres.append("(target_max_amount IS NULL OR target_max_amount >= ?)")
+        params.append(amount)
+
+    if exclude_ids:
+        placeholders = ",".join("?" for _ in exclude_ids)
+        wheres.append(f"id NOT IN ({placeholders})")
+        params.extend(exclude_ids)
+
+    sql = (
+        "SELECT * FROM success_page_ads WHERE "
+        + " AND ".join(wheres)
+        + " ORDER BY priority DESC, id DESC LIMIT 1"
+    )
+    try:
+        row = c.execute(sql, params).fetchone()
+        return dict(row) if row else None
+    except Exception as e:
+        logger.error(f"_query_ad_by_slot({slot}) failed: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+@retry_on_lock
+def get_receipt_ads(tx_type=None, country=None, amount=None,
+                    device_type=None) -> Dict:
+    """Return the three ads to render on a single receipt.
+
+    Layout:
+      primary   -> exactly one full hero card
+      secondary -> up to one compact card
+      tertiary  -> up to one small text chip
+
+    Each slot falls back to "no ad" gracefully — if secondary or tertiary
+    has no match, the template simply skips that section. The primary slot
+    reuses the pre-existing select_success_page_ad() so its behaviour is
+    unchanged for anyone relying on the older single-slot API.
+    """
+    # Belt-and-braces: make sure the schema is up to date before querying.
+    # Idempotent, cheap, and prevents "no such column: slot" on a database
+    # that predates the migration.
+    ensure_success_page_ads_schema()
+
+    primary = select_success_page_ad(
+        tx_type=tx_type,
+        country=country,
+        amount=amount,
+        device_type=device_type,
+    )
+
+    used_ids = [primary["id"]] if primary else []
+
+    secondary = _query_ad_by_slot(
+        "secondary",
+        tx_type=tx_type, country=country,
+        amount=amount, device_type=device_type,
+        exclude_ids=used_ids,
+    )
+    if secondary:
+        used_ids.append(secondary["id"])
+
+    tertiary = _query_ad_by_slot(
+        "tertiary",
+        tx_type=tx_type, country=country,
+        amount=amount, device_type=device_type,
+        exclude_ids=used_ids,
+    )
+
+    return {
+        "primary": primary,
+        "secondary": secondary,
+        "tertiary": tertiary,
+    }
 
 @retry_on_lock
 def record_success_page_ad_event(ad_id: int, event: str, reference: str = None,
@@ -6783,15 +6909,24 @@ def record_success_page_ad_event(ad_id: int, event: str, reference: str = None,
 
 @retry_on_lock
 def ensure_success_page_ads_schema() -> bool:
-    """Create the success-page ad tables if they don't exist.
+    """Create the success-page ad tables if they don't exist, and migrate
+    any older schema versions in place.
 
     Idempotent — safe to call on every boot, and safe to call from
     any route that touches these tables, so a fresh deploy, a migrated
     DB, or a DB that predates the feature all self-heal automatically.
+
+    Migrations applied here:
+      - Create success_page_ads and success_page_ad_events if missing
+      - Add `slot` column to success_page_ads if missing
+        (values: 'primary' | 'secondary' | 'tertiary'; default 'primary'
+         so existing rows keep working unchanged)
+      - Create supporting indexes
     """
     conn = get_db_connection()
     c = conn.cursor()
     try:
+        # ── 1. Base tables ──────────────────────────────────────────
         c.execute("""
             CREATE TABLE IF NOT EXISTS success_page_ads (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -6841,14 +6976,39 @@ def ensure_success_page_ads_schema() -> bool:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # ── 2. Migration: add `slot` column if missing ──────────────
+        # Older databases were created before multi-slot support existed.
+        # Every existing row becomes 'primary' automatically, so the layout
+        # keeps working unchanged until an admin creates secondary/tertiary
+        # ads.
+        cols = {
+            row[1]
+            for row in c.execute(
+                "PRAGMA table_info(success_page_ads)"
+            ).fetchall()
+        }
+        if "slot" not in cols:
+            c.execute(
+                "ALTER TABLE success_page_ads "
+                "ADD COLUMN slot TEXT DEFAULT 'primary'"
+            )
+            logger.info("Added `slot` column to success_page_ads")
+
+        # ── 3. Indexes ──────────────────────────────────────────────
         c.execute(
             "CREATE INDEX IF NOT EXISTS idx_success_ads_active "
             "ON success_page_ads(active)"
         )
         c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_success_ads_slot "
+            "ON success_page_ads(slot, active, priority)"
+        )
+        c.execute(
             "CREATE INDEX IF NOT EXISTS idx_success_ad_events_ad "
             "ON success_page_ad_events(ad_id)"
         )
+
         conn.commit()
         return True
     except Exception as e:
@@ -6857,6 +7017,145 @@ def ensure_success_page_ads_schema() -> bool:
         return False
     finally:
         conn.close()
+
+@retry_on_lock
+def ensure_success_page_ads_slot_column() -> bool:
+    """Idempotently add the `slot` column to success_page_ads if missing.
+
+    Values: 'primary' | 'secondary' | 'tertiary'
+    Existing rows default to 'primary' so nothing breaks on migration.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        cols = {row[1] for row in c.execute("PRAGMA table_info(success_page_ads)").fetchall()}
+        if "slot" not in cols:
+            c.execute(
+                "ALTER TABLE success_page_ads ADD COLUMN slot TEXT DEFAULT 'primary'"
+            )
+            conn.commit()
+            logger.info("Added `slot` column to success_page_ads")
+        c.execute(
+            "CREATE INDEX IF NOT EXISTS idx_success_ads_slot "
+            "ON success_page_ads(slot, active, priority)"
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"ensure_success_page_ads_slot_column failed: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+        
+def _query_ad_by_slot(slot, tx_type=None, country=None, amount=None,
+                      device_type=None, exclude_ids=None):
+    """Internal helper. Returns the highest-priority active ad for a slot
+    that matches the given targeting, or None."""
+    conn = get_db_connection()
+    c = conn.cursor()
+    now = datetime.utcnow().isoformat()
+
+    wheres = [
+        "slot = ?",
+        "active = 1",
+        "(start_date IS NULL OR start_date <= ?)",
+        "(end_date IS NULL OR end_date >= ?)",
+        "(max_impressions IS NULL OR impressions_used < max_impressions)",
+        "(max_clicks IS NULL OR clicks_used < max_clicks)",
+    ]
+    params = [slot, now, now]
+
+    if tx_type:
+        wheres.append(
+            "(target_tx_type IS NULL OR target_tx_type = '' OR target_tx_type = ?)"
+        )
+        params.append(tx_type)
+    if country:
+        wheres.append(
+            "(target_country IS NULL OR target_country = '' OR target_country = ?)"
+        )
+        params.append(country)
+    if device_type:
+        wheres.append(
+            "(target_device IS NULL OR target_device = '' "
+            "OR target_device = 'all' OR target_device = ?)"
+        )
+        params.append(device_type)
+    if amount is not None:
+        wheres.append("(target_min_amount IS NULL OR target_min_amount <= ?)")
+        params.append(amount)
+        wheres.append("(target_max_amount IS NULL OR target_max_amount >= ?)")
+        params.append(amount)
+
+    if exclude_ids:
+        placeholders = ",".join("?" for _ in exclude_ids)
+        wheres.append(f"id NOT IN ({placeholders})")
+        params.extend(exclude_ids)
+
+    sql = (
+        "SELECT * FROM success_page_ads WHERE "
+        + " AND ".join(wheres)
+        + " ORDER BY priority DESC, id DESC LIMIT 1"
+    )
+    try:
+        row = c.execute(sql, params).fetchone()
+        return dict(row) if row else None
+    except Exception as e:
+        logger.error(f"_query_ad_by_slot({slot}) failed: {e}")
+        return None
+    finally:
+        conn.close()
+
+
+@retry_on_lock
+def get_receipt_ads(tx_type=None, country=None, amount=None,
+                    device_type=None) -> Dict:
+    """Return the ads to render on a single receipt.
+
+    Layout:
+      primary   -> exactly one full hero ad (may be paid/sponsored)
+      secondary -> up to one compact card (usually house ad)
+      tertiary  -> up to one small text chip (usually house ad)
+
+    Falls back gracefully: if no secondary/tertiary matches, those slots
+    return None and the template just skips them.
+    """
+    # Ensure schema is up to date before touching the table. Idempotent,
+    # cheap (2 PRAGMA + a couple of CREATE IF NOT EXISTS), and prevents
+    # "no such column: slot" on a database that predates the migration.
+    ensure_success_page_ads_schema()
+
+    primary = _query_ad_by_slot(
+        "primary",
+        tx_type=tx_type, country=country,
+        amount=amount, device_type=device_type,
+    )
+
+    used_ids = [primary["id"]] if primary else []
+
+    secondary = _query_ad_by_slot(
+        "secondary",
+        tx_type=tx_type, country=country,
+        amount=amount, device_type=device_type,
+        exclude_ids=used_ids,
+    )
+    if secondary:
+        used_ids.append(secondary["id"])
+
+    tertiary = _query_ad_by_slot(
+        "tertiary",
+        tx_type=tx_type, country=country,
+        amount=amount, device_type=device_type,
+        exclude_ids=used_ids,
+    )
+
+    return {
+        "primary": primary,
+        "secondary": secondary,
+        "tertiary": tertiary,
+    }        
+
 
 @retry_on_lock
 def get_success_page_ad_analytics(ad_id: int) -> Dict:
