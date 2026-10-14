@@ -4112,18 +4112,34 @@ def parse_user_agent(ua_string: str) -> Dict[str, str]:
     return {"device_type": device_type, "os": os_name, "browser": browser}
 
 
-from ua_extract import DeviceDetector
+from user_agents import parse as _parse_ua
 
-def parse_device_model(ua_string, request_obj=None):
-    headers = {}
-    if request_obj:
-        headers = dict(request_obj.headers)
-    device = DeviceDetector(ua_string, headers=headers).parse()
-    brand = device.device_brand()
-    model = device.device_model()
-    if brand and model:
-        return f"{brand} {model}"
-    return model or brand or ""
+    
+def detect_ua(ua_string: str) -> dict:
+    """Parse a User-Agent string into the columns visitor_logs expects."""
+    ua = _parse_ua(ua_string or "")
+    if ua.is_mobile:
+        dtype = "Mobile"
+    elif ua.is_tablet:
+        dtype = "Tablet"
+    elif ua.is_bot:
+        dtype = "Bot"
+    elif ua.is_pc:
+        dtype = "Desktop"
+    else:
+        dtype = "Other"
+
+    def _clean(v):
+        return None if not v or v == "Other" else v
+
+    return {
+        "device_type": dtype,
+        "os_name":     _clean(ua.os.family),
+        "browser":     _clean(ua.browser.family),
+        "device_model": _clean(ua.device.family),
+        "is_bot":      1 if ua.is_bot else 0,
+        "bot_name":    ua.device.family if ua.is_bot else None,
+    }    
 
 def get_client_ip() -> str:
     forwarded = request.headers.get("X-Forwarded-For", "")
