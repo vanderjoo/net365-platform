@@ -1299,14 +1299,39 @@ except ImportError:
     CRYPTOGRAPHY_AVAILABLE = False
     print("WARNING: cryptography not installed. PII will be stored in plaintext!")
 
-ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
-cipher = None
-if CRYPTOGRAPHY_AVAILABLE and ENCRYPTION_KEY:
+# ============ CHECK ENCRYPTION KEY IN PRODUCTION ============
+_ENV = os.getenv("ENVIRONMENT", "").lower()
+_ENCRYPTION_KEY_RAW = os.getenv("ENCRYPTION_KEY")
+
+# Validate the key format up-front — presence alone is not enough.
+# A malformed key would otherwise leave `cipher = None` and cause
+# every encrypt_pii() call to silently return plaintext.
+_encryption_key_valid = False
+if _ENCRYPTION_KEY_RAW:
     try:
-        cipher = Fernet(ENCRYPTION_KEY.encode())
-        print("Encryption initialized successfully")
-    except Exception as e:
-        print(f"WARNING: Failed to initialize encryption: {e}")
+        from cryptography.fernet import Fernet as _Fernet
+        _Fernet(_ENCRYPTION_KEY_RAW.encode())   # raises if not a valid Fernet key
+        _encryption_key_valid = True
+    except Exception as _e:
+        _encryption_key_valid = False
+        _encryption_key_error = str(_e)
+else:
+    _encryption_key_error = "not set"
+
+if _ENV == "production":
+    if not _encryption_key_valid:
+        raise ValueError(
+            f"ENCRYPTION_KEY is required and must be a valid Fernet key in production "
+            f"(problem: {_encryption_key_error}). Generate one with: "
+            f"python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+        )
+    print("✅ Production mode: ENCRYPTION_KEY is set and valid")
+else:
+    if not _encryption_key_valid:
+        print(f"⚠️ WARNING: ENCRYPTION_KEY {_encryption_key_error} — PII will be stored in plaintext.")
+        print("   Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"")
+    else:
+        print("✅ Development mode: ENCRYPTION_KEY set and valid")
 
 
 def encrypt_pii(data: str) -> str:
@@ -3570,6 +3595,8 @@ from flask import (
     session,
     g,
     make_response,
+    url_for,
+    send_from_directory,
 )
 
 PAYMENT_COUNTRY_CONFIG = {
@@ -3729,17 +3756,7 @@ def get_authenticated_user():
                 
                 
                 
-        # ============ ADMIN: VISITOR STATS ============
-        @self.app.route("/api/admin/visitors/stats", methods=["GET"])
-        @admin_required
-        def get_admin_visitor_stats():
-            """Get visitor statistics for admin dashboard."""
-            try:
-                stats = db.get_visitor_stats()
-                return jsonify({"success": True, "stats": stats})
-            except Exception as e:
-                logger.error(f"Error getting visitor stats: {e}")
-                return jsonify({"success": False, "error": str(e)}), 500
+
                
                
 
@@ -4095,6 +4112,19 @@ def parse_user_agent(ua_string: str) -> Dict[str, str]:
     return {"device_type": device_type, "os": os_name, "browser": browser}
 
 
+from ua_extract import DeviceDetector
+
+def parse_device_model(ua_string, request_obj=None):
+    headers = {}
+    if request_obj:
+        headers = dict(request_obj.headers)
+    device = DeviceDetector(ua_string, headers=headers).parse()
+    brand = device.device_brand()
+    model = device.device_model()
+    if brand and model:
+        return f"{brand} {model}"
+    return model or brand or ""
+
 def get_client_ip() -> str:
     forwarded = request.headers.get("X-Forwarded-For", "")
     if forwarded:
@@ -4108,14 +4138,7 @@ def get_client_ip() -> str:
 VISITOR_TRACKED_PATHS = {"/", "/scheduler", "/analytics", "/business", "/utilities"}
 
 
-def log_page_visit():
-    try:
-        print(">>> log_page_visit fired for", request.path, flush=True)
 
-        # your existing log_page_visit logic here
-
-    except Exception as e:
-        print(f"❌ log_page_visit error: {e}", flush=True)
 
 def log_page_visit():
     """Log one page visit + kick off background IP enrichment.
@@ -4124,6 +4147,12 @@ def log_page_visit():
     slow external lookup can never delay the response to the visitor.
     Bot classification is done inline from the User-Agent — it's pure
     string matching, no network, so it's cheap enough to do here.
+
+    Device model detection combines:
+      - Sec-CH-UA-Model client hint (modern Chrome/Edge on Android)
+      - User-Agent parsing (Safari, Firefox, older Android, others)
+    Apple never reveals exact models — iOS visitors always log as "iPhone"
+    or "iPad", which is a hard limit set by Apple, not a bug here.
     """
     try:
         if request.path not in VISITOR_TRACKED_PATHS:
@@ -4131,6 +4160,18 @@ def log_page_visit():
 
         ua = request.headers.get("User-Agent", "")
         ua_info = parse_user_agent(ua)
+
+        # NEW: extract the device model. Request object is passed so the
+        # helper can read Sec-CH-UA-Model, which is the only way to
+        # recover the model from modern Chrome. Returns "" when nothing
+        # meaningful could be determined — the DB stores NULL in that case.
+        try:
+            device_model = parse_device_model(ua, request_obj=request) or None
+        except Exception as e:
+            # Never let model parsing break visitor logging.
+            logger.debug(f"parse_device_model failed: {e}")
+            logger.warning(f"parse_device_model failed: {e}", exc_info=True)
+            device_model = None
 
         # Bot classification (offline, no network call)
         is_bot, bot_name = detect_bot(ua)
@@ -4148,14 +4189,15 @@ def log_page_visit():
         ip = get_client_ip()
 
         # Build the payload once. If db.log_visitor doesn't yet accept the
-        # new is_bot / bot_name kwargs, we retry without them below rather
-        # than losing the whole visit record.
+        # new kwargs (device_model, is_bot, bot_name), we retry without
+        # them below rather than losing the whole visit record.
         payload = {
             "user_id": user_id,
             "visitor_name": visitor_name,
             "ip_address": ip,
             "user_agent": ua,
             "device_type": ua_info["device_type"],
+            "device_model": device_model,       # ← NEW
             "os_name": ua_info["os"],
             "browser": ua_info["browser"],
             "path": request.path,
@@ -4168,18 +4210,20 @@ def log_page_visit():
             "city": request.headers.get("CF-IPCity") or None,
             "region": request.headers.get("CF-IPRegion") or None,
             "timezone": request.headers.get("CF-IPTimezone") or None,
-            # --- NEW: bot classification ---
+            # --- bot classification ---
             "is_bot": 1 if is_bot else 0,
             "bot_name": bot_name,
         }
 
         try:
             db.log_visitor(**payload)
-        except TypeError:
-            # db.log_visitor hasn't been updated yet to accept is_bot/bot_name.
-            # Strip them and try once more so we still record the visit.
-            payload.pop("is_bot", None)
-            payload.pop("bot_name", None)
+        except TypeError as e:
+            logger.warning(
+                f"db.log_visitor rejected new kwargs ({e}); retrying without "
+                f"device_model/is_bot/bot_name — fix database.log_visitor signature."
+            )
+            for _k in ("device_model", "is_bot", "bot_name"):
+                payload.pop(_k, None)
             db.log_visitor(**payload)
 
         # Fire-and-forget enrichment. Never blocks the request path.
@@ -4194,7 +4238,7 @@ def log_page_visit():
 
     except TypeError as e:
         # A TypeError that reaches here means something other than the
-        # is_bot/bot_name kwargs mismatch — treat as a real bug.
+        # new-kwargs mismatch — treat as a real bug.
         logger.error(f"Visitor logging signature mismatch (BUG): {e}", exc_info=True)
     except Exception as e:
         logger.warning(f"Visitor logging failed (non-fatal): {e}")
@@ -8692,6 +8736,7 @@ class ReloadlyWebApp:
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
+            response.headers["Accept-CH"] = "Sec-CH-UA-Model"
             return response
 
         @self.app.route("/")
@@ -12395,49 +12440,41 @@ class ReloadlyWebApp:
             return jsonify({"success": False, "error": "Failed to update config"}), 500
 
         def import_contacts_unique(user_id, contacts, phone_field='phone', name_field='name'):
+            """Import multiple contacts for a user, skipping duplicates by phone/email.
+
+            Args: user_id, contacts (list of dicts), phone_field, name_field
+            Returns: {success, added, skipped, updated, errors}
             """
-            Import multiple contacts for a user, skipping duplicates by phone/email.
-            
-            Args:
-                user_id: The user's ID
-                contacts: List of dicts with phone/email/name
-                phone_field: Key name for phone in each contact dict
-                name_field: Key name for name in each contact dict
-            
-            Returns:
-                dict: {success, added, skipped, updated, errors}
-            """
-            conn = get_db_connection()
+            conn = db.get_db_connection()          # ← was bare get_db_connection()
             c = conn.cursor()
-            
+
             added = 0
             skipped = 0
             updated = 0
             errors = []
-            
+
             try:
                 for contact in contacts:
                     if not isinstance(contact, dict):
                         skipped += 1
                         continue
-                    
+
                     phone = str(contact.get(phone_field) or contact.get('phone') or '').strip()
                     email = str(contact.get('email') or '').strip().lower()
                     name = str(contact.get(name_field) or contact.get('name') or '').strip()
                     network = str(contact.get('network') or '').strip()
                     country = str(contact.get('country') or '').strip()
-                    
+
                     if not phone and not email:
                         skipped += 1
                         continue
-                    
-                    # Normalize phone - strip non-digits except leading +
+
                     clean_phone = re.sub(r'[^\d+]', '', phone)
                     if not clean_phone or len(clean_phone) < 5:
                         skipped += 1
                         continue
-                    
-                    # Check for existing contact by phone or email
+
+                    # Look up an existing row by phone first, then by email
                     existing = None
                     if clean_phone:
                         existing = c.execute(
@@ -12449,9 +12486,9 @@ class ReloadlyWebApp:
                             "SELECT id FROM contacts WHERE user_id = ? AND email = ?",
                             (user_id, email)
                         ).fetchone()
-                    
+
                     if existing:
-                        # Update existing contact
+                        existing_id = existing["id"] if hasattr(existing, "keys") else existing[0]
                         c.execute(
                             """
                             UPDATE contacts
@@ -12462,18 +12499,20 @@ class ReloadlyWebApp:
                                 updated_at = CURRENT_TIMESTAMP
                             WHERE id = ? AND user_id = ?
                             """,
-                            (name, network, country, email,
-                             existing_phones[phone]["id"], user_id)
+                            (name, network, country, email, existing_id, user_id)
                         )
                         updated += 1
                     else:
-                        # Insert new contact
-                        c.execute("""
-                            INSERT INTO contacts (user_id, name, phone, email, network, country, created_at, updated_at)
+                        c.execute(
+                            """
+                            INSERT INTO contacts
+                                (user_id, name, phone, email, network, country, created_at, updated_at)
                             VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                        """, (user_id, name or 'Contact', clean_phone, email, network, country))
+                            """,
+                            (user_id, name or 'Contact', clean_phone, email, network, country)
+                        )
                         added += 1
-                
+
                 conn.commit()
                 return {
                     'success': True,
@@ -12482,7 +12521,7 @@ class ReloadlyWebApp:
                     'updated': updated,
                     'errors': errors
                 }
-            
+
             except Exception as e:
                 conn.rollback()
                 logger.error(f"import_contacts_unique failed: {e}")
@@ -12495,6 +12534,10 @@ class ReloadlyWebApp:
                 }
             finally:
                 conn.close()
+        
+        
+        
+        
        # ============ BULK RECHARGE API ============
         # ============ BULK RECHARGE API ============
         @self.app.route("/api/bulk/recharge", methods=["POST"])
@@ -13514,7 +13557,7 @@ class ReloadlyWebApp:
                 "paystack": bool(os.getenv("PAYSTACK_SECRET_KEY")),
                 "stripe": bool(os.getenv("STRIPE_SECRET_KEY")) and STRIPE_AVAILABLE,
                 "flutterwave": bool(os.getenv("FLUTTERWAVE_SECRET_KEY")),
-                "encryption": bool(ENCRYPTION_KEY),
+                "encryption": _encryption_key_valid,
                 "exchange_rates": ExchangeRateService._last_success is not None,
             }
             healthy = all(status.values())
@@ -15161,104 +15204,9 @@ class ReloadlyWebApp:
                 logger.error(f"Error getting visitor stats: {e}")
                 return jsonify({"success": False, "error": str(e)}), 500
 
-                # ============ PROMOTIONS MANAGEMENT API ============
 
-        @self.app.route("/api/admin/promotions", methods=["GET"])
-        @admin_required
-        def admin_get_promotions():
-            """Get all promotions with pagination."""
-            limit = min(request.args.get("limit", 50, type=int), 100)
-            offset = max(request.args.get("offset", 0, type=int), 0)
-            promotions = db.get_all_promotions(limit, offset)
-            return jsonify({"success": True, "promotions": promotions})
 
-            # ============ PROMOTIONS MANAGEMENT API ============
 
-        @self.app.route("/api/admin/promotions", methods=["POST"])
-        @admin_required
-        def admin_create_promotion():
-            """Create a new promotion."""
-            data = request.json or {}
-
-            # Log incoming data for debugging
-            logger.info(f"Creating promotion with data: {data}")
-
-            # Only require name, title, body - everything else is optional
-            required = ["name", "title", "body"]
-            missing = [f for f in required if not data.get(f)]
-            if missing:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "error": f"Missing required fields: {', '.join(missing)}",
-                        }
-                    ),
-                    400,
-                )
-
-            # Build promotion data with defaults for all fields
-            try:
-                promo_id = db.create_promotion(
-                    name=data.get("name"),
-                    title=data.get("title"),
-                    body=data.get("body"),
-                    cta_text=data.get("cta_text"),
-                    cta_url=data.get("cta_url"),
-                    promo_type=data.get("promo_type", "standard"),
-                    category=data.get("category", "general"),
-                    icon=data.get("icon", "🎁"),
-                    brand_color=data.get("brand_color", "#4f46e5"),
-                    background_color=data.get("background_color", "#f5f3ff"),
-                    text_color=data.get("text_color", "#1e293b"),
-                    active=data.get("active", True),
-                    priority=data.get("priority", 0),
-                    start_date=data.get("start_date"),
-                    end_date=data.get("end_date"),
-                    target_tx_type=data.get("target_tx_type"),
-                    target_min_amount=data.get("target_min_amount"),
-                    target_max_amount=data.get("target_max_amount"),
-                    target_customer_type=data.get("target_customer_type"),
-                    target_hour_start=data.get("target_hour_start"),
-                    target_hour_end=data.get("target_hour_end"),
-                    target_days=data.get("target_days"),
-                    max_impressions=data.get("max_impressions"),
-                    max_clicks=data.get("max_clicks"),
-                    metadata=data.get("metadata"),
-                    # New fields for percentage discounts
-                    discount_type=data.get("discount_type", "fixed"),
-                    discount_value=data.get("discount_value", 0),
-                    max_discount=data.get("max_discount"),
-                    min_purchase=data.get("min_purchase"),
-                    service_types=data.get("service_types"),
-                    usage_limit_per_user=data.get("usage_limit_per_user"),
-                    coupon_code=data.get("coupon_code"),
-                    is_referral=data.get("is_referral", False),
-                    referrer_bonus_type=data.get("referrer_bonus_type", "fixed"),
-                    referrer_bonus_value=data.get("referrer_bonus_value", 0),
-                    referred_bonus_type=data.get("referred_bonus_type", "fixed"),
-                    referred_bonus_value=data.get("referred_bonus_value", 0),
-                    created_by=(
-                        g.current_user.get("id") if hasattr(g, "current_user") else None
-                    ),
-                )
-
-                if promo_id:
-                    return jsonify(
-                        {
-                            "success": True,
-                            "promotion_id": promo_id,
-                            "message": "Promotion created successfully",
-                        }
-                    )
-                return (
-                    jsonify({"success": False, "error": "Failed to create promotion"}),
-                    500,
-                )
-
-            except Exception as e:
-                logger.error(f"Error creating promotion: {e}")
-                return jsonify({"success": False, "error": str(e)}), 500
 
         @self.app.route("/api/admin/promotions/<int:promo_id>", methods=["GET"])
         @admin_required
@@ -15356,17 +15304,7 @@ class ReloadlyWebApp:
             finally:
                 conn.close()
 
-        # ============ ADMIN: ALL RECEIPT ADS ============
-        @self.app.route("/api/admin/receipt-ads/all", methods=["GET"])
-        @admin_required
-        def admin_list_all_receipt_ads():
-            """Get all receipt ads for admin."""
-            limit = min(request.args.get("limit", 50, type=int), 100)
-            offset = max(request.args.get("offset", 0, type=int), 0)
-            campaigns = db.get_all_sponsored_campaigns(limit, offset)
-            return jsonify(
-                {"success": True, "campaigns": campaigns, "count": len(campaigns)}
-            )
+       
 
         # ============ ADMIN: SMS CONFIG ============
         @self.app.route("/api/admin/sms/config", methods=["GET"])
@@ -16601,6 +16539,9 @@ def _admin_bot_summary():
         })
     except Exception as _e:
         return _flask_jsonify({"success": False, "error": str(_e)}), 500
+
+
+
 
 def main():
     print("\n" + "=" * 60)
