@@ -4112,7 +4112,103 @@ def parse_user_agent(ua_string: str) -> Dict[str, str]:
     return {"device_type": device_type, "os": os_name, "browser": browser}
 
 
-from user_agents import parse as _parse_ua
+# ua_extract.py
+"""
+Minimal User-Agent device/brand/model extractor.
+
+Exposes the exact interface main.py's parse_device_model() expects:
+    DeviceDetector(ua, headers=...).parse()
+        .device_brand() -> str
+        .device_model() -> str
+
+Strategy:
+  1. Prefer Client Hints (Sec-CH-UA-Model) when present — that's the only way
+     modern Chrome on Android reveals the exact model.
+  2. Fall back to parsing the User-Agent string.
+"""
+
+import re
+
+
+class _ParsedDevice:
+    def __init__(self, brand="", model=""):
+        self._brand = brand or ""
+        self._model = model or ""
+
+    def device_brand(self):
+        return self._brand
+
+    def device_model(self):
+        return self._model
+
+
+class DeviceDetector:
+    def __init__(self, user_agent="", headers=None):
+        self.user_agent = user_agent or ""
+        self.headers = headers or {}
+
+    def parse(self):
+        ua = self.user_agent
+        h = {k.lower(): v for k, v in self.headers.items()}
+
+        # ---- 1. Client Hints (most accurate for Android Chrome) ----
+        ch_model = h.get("sec-ch-ua-model", "").strip('"').strip()
+        if ch_model:
+            # "SM-G991B" → brand Samsung, model SM-G991B (best we can do)
+            brand = self._brand_from_model(ch_model)
+            return _ParsedDevice(brand, ch_model)
+
+        # ---- 2. iPhone / iPad ----
+        if re.search(r"iPhone", ua):
+            return _ParsedDevice("Apple", "iPhone")
+        if re.search(r"iPad", ua):
+            return _ParsedDevice("Apple", "iPad")
+        if re.search(r"iPod", ua):
+            return _ParsedDevice("Apple", "iPod")
+
+        # ---- 3. Android: "Android X; <model> Build/..." ----
+        m = re.search(r"Android[^;]*;\s*([^;)]+?)(?:\s+Build[/\s]|\)|;)", ua)
+        if m:
+            model = m.group(1).strip()
+            # Skip locale-style prefix ("en-us; Pixel 6")
+            model = re.sub(r"^[a-z]{2}-[a-z]{2}[;\s]*", "", model, flags=re.I).strip()
+            brand = self._brand_from_model(model)
+            return _ParsedDevice(brand, model)
+
+        # ---- 4. Windows / macOS / Linux desktop — no model ----
+        # Desktops genuinely have no model. Return empty strings, not None,
+        # so the caller's `or None` writes a real NULL.
+        return _ParsedDevice("", "")
+
+    @staticmethod
+    def _brand_from_model(model: str) -> str:
+        """Rough brand inference from a model code. Good enough for analytics."""
+        m = model.lower()
+        if m.startswith(("sm-", "gt-", "sgh-", "sch-")) or "samsung" in m:
+            return "Samsung"
+        if m.startswith("pixel") or "google" in m:
+            return "Google"
+        if m.startswith(("m2", "redmi", "mi ", "poco")) or "xiaomi" in m:
+            return "Xiaomi"
+        if m.startswith(("cph", "cph1", "cph2")) or "oppo" in m:
+            return "Oppo"
+        if m.startswith("vivo") or m.startswith("v2"):
+            return "Vivo"
+        if m.startswith("oneplus") or m.startswith("ne2"):
+            return "OnePlus"
+        if m.startswith(("moto", "xt", "x")) and "moto" in m:
+            return "Motorola"
+        if "huawei" in m or m.startswith(("ane-", "lya-", "ele-", "vog-")):
+            return "Huawei"
+        if "nokia" in m:
+            return "Nokia"
+        if "infinix" in m:
+            return "Infinix"
+        if "tecno" in m:
+            return "Tecno"
+        if "itel" in m:
+            return "Itel"
+        return ""
 
     
 def detect_ua(ua_string: str) -> dict:
