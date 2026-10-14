@@ -7309,6 +7309,7 @@ def log_visitor(
     ip_address: str = "",
     user_agent: str = "",
     device_type: str = "",
+    device_model: str = "",               # ← NEW
     os_name: str = "",
     browser: str = "",
     path: str = "",
@@ -7318,7 +7319,7 @@ def log_visitor(
     city: str = "",
     region: str = "",
     timezone: str = "",
-    # ── NEW: bot / crawler classification ─────────────────────────────
+    # ── bot / crawler classification ──────────────────────────────────
     # Passed in by log_page_visit() in app.py after running detect_bot()
     # on the request's User-Agent. Cheap offline string matching — no
     # external call, no reason to leave it blank.
@@ -7329,8 +7330,14 @@ def log_visitor(
 
     All parameters after user_id are optional so that old call sites —
     tests, scripts, other modules — keep working even after the geo
-    fields (country, city, region, timezone) and bot fields
-    (is_bot, bot_name) are added later.
+    fields (country, city, region, timezone), bot fields
+    (is_bot, bot_name), and the new device_model field are added later.
+
+    device_model is populated by parse_device_model() in app.py, which
+    combines the Sec-CH-UA-Model client hint (modern Chrome/Edge on
+    Android) with User-Agent parsing (Safari, Firefox, older Android).
+    Apple devices always log as "iPhone" or "iPad" — that's an Apple
+    restriction, not a detection failure.
     """
     conn = get_db_connection()
     c = conn.cursor()
@@ -7344,6 +7351,7 @@ def log_visitor(
             ip_address TEXT,
             user_agent TEXT,
             device_type TEXT,
+            device_model TEXT,                 -- ← NEW
             os_name TEXT,
             browser TEXT,
             path TEXT,
@@ -7370,6 +7378,7 @@ def log_visitor(
         "ip_address",
         "user_agent",
         "device_type",
+        "device_model",                    # ← NEW
         "os_name",
         "browser",
         "path",
@@ -7418,9 +7427,13 @@ def log_visitor(
     c.execute(
         "CREATE INDEX IF NOT EXISTS idx_visitor_logs_country ON visitor_logs(country)"
     )
-    # NEW: index for bot aggregation queries used by /api/admin/bots/summary
+    # Index for bot aggregation queries used by /api/admin/bots/summary
     c.execute(
         "CREATE INDEX IF NOT EXISTS idx_visitor_logs_is_bot ON visitor_logs(is_bot)"
+    )
+    # NEW: index for filtering/grouping by device model in admin analytics
+    c.execute(
+        "CREATE INDEX IF NOT EXISTS idx_visitor_logs_device_model ON visitor_logs(device_model)"
     )
 
     # Normalize is_bot so both True/False and 1/0 come through cleanly as
@@ -7428,15 +7441,20 @@ def log_visitor(
     # always match.
     is_bot_int = 1 if is_bot else 0
 
+    # Normalize device_model: store NULL, not "", when nothing was detected.
+    # The admin table renders NULL as "—" and every query that filters on
+    # device_model can do so consistently.
+    device_model_value = (device_model or "").strip() or None
+
     try:
         c.execute(
             """
             INSERT INTO visitor_logs
             (user_id, visitor_name, ip_address, user_agent, device_type,
-             os_name, browser, path, referrer, session_id,
+             device_model, os_name, browser, path, referrer, session_id,
              country, city, region, timezone,
              is_bot, bot_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 user_id,
@@ -7444,6 +7462,7 @@ def log_visitor(
                 ip_address,
                 user_agent,
                 device_type,
+                device_model_value,            # ← NEW
                 os_name,
                 browser,
                 path,
@@ -7461,6 +7480,7 @@ def log_visitor(
         logger.info(
             f"Visitor logged: path={path}, user_id={user_id}, "
             f"ip={ip_address}, country={country or '?'}, city={city or '?'}, "
+            f"device={device_type or '?'}, model={device_model_value or '?'}, "
             f"is_bot={is_bot_int}{' (' + bot_name + ')' if bot_name else ''}"
         )
         return True
