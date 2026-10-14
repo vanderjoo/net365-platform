@@ -3419,7 +3419,7 @@ class PaymentProcessor:
                 amount_cents = int(amount * 100)
 
             session = stripe.checkout.Session.create(
-                payment_method_types=["card"],
+                #payment_method_types=["card"],
                 line_items=[
                     {
                         "price_data": {
