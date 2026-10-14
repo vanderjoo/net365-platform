@@ -1,20 +1,18 @@
-# ============ FIX WINDOWS CONSOLE ENCODING ============
-# ============ FIX WINDOWS CONSOLE ENCODING ============
-# ============ FIX UNICODE/ENCODING ISSUES ============
+# ============ STANDARD IMPORTS ============
 import sys
 import io
 import os
 import uuid
+import logging
 
-# Force UTF-8 for all I/O
+# ============ WINDOWS CONSOLE / UNICODE FIX ============
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
     os.environ["PYTHONIOENCODING"] = "utf-8"
 
-# Also set for logging
-import logging
-
+# ============ LOGGING SETUP ============
+# Must run BEFORE any code below calls logger.
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -23,28 +21,22 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout),
     ],
 )
-# ======================================================'
-# ======================================================
+logger = logging.getLogger(__name__)
 
-# ============ LOAD ENVIRONMENT VARIABLES ============
+# ============ LOAD .env ============
 try:
     from dotenv import load_dotenv
-
     load_dotenv()
     print("Loaded .env file using python-dotenv")
 except ImportError:
     print("python-dotenv not installed, using system environment variables")
 
-import os
-
-# Diagnostic: shows exactly what SMTP_HOST resolved to, wrapped in brackets so
-# hidden issues (stray quotes, trailing spaces, wrong variable name entirely)
-# are visible instead of silently causing a DNS lookup failure later.
+# ============ SMTP DIAGNOSTICS ============
 _smtp_host_check = os.getenv("SMTP_HOST")
 if _smtp_host_check:
     print(f"SMTP_HOST loaded as: [{_smtp_host_check}]")
 else:
-    print("SMTP_HOST not set — email sending will use the default (smtp.gmail.com)")
+    print("SMTP_HOST not set — email sending will use the default (smtp.mailgun.org)")
 print(f"SMTP_PORT loaded as: [{os.getenv('SMTP_PORT', '587 (default)')}]")
 _smtp_user_check = os.getenv("SMTP_USER")
 _smtp_pass_check = os.getenv("SMTP_PASSWORD")
@@ -52,24 +44,65 @@ print(f"SMTP_USER loaded: [{'SET as ' + _smtp_user_check if _smtp_user_check els
 print(f"SMTP_PASSWORD loaded: [{'SET' if _smtp_pass_check else 'NOT SET'}]")
 if not _smtp_user_check or not _smtp_pass_check:
     print("⚠️ WARNING: SMTP_USER/SMTP_PASSWORD missing — send_email_notification() will "
-          "silently return False for every email until these are set on Railway.")
-from flask import send_from_directory, render_template_string
+          "silently return False for every email until these are set.")
 
+# ============ ENVIRONMENT VARIABLES CHECK ============
 print("=" * 60)
 print("ENVIRONMENT VARIABLES CHECK")
 print("=" * 60)
-print(
-    f"RELOADLY_CLIENT_ID: {os.getenv('RELOADLY_CLIENT_ID', 'NOT SET')[:15] if os.getenv('RELOADLY_CLIENT_ID') else 'NOT SET'}..."
-)
-print(
-    f"RELOADLY_CLIENT_SECRET: {'SET' if os.getenv('RELOADLY_CLIENT_SECRET') else 'NOT SET'}"
-)
+print(f"RELOADLY_CLIENT_ID: {os.getenv('RELOADLY_CLIENT_ID', 'NOT SET')[:15] if os.getenv('RELOADLY_CLIENT_ID') else 'NOT SET'}...")
+print(f"RELOADLY_CLIENT_SECRET: {'SET' if os.getenv('RELOADLY_CLIENT_SECRET') else 'NOT SET'}")
 print(f"RELOADLY_ENVIRONMENT: {os.getenv('RELOADLY_ENVIRONMENT', 'NOT SET')}")
 print(f"PAYMENT_SERVICE_URL: {os.getenv('PAYMENT_SERVICE_URL', 'NOT SET')}")
 print(f"PUBLIC_URL: {os.getenv('PUBLIC_URL', 'NOT SET')}")
 print(f"FRONTEND_URL: {os.getenv('FRONTEND_URL', 'NOT SET')}")
 print(f"EXCHANGE_RATE_INTERVAL: {os.getenv('EXCHANGE_RATE_INTERVAL', '300')} seconds")
 print("=" * 60 + "\n")
+
+# ============ ENCRYPTION SETUP ============
+# This must come AFTER logger exists (it uses logger.warning).
+_ENV = os.getenv("ENVIRONMENT", "").lower()
+_ENCRYPTION_KEY_RAW = os.getenv("ENCRYPTION_KEY")
+
+_encryption_key_valid = False
+_encryption_key_error = "not set"   # always defined
+
+if _ENCRYPTION_KEY_RAW:
+    try:
+        from cryptography.fernet import Fernet as _Fernet
+        _Fernet(_ENCRYPTION_KEY_RAW.encode())
+        _encryption_key_valid = True
+        _encryption_key_error = None
+    except Exception as _e:
+        _encryption_key_valid = False
+        _encryption_key_error = str(_e)
+
+# Build the global `cipher` — encrypt_pii/decrypt_pii depend on this existing.
+cipher = None
+if _encryption_key_valid:
+    try:
+        from cryptography.fernet import Fernet
+        cipher = Fernet(_ENCRYPTION_KEY_RAW.encode())
+    except Exception as _e:
+        logger.error(f"Failed to construct Fernet cipher: {_e}")
+        cipher = None
+
+if _ENV == "production":
+    if not _encryption_key_valid:
+        raise ValueError(
+            f"ENCRYPTION_KEY is required and must be a valid Fernet key in production "
+            f"(problem: {_encryption_key_error}). Generate one with: "
+            f"python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+        )
+    logger.info("✅ Production mode: ENCRYPTION_KEY is set and valid")
+else:
+    if not _encryption_key_valid:
+        logger.warning(
+            f"⚠️  ENCRYPTION_KEY {_encryption_key_error} — PII will be stored in plaintext. "
+            f"Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+        )
+    else:
+        logger.info("✅ Development mode: ENCRYPTION_KEY set and valid")
 # ==========================================================
 
 import requests
@@ -1301,13 +1334,16 @@ except ImportError:
     print("WARNING: cryptography not installed. PII will be stored in plaintext!")
 
 # ============ CHECK ENCRYPTION KEY IN PRODUCTION ============
+# ============ ENCRYPTION SETUP ============
 _ENV = os.getenv("ENVIRONMENT", "").lower()
 _ENCRYPTION_KEY_RAW = os.getenv("ENCRYPTION_KEY")
 
 # Validate the key format up-front — presence alone is not enough.
-# A malformed key would otherwise leave `cipher = None` and cause
-# every encrypt_pii() call to silently return plaintext.
+# A malformed key would otherwise leave cipher=None and cause every
+# encrypt_pii() call to silently return plaintext.
 _encryption_key_valid = False
+_encryption_key_error = None      # ← always defined, set explicitly in each branch
+
 if _ENCRYPTION_KEY_RAW:
     try:
         from cryptography.fernet import Fernet as _Fernet
@@ -1319,6 +1355,20 @@ if _ENCRYPTION_KEY_RAW:
 else:
     _encryption_key_error = "not set"
 
+
+# Build the actual cipher. Global `cipher` is what encrypt_pii/decrypt_pii
+# look up at call time — without this, every call crashes with NameError.
+cipher = None
+if _encryption_key_valid:
+    try:
+        from cryptography.fernet import Fernet
+        cipher = Fernet(_ENCRYPTION_KEY_RAW.encode())
+    except Exception as _e:
+        logger.error(f"Failed to construct Fernet cipher: {_e}")
+        cipher = None
+
+
+# Environment-aware startup messaging.
 if _ENV == "production":
     if not _encryption_key_valid:
         raise ValueError(
@@ -1326,17 +1376,25 @@ if _ENV == "production":
             f"(problem: {_encryption_key_error}). Generate one with: "
             f"python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
         )
-    print("✅ Production mode: ENCRYPTION_KEY is set and valid")
+    logger.info("✅ Production mode: ENCRYPTION_KEY is set and valid")
 else:
     if not _encryption_key_valid:
-        print(f"⚠️ WARNING: ENCRYPTION_KEY {_encryption_key_error} — PII will be stored in plaintext.")
-        print("   Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"")
+        logger.warning(
+            f"⚠️  ENCRYPTION_KEY {_encryption_key_error} — PII will be stored in plaintext. "
+            f"Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+        )
     else:
-        print("✅ Development mode: ENCRYPTION_KEY set and valid")
-
+        logger.info("✅ Development mode: ENCRYPTION_KEY set and valid")
 
 def encrypt_pii(data: str) -> str:
-    if not data or not cipher:
+    if not data:
+        return data
+    c = globals().get("cipher")
+    if c is None:
+        return data
+    try:
+        return c.encrypt(data.encode()).decode()
+    except Exception:
         return data
     try:
         return cipher.encrypt(data.encode()).decode()
@@ -8677,6 +8735,35 @@ class ReloadlyWebApp:
                 logger.exception(f"recommend_success_ad failed: {e}")
                 return jsonify({"success": False, "error": str(e)}), 500            
 
+
+        def select_success_page_ad(self, tx_type, country, amount, device_type, user_signals):
+            candidates = get_active_campaigns()
+            scored = []
+            for c in candidates:
+                score = c.priority  # base
+                # Hard filters
+                if c.target_country and c.target_country != country:
+                    continue
+                # Soft scoring — every match adds weight
+                if c.target_tx_type == tx_type:
+                    score += 50
+                if c.target_device == device_type:
+                    score += 10
+                if c.target_languages and user_signals['language'] in c.target_languages:
+                    score += 15
+                if c.target_connection and user_signals['connection'] == c.target_connection:
+                    score += 8
+                if c.target_hours and user_signals['local_hour'] in c.target_hours:
+                    score += 12
+                if c.target_networks and user_signals['preferred_network'] in c.target_networks:
+                    score += 20
+                if c.exclude_service and c.exclude_service == tx_type:
+                    continue
+                # RFM gating
+                if c.target_rfm and not matches_rfm(user_signals['rfm'], c.target_rfm):
+                    continue
+                scored.append((score, c))
+            return max(scored, key=lambda x: x[0])[1] if scored else None
      
         @self.app.route("/api/chat/session", methods=["POST"])
         def chat_session():
@@ -16651,7 +16738,39 @@ def _admin_bot_summary():
     except Exception as _e:
         return _flask_jsonify({"success": False, "error": str(_e)}), 500
 
-
+@app.route("/api/visitor/signals", methods=["POST"])
+def visitor_signals():
+    data = request.get_json(silent=True) or {}
+    tz = data.get("timezone")
+    local_hour = local_dow = None
+    if tz:
+        try:
+            from zoneinfo import ZoneInfo
+            now = datetime.now(ZoneInfo(tz))
+            local_hour = now.hour
+            local_dow = now.weekday()
+        except Exception:
+            pass
+    conn = db.get_db_connection()
+    conn.execute("""
+        INSERT INTO visitor_signals
+        (session_id, user_id, screen_w, screen_h, viewport_w, viewport_h,
+         timezone, language, languages, touch, connection,
+         battery_level, battery_charging, referrer_class, local_hour, local_dow, raw_json)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (
+        data.get("session_id"), getattr(g, "current_user_id", None),
+        data.get("screen_w"), data.get("screen_h"),
+        data.get("viewport_w"), data.get("viewport_h"),
+        tz, data.get("language"), data.get("languages"),
+        data.get("touch"), data.get("connection"),
+        data.get("battery_level"), data.get("battery_charging"),
+        classify_referrer(data.get("referrer_class")),
+        local_hour, local_dow, json.dumps(data),
+    ))
+    conn.commit()
+    conn.close()
+    return ("", 204)
 
 
 def main():
