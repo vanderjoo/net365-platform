@@ -99,6 +99,7 @@ from email import encoders
 import database as db
 from ip_intel import IPIntel, detect_bot
 from webhook_security import verify_paystack_signature, verify_flutterwave_signature
+from net365_ua import DeviceDetector, parse_device_model
 
 # ============ CHECK ENCRYPTION KEY IN PRODUCTION ============
 if os.getenv("ENVIRONMENT", "").lower() == "production":
@@ -4210,32 +4211,30 @@ class DeviceDetector:
             return "Itel"
         return ""
 
+def parse_device_model(ua_string, request_obj=None):
+    """Return 'Brand Model' (or just one of them) from a UA + client hints.
+
+    Returns "" when nothing meaningful could be determined. log_page_visit()
+    turns "" into None, so the DB column gets a real NULL for desktop visits
+    and a real string for phones.
+    """
+    headers = {}
+    if request_obj is not None:
+        try:
+            headers = dict(request_obj.headers)
+        except Exception:
+            headers = {}
+    try:
+        device = DeviceDetector(ua_string, headers=headers).parse()
+        brand = device.device_brand() or ""
+        model = device.device_model() or ""
+    except Exception:
+        return ""
+    if brand and model:
+        return f"{brand} {model}"
+    return model or brand or ""
+
     
-def detect_ua(ua_string: str) -> dict:
-    """Parse a User-Agent string into the columns visitor_logs expects."""
-    ua = _parse_ua(ua_string or "")
-    if ua.is_mobile:
-        dtype = "Mobile"
-    elif ua.is_tablet:
-        dtype = "Tablet"
-    elif ua.is_bot:
-        dtype = "Bot"
-    elif ua.is_pc:
-        dtype = "Desktop"
-    else:
-        dtype = "Other"
-
-    def _clean(v):
-        return None if not v or v == "Other" else v
-
-    return {
-        "device_type": dtype,
-        "os_name":     _clean(ua.os.family),
-        "browser":     _clean(ua.browser.family),
-        "device_model": _clean(ua.device.family),
-        "is_bot":      1 if ua.is_bot else 0,
-        "bot_name":    ua.device.family if ua.is_bot else None,
-    }    
 
 def get_client_ip() -> str:
     forwarded = request.headers.get("X-Forwarded-For", "")
