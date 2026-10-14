@@ -23,6 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 # ============ LOAD .env ============
 try:
     from dotenv import load_dotenv
@@ -106,28 +107,6 @@ else:
 # ==========================================================
 
 
-import os
-print("=" * 60)
-print("RAILWAY ENV DIAGNOSTIC")
-print("=" * 60)
-for key in [
-    "ENCRYPTION_KEY", "FLASK_SECRET_KEY",
-    "RELOADLY_CLIENT_ID", "RELOADLY_CLIENT_SECRET", "RELOADLY_ENVIRONMENT",
-    "SMTP_HOST", "SMTP_USER", "MAILGUN_API_KEY", "MAILGUN_DOMAIN",
-    "PAYSTACK_SECRET_KEY", "STRIPE_SECRET_KEY", "FLUTTERWAVE_SECRET_KEY",
-    "ADMIN_SECRET", "NET365_DB_PATH",
-    "PUBLIC_URL", "PAYMENT_SERVICE_URL", "FRONTEND_URL",
-]:
-    v = os.getenv(key)
-    if v is None:
-        print(f"  {key:<28} NOT SET")
-    elif key in ("ENCRYPTION_KEY", "FLASK_SECRET_KEY", "PAYSTACK_SECRET_KEY",
-                 "STRIPE_SECRET_KEY", "FLUTTERWAVE_SECRET_KEY", "ADMIN_SECRET",
-                 "RELOADLY_CLIENT_SECRET", "SMTP_PASSWORD", "MAILGUN_API_KEY"):
-        print(f"  {key:<28} SET (len={len(v)})")
-    else:
-        print(f"  {key:<28} {v}")
-print("=" * 60)
 
 
 import requests
@@ -159,17 +138,7 @@ from ip_intel import IPIntel, detect_bot
 from webhook_security import verify_paystack_signature, verify_flutterwave_signature
 from net365_ua import DeviceDetector, parse_device_model
 
-# ============ CHECK ENCRYPTION KEY IN PRODUCTION ============
-if os.getenv("ENVIRONMENT", "").lower() == "production":
-    if not os.getenv("ENCRYPTION_KEY"):
-        raise ValueError(
-            "ENCRYPTION_KEY required in production! Please set ENCRYPTION_KEY in .env file."
-        )
-    print("✅ Production mode: ENCRYPTION_KEY is set")
-else:
-    if not os.getenv("ENCRYPTION_KEY"):
-        print("⚠️ WARNING: ENCRYPTION_KEY not set! PII will be stored in plaintext.")
-        print("   Set ENCRYPTION_KEY in .env file for security.")
+
 
 
 # ============ EXCHANGE RATE SERVICE WITH AUTO-REFRESH ============
