@@ -558,6 +558,7 @@
                                     <th>Organization</th>
                                     <th>Kind</th>
                                     <th>Device</th>
+                                    <th>Model</th> 
                                     <th>OS</th>
                                     <th>Browser</th>
                                     <th>Country</th>
@@ -1977,7 +1978,7 @@
         function renderVisitorTable(visitors) {
             const tbody = document.getElementById('visitorTableBody');
             if (!visitors.length) {
-                tbody.innerHTML = '<tr><td colspan="12" class="empty-state">No visits recorded for this filter</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" class="empty-state">No visits recorded for this filter</td></tr>';
                 return;
             }
             const badgeClass = { Desktop: 'badge-desktop', Mobile: 'badge-mobile', Tablet: 'badge-tablet' };
@@ -2009,12 +2010,20 @@
                     ? escapeHtml(v.city)
                     : '<span style="color:var(--text-secondary)">—</span>';
 
-                // NEW: Organization + Kind cells
+                // Organization + Kind cells
                 const orgCell = v.org_name
                     ? `<span title="${escapeHtml(v.asn || '')}">${escapeHtml(v.org_name)}</span>`
                     : '<span style="color:var(--text-secondary)">…</span>';
                 const kindCell = v.ip_kind
                     ? `<span class="badge ${kindBadge[v.ip_kind] || 'badge-unknown'}">${escapeHtml(v.ip_kind)}</span>`
+                    : '<span style="color:var(--text-secondary)">—</span>';
+
+                // NEW: Device model cell.
+                // Empty when the browser didn't send Sec-CH-UA-Model and the UA
+                // didn't reveal a model (common for iPhones and older sessions).
+                // A small em-dash keeps the column visually clean instead of blank.
+                const modelCell = v.device_model
+                    ? `<span title="${escapeHtml(v.device_model)}">${escapeHtml(v.device_model)}</span>`
                     : '<span style="color:var(--text-secondary)">—</span>';
 
                 return `
@@ -2025,6 +2034,7 @@
                     <td>${orgCell}</td>
                     <td>${kindCell}</td>
                     <td><span class="badge ${badgeClass[v.device_type] || 'badge-unknown'}">${v.device_type || 'Unknown'}</span></td>
+                    <td>${modelCell}</td>
                     <td>${escapeHtml(v.os_name || v.os || '')}</td>
                     <td>${escapeHtml(v.browser || '')}</td>
                     <td>${countryCell}</td>
