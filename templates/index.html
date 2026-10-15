@@ -7208,5 +7208,12 @@ body.dark-mode .footer{background:#080B14!important}
 @media(max-width:768px){.welcome-banner{padding:25px!important;min-height:unset!important}.welcome-banner h1{font-size:clamp(29px,8vw,40px)!important}.sidebar{box-shadow:20px 0 55px rgba(0,0,0,.24)!important}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
+<script>
+(function(){try{var p=new URLSearchParams(location.search);var e=p.get('google_error');
+if(e){setTimeout(function(){if(typeof showToast==='function')showToast('Google sign-in: '+e,'error');else alert(e);},600);
+history.replaceState(null,'',location.pathname);}
+var ref=p.get('ref');var g=document.querySelector('.n365-google');
+if(ref&&g){g.href='/api/auth/google/login?ref='+encodeURIComponent(ref);}}catch(_){}})();
+</script>
 </body>
 </html>
