@@ -23,7 +23,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 # ============ LOAD .env ============
 try:
     from dotenv import load_dotenv
@@ -106,9 +105,6 @@ else:
         logger.info("✅ Development mode: ENCRYPTION_KEY set and valid")
 # ==========================================================
 
-
-
-
 import requests
 import json
 import uuid
@@ -138,7 +134,17 @@ from ip_intel import IPIntel, detect_bot
 from webhook_security import verify_paystack_signature, verify_flutterwave_signature
 from net365_ua import DeviceDetector, parse_device_model
 
-
+# ============ CHECK ENCRYPTION KEY IN PRODUCTION ============
+if os.getenv("ENVIRONMENT", "").lower() == "production":
+    if not os.getenv("ENCRYPTION_KEY"):
+        raise ValueError(
+            "ENCRYPTION_KEY required in production! Please set ENCRYPTION_KEY in .env file."
+        )
+    print("✅ Production mode: ENCRYPTION_KEY is set")
+else:
+    if not os.getenv("ENCRYPTION_KEY"):
+        print("⚠️ WARNING: ENCRYPTION_KEY not set! PII will be stored in plaintext.")
+        print("   Set ENCRYPTION_KEY in .env file for security.")
 
 
 # ============ EXCHANGE RATE SERVICE WITH AUTO-REFRESH ============
@@ -1327,72 +1333,15 @@ except ImportError:
     CRYPTOGRAPHY_AVAILABLE = False
     print("WARNING: cryptography not installed. PII will be stored in plaintext!")
 
-# ============ CHECK ENCRYPTION KEY IN PRODUCTION ============
-# ============ ENCRYPTION SETUP ============
-_ENV = os.getenv("ENVIRONMENT", "").lower()
-_ENCRYPTION_KEY_RAW = os.getenv("ENCRYPTION_KEY")
-
-# Validate the key format up-front — presence alone is not enough.
-# A malformed key would otherwise leave cipher=None and cause every
-# encrypt_pii() call to silently return plaintext.
-_encryption_key_valid = False
-_encryption_key_error = None      # ← always defined, set explicitly in each branch
-
-if _ENCRYPTION_KEY_RAW:
-    try:
-        from cryptography.fernet import Fernet as _Fernet
-        _Fernet(_ENCRYPTION_KEY_RAW.encode())   # raises if not a valid Fernet key
-        _encryption_key_valid = True
-    except Exception as _e:
-        _encryption_key_valid = False
-        _encryption_key_error = str(_e)
-else:
-    _encryption_key_error = "not set"
-
-
-# Build the actual cipher. Global `cipher` is what encrypt_pii/decrypt_pii
-# look up at call time — without this, every call crashes with NameError.
-cipher = None
-if _encryption_key_valid:
-    try:
-        from cryptography.fernet import Fernet
-        cipher = Fernet(_ENCRYPTION_KEY_RAW.encode())
-    except Exception as _e:
-        logger.error(f"Failed to construct Fernet cipher: {_e}")
-        cipher = None
-
-
-# Environment-aware startup messaging.
-if _ENV == "production":
-    if not _encryption_key_valid:
-        raise ValueError(
-            f"ENCRYPTION_KEY is required and must be a valid Fernet key in production "
-            f"(problem: {_encryption_key_error}). Generate one with: "
-            f"python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
-        )
-    logger.info("✅ Production mode: ENCRYPTION_KEY is set and valid")
-else:
-    if not _encryption_key_valid:
-        logger.warning(
-            f"⚠️  ENCRYPTION_KEY {_encryption_key_error} — PII will be stored in plaintext. "
-            f"Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
-        )
-    else:
-        logger.info("✅ Development mode: ENCRYPTION_KEY set and valid")
+# (Encryption key setup lives near the top of this file; not repeated here.)
 
 def encrypt_pii(data: str) -> str:
-    if not data:
-        return data
-    c = globals().get("cipher")
-    if c is None:
-        return data
-    try:
-        return c.encrypt(data.encode()).decode()
-    except Exception:
+    if not data or not cipher:
         return data
     try:
         return cipher.encrypt(data.encode()).decode()
     except Exception:
+        logger.error("encrypt_pii failed; value NOT encrypted", exc_info=True)
         return data
 
 
@@ -1402,6 +1351,8 @@ def decrypt_pii(data: str) -> str:
     try:
         return cipher.decrypt(data.encode()).decode()
     except Exception:
+        # Plaintext rows saved before a key existed land here too; only warn.
+        logger.warning("decrypt_pii: value could not be decrypted (plaintext or wrong key)")
         return data
 
 
@@ -3419,7 +3370,7 @@ class PaymentProcessor:
                 amount_cents = int(amount * 100)
 
             session = stripe.checkout.Session.create(
-                #payment_method_types=["card"],
+            #payment_method_types=["card"],
                 line_items=[
                     {
                         "price_data": {
@@ -4282,7 +4233,15 @@ def parse_device_model(ua_string, request_obj=None):
         model = device.device_model() or ""
     except Exception:
         return ""
+    # Chrome's reduced User-Agent reports a placeholder model ("K") on Android.
+    # That is not a real model; treat it as unknown rather than logging "K".
+    if model.strip().lower() in ("k", "android", "mobile", "unknown", "generic"):
+        model = ""
+        brand = ""
     if brand and model:
+        # Avoid "Tecno TECNO KG5k" when the model already starts with the brand
+        if model.lower().startswith(brand.lower()):
+            return model
         return f"{brand} {model}"
     return model or brand or ""
 
@@ -8928,7 +8887,12 @@ class ReloadlyWebApp:
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
+            # Ask Chrome/Edge for the real device model. Critical-CH makes the
+            # browser retry the FIRST page load with the hint (HTTPS/localhost only);
+            # without it the model only appears from the second request onwards.
             response.headers["Accept-CH"] = "Sec-CH-UA-Model"
+            response.headers["Critical-CH"] = "Sec-CH-UA-Model"
+            response.headers.add("Vary", "Sec-CH-UA-Model")
             return response
 
         @self.app.route("/")
@@ -13502,6 +13466,98 @@ class ReloadlyWebApp:
                 }
             )
 
+        # ============ GOOGLE SIGN-IN / SIGN-UP ============
+        google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+        google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+        self.google_oauth = None
+        if AUTH_LIB_AVAILABLE and google_client_id and google_client_secret:
+            _oauth = OAuth(self.app)
+            _oauth.register(
+                name="google",
+                client_id=google_client_id,
+                client_secret=google_client_secret,
+                server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+                client_kwargs={"scope": "openid email profile"},
+            )
+            self.google_oauth = _oauth.google
+            logger.info("Google OAuth enabled")
+        else:
+            logger.warning(
+                "Google OAuth disabled (authlib=%s, client_id=%s, secret=%s)",
+                AUTH_LIB_AVAILABLE, bool(google_client_id), bool(google_client_secret),
+            )
+
+        def _google_fail(msg):
+            from urllib.parse import quote
+            return redirect(f"{FRONTEND_URL}/?google_error={quote(msg)}")
+
+        @self.app.route("/api/auth/google/login", methods=["GET"])
+        def google_login():
+            if not self.google_oauth:
+                return _google_fail("Google sign-in is not configured on this server")
+            ref = (request.args.get("ref") or "").strip()
+            if ref:
+                session["google_ref"] = ref[:32]
+            redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "").strip() or url_for(
+                "google_callback", _external=True
+            )
+            return self.google_oauth.authorize_redirect(redirect_uri)
+
+        @self.app.route("/api/auth/google/callback", methods=["GET"])
+        def google_callback():
+            if not self.google_oauth:
+                return _google_fail("Google sign-in is not configured")
+            if request.args.get("error"):
+                return _google_fail("Google sign-in was cancelled")
+            try:
+                token = self.google_oauth.authorize_access_token()
+                info = token.get("userinfo") or self.google_oauth.userinfo()
+            except Exception as e:
+                logger.error(f"Google OAuth callback failed: {e}")
+                return _google_fail("Google sign-in failed. Please try again.")
+
+            email = (info.get("email") or "").strip().lower()
+            if not email or not info.get("email_verified", False):
+                return _google_fail("Your Google email is not verified")
+
+            try:
+                user = db.get_user_by_email(email)
+                if not user:
+                    ref = session.pop("google_ref", None)
+                    user_id = db.create_user(
+                        email=email,
+                        password=None,
+                        full_name=info.get("name") or email.split("@")[0],
+                        referral_code=ref,
+                    )
+                    if not user_id:
+                        return _google_fail("Could not create your account")
+                    user = db.get_user_by_email(email)
+                session.pop("google_ref", None)
+
+                status = user.get("account_status") or "active"
+                if status in ("suspended", "blocked", "deleted"):
+                    return _google_fail(f"This account has been {status}")
+
+                # Google has verified the address
+                if not user.get("email_verified"):
+                    conn = db.get_db()
+                    try:
+                        conn.execute(
+                            "UPDATE users SET email_verified = 1, verified_at = CURRENT_TIMESTAMP WHERE id = ?",
+                            (user["id"],),
+                        )
+                        conn.commit()
+                    finally:
+                        conn.close()
+
+                session_token = db.create_session(user["id"])
+                response = make_response(redirect(f"{FRONTEND_URL}/"))
+                return set_auth_cookie(response, session_token)
+            except Exception as e:
+                logger.error(f"Google login error: {e}", exc_info=True)
+                return _google_fail("Something went wrong. Please try again.")
+
         @self.app.route("/api/auth/login", methods=["POST"])
         @rate_limit(max_requests=5, window_seconds=300)
         def login_user():
@@ -13749,7 +13805,7 @@ class ReloadlyWebApp:
                 "paystack": bool(os.getenv("PAYSTACK_SECRET_KEY")),
                 "stripe": bool(os.getenv("STRIPE_SECRET_KEY")) and STRIPE_AVAILABLE,
                 "flutterwave": bool(os.getenv("FLUTTERWAVE_SECRET_KEY")),
-                "encryption": _encryption_key_valid,
+                "encryption": bool(_encryption_key_valid and cipher and decrypt_pii(encrypt_pii("ok")) == "ok"),
                 "exchange_rates": ExchangeRateService._last_success is not None,
             }
             healthy = all(status.values())
