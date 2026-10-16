@@ -1470,23 +1470,6 @@
     </div>
   </div>
 
-  <!-- ===== GIFT CARD MODAL ===== -->
-  <div id="giftCardModalOverlay" class="giftcard-modal-overlay" onclick="if(event.target===this) closeGiftCardWidget()">
-    <div class="giftcard-modal">
-      <div class="giftcard-modal-header">
-        <h3><i class="fas fa-gift"></i> Buy Gift Cards &amp; Subscriptions</h3>
-        <button class="giftcard-modal-close" onclick="closeGiftCardWidget()" aria-label="Close"><i class="fas fa-times"></i></button>
-      </div>
-      <p class="giftcard-modal-note">
-        <i class="fas fa-circle-info"></i>
-        Payment for gift cards is handled securely by Reloadly via card checkout — separate from your Net365 wallet balance.
-      </p>
-      <div class="giftcard-widget-container">
-        <reloadly-widget data-widget-id="VKTNgFdEdTMD2Kxeo1fKQLlbilG0j9pilu1hMR4dE"></reloadly-widget>
-      </div>
-    </div>
-  </div>
-  <script src="https://cdn.reloadly.com/widget/v2/reloadly-widget.js"></script>
 
   <div id="toastContainer"></div>
 
@@ -1521,21 +1504,8 @@
       document.getElementById('smsStudio').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // ---------- GIFT CARD WIDGET ----------
-    function openGiftCardWidget() {
-      document.getElementById('giftCardModalOverlay').classList.add('open');
-      document.body.style.overflow = 'hidden';
-      // Ensure the Reloadly widget script is loaded (defer may not have executed yet)
-      if (typeof window.ReloadlyWidget === 'undefined') {
-        // Script is already in the DOM with defer; give it a moment
-        setTimeout(() => {}, 100);
-      }
-    }
-    function closeGiftCardWidget() {
-      document.getElementById('giftCardModalOverlay').classList.remove('open');
-      document.body.style.overflow = '';
-    }
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeGiftCardWidget(); });
+    // ---------- GIFT CARDS: open the dedicated full-page store ----------
+    function openGiftCardWidget() { window.location.href = '/giftcards'; }
 
     // ---------- TOAST ----------
     function showToast(message, type = 'info') {
