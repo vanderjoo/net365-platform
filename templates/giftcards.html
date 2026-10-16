@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Net365 Gift Cards &amp; Subscriptions</title>
+  <meta name="description" content="Buy gift cards, streaming subscriptions and digital vouchers from global brands on Net365." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="preconnect" href="https://cdn.reloadly.com" crossorigin />
+  <style>
+    :root{
+      --bg:#f3f6fb; --bar:#ffffff; --stage:#ffffff; --text:#132238; --muted:#5b6b80;
+      --line:rgba(100,116,139,.22); --accent:#ff6d00; --accent-2:#4f46e5; --chip:rgba(15,23,42,.05);
+      --bar-h:60px;
+    }
+    body.dark{
+      --bg:#05070d; --bar:#0b1120; --stage:#0f1626; --text:#f5f7fb; --muted:#9aa7bc;
+      --line:rgba(148,163,184,.18); --chip:rgba(255,255,255,.06);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+      background:var(--bg);color:var(--text);
+      display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;
+    }
+    a{color:inherit;text-decoration:none}
+
+    /* ---------- top bar ---------- */
+    .bar{
+      position:sticky;top:0;z-index:20;height:var(--bar-h);
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));
+      background:var(--bar);border-bottom:1px solid var(--line);
+    }
+    .bar-left,.bar-right{display:flex;align-items:center;gap:10px;min-width:0}
+    .back{
+      display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:12px;
+      background:var(--chip);font-size:14px;font-weight:600;white-space:nowrap;
+    }
+    .back:hover{background:var(--line)}
+    .title{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;min-width:0}
+    .title i{color:var(--accent);font-size:18px}
+    .title span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .icon-btn{
+      width:44px;height:44px;border-radius:12px;border:0;cursor:pointer;
+      background:var(--chip);color:var(--text);font-size:16px;
+    }
+    .icon-btn:hover{background:var(--line)}
+
+    /* ---------- trust strip ---------- */
+    .strip{
+      display:flex;gap:10px 22px;flex-wrap:wrap;align-items:center;justify-content:center;
+      padding:10px 16px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--bar);
+    }
+    .strip span{display:inline-flex;align-items:center;gap:7px}
+    .strip i{color:var(--accent)}
+
+    /* ---------- the stage: fills everything left on the screen ---------- */
+    .stage{
+      flex:1 1 auto;display:flex;flex-direction:column;width:100%;
+      background:var(--stage);
+      min-height:calc(100dvh - var(--bar-h) - 44px);
+    }
+    .stage-inner{position:relative;flex:1 1 auto;display:flex;flex-direction:column;width:100%;margin:0;padding:0}
+
+    reloadly-widget{
+      display:block;flex:1 1 auto;width:100%;
+      min-height:calc(100dvh - var(--bar-h) - 44px);
+    }
+    /* if the plugin renders an iframe, make it fill the stage too */
+    reloadly-widget iframe{display:block;width:100%;height:100%;min-height:calc(100dvh - var(--bar-h) - 44px);border:0}
+
+    /* ---------- loading / fallback ---------- */
+    .state{
+      display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+      text-align:center;padding:48px 20px;color:var(--muted);
+      position:absolute;inset:0;z-index:2;background:var(--stage);
+    }
+    .state.show{display:flex}
+    .spinner{
+      width:38px;height:38px;border-radius:50%;
+      border:3px solid var(--line);border-top-color:var(--accent);animation:spin .9s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .state h2{color:var(--text);font-size:18px}
+    .state p{max-width:420px;font-size:14px;line-height:1.55}
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border-radius:12px;border:0;cursor:pointer;
+      font:700 14px inherit;font-family:inherit;color:#fff;background:linear-gradient(135deg,var(--accent),#ff3b30);
+    }
+
+    @media (max-width:640px){
+      .title span{font-size:15px}
+      .back span{display:none}
+      .back{padding:0 13px}
+      .strip{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;white-space:nowrap;font-size:12.5px}
+    }
+    @media (prefers-reduced-motion:reduce){.spinner{animation-duration:2.5s}}
+  </style>
+</head>
+<body class="dark">
+
+  <header class="bar">
+    <div class="bar-left">
+      <a class="back" href="/business" aria-label="Back to Net365 Business"><i class="fas fa-arrow-left"></i><span>Business</span></a>
+      <div class="title"><i class="fas fa-gift"></i><span>Gift Cards &amp; Subscriptions</span></div>
+    </div>
+    <div class="bar-right">
+      <a class="back" href="/" aria-label="Net365 home"><i class="fas fa-house"></i><span>Home</span></a>
+      <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Toggle light or dark mode"><i class="fas fa-sun"></i></button>
+    </div>
+  </header>
+
+  <div class="strip" role="note">
+    <span><i class="fas fa-bolt"></i> Instant delivery</span>
+    <span><i class="fas fa-globe"></i> Global brands</span>
+    <span><i class="fas fa-lock"></i> Secure card checkout by Reloadly</span>
+    <span><i class="fas fa-wallet"></i> Paid separately from your Net365 wallet</span>
+  </div>
+
+  <main class="stage">
+    <div class="stage-inner">
+      <div class="state show" id="loading" role="status" aria-live="polite">
+        <div class="spinner"></div>
+        <p>Loading the catalog…</p>
+      </div>
+
+      <div class="state" id="failed" role="alert">
+        <i class="fas fa-plug-circle-exclamation" style="font-size:30px;color:var(--accent)"></i>
+        <h2>The catalog didn't load</h2>
+        <p>This can happen on a slow connection or when an ad-blocker or firewall blocks the gift card provider. Check your connection and try again.</p>
+        <button class="btn" onclick="location.reload()"><i class="fas fa-rotate-right"></i> Reload</button>
+      </div>
+
+      <reloadly-widget data-widget-id="VKTNgFdEdTMD2Kxeo1fKQLlbilG0j9pilu1hMR4dE"></reloadly-widget>
+    </div>
+  </main>
+
+  <script src="https://cdn.reloadly.com/widget/v2/reloadly-widget.js" async></script>
+  <script>
+    // ---- theme (shared with the rest of Net365) ----
+    function applyTheme(t){
+      var dark = t !== 'light';
+      document.body.classList.toggle('dark', dark);
+      document.querySelector('#themeBtn i').className = dark ? 'fas fa-sun' : 'fas fa-moon';
+      try{ localStorage.setItem('net365_theme', dark ? 'dark' : 'light'); }catch(e){}
+    }
+    function toggleTheme(){ applyTheme(document.body.classList.contains('dark') ? 'light' : 'dark'); }
+    (function(){ var s=null; try{ s=localStorage.getItem('net365_theme'); }catch(e){} applyTheme(s==='light'?'light':'dark'); })();
+
+    // ---- loading / failure detection ----
+    (function(){
+      var w = document.querySelector('reloadly-widget');
+      var loading = document.getElementById('loading');
+      var failed = document.getElementById('failed');
+      var done = false, start = Date.now();
+
+      function rendered(){
+        return !!(w.shadowRoot && w.shadowRoot.childElementCount) || w.childElementCount > 0 || w.getBoundingClientRect().height > 120 && w.innerHTML.trim() !== '';
+      }
+      var timer = setInterval(function(){
+        if (done) return;
+        if (rendered()) { done = true; loading.classList.remove('show'); clearInterval(timer); return; }
+        if (Date.now() - start > 15000) {
+          done = true; clearInterval(timer);
+          loading.classList.remove('show'); failed.classList.add('show');
+        }
+      }, 400);
+    })();
+  </script>
+</body>
+</html>
