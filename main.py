@@ -4257,7 +4257,7 @@ def get_client_ip() -> str:
 # Page routes to log as visits. Deliberately NOT logging /api/* — this app polls its own
 # APIs every few seconds per page load, so logging every API call would flood the table
 # with noise rather than meaningful visit data.
-VISITOR_TRACKED_PATHS = {"/", "/scheduler", "/analytics", "/business", "/utilities"}
+VISITOR_TRACKED_PATHS = {"/", "/scheduler", "/analytics", "/business", "/utilities", "/giftcards"}
 
 
 
@@ -8949,6 +8949,14 @@ class ReloadlyWebApp:
                     "Analytics page not found. Please create analytics.html in the root directory.",
                     404,
                 )
+
+        @self.app.route("/giftcards")
+        def giftcards_page():
+            """Full-page Reloadly gift cards & subscriptions store."""
+            base = os.path.dirname(os.path.abspath(__file__))
+            if os.path.exists(os.path.join(base, "giftcards.html")):
+                return send_from_directory(base, "giftcards.html")
+            return "Gift cards page not found", 404
 
         @self.app.route("/business")
         def business_page():
