@@ -2,36 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Net365" />
-<meta name="theme-color" content="#0A0E1A" />
-<title>Net365 — Recharge, Wallet, Utilities</title>
+<meta name="theme-color" content="#F3F6FB" />
+<title>Net365 — Recharge, Gift Cards, Wallet</title>
+<meta name="description" content="Recharge airtime, buy gift cards, schedule payments and manage your Net365 wallet." />
 
 <!--
-============================================================
-NET365 MOBILE — CHANGELOG
-============================================================
-v3.0 — Integrated build
-  - Midnight Neon design (kept)
-  - Country override dropdown (restored)
-  - Correct phone/country detection (explicit codes first)
-  - Payment auto-select per country via /api/payment/preferences
-  - Support button + support sheet (Email, Chat, WhatsApp)
-  - Floating live chat widget (wired to /api/chat/*)
-  - In-app biller sheet for utilities (uses /api/utilities/*)
-  - Two-step payment modal (review -> confirm)
-  - Moment ad engine on payment success page (5 ad types)
-  - All sheets from previous build kept (auth, wallet, transfer, referral)
-============================================================
+NET365 MOBILE v5 — light fintech redesign
+  - New layout: wallet card, service tiles, quick services, bottom tab bar with centre Recharge button
+  - All previous flows kept: recharge (auto-detect + Paystack/Stripe/Flutterwave/Wallet), wallet funding,
+    receipts, transaction history, live chat, referral, payment-success offers
+  - Added: Gift Cards (/giftcards), Scheduled payments (/scheduler), Rewards, Google sign-in,
+    email verification, password reset, full-platform link
+  - Removed: wallet-to-wallet transfer
+  - Bill payments (electricity / cable) are switched by FEATURES.utilities in the script
 -->
 
-<link rel="manifest" href='data:application/json,{
-  "name":"Net365","short_name":"Net365","start_url":"./","display":"standalone",
-  "background_color":"#0A0E1A","theme_color":"#0A0E1A",
-  "icons":[{"src":"https://img.icons8.com/color/512/wifi.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
-}' />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
@@ -39,887 +30,480 @@ v3.0 — Integrated build
 
 <style>
 /* ============================================================
-   NET365 MOBILE — CALM LUXURY DESIGN SYSTEM
+   NET365 MOBILE — LIGHT FINTECH DESIGN SYSTEM (v5)
+   Light surfaces, navy wallet card, brand-ember actions.
    ============================================================ */
 :root{
-  --bg-0:#080B14;
-  --bg-1:#0A0E1A;
-  --bg-2:#0D1224;
-  --surface:rgba(20,26,45,0.72);
-  --surface-2:rgba(28,34,56,0.65);
-  --border:rgba(255,255,255,0.085);
-  --border-strong:rgba(255,109,0,0.28);
+  --bg:#F3F6FB;
+  --card:#FFFFFF;
+  --ink:#0E1A33;
+  --ink-2:#44546F;       /* secondary text  (7.4:1 on white) */
+  --ink-3:#5F6E86;       /* tertiary text   (5.2:1 on white) */
+  --line:#E3E9F3;
+  --line-strong:#CBD5E5;
 
-  /* Net365 signature: confident ember, warm amber, quiet signal-cyan */
-  --violet:#E53935;
-  --violet-bright:#FF6D00;
-  --violet-soft:rgba(229,57,53,0.13);
-  --cyan:#65D9E8;
-  --cyan-soft:rgba(101,217,232,0.10);
-  --brand-ember:#E53935;
-  --brand-orange:#FF6D00;
-  --brand-gold:#FFB454;
+  --navy-1:#10224A;
+  --navy-2:#1B3FA6;
 
-  --success:#22C55E;
-  --success-soft:rgba(34,197,94,0.12);
-  --warning:#F59E0B;
-  --warning-soft:rgba(245,158,11,0.12);
-  --danger:#F43F5E;
-  --danger-soft:rgba(244,63,94,0.12);
+  --brand:#DC2626;
+  --brand-2:#C2410C;
+  --brand-grad:linear-gradient(135deg,#DC2626 0%,#C2410C 100%);
+  --brand-soft:#FDECE7;
 
-  --text-0:#F8FAFC;
-  --text-1:#CBD5E1;
-  --text-2:#94A3B8;
-  --text-3:#64748B;
+  --blue:#2563EB;   --blue-soft:#E6EEFF;
+  --green:#15803D;  --green-soft:#E3F6EA;
+  --orange:#C2410C; --orange-soft:#FFEEDD;
+  --purple:#6D28D9; --purple-soft:#EEE8FF;
+  --pink:#BE185D;   --pink-soft:#FFE6F0;
+  --teal:#0F766E;   --teal-soft:#DDF5F2;
+  --slate:#475569;  --slate-soft:#E8EDF4;
 
-  --radius-xl:28px;
-  --radius-lg:20px;
-  --radius-md:14px;
-  --radius-sm:10px;
+  --success:#15803D; --success-soft:#E3F6EA;
+  --warning:#A16207; --warning-soft:#FEF3C7;
+  --danger:#B91C1C;  --danger-soft:#FDE8E8;
 
-  --shadow-card:0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+  --radius-xl:26px; --radius-lg:20px; --radius-md:14px; --radius-sm:10px;
+  --shadow-1:0 1px 2px rgba(16,34,74,.05),0 6px 18px rgba(16,34,74,.06);
+  --shadow-2:0 10px 34px rgba(16,34,74,.14);
 
-  --nav-h:70px;
-  --top-h:64px;
-
-  --font:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --nav-h:74px;
+  --top-h:60px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
 }
 
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-
-html,body{height:100%;overscroll-behavior-y:none;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg);scroll-behavior:smooth}
+html,body{min-height:100%;overscroll-behavior-y:none}
 body{
-  font-family:var(--font);
-  background:var(--bg-1);
-  color:var(--text-0);
-  min-height:100vh;
-  position:relative;
-  overflow-x:hidden;
+  font-family:var(--font);background:var(--bg);color:var(--ink);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
   padding-top:env(safe-area-inset-top);
-  padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
-  -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 8px);
 }
+button{font-family:inherit;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:3px solid #2563EB;outline-offset:2px;border-radius:8px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
-body::before{
-  content:'';
-  position:fixed;inset:0;
-  background:
-    radial-gradient(ellipse 760px 460px at 12% -12%, rgba(229,57,53,0.15), transparent 62%),
-    radial-gradient(ellipse 680px 440px at 100% 8%, rgba(101,217,232,0.085), transparent 64%),
-    radial-gradient(ellipse 520px 480px at 50% 105%, rgba(255,109,0,0.075), transparent 68%);
-  pointer-events:none;
-  z-index:0;
-  animation:auroraDrift 24s ease-in-out infinite alternate;
-}
-@keyframes auroraDrift{
-  0%{transform:translate3d(0,0,0) scale(1);}
-  100%{transform:translate3d(-3%,2%,0) scale(1.06);}
-}
-
-/* ============================================================
-   TOP BAR
-   ============================================================ */
+/* ---------- top bar ---------- */
 .topbar{
-  position:sticky;top:0;z-index:50;
-  height:var(--top-h);
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 18px;
-  background:rgba(8,11,20,0.72);
-  backdrop-filter:blur(20px) saturate(180%);
-  -webkit-backdrop-filter:blur(20px) saturate(180%);
-  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:50;height:var(--top-h);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:0 16px;background:rgba(243,246,251,.92);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
 }
-.brand{display:flex;align-items:center;gap:9px;cursor:pointer;}
+.brand{display:flex;align-items:center;gap:10px;cursor:pointer;min-height:44px}
 .brand-mark{
-  width:34px;height:34px;border-radius:11px;
-  display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  box-shadow:0 0 20px rgba(124,58,237,0.45);
-  font-size:16px;color:#fff;
+  width:36px;height:36px;border-radius:12px;display:grid;place-items:center;
+  background:var(--brand-grad);color:#fff;font-size:16px;box-shadow:0 6px 16px rgba(194,65,12,.28);
 }
-.brand-name{
-  font-weight:900;font-size:18px;letter-spacing:-0.02em;
-  background:linear-gradient(90deg,#fff,#CBD5E1);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+.brand-name{font-size:20px;font-weight:900;letter-spacing:-.04em;color:var(--ink)}
+.brand-name b{color:var(--brand)}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.icon-btn{
+  width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card);
+  color:var(--ink);font-size:16px;display:grid;place-items:center;box-shadow:var(--shadow-1);
+  font-weight:800;
 }
-.topbar-actions{display:flex;align-items:center;gap:8px;}
-.wallet-chip{
-  display:none;align-items:center;gap:8px;
-  padding:8px 14px;border-radius:999px;
-  background:rgba(124,58,237,0.14);
-  border:1px solid var(--border-strong);
-  font-weight:800;font-size:14px;
-  color:#fff;cursor:pointer;
-  transition:all .2s ease;
-}
-.wallet-chip.show{display:inline-flex;}
-.wallet-chip:hover{background:rgba(124,58,237,0.24);}
-.wallet-chip i{color:var(--cyan);font-size:13px;}
+.icon-btn.logged-in{background:var(--navy-1);color:#fff;border-color:var(--navy-1);font-size:15px}
 
-.avatar-btn{
-  width:38px;height:38px;border-radius:50%;
-  border:1px solid var(--border-strong);
-  background:var(--surface);
-  color:var(--text-1);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  font-size:16px;font-weight:700;
-  transition:all .2s ease;
+/* ---------- views ---------- */
+.app-view{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:4px 16px 24px}
+.view{display:none}
+.view.active{display:block;animation:viewIn .25s ease}
+@keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page-head{display:flex;align-items:center;gap:12px;margin:4px 0 16px}
+.page-head h1{font-size:22px;font-weight:900;letter-spacing:-.03em}
+.back-btn{
+  width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--card);
+  color:var(--ink);font-size:15px;box-shadow:var(--shadow-1)
 }
-.avatar-btn:hover{border-color:var(--violet);color:#fff;}
-.avatar-btn.logged-in{
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  color:#fff;border-color:transparent;
-  box-shadow:0 0 18px rgba(124,58,237,0.5);
-}
-
-/* ============================================================
-   VIEWS
-   ============================================================ */
-.app-view{padding:20px 18px 30px;position:relative;z-index:1;}
-.view{display:none;animation:viewIn .35s cubic-bezier(0.16,1,0.3,1);}
-.view.active{display:block;}
-@keyframes viewIn{
-  from{opacity:0;transform:translateY(8px);}
-  to{opacity:1;transform:translateY(0);}
-}
-
-/* ============================================================
-   CARDS
-   ============================================================ */
-.card{
-  background:var(--surface);
-  backdrop-filter:blur(24px) saturate(180%);
-  -webkit-backdrop-filter:blur(24px) saturate(180%);
-  border:1px solid var(--border);
-  border-radius:var(--radius-xl);
-  padding:24px 22px;
-  box-shadow:var(--shadow-card);
-  position:relative;
-  overflow:hidden;
-}
-.card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(124,58,237,0.6),transparent);
-}
-
-/* ============================================================
-   TYPOGRAPHY
-   ============================================================ */
 .section-title{
-  font-size:12px;font-weight:800;letter-spacing:0.14em;
-  color:var(--text-2);text-transform:uppercase;
-  margin:22px 4px 12px;
   display:flex;align-items:center;justify-content:space-between;
+  font-size:17px;font-weight:800;letter-spacing:-.02em;margin:26px 2px 12px;color:var(--ink)
 }
-.section-title a{
-  font-size:12px;color:var(--cyan);text-decoration:none;
-  font-weight:700;letter-spacing:0;cursor:pointer;
-}
-.field-label{
-  display:flex;align-items:center;gap:8px;
-  font-size:12px;font-weight:700;
-  color:var(--text-2);letter-spacing:0.05em;
-  text-transform:uppercase;
-  margin-bottom:9px;
-}
-.field-label i{color:var(--violet-bright);font-size:12px;}
+.section-title a{font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;min-height:44px;min-width:44px;justify-content:flex-end;display:inline-flex;align-items:center;gap:4px;text-decoration:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow-1)}
 
-/* ============================================================
-   INPUTS
-   ============================================================ */
-.field{margin-bottom:18px;}
-.input, select.input{
-  width:100%;
-  padding:16px 18px;
-  background:rgba(8,11,20,0.6);
-  border:1.5px solid rgba(148,163,184,0.16);
-  border-radius:var(--radius-md);
-  color:var(--text-0);
-  font-family:inherit;
-  font-size:16px;
-  font-weight:600;
-  outline:none;
-  transition:border-color .2s ease, box-shadow .2s ease, background .2s ease;
+/* ---------- greeting ---------- */
+.greet{margin:6px 2px 16px}
+.greet small{display:block;font-size:14px;color:var(--ink-2);font-weight:500}
+.greet h1{font-size:26px;font-weight:900;letter-spacing:-.035em;margin-top:2px}
+.greet p{font-size:14px;color:var(--ink-3);margin-top:4px}
+
+/* ---------- verify banner ---------- */
+.verify-banner{
+  display:none;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px;
+  border-radius:var(--radius-md);background:var(--warning-soft);border:1px solid #F3D88A;color:#5B3A00;
+  font-size:13.5px;font-weight:600;line-height:1.4
 }
-.input::placeholder{color:var(--text-3);font-weight:500;}
-.input:focus{
-  border-color:var(--violet-bright);
-  background:rgba(124,58,237,0.06);
-  box-shadow:0 0 0 4px rgba(124,58,237,0.16);
-}
-select.input{
-  appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%2394A3B8' d='M6 8L0 0h12z'/></svg>");
-  background-repeat:no-repeat;background-position:right 18px center;
-  padding-right:44px;
+.verify-banner.show{display:flex}
+.verify-banner i{font-size:18px;color:var(--warning)}
+.verify-banner button{
+  margin-left:auto;border:0;background:#5B3A00;color:#fff;border-radius:10px;min-height:40px;padding:0 14px;font-weight:800;font-size:13px;white-space:nowrap
 }
 
-.amount-wrap{
-  display:flex;align-items:center;
-  background:rgba(8,11,20,0.72);
-  border:1.5px solid rgba(148,163,184,0.16);
-  border-radius:var(--radius-lg);
-  padding:8px 20px 8px 22px;
-  transition:border-color .2s ease, box-shadow .2s ease;
-  position:relative;overflow:hidden;
+/* ---------- wallet card ---------- */
+.wallet-card{
+  position:relative;overflow:hidden;color:#fff;border-radius:var(--radius-xl);padding:20px;
+  background:linear-gradient(135deg,var(--navy-1) 0%,#16348C 55%,var(--navy-2) 100%);
+  box-shadow:0 14px 34px rgba(16,34,74,.30);
 }
-.amount-wrap::after{
-  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,var(--violet),var(--cyan));
-  transform:scaleX(0);transform-origin:left;
-  transition:transform .35s cubic-bezier(0.16,1,0.3,1);
+.wallet-card::before{
+  content:'';position:absolute;right:-60px;top:-70px;width:220px;height:220px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,138,76,.55),rgba(255,138,76,0) 68%);
 }
-.amount-wrap:focus-within::after{transform:scaleX(1);}
-.amount-wrap:focus-within{
-  border-color:var(--violet-bright);
-  box-shadow:0 0 0 4px rgba(124,58,237,0.16);
+.wallet-card::after{
+  content:'';position:absolute;left:-50px;bottom:-90px;width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(110,168,255,.32),rgba(110,168,255,0) 70%);
 }
-.amount-symbol{
-  font-size:26px;font-weight:900;color:var(--text-2);
-  margin-right:12px;
+.wallet-card>*{position:relative;z-index:1}
+.wallet-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.wallet-label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#DCE6FF}
+.eye-btn{width:44px;height:44px;margin:-8px -10px -8px 0;border:0;background:transparent;color:#DCE6FF;font-size:16px;border-radius:50%}
+.wallet-amount{font-size:34px;font-weight:900;letter-spacing:-.04em;margin:6px 0 2px;line-height:1.1;overflow-wrap:anywhere}
+.wallet-sub{font-size:12.5px;color:#C7D6F8;font-weight:500}
+.wallet-actions{display:flex;gap:10px;margin-top:16px}
+.pill-btn{
+  flex:1;min-height:46px;border-radius:14px;border:0;font-weight:800;font-size:14px;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px
 }
-.amount-input{
-  flex:1;background:none;border:none;outline:none;
-  color:#fff;font-family:inherit;
-  font-size:44px !important;font-weight:900;
-  letter-spacing:-0.03em;line-height:1.1;
-  padding:8px 0;width:100%;
-  caret-color:var(--cyan);
-}
-.amount-input::placeholder{color:var(--text-3);font-weight:900;}
+.pill-btn.light{background:#fff;color:#C2410C}
+.pill-btn.ghost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.3)}
 
-.quick-row{
-  display:flex;gap:8px;margin-top:14px;overflow-x:auto;
-  padding-bottom:2px;scrollbar-width:none;
+/* ---------- service tiles (top row) ---------- */
+.tile-row{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px 8px;box-shadow:var(--shadow-1)
 }
-.quick-row::-webkit-scrollbar{display:none;}
+.tile{
+  display:flex;flex-direction:column;align-items:center;gap:7px;border:0;background:none;
+  padding:4px 2px;min-height:44px;color:var(--ink);position:relative
+}
+.tile .ico,.svc .ico{
+  width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:22px;color:#fff
+}
+.tile b{font-size:13px;font-weight:800}
+.tile small{font-size:11.5px;color:var(--ink-3);font-weight:500;margin-top:-5px}
+.c-blue{background:linear-gradient(145deg,#3B82F6,#1D4ED8)}
+.c-green{background:linear-gradient(145deg,#22A05A,#15803D)}
+.c-orange{background:linear-gradient(145deg,#F2751A,#C2410C)}
+.c-purple{background:linear-gradient(145deg,#8B5CF6,#6D28D9)}
+.c-pink{background:linear-gradient(145deg,#E5407F,#BE185D)}
+.c-teal{background:linear-gradient(145deg,#14A89B,#0F766E)}
+.c-slate{background:linear-gradient(145deg,#64748B,#334155)}
+.c-red{background:linear-gradient(145deg,#EF4444,#B91C1C)}
+.soon{
+  position:absolute;top:-2px;right:2px;background:var(--ink);color:#fff;font-size:9.5px;font-weight:800;
+  padding:2px 6px;border-radius:99px;letter-spacing:.03em
+}
+
+/* ---------- quick services (list-style cards) ---------- */
+.svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.svc{
+  display:flex;align-items:center;gap:12px;text-align:left;padding:12px;min-height:64px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-1);color:var(--ink);position:relative
+}
+.svc .ico{width:42px;height:42px;border-radius:13px;font-size:18px;flex:none}
+.svc .t{min-width:0}
+.svc .t b{display:block;font-size:14px;font-weight:800}
+.svc .t small{display:block;font-size:12px;color:var(--ink-3);font-weight:500;line-height:1.3;margin-top:1px}
+.svc:active,.tile:active,.pm-btn:active,.um-item:active{transform:scale(.97)}
+.svc .soon{top:8px;right:8px}
+
+/* ---------- promo cards ---------- */
+.promo{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;padding:16px;
+  border-radius:var(--radius-lg);color:#fff;background:var(--brand-grad);box-shadow:0 10px 26px rgba(194,65,12,.25);border:0;text-align:left;width:100%
+}
+.promo b{display:block;font-size:16px;font-weight:900;letter-spacing:-.02em}
+.promo small{display:block;font-size:13px;margin-top:3px;color:#FFE9DE;font-weight:500;line-height:1.4}
+.promo .go{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;flex:none}
+.promo.alt{background:linear-gradient(135deg,var(--navy-1),var(--navy-2));box-shadow:0 10px 26px rgba(16,34,74,.25)}
+.promo.alt small{color:#C7D6F8}
+
+/* ---------- forms ---------- */
+.field{margin-bottom:14px}
+.field-label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:8px}
+.field-label i{color:var(--ink-3)}
+.input,select.input{
+  width:100%;min-height:50px;padding:0 14px;border-radius:14px;border:1.5px solid var(--line-strong);
+  background:#fff;color:var(--ink);font:600 16px var(--font);outline:none
+}
+.input::placeholder{color:#7B889D;font-weight:500}
+.input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
+select.input{appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%2344546F' stroke-width='2'%3E%3Cpath d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+.amount-wrap{display:flex;align-items:center;min-height:62px;border-radius:16px;border:1.5px solid var(--line-strong);background:#fff;padding:0 16px}
+.amount-wrap:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
+.amount-symbol{font-size:22px;font-weight:900;color:var(--ink-2);margin-right:8px}
+.amount-input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:900 28px var(--font);color:var(--ink);letter-spacing:-.03em}
+.amount-input::placeholder{color:#A3AEC2}
+.quick-row{display:flex;gap:8px;overflow-x:auto;margin:10px 0 4px;padding-bottom:2px;scrollbar-width:none}
+.quick-row::-webkit-scrollbar{display:none}
 .quick-pill{
-  flex-shrink:0;
-  padding:9px 18px;border-radius:999px;
-  background:rgba(148,163,184,0.08);
-  border:1px solid rgba(148,163,184,0.14);
-  color:var(--text-1);
-  font-family:inherit;font-size:13px;font-weight:800;
-  cursor:pointer;transition:all .18s ease;
+  flex:none;min-height:44px;padding:0 16px;border-radius:99px;border:1.5px solid var(--line-strong);background:#fff;
+  color:var(--ink);font-weight:800;font-size:14px
 }
-.quick-pill:hover,.quick-pill:active{
-  background:var(--violet-soft);
-  border-color:var(--violet);
-  color:#fff;transform:translateY(-1px);
-}
-.quick-pill.active{
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  border-color:transparent;color:#fff;
-  box-shadow:0 0 20px rgba(124,58,237,0.5);
-}
+.quick-pill.active{background:var(--navy-1);border-color:var(--navy-1);color:#fff}
+
+.phone-wrap{display:flex;align-items:center;gap:10px;min-height:58px;border-radius:16px;border:1.5px solid var(--line-strong);background:#fff;padding:0 14px}
+.phone-wrap:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
+.phone-wrap>i{color:var(--ink-3);font-size:18px}
+.phone-input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:800 20px var(--font);color:var(--ink);letter-spacing:.01em}
+.phone-input::placeholder{color:#8895AA;font-weight:600;font-size:17px}
+.n365-check{width:26px;height:26px;border-radius:50%;background:var(--success);color:#fff;display:none;place-items:center;font-size:12px;flex:none}
+.n365-check.show{display:grid}
 
 .detect-card{
-  display:none;align-items:center;gap:12px;
-  padding:14px 16px;
-  border-radius:var(--radius-md);
-  background:linear-gradient(135deg,rgba(34,197,94,0.10),rgba(34,211,238,0.06));
-  border:1px solid rgba(34,197,94,0.28);
-  margin-top:14px;
-  animation:slideDown .3s ease;
+  display:none;align-items:center;gap:12px;margin:12px 0;padding:12px 14px;border-radius:14px;
+  background:var(--green-soft);border:1px solid #BFE8CC
 }
-.detect-card.show{display:flex;}
-.detect-card.warn{
-  background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(244,63,94,0.06));
-  border-color:rgba(245,158,11,0.30);
-}
-@keyframes slideDown{
-  from{opacity:0;transform:translateY(-6px);}
-  to{opacity:1;transform:translateY(0);}
-}
-.detect-icon{
-  width:40px;height:40px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(34,197,94,0.18);
-  color:var(--success);
-  font-size:16px;flex-shrink:0;
-}
-.detect-card.warn .detect-icon{
-  background:rgba(245,158,11,0.18);color:var(--warning);
-}
-.detect-info{flex:1;min-width:0;}
-.detect-name{font-size:15px;font-weight:800;color:#fff;letter-spacing:-0.01em;}
-.detect-sub{font-size:11.5px;color:var(--text-2);margin-top:2px;font-weight:500;}
-.detect-badge{
-  font-size:10px;font-weight:900;letter-spacing:0.1em;
-  padding:5px 10px;border-radius:999px;
-  background:rgba(34,197,94,0.16);
-  color:var(--success);
-}
-.detect-card.warn .detect-badge{
-  background:rgba(245,158,11,0.16);color:var(--warning);
-}
+.detect-card.show{display:flex}
+.detect-card.warn{background:var(--warning-soft);border-color:#F3D88A}
+.detect-icon{width:38px;height:38px;border-radius:12px;background:var(--success);color:#fff;display:grid;place-items:center;font-size:15px;flex:none}
+.detect-card.warn .detect-icon{background:var(--warning)}
+.detect-info{flex:1;min-width:0}
+.detect-name{font-weight:800;font-size:15px;color:var(--ink)}
+.detect-sub{font-size:12.5px;color:var(--ink-2);margin-top:1px}
+.detect-badge{font-size:11px;font-weight:900;letter-spacing:.06em;color:var(--success);background:#fff;border-radius:99px;padding:4px 9px}
+.detect-card.warn .detect-badge{color:var(--warning)}
+.manual-block{display:none;margin:0 0 12px;padding:12px;border-radius:14px;background:var(--slate-soft)}
+.manual-block.show{display:block}
+.manual-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:13px;color:var(--ink)}
+.manual-head button{border:0;background:none;color:var(--blue);font-weight:800;font-size:13px;min-height:36px}
+.country-row{display:flex;align-items:center;gap:10px;margin:2px 0 14px}
+.country-row i{color:var(--ink-3)}
+.country-row span{font-size:13px;font-weight:700;color:var(--ink-2)}
+.country-row select{flex:1;min-height:44px;border-radius:12px;border:1.5px solid var(--line-strong);background:#fff;color:var(--ink);font:600 14px var(--font);padding:0 10px}
+.amount-label{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--ink-2);margin:6px 0 8px}
 
-.manual-block{
-  display:none;margin-top:10px;
-  padding:14px;
-  border-radius:var(--radius-md);
-  background:rgba(124,58,237,0.08);
-  border:1px solid var(--border-strong);
-}
-.manual-block.show{display:block;animation:slideDown .3s ease;}
-.manual-head{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:10px;
-}
-.manual-head strong{font-size:13px;color:#fff;font-weight:800;}
-.manual-head button{
-  background:none;border:none;color:var(--cyan);
-  font-family:inherit;font-size:12px;font-weight:700;
-  cursor:pointer;padding:0;
-}
+.total-box{margin:14px 0;padding:14px;border-radius:14px;background:var(--slate-soft);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.total-box span{font-size:13px;color:var(--ink-2);font-weight:600}
+.total-box strong{font-size:20px;font-weight:900;margin-left:8px;letter-spacing:-.02em}
+.total-box small{font-size:12.5px;color:var(--ink-2)}
+.n365-hidden-value{display:none}
 
-.breakdown{
-  background:rgba(8,11,20,0.55);
-  border:1px solid rgba(148,163,184,0.10);
-  border-radius:var(--radius-lg);
-  padding:16px 18px;
-  margin-top:14px;
-}
-.bd-row{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:8px 0;
-}
-.bd-row .lbl{
-  font-size:13px;color:var(--text-2);font-weight:600;
-  display:flex;align-items:center;gap:8px;
-}
-.bd-row .lbl .fee-tag{
-  font-size:9.5px;padding:3px 8px;border-radius:6px;
-  background:rgba(245,158,11,0.14);
-  color:var(--warning);font-weight:800;letter-spacing:0.05em;
-}
-.bd-row .val{
-  font-size:20px;font-weight:800;
-  color:var(--text-0);letter-spacing:-0.01em;
-}
-.bd-row.total{
-  border-top:1px solid rgba(148,163,184,0.14);
-  margin-top:8px;padding-top:14px;
-}
-.bd-row.total .lbl{font-size:14px;color:#fff;font-weight:800;}
-.bd-row.total .val{
-  font-size:32px;font-weight:900;
-  letter-spacing:-0.03em;
-  background:linear-gradient(90deg,var(--brand-orange),var(--brand-gold));
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-}
-.bd-row.discount .val{color:var(--success);}
-
-.pm-label{
-  font-size:12px;font-weight:700;letter-spacing:0.05em;
-  color:var(--text-2);text-transform:uppercase;
-  margin:18px 0 10px;display:flex;align-items:center;gap:8px;
-}
-.pm-label i{color:var(--violet-bright);font-size:12px;}
-.pm-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.pm-label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--ink-2);margin:6px 0 8px}
+.pm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .pm-btn{
-  display:flex;align-items:center;gap:10px;
-  padding:13px 14px;
-  border-radius:var(--radius-md);
-  background:rgba(148,163,184,0.06);
-  border:1.5px solid rgba(148,163,184,0.12);
-  color:var(--text-1);
-  font-family:inherit;font-size:13px;font-weight:700;
-  cursor:pointer;transition:all .18s ease;
-  text-align:left;position:relative;
+  display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px;min-height:74px;border-radius:14px;
+  background:#fff;border:1.5px solid var(--line-strong);color:var(--ink);font-size:12.5px;font-weight:800;text-align:center
 }
-.pm-btn:hover{border-color:var(--violet);color:#fff;}
-.pm-btn.active{
-  background:linear-gradient(135deg,rgba(124,58,237,0.20),rgba(34,211,238,0.10));
-  border-color:var(--violet);color:#fff;
-  box-shadow:0 0 20px rgba(124,58,237,0.30);
-}
-.pm-btn .pm-icon{
-  width:28px;height:28px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(124,58,237,0.16);
-  color:var(--violet-bright);
-  font-size:13px;flex-shrink:0;
-}
-.pm-btn.active .pm-icon{
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  color:#fff;
-}
-.pm-btn small{
-  display:block;font-size:10px;color:var(--text-2);
-  font-weight:500;margin-top:1px;
-}
-.pm-btn.active small{color:rgba(255,255,255,0.7);}
+.pm-btn .pm-icon{width:32px;height:32px;border-radius:10px;background:var(--slate-soft);display:grid;place-items:center;color:var(--ink-2);font-size:14px}
+.pm-btn small{font-size:11px;font-weight:600;color:var(--ink-3);display:block}
+.pm-btn.active{border-color:var(--navy-2);background:var(--blue-soft)}
+.pm-btn.active .pm-icon{background:var(--navy-2);color:#fff}
 
 .btn-hero{
-  width:100%;
-  margin-top:18px;
-  padding:20px 24px;
-  border-radius:var(--radius-lg);
-  border:none;
-  background:linear-gradient(115deg,#E53935 0%,#FF6D00 58%,#FFB454 100%);
-  background-size:200% 200%;
-  color:#fff;
-  font-family:inherit;
-  font-size:17px;font-weight:900;
-  letter-spacing:0.01em;
-  cursor:pointer;position:relative;overflow:hidden;
-  box-shadow:0 12px 32px rgba(124,58,237,0.42), inset 0 1px 0 rgba(255,255,255,0.20);
-  transition:transform .12s ease, box-shadow .25s ease;
-  animation:heroShift 8s ease-in-out infinite;
+  width:100%;min-height:56px;border:0;border-radius:16px;color:#fff;background:var(--brand-grad);
+  font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;
+  padding:10px 16px;box-shadow:0 10px 24px rgba(194,65,12,.28)
 }
-@keyframes heroShift{
-  0%,100%{background-position:0% 50%;}
-  50%{background-position:100% 50%;}
-}
-.btn-hero:not(:disabled):active{transform:scale(0.97);}
-.btn-hero:not(:disabled):hover{box-shadow:0 16px 44px rgba(124,58,237,0.55);}
-.btn-hero:disabled{
-  opacity:0.42;cursor:not-allowed;
-  box-shadow:none;animation:none;
-  background:rgba(148,163,184,0.16);
-  color:var(--text-3);
-}
-.btn-hero .btn-hint{
-  display:block;font-size:12px;font-weight:500;
-  opacity:0.85;margin-top:3px;letter-spacing:0;
-}
-
+.btn-hero:disabled{background:#B7C1D3;color:#fff;box-shadow:none;cursor:not-allowed}
+.btn-hero .btn-hint{font-size:12px;font-weight:600;opacity:.92}
+.btn-hero.inline{flex-direction:row;gap:10px}
 .btn-ghost{
-  width:100%;padding:16px;
-  border-radius:var(--radius-md);
-  background:rgba(148,163,184,0.06);
-  border:1px solid rgba(148,163,184,0.16);
-  color:var(--text-1);
-  font-family:inherit;font-size:14px;font-weight:700;
-  cursor:pointer;transition:all .2s ease;
+  width:100%;min-height:50px;border-radius:14px;border:1.5px solid var(--line-strong);background:#fff;color:var(--ink);font-weight:800;font-size:15px
 }
-.btn-ghost:hover{background:rgba(148,163,184,0.12);color:#fff;}
-.btn-secondary{
-  flex:1;padding:16px;
-  border-radius:var(--radius-md);
-  border:none;
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  color:#fff;font-family:inherit;font-size:14px;font-weight:800;
-  cursor:pointer;
-  box-shadow:0 8px 24px rgba(124,58,237,0.32);
-  transition:transform .12s ease;
+.cta-hint{text-align:center;font-size:12.5px;color:var(--ink-3);margin-top:10px}
+.divider-or{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--ink-3);font-size:12.5px;font-weight:700}
+.divider-or::before,.divider-or::after{content:'';flex:1;height:1px;background:var(--line)}
+.btn-google{
+  width:100%;min-height:50px;border-radius:14px;border:1.5px solid var(--line-strong);background:#fff;color:var(--ink);
+  font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none
 }
-.btn-secondary:active{transform:scale(0.97);}
+.btn-google svg{width:20px;height:20px}
+.link-btn{background:none;border:0;color:var(--blue);font-weight:800;font-size:13.5px;min-height:44px;padding:0 6px}
 
-.qa-scroll{
-  display:flex;gap:10px;overflow-x:auto;
-  padding:4px 4px 12px;margin:0 -4px;
-  scrollbar-width:none;
-}
-.qa-scroll::-webkit-scrollbar{display:none;}
-.qa-item{
-  flex-shrink:0;
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  padding:0;background:none;border:none;
-  font-family:inherit;cursor:pointer;
-  width:72px;color:var(--text-1);
-}
-.qa-icon{
-  width:56px;height:56px;border-radius:18px;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(124,58,237,0.10);
-  border:1px solid rgba(124,58,237,0.20);
-  color:var(--violet-bright);
-  font-size:20px;
-  transition:all .2s ease;
-}
-.qa-item:hover .qa-icon,
-.qa-item:active .qa-icon{
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  color:#fff;border-color:transparent;
-  box-shadow:0 8px 24px rgba(124,58,237,0.42);
-  transform:translateY(-3px);
-}
-.qa-label{
-  font-size:10.5px;font-weight:700;
-  letter-spacing:0.02em;text-align:center;
-  line-height:1.2;color:var(--text-2);
-}
+.breakdown{border-radius:16px;background:var(--slate-soft);padding:6px 16px}
+.bd-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line-strong)}
+.bd-row:last-child{border-bottom:0}
+.bd-row .lbl{font-size:13.5px;color:var(--ink-2);font-weight:600}
+.bd-row .val{font-size:15px;font-weight:800;color:var(--ink);text-align:right}
+.bd-row.total .lbl{color:var(--ink);font-weight:800}
+.bd-row.total .val{font-size:19px;color:var(--brand-2)}
 
-.tx-list{display:flex;flex-direction:column;gap:6px;}
-.tx-row{
-  display:flex;align-items:center;gap:14px;
-  padding:14px 16px;
-  border-radius:var(--radius-md);
-  background:rgba(148,163,184,0.04);
-  border:1px solid transparent;
-  cursor:pointer;
-  transition:all .18s ease;
-}
-.tx-row:hover,.tx-row:active{
-  background:rgba(124,58,237,0.08);
-  border-color:var(--border);
-}
-.tx-icon{
-  width:42px;height:42px;border-radius:13px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:16px;flex-shrink:0;
-}
-.tx-icon.credit{background:rgba(34,197,94,0.14);color:var(--success);}
-.tx-icon.debit{background:rgba(244,63,94,0.14);color:var(--danger);}
-.tx-icon.neutral{background:rgba(124,58,237,0.14);color:var(--violet-bright);}
-.tx-body{flex:1;min-width:0;}
-.tx-title{
-  font-size:14px;font-weight:700;color:var(--text-0);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.tx-sub{
-  font-size:11.5px;color:var(--text-2);font-weight:500;
-  margin-top:3px;
-  display:flex;align-items:center;gap:8px;
-}
-.status-pill{
-  padding:2px 8px;border-radius:999px;
-  font-size:9.5px;font-weight:800;
-  letter-spacing:0.06em;text-transform:uppercase;
-}
-.status-pill.success{background:var(--success-soft);color:var(--success);}
-.status-pill.pending{background:var(--warning-soft);color:var(--warning);}
-.status-pill.failed{background:var(--danger-soft);color:var(--danger);}
-.tx-amount{text-align:right;flex-shrink:0;}
-.tx-amount .amt{
-  font-size:18px;font-weight:800;
-  letter-spacing:-0.02em;color:var(--text-0);
-}
-.tx-amount .amt.positive{color:var(--success);}
+/* ---------- transactions ---------- */
+.tx-list{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1);overflow:hidden}
+.tx-row{display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid var(--line);cursor:pointer;min-height:64px}
+.tx-row:last-child{border-bottom:0}
+.tx-row:active{background:var(--bg)}
+.tx-icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:16px;flex:none}
+.tx-icon.credit{background:var(--green-soft);color:var(--success)}
+.tx-icon.debit{background:var(--blue-soft);color:var(--blue)}
+.tx-icon.neutral{background:var(--slate-soft);color:var(--slate)}
+.tx-body{flex:1;min-width:0}
+.tx-title{font-size:14.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-sub{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:12px;color:var(--ink-3);flex-wrap:wrap}
+.status-pill{font-size:10.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:99px}
+.status-pill.success{background:var(--success-soft);color:var(--success)}
+.status-pill.pending{background:var(--warning-soft);color:var(--warning)}
+.status-pill.failed{background:var(--danger-soft);color:var(--danger)}
+.tx-amount .amt{font-size:15px;font-weight:900;letter-spacing:-.02em;white-space:nowrap}
+.tx-amount .amt.positive{color:var(--success)}
+.empty-state{text-align:center;padding:38px 20px;color:var(--ink-3)}
+.empty-state i{font-size:30px;margin-bottom:10px;color:#A3AEC2}
+.empty-state p{font-size:14px;font-weight:600}
 
-.empty-state{
-  text-align:center;padding:36px 20px;color:var(--text-2);
-}
-.empty-state i{
-  font-size:36px;color:var(--text-3);
-  margin-bottom:12px;display:block;
-}
-.empty-state p{font-size:13px;font-weight:500;}
+/* ---------- wallet view ---------- */
+.cur-chips{display:flex;gap:8px;overflow-x:auto;margin:14px 0 4px;scrollbar-width:none}
+.cur-chips::-webkit-scrollbar{display:none}
+.cur-chip{flex:none;min-height:40px;padding:0 14px;border-radius:99px;border:1.5px solid var(--line-strong);background:#fff;color:var(--ink);font-weight:800;font-size:13px}
+.cur-chip.active{background:var(--navy-1);border-color:var(--navy-1);color:#fff}
 
-.balance-hero{
-  background:
-    linear-gradient(135deg,rgba(124,58,237,0.28) 0%,rgba(34,211,238,0.12) 100%),
-    rgba(8,11,20,0.85);
-  border:1px solid var(--border-strong);
-  border-radius:var(--radius-xl);
-  padding:28px 24px;
-  position:relative;overflow:hidden;
-  box-shadow:0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
-}
-.balance-hero::before{
-  content:'';position:absolute;
-  width:280px;height:280px;border-radius:50%;
-  background:radial-gradient(circle,rgba(124,58,237,0.35) 0%,transparent 70%);
-  top:-100px;right:-80px;pointer-events:none;
-}
-.balance-label{
-  font-size:11px;font-weight:800;
-  letter-spacing:0.16em;text-transform:uppercase;
-  color:rgba(255,255,255,0.6);
-  margin-bottom:10px;
-  display:flex;align-items:center;gap:8px;
-}
-.balance-label i{color:var(--cyan);}
-.balance-value{
-  font-size:52px;font-weight:900;
-  letter-spacing:-0.04em;line-height:1.05;
-  color:#fff;
-  text-shadow:0 0 40px rgba(124,58,237,0.35);
-  word-break:break-all;
-}
-.balance-currency{
-  font-size:14px;font-weight:700;
-  color:var(--text-2);margin-top:6px;
-}
-.balance-actions{
-  display:flex;gap:10px;margin-top:22px;
-  position:relative;z-index:1;
-}
-
-.cur-chips{
-  display:flex;gap:8px;overflow-x:auto;
-  padding:4px 4px 12px;margin:18px -4px 0;
-  scrollbar-width:none;
-}
-.cur-chips::-webkit-scrollbar{display:none;}
-.cur-chip{
-  flex-shrink:0;
-  padding:9px 16px;border-radius:999px;
-  background:rgba(148,163,184,0.06);
-  border:1px solid rgba(148,163,184,0.14);
-  color:var(--text-2);
-  font-family:inherit;font-size:12px;font-weight:800;
-  letter-spacing:0.04em;
-  cursor:pointer;transition:all .2s ease;
-}
-.cur-chip.active{
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  border-color:transparent;color:#fff;
-  box-shadow:0 0 18px rgba(124,58,237,0.45);
-}
-
-.biller-group{margin-bottom:22px;}
-.biller-head{
-  font-size:12px;font-weight:800;
-  letter-spacing:0.14em;text-transform:uppercase;
-  color:var(--text-2);
-  margin:0 4px 12px;
-  display:flex;align-items:center;gap:8px;
-}
-.biller-head i{color:var(--cyan);font-size:13px;}
-.biller-grid{
-  display:grid;grid-template-columns:repeat(2,1fr);gap:10px;
-}
+/* ---------- utilities ---------- */
+.biller-group{margin-bottom:20px}
+.biller-head{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;margin-bottom:10px;color:var(--ink-2)}
+.biller-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .biller-btn{
-  display:flex;align-items:center;gap:12px;
-  padding:14px;
-  border-radius:var(--radius-md);
-  background:rgba(148,163,184,0.05);
-  border:1px solid rgba(148,163,184,0.10);
-  color:var(--text-1);
-  font-family:inherit;font-size:13px;font-weight:700;
-  cursor:pointer;transition:all .18s ease;
-  text-align:left;
+  display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px;min-height:92px;border-radius:var(--radius-md);
+  background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow-1);color:var(--ink);font-size:12.5px;font-weight:700;text-align:center
 }
-.biller-btn:hover,.biller-btn:active{
-  background:rgba(124,58,237,0.10);
-  border-color:var(--border-strong);
-  color:#fff;transform:translateY(-1px);
-}
-.biller-logo{
-  width:34px;height:34px;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(124,58,237,0.16);
-  color:var(--violet-bright);
-  font-size:14px;flex-shrink:0;font-weight:900;
-}
+.biller-logo{width:42px;height:42px;border-radius:13px;background:var(--orange-soft);color:var(--orange);display:grid;place-items:center;font-size:12px;font-weight:900}
+.coming{text-align:center;padding:34px 20px;background:var(--card);border:1px dashed var(--line-strong);border-radius:var(--radius-lg)}
+.coming .ico{width:64px;height:64px;margin:0 auto 14px;border-radius:20px;display:grid;place-items:center;font-size:26px;color:#fff}
+.coming h2{font-size:19px;font-weight:900;letter-spacing:-.02em}
+.coming p{font-size:14px;color:var(--ink-2);margin:8px auto 0;max-width:300px;line-height:1.5}
 
+/* ---------- bottom nav ---------- */
 .bottom-nav{
-  position:fixed;bottom:0;left:0;right:0;
-  z-index:80;display:flex;
-  background:rgba(8,11,20,0.88);
-  backdrop-filter:blur(24px) saturate(180%);
-  -webkit-backdrop-filter:blur(24px) saturate(180%);
-  border-top:1px solid var(--border);
-  padding-bottom:env(safe-area-inset-bottom);
-  padding-top:8px;padding-left:8px;padding-right:8px;
+  position:fixed;left:0;right:0;bottom:0;z-index:60;height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  padding:0 8px env(safe-area-inset-bottom);display:flex;justify-content:center;
+  background:rgba(255,255,255,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);
 }
+.bottom-nav .inner{width:100%;max-width:560px;display:grid;grid-template-columns:1fr 1fr 84px 1fr 1fr;align-items:center}
 .nav-item{
-  flex:1;
-  display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:8px 4px 10px;
-  background:none;border:none;
-  color:var(--text-3);
-  font-family:inherit;font-size:10px;font-weight:700;
-  letter-spacing:0.04em;
-  cursor:pointer;transition:all .2s ease;
-  position:relative;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;background:none;
+  color:var(--ink-3);min-height:56px;font-size:12px;font-weight:700
 }
-.nav-item .nav-icon{
-  font-size:20px;transition:all .2s ease;line-height:1;
+.nav-item .nav-icon{font-size:20px}
+.nav-item.active{color:var(--blue)}
+.nav-fab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;border:0;background:none;color:var(--ink-3);font-size:12px;font-weight:700;gap:4px;padding-bottom:10px}
+.nav-fab .disc{
+  position:absolute;top:-24px;left:50%;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;
+  background:var(--brand-grad);color:#fff;display:grid;place-items:center;font-size:24px;border:5px solid #fff;
+  box-shadow:0 10px 24px rgba(194,65,12,.38)
 }
-.nav-item .nav-label{font-weight:800;letter-spacing:0.05em;}
-.nav-item.active{color:#fff;}
-.nav-item.active .nav-icon{
-  color:var(--violet-bright);
-  filter:drop-shadow(0 0 10px rgba(124,58,237,0.85));
-  transform:translateY(-2px);
-}
-.nav-item.active::before{
-  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
-  width:32px;height:3px;border-radius:0 0 4px 4px;
-  background:linear-gradient(90deg,var(--violet),var(--cyan));
-  box-shadow:0 0 12px rgba(124,58,237,0.85);
-}
+.nav-fab span.lbl{color:var(--ink-3)}
 
+/* ---------- sheets ---------- */
 .sheet-backdrop{
-  position:fixed;inset:0;z-index:200;
-  background:rgba(8,11,20,0.72);
-  backdrop-filter:blur(6px);
-  display:none;align-items:flex-end;justify-content:center;
-  animation:fadeIn .2s ease;
+  position:fixed;inset:0;z-index:200;display:none;align-items:flex-end;justify-content:center;
+  background:rgba(14,26,51,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)
 }
-.sheet-backdrop.show{display:flex;}
-@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.sheet-backdrop.show{display:flex}
 .sheet{
-  width:100%;max-width:560px;
-  background:var(--bg-2);
-  border-radius:28px 28px 0 0;
-  padding:8px 20px calc(24px + env(safe-area-inset-bottom));
-  max-height:88vh;overflow-y:auto;
-  border-top:1px solid var(--border-strong);
-  animation:sheetUp .32s cubic-bezier(0.16,1,0.3,1);
+  width:100%;max-width:560px;max-height:92vh;max-height:92dvh;overflow-y:auto;background:var(--card);
+  border-radius:28px 28px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+  animation:sheetUp .3s cubic-bezier(.16,1,.3,1);box-shadow:var(--shadow-2)
 }
-@keyframes sheetUp{
-  from{transform:translateY(100%);}
-  to{transform:translateY(0);}
-}
-.sheet-handle{
-  width:44px;height:4px;border-radius:99px;
-  background:rgba(148,163,184,0.28);
-  margin:6px auto 16px;
-}
-.sheet-title{
-  font-size:19px;font-weight:900;color:#fff;
-  letter-spacing:-0.02em;margin-bottom:4px;
-}
-.sheet-sub{
-  font-size:13px;color:var(--text-2);
-  margin-bottom:20px;font-weight:500;
-}
-.sheet-close{
-  position:absolute;top:16px;right:18px;
-  width:32px;height:32px;border-radius:50%;
-  background:rgba(148,163,184,0.10);
-  border:none;color:var(--text-2);
-  font-size:15px;cursor:pointer;
-}
-.sheet-relative{position:relative;}
-
-.user-menu-list{display:flex;flex-direction:column;gap:2px;}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.sheet-handle{width:44px;height:5px;border-radius:99px;background:var(--line-strong);margin:4px auto 16px}
+.sheet-relative{position:relative;padding-right:52px;margin-bottom:18px}
+.sheet-title{font-size:21px;font-weight:900;letter-spacing:-.03em;color:var(--ink)}
+.sheet-sub{font-size:14px;color:var(--ink-2);margin-top:4px;line-height:1.45}
+.sheet-close{position:absolute;right:-4px;top:-4px;width:44px;height:44px;border-radius:50%;border:0;background:var(--slate-soft);color:var(--ink);font-size:15px}
+.user-menu-list{display:flex;flex-direction:column;gap:8px}
 .um-item{
-  display:flex;align-items:center;gap:14px;
-  padding:15px 12px;
-  border-radius:var(--radius-md);
-  color:var(--text-1);
-  font-family:inherit;font-size:14px;font-weight:600;
-  background:none;border:none;
-  cursor:pointer;transition:all .16s ease;
-  text-align:left;width:100%;
+  display:flex;align-items:center;gap:14px;min-height:56px;padding:0 14px;border-radius:14px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);font-weight:700;font-size:15px;text-align:left;width:100%
 }
-.um-item:hover{background:rgba(124,58,237,0.10);color:#fff;}
-.um-item i{
-  width:34px;height:34px;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(124,58,237,0.12);
-  color:var(--violet-bright);
-  font-size:13px;flex-shrink:0;
-}
-.um-item.danger{color:var(--danger);}
-.um-item.danger i{background:rgba(244,63,94,0.12);color:var(--danger);}
-.um-item.danger:hover{background:rgba(244,63,94,0.08);}
+.um-item i{width:34px;height:34px;border-radius:11px;background:var(--slate-soft);color:var(--ink-2);display:grid;place-items:center;font-size:15px;flex:none}
+.um-item.danger{color:var(--danger)}
+.um-item.danger i{background:var(--danger-soft);color:var(--danger)}
+.notice{padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.45;font-weight:600}
+.notice.error{background:var(--danger-soft);border:1px solid #F4B4B4;color:#7F1D1D}
+.notice.ok{background:var(--success-soft);border:1px solid #BFE8CC;color:#14532D}
+.ref-box{padding:20px;border-radius:20px;background:var(--brand-soft);border:1px solid #F8C9BB;text-align:center}
+.ref-box small{display:block;font-size:11.5px;color:var(--ink-2);font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.ref-box b{display:block;font-size:30px;font-weight:900;letter-spacing:.05em;color:var(--ink)}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat{padding:12px 8px;border-radius:14px;background:var(--slate-soft);text-align:center}
+.stat b{display:block;font-size:17px;font-weight:900}
+.stat small{font-size:11.5px;color:var(--ink-2);font-weight:600}
+.otp-input{text-align:center;letter-spacing:.5em;font-size:24px!important;font-weight:900!important}
 
-#toastWrap{
-  position:fixed;
-  top:calc(env(safe-area-inset-top) + 76px);
-  left:50%;transform:translateX(-50%);
-  z-index:9000;
-  display:flex;flex-direction:column;gap:8px;
-  pointer-events:none;width:calc(100% - 32px);max-width:420px;
-}
+/* ---------- toast ---------- */
+#toastWrap{position:fixed;top:calc(10px + env(safe-area-inset-top));left:12px;right:12px;z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
 .toast{
-  padding:14px 18px;border-radius:14px;
-  background:rgba(20,26,45,0.96);
-  backdrop-filter:blur(20px);
-  border:1px solid var(--border-strong);
-  color:#fff;font-size:13.5px;font-weight:600;
-  box-shadow:0 12px 32px rgba(0,0,0,0.55);
-  display:flex;align-items:center;gap:10px;
-  animation:toastIn .35s cubic-bezier(0.34,1.56,0.64,1);
-  pointer-events:auto;
+  pointer-events:auto;max-width:460px;width:100%;display:flex;align-items:flex-start;gap:10px;padding:13px 15px;border-radius:14px;
+  background:var(--ink);color:#fff;font-size:14px;font-weight:600;line-height:1.4;box-shadow:var(--shadow-2);animation:viewIn .25s ease
 }
-.toast.success{border-color:rgba(34,197,94,0.45);}
-.toast.success i{color:var(--success);}
-.toast.error{border-color:rgba(244,63,94,0.45);}
-.toast.error i{color:var(--danger);}
-.toast.warning{border-color:rgba(245,158,11,0.45);}
-.toast.warning i{color:var(--warning);}
-.toast.info i{color:var(--cyan);}
-@keyframes toastIn{
-  from{opacity:0;transform:translateY(-14px);}
-  to{opacity:1;transform:translateY(0);}
-}
+.toast i{margin-top:2px}
+.toast.success i{color:#6EE7A0}.toast.error i{color:#FCA5A5}.toast.warning i{color:#FCD34D}.toast.info i{color:#93C5FD}
+.spinner{display:inline-block;width:16px;height:16px;border:2.5px solid currentColor;border-top-color:transparent;opacity:.85;border-radius:50%;animation:spin .8s linear infinite;margin-right:8px;vertical-align:-3px}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-.spinner{
-  display:inline-block;
-  width:14px;height:14px;
-  border:2px solid rgba(255,255,255,0.28);
-  border-top-color:#fff;
-  border-radius:50%;
-  animation:spin .7s linear infinite;
-  vertical-align:middle;margin-right:8px;
-}
-@keyframes spin{to{transform:rotate(360deg);}}
-
-/* ============================================================
-   CHAT WIDGET
-   ============================================================ */
+/* ---------- live chat (light) ---------- */
 .chat-fab{
-  position:fixed;
-  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
-  right:16px;
-  width:52px;height:52px;border-radius:50%;
-  border:none;
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  color:#fff;font-size:20px;cursor:pointer;
-  box-shadow:0 8px 28px rgba(124,58,237,0.55);
-  z-index:90;transition:transform .2s ease;
-  display:none;
+  position:fixed;right:16px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 18px);width:52px;height:52px;border-radius:50%;
+  border:0;background:var(--navy-1);color:#fff;font-size:20px;box-shadow:var(--shadow-2);z-index:90;display:none
 }
-.chat-fab.show{display:flex;align-items:center;justify-content:center;}
-.chat-fab:active{transform:scale(0.92);}
-
+.chat-fab.show{display:none} /* chat opens from Support */
 .chat-widget{
-  display:none;
-  position:fixed;
-  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
-  right:16px;left:16px;
-  max-width:420px;margin:0 auto;
-  height:min(520px, calc(100vh - 140px));
-  background:var(--bg-2);
-  border:1px solid var(--border-strong);
-  border-radius:24px;
-  box-shadow:0 30px 80px rgba(0,0,0,0.6);
-  z-index:100;flex-direction:column;overflow:hidden;
-  animation:sheetUp .3s cubic-bezier(0.16,1,0.3,1);
+  display:none;position:fixed;left:12px;right:12px;margin:0 auto;max-width:440px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 14px);
+  height:min(540px,calc(100dvh - 150px));background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow-2);
+  z-index:150;flex-direction:column;overflow:hidden
 }
-.chat-widget.show{display:flex;}
-.chat-header{
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  color:#fff;padding:14px 16px;
-  display:flex;align-items:center;justify-content:space-between;
+.chat-widget.show{display:flex}
+.chat-header{background:var(--navy-1);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+.chat-header button{width:44px;height:44px;margin:-8px;border-radius:50%}
+.chat-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.chat-msg{max-width:82%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.45;font-weight:500}
+.chat-msg.support{background:#fff;color:var(--ink);align-self:flex-start;border:1px solid var(--line);border-bottom-left-radius:4px}
+.chat-msg.user{background:var(--navy-2);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.chat-footer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);background:#fff}
+.chat-footer input{flex:1;min-height:46px;padding:0 14px;border-radius:14px;border:1.5px solid var(--line-strong);background:#fff;color:var(--ink);font:500 16px var(--font);outline:none}
+.chat-footer input:focus{border-color:var(--blue)}
+.chat-footer button{width:48px;border-radius:14px;border:0;background:var(--brand-grad);color:#fff;font-size:15px}
+
+/* ---------- receipt (light, printable) ---------- */
+.receipt-backdrop{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(14,26,51,.6);backdrop-filter:blur(4px)}
+.receipt-backdrop.show{display:flex}
+.receipt-card{width:100%;max-width:440px;max-height:90vh;overflow:auto;background:#fff;border-radius:26px;padding:22px;box-shadow:var(--shadow-2);color:var(--ink);animation:sheetUp .28s cubic-bezier(.16,1,.3,1)}
+.receipt-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.receipt-brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:-.03em;font-size:18px}
+.receipt-brand-mark{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:var(--brand-grad);color:#fff}
+.receipt-close{width:44px;height:44px;border:0;border-radius:50%;background:var(--slate-soft);color:var(--ink);font-size:16px}
+.receipt-status{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin:8px 0 10px}
+.receipt-total{text-align:center;font-size:36px;line-height:1.1;font-weight:900;letter-spacing:-.04em;margin-bottom:5px;overflow-wrap:anywhere}
+.receipt-caption{text-align:center;color:var(--ink-2);font-size:13px;margin-bottom:18px;text-transform:capitalize}
+.receipt-divider{border-top:1.5px dashed var(--line-strong);margin:14px 0}
+.receipt-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:9px 0;font-size:13px}
+.receipt-row .k{color:var(--ink-2);flex:0 0 38%}
+.receipt-row .v{color:var(--ink);text-align:right;font-weight:700;overflow-wrap:anywhere;max-width:62%}
+.receipt-note{background:var(--blue-soft);color:#1E3A8A;padding:11px 12px;border-radius:12px;font-size:12px;line-height:1.5;margin-top:14px}
+.receipt-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.receipt-action{border:1.5px solid var(--line-strong);border-radius:14px;min-height:48px;background:#fff;color:var(--ink);font:800 14px var(--font)}
+.receipt-action.primary{border:0;background:var(--brand-grad);color:#fff}
+@media print{body *{visibility:hidden!important}.receipt-backdrop,.receipt-backdrop *{visibility:visible!important}.receipt-backdrop{display:block!important;position:static;background:#fff;padding:0}.receipt-card{max-width:none;max-height:none;box-shadow:none;border:0}.receipt-actions,.receipt-close{display:none!important}}
+
+/* ---------- tablet+ : keep the app column centred ---------- */
+@media (min-width:600px){
+  body{background:#E9EEF7}
+  .app-view{padding-top:12px}
 }
-.chat-body{
-  flex:1;overflow-y:auto;padding:16px;
-  display:flex;flex-direction:column;gap:10px;
-  background:rgba(8,11,20,0.4);
+@media (max-width:360px){
+  .tile .ico{width:46px;height:46px;font-size:20px}
+  .pm-grid{gap:6px}
+  .wallet-amount{font-size:30px}
+  .svc{padding:10px;gap:10px}
 }
-.chat-msg{
-  max-width:82%;padding:10px 14px;
-  border-radius:16px;font-size:13.5px;line-height:1.45;font-weight:500;
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* Dark overlays (payment-success moment + sponsored offers) keep their own dark palette */
+.moment-ad-backdrop{
+  --text-0:#F8FAFC;--text-1:#CBD5E1;--text-2:#A7B3C6;--text-3:#8391A8;
+  --border:rgba(255,255,255,.1);--border-strong:rgba(255,109,0,.32);
+  --bg-1:#0A0E1A;--bg-2:#0D1224;--surface:rgba(20,26,45,.72);
+  --violet:#E53935;--violet-bright:#FF6D00;--cyan:#65D9E8;--brand-ember:#E53935;--brand-orange:#FF6D00;--brand-gold:#FFB454;
+  --success:#22C55E;--warning:#F59E0B;--danger:#F43F5E;--radius-lg:20px;--radius-md:14px;
 }
-.chat-msg.support{
-  background:rgba(148,163,184,0.10);
-  color:var(--text-0);
-  align-self:flex-start;
-  border-bottom-left-radius:4px;
-  border:1px solid rgba(148,163,184,0.12);
-}
-.chat-msg.user{
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  color:#fff;align-self:flex-end;
-  border-bottom-right-radius:4px;
-}
-.chat-footer{
-  display:flex;gap:8px;padding:10px;
-  border-top:1px solid var(--border);
-  background:rgba(8,11,20,0.6);
-}
-.chat-footer input{
-  flex:1;padding:12px 16px;
-  border-radius:14px;
-  border:1.5px solid rgba(148,163,184,0.16);
-  background:rgba(8,11,20,0.6);
-  color:#fff;font-family:inherit;font-size:14px;
-  outline:none;
-}
-.chat-footer input:focus{border-color:var(--violet-bright);}
-.chat-footer button{
-  width:44px;border-radius:14px;border:none;
-  background:linear-gradient(135deg,var(--brand-ember),var(--brand-orange));
-  color:#fff;font-size:15px;cursor:pointer;
-}
+
+
+/* ===== Payment-success + sponsored-offer overlays (dark by design) ===== */
 
 /* ============================================================
    MOMENT AD — Payment Success Overlay
@@ -1194,13 +778,6 @@ select.input{
   100%{opacity:0;transform:translateY(120px) rotate(360deg);}
 }
 
-@media (min-width:600px){
-  .app-view{max-width:520px;margin:0 auto;}
-  .bottom-nav{max-width:520px;margin:0 auto;left:50%;transform:translateX(-50%);border-radius:22px 22px 0 0;border-left:1px solid var(--border);border-right:1px solid var(--border);}
-  .biller-grid{grid-template-columns:repeat(3,1fr);}
-  .pm-grid{grid-template-columns:repeat(4,1fr);}
-}
-
 /* ============================================================
    NET365 SMART MEDIA — SCALABLE AD UI v4
    ============================================================ */
@@ -1335,127 +912,20 @@ select.input{
   .smart-ad-media{height:125px;}
   .moment-ad-sheet{padding-left:13px;padding-right:13px;}
 }
-
-
-/* ============================================================
-   NET365 PREMIUM CONSUMER SHELL — v4
-   Presentation layer only; existing business logic/IDs retained.
-   ============================================================ */
-.n365-welcome{padding:10px 2px 22px;position:relative}
-.n365-eyebrow{font-size:10px;letter-spacing:.16em;font-weight:900;color:#94A3B8;margin-bottom:11px;display:flex;align-items:center;gap:7px}
-.n365-live-dot{width:7px;height:7px;border-radius:50%;background:#22C55E;box-shadow:0 0 12px rgba(34,197,94,.7);animation:n365Pulse 2s infinite}
-@keyframes n365Pulse{50%{opacity:.35;transform:scale(.75)}}
-.n365-welcome h1{font-size:34px;line-height:1.02;letter-spacing:-.055em;margin:0;font-weight:900;color:#F8FAFC}
-.n365-welcome h1 span{background:linear-gradient(90deg,#A78BFA,#22D3EE);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.n365-welcome p{margin:12px 0 0;color:#94A3B8;font-size:14px;line-height:1.55;max-width:330px}
-.n365-hero-card{position:relative;overflow:hidden;padding:20px;border-radius:28px;background:linear-gradient(145deg,rgba(24,29,52,.96),rgba(12,16,30,.96));border:1px solid rgba(255,255,255,.09);box-shadow:0 25px 70px rgba(0,0,0,.35),0 0 50px rgba(124,58,237,.08)}
-.n365-hero-card:after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(124,58,237,.09),transparent 42%,rgba(34,211,238,.05))}
-.n365-hero-glow{position:absolute;width:170px;height:170px;right:-80px;top:-90px;border-radius:50%;background:#7C3AED;filter:blur(70px);opacity:.25}
-.n365-hero-top,.n365-phone-wrap,.n365-detected,.n365-country-row,.n365-amount-label,.n365-amount-box,.n365-quick-row,.n365-total,.n365-payment-strip,.n365-main-cta,.n365-cta-hint{position:relative;z-index:1}
-.n365-hero-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
-.n365-card-kicker,.n365-services-head span,.n365-discover-copy span,.n365-business-card span{font-size:9px;letter-spacing:.16em;font-weight:900;color:#94A3B8}
-.n365-card-title{font-size:20px;font-weight:900;letter-spacing:-.03em;margin-top:4px}
-.n365-secure-pill{font-size:10px;font-weight:800;padding:7px 9px;border-radius:99px;color:#A7F3D0;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2)}
-.n365-secure-pill i{margin-right:4px}
-.n365-phone-wrap{display:flex;align-items:center;height:58px;border:1px solid rgba(255,255,255,.12);background:rgba(5,8,17,.72);border-radius:18px;padding:0 14px;transition:.2s}
-.n365-phone-wrap:focus-within{border-color:rgba(124,58,237,.8);box-shadow:0 0 0 4px rgba(124,58,237,.1)}
-.n365-phone-prefix{color:#A78BFA;font-size:17px;width:29px}
-.n365-phone-input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:700 17px Inter,sans-serif}
-.n365-phone-input::placeholder{color:#64748B;font-weight:600}
-.n365-check{width:27px;height:27px;border-radius:50%;display:none;align-items:center;justify-content:center;background:#22C55E;color:#fff;font-size:11px}.n365-check.show{display:flex}
-.n365-detected{display:flex;align-items:center;gap:10px;margin-top:11px;padding:10px 11px;border-radius:15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06)}
-.n365-detected .detect-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(124,58,237,.15);color:#A78BFA}
-.n365-detected .detect-info{flex:1;min-width:0}.n365-detected .detect-name{font-size:12px;font-weight:850;color:#F8FAFC}.n365-detected .detect-sub{font-size:10px;color:#64748B;margin-top:2px}.n365-detected .detect-badge{font-size:8px;font-weight:900;letter-spacing:.08em;color:#67E8F9;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.16);padding:5px 7px;border-radius:7px}
-.n365-country-row{display:flex;align-items:center;gap:8px;margin-top:10px;color:#64748B;font-size:11px;font-weight:700}.n365-country-row i{color:#22D3EE}.n365-country-row select{margin-left:auto;background:transparent;border:0;color:#CBD5E1;outline:0;font:700 11px Inter}.n365-country-row option{background:#0D1224;color:#fff}
-.n365-manual{margin-top:10px}.n365-amount-label{display:flex;justify-content:space-between;margin-top:18px;margin-bottom:7px;color:#94A3B8;font-size:11px;font-weight:800}.n365-amount-label span:last-child{color:#A78BFA;font-size:10px}
-.n365-amount-box{height:62px;display:flex;align-items:center;padding:0 15px;border-radius:18px;background:rgba(5,8,17,.72);border:1px solid rgba(255,255,255,.1)}.n365-amount-box:focus-within{border-color:rgba(34,211,238,.55)}
-.n365-amount-box .amount-symbol{font-size:22px;color:#CBD5E1;font-weight:900}.n365-amount-input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#fff;font:900 26px Inter,sans-serif;padding-left:8px}.n365-amount-input::placeholder{color:#334155}
-.n365-quick-row{display:flex;gap:7px;overflow:auto;padding:9px 0 2px;scrollbar-width:none}.n365-quick-row button{flex:0 0 auto;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:#CBD5E1;padding:7px 10px;border-radius:10px;font:800 10px Inter}.n365-quick-row button:active{transform:scale(.96);background:rgba(124,58,237,.15)}
-.n365-total{margin-top:15px;padding:12px 13px;border-radius:14px;background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.13)}.n365-total>div{display:flex;align-items:center;justify-content:space-between}.n365-total span{font-size:11px;color:#94A3B8}.n365-total strong{font-size:16px;color:#fff}.n365-total small{font-size:9px;color:#64748B}.n365-hidden-value{display:none!important}
-.n365-payment-strip{margin-top:14px}.n365-payment-strip>span{display:block;font-size:10px;font-weight:800;color:#64748B;margin-bottom:7px}.n365-payment-strip>span i{margin-right:5px;color:#22C55E}.n365-pm-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.n365-pm-mini .pm-btn{min-width:0;padding:8px 3px;border-radius:12px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.035);color:#CBD5E1;font-size:8px}.n365-pm-mini .pm-btn .pm-icon{display:none}.n365-pm-mini .pm-btn small{display:block;color:#64748B;font-size:7px;margin-top:2px}.n365-pm-mini .pm-btn.selected{border-color:#7C3AED;background:rgba(124,58,237,.13);color:#fff}
-.n365-main-cta{width:100%;margin-top:14px;height:55px;border:0;border-radius:17px;background:linear-gradient(100deg,#7C3AED,#4F46E5 55%,#06B6D4);color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font:900 14px Inter;box-shadow:0 14px 35px rgba(79,70,229,.24);cursor:pointer}.n365-main-cta:disabled{opacity:.48;box-shadow:none;cursor:not-allowed}.n365-main-cta i{font-size:12px}.n365-cta-hint{text-align:center;color:#64748B;font-size:9px;margin-top:8px}
-.n365-services-head{display:flex;align-items:flex-end;justify-content:space-between;margin:27px 2px 12px}.n365-services-head h2{font-size:19px;letter-spacing:-.035em;margin:4px 0 0}.n365-services-head a{font-size:10px;font-weight:800;color:#22D3EE;cursor:pointer}.n365-services-head a i{margin-left:4px}
-.n365-service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.n365-service-grid button{min-height:108px;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(20,26,45,.6);padding:13px 10px;text-align:left;color:#fff;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer;transition:.2s}.n365-service-grid button:active{transform:translateY(2px);background:rgba(124,58,237,.12)}.n365-service-grid i{width:32px;height:32px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(124,58,237,.12);color:#A78BFA;font-size:13px;margin-bottom:13px}.n365-service-grid b{font-size:11px}.n365-service-grid small{font-size:8px;color:#64748B;margin-top:3px}
-.n365-discover-card{position:relative;overflow:hidden;margin-top:12px;min-height:170px;border-radius:22px;padding:20px;background:linear-gradient(135deg,#16132B,#0D1728);border:1px solid rgba(167,139,250,.13);display:flex}.n365-discover-copy{position:relative;z-index:2;max-width:72%}.n365-discover-copy h3{font-size:23px;line-height:1.05;letter-spacing:-.04em;margin:7px 0}.n365-discover-copy p{font-size:10px;line-height:1.55;color:#94A3B8;margin:0}.n365-discover-orb{position:absolute;right:-12px;top:24px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#22D3EE,transparent 10%),radial-gradient(circle at 60% 60%,#7C3AED,transparent 48%),rgba(124,58,237,.13);box-shadow:0 0 55px rgba(124,58,237,.28)}.n365-discover-orb i{position:absolute;font-size:11px;color:#fff}.n365-discover-orb i:nth-child(1){top:20px;right:25px}.n365-discover-orb i:nth-child(2){bottom:23px;left:25px}.n365-discover-orb i:nth-child(3){top:48px;left:47px;color:#67E8F9}
-.n365-business-card{margin-top:12px;padding:19px;border-radius:22px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);cursor:pointer}.n365-business-card h3{font-size:18px;letter-spacing:-.03em;margin:6px 0}.n365-business-card p{font-size:10px;line-height:1.5;color:#94A3B8;margin:0;max-width:300px}.n365-api-flow{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;font-size:9px;font-weight:900;color:#CBD5E1}.n365-api-flow span{padding:7px 10px;border-radius:9px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.18)}.n365-api-flow i{font-size:8px;color:#22D3EE}.n365-activity-title{margin-top:25px}
-@media(min-width:600px){.n365-welcome h1{font-size:42px}.n365-service-grid{grid-template-columns:repeat(6,1fr)}.n365-service-grid button{min-height:120px}.n365-hero-card{padding:24px}}
-/* Amount input goes hero when typing */
-.n365-hero-card.is-typing .n365-phone-wrap,
-.n365-hero-card.is-typing .n365-detected,
-.n365-hero-card.is-typing .n365-country-row,
-.n365-hero-card.is-typing .n365-amount-label,
-.n365-hero-card.is-typing .n365-quick-row,
-.n365-hero-card.is-typing .n365-payment-strip > span {
-  opacity: 0.25;
-  transition: opacity .35s ease;
-}
-.n365-hero-card.is-typing .n365-amount-box {
-  border-color: rgba(124,58,237,0.7);
-  background: rgba(124,58,237,0.06);
-  box-shadow: 0 0 0 5px rgba(124,58,237,0.10), 0 20px 45px rgba(124,58,237,0.14);
-  transform: translateY(-2px);
-  transition: all .35s cubic-bezier(.16,1,.3,1);
-}
-.n365-hero-card.is-typing .n365-amount-input {
-  font-size: 36px !important;
-  transition: font-size .3s cubic-bezier(.16,1,.3,1);
-}
-.n365-hero-card.is-typing .n365-total {
-  background: rgba(124,58,237,0.12);
-  border-color: rgba(124,58,237,0.24);
-  transition: all .35s ease;
-}
-.n365-hero-card.is-typing .n365-main-cta {
-  transform: translateY(-1px);
-  box-shadow: 0 20px 48px rgba(79,70,229,0.35);
-  transition: all .35s cubic-bezier(.16,1,.3,1);
-}
-
-/* ============================================================
-   TRUST-CENTRED RECEIPT — stable, printable, accessible
-   ============================================================ */
-.receipt-backdrop{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(3,6,12,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-.receipt-backdrop.show{display:flex;}
-.receipt-card{width:100%;max-width:440px;max-height:88vh;overflow:auto;background:linear-gradient(160deg,#111827,#0A0E18);border:1px solid rgba(255,255,255,.12);border-radius:26px;padding:24px;box-shadow:0 32px 100px rgba(0,0,0,.6);color:#F8FAFC;animation:receiptIn .28s cubic-bezier(.16,1,.3,1)}
-@keyframes receiptIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
-.receipt-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
-.receipt-brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:-.03em;font-size:18px}
-.receipt-brand-mark{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(135deg,#E53935,#FF6D00);box-shadow:0 8px 24px rgba(255,109,0,.18)}
-.receipt-close{width:36px;height:36px;border:1px solid rgba(255,255,255,.12);border-radius:50%;background:rgba(255,255,255,.05);color:#CBD5E1;font-size:16px;cursor:pointer}
-.receipt-status{display:flex;align-items:center;justify-content:center;gap:8px;color:#78E5A4;font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;margin:10px 0 12px}
-.receipt-total{text-align:center;font-size:36px;line-height:1.1;font-weight:900;letter-spacing:-.04em;margin-bottom:5px;overflow-wrap:anywhere}
-.receipt-caption{text-align:center;color:#94A3B8;font-size:12px;margin-bottom:22px}
-.receipt-divider{border-top:1px dashed rgba(148,163,184,.24);margin:16px 0}
-.receipt-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:9px 0;font-size:12px}
-.receipt-row .k{color:#94A3B8;flex:0 0 38%}.receipt-row .v{color:#F8FAFC;text-align:right;font-weight:700;overflow-wrap:anywhere;max-width:62%}
-.receipt-note{border:1px solid rgba(101,217,232,.15);background:rgba(101,217,232,.05);color:#AFC6D1;padding:11px 12px;border-radius:12px;font-size:11px;line-height:1.5;margin-top:14px}
-.receipt-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-.receipt-action{border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:13px 10px;background:rgba(255,255,255,.045);color:#F8FAFC;font:700 12px var(--font);cursor:pointer}
-.receipt-action.primary{border:0;background:linear-gradient(120deg,#E53935,#FF6D00);}
-@media print{body *{visibility:hidden!important}.receipt-backdrop,.receipt-backdrop *{visibility:visible!important}.receipt-backdrop{display:block!important;position:static;background:#fff;padding:0}.receipt-card{max-width:none;max-height:none;box-shadow:none;background:#fff;color:#111;border:0}.receipt-row .k,.receipt-caption,.receipt-note{color:#555}.receipt-row .v,.receipt-total,.receipt-brand{color:#111}.receipt-actions,.receipt-close{display:none!important}}
-@media(max-width:390px){.receipt-card{padding:19px;border-radius:22px}.receipt-total{font-size:30px}}
-
 </style>
 </head>
-<body>
+<body data-view="home">
 
 <!-- ============ TOP BAR ============ -->
 <header class="topbar">
-  <div class="brand" onclick="showView('home')">
+  <div class="brand" onclick="showView('home')" role="link" aria-label="Net365 home">
     <div class="brand-mark"><i class="fas fa-bolt"></i></div>
-    <div class="brand-name">NET365</div>
+    <div class="brand-name">Net<b>365</b></div>
   </div>
   <div class="topbar-actions">
-    <div class="wallet-chip" id="walletChip" onclick="showView('wallet')">
-      <i class="fas fa-wallet"></i>
-      <span id="walletChipValue">₦0.00</span>
-    </div>
-    <button class="avatar-btn" onclick="openSheet('supportSheet')" aria-label="Support">
-      <i class="fas fa-headset"></i>
-    </button>
-    <button class="avatar-btn" id="avatarBtn" onclick="onAvatarTap()" aria-label="Account">
-      <i class="fas fa-user"></i>
-    </button>
+    <div class="wallet-chip" id="walletChip" style="display:none"><span id="walletChipValue"></span></div>
+    <button class="icon-btn" onclick="openSheet('supportSheet')" aria-label="Support"><i class="fas fa-headset"></i></button>
+    <button class="icon-btn" id="avatarBtn" onclick="onAvatarTap()" aria-label="Account"><i class="fas fa-user"></i></button>
   </div>
 </header>
 
@@ -1466,42 +936,93 @@ select.input{
        ============================================================ -->
   <section class="view active" id="view-home">
 
-    <!-- Premium consumer landing / recharge experience -->
-    <section class="n365-welcome">
-      <div class="n365-eyebrow"><span class="n365-live-dot"></span> NET365 · DIGITAL LIFE, SIMPLIFIED</div>
-      <h1>Everything you need.<br><span>One Net365.</span></h1>
-      <p>Recharge, pay bills, subscribe and stay connected — wherever you are.</p>
-    </section>
+    <div class="greet">
+      <small id="greetHello">Good morning</small>
+      <h1 id="greetName">Welcome to Net365</h1>
+      <p>Recharge, gift cards, bills and your wallet — all in one app.</p>
+    </div>
 
-    <div class="n365-hero-card">
-      <div class="n365-hero-glow"></div>
-      <div class="n365-hero-top">
-        <div>
-          <div class="n365-card-kicker">INSTANT RECHARGE</div>
-          <div class="n365-card-title">Top up your phone</div>
+    <div class="verify-banner" id="verifyBanner" role="status">
+      <i class="fas fa-envelope-circle-check"></i>
+      <span>Verify your email to add money and pay.</span>
+      <button type="button" onclick="openVerifySheet()">Verify</button>
+    </div>
+
+    <!-- Wallet card -->
+    <div class="wallet-card" id="homeWalletCard">
+      <div class="wallet-row">
+        <div class="wallet-label"><i class="fas fa-wallet"></i> <span>Wallet balance</span></div>
+        <button class="eye-btn" id="eyeBtn" onclick="toggleBalance()" aria-label="Show or hide balance"><i class="fas fa-eye"></i></button>
+      </div>
+      <div class="wallet-amount" id="homeBalance">₦0.00</div>
+      <div class="wallet-sub" id="homeBalanceSub">Sign in to see your balance</div>
+      <div class="wallet-actions">
+        <button class="pill-btn light" id="homeFundBtn" onclick="onFundWallet()"><i class="fas fa-plus"></i> <span id="homeFundLabel">Sign in</span></button>
+        <button class="pill-btn ghost" onclick="showView('wallet')"><i class="fas fa-clock-rotate-left"></i> Wallet</button>
+      </div>
+    </div>
+
+    <!-- Top 4 tiles -->
+    <div class="tile-row">
+      <button class="tile" onclick="showView('recharge')"><span class="ico c-blue"><i class="fas fa-mobile-screen-button"></i></span><b>Airtime</b><small>Recharge</small></button>
+      <button class="tile" onclick="soonToast('Data bundles')"><span class="soon">SOON</span><span class="ico c-green"><i class="fas fa-globe"></i></span><b>Data</b><small>Buy data</small></button>
+      <button class="tile" onclick="window.location.href='/giftcards'"><span class="ico c-orange"><i class="fas fa-gift"></i></span><b>Gift Cards</b><small>Buy now</small></button>
+      <button class="tile" onclick="showView('utilities')"><span class="ico c-purple"><i class="fas fa-lightbulb"></i></span><b>Bills</b><small>Pay bills</small></button>
+    </div>
+
+    <!-- Quick services -->
+    <div class="section-title">Quick Services</div>
+    <div class="svc-grid">
+      <button class="svc" onclick="showView('recharge')"><span class="ico c-blue"><i class="fas fa-mobile-screen-button"></i></span><span class="t"><b>Airtime</b><small>Top up any network</small></span></button>
+      <button class="svc" onclick="window.location.href='/giftcards'"><span class="ico c-orange"><i class="fas fa-gift"></i></span><span class="t"><b>Gift Cards</b><small>Netflix, Spotify &amp; more</small></span></button>
+      <button class="svc" onclick="window.location.href='/scheduler'"><span class="ico c-teal"><i class="fas fa-calendar-check"></i></span><span class="t"><b>Scheduled</b><small>Auto-pay &amp; reminders</small></span></button>
+      <button class="svc" onclick="openRewards()"><span class="ico c-pink"><i class="fas fa-star"></i></span><span class="t"><b>Rewards</b><small>Refer &amp; earn</small></span></button>
+      <button class="svc" onclick="showView('utilities')"><span class="ico c-purple"><i class="fas fa-bolt"></i></span><span class="t"><b>Electricity</b><small>Prepaid &amp; postpaid</small></span></button>
+      <button class="svc" onclick="showView('utilities')"><span class="ico c-red"><i class="fas fa-tv"></i></span><span class="t"><b>Cable TV</b><small>DStv, GOtv, StarTimes</small></span></button>
+      <button class="svc" onclick="window.location.href='/?full=1'"><span class="ico c-slate"><i class="fas fa-upload"></i></span><span class="t"><b>Bulk Recharge</b><small>Contacts &amp; CSV</small></span></button>
+      <button class="svc" onclick="window.location.href='/business'"><span class="ico c-green"><i class="fas fa-briefcase"></i></span><span class="t"><b>Business</b><small>SMS &amp; receipt ads</small></span></button>
+    </div>
+
+    <button class="promo" onclick="openRewards()">
+      <span><b>Invite friends, earn rewards</b><small>Share your code. You both benefit when they recharge.</small></span>
+      <span class="go"><i class="fas fa-arrow-right"></i></span>
+    </button>
+
+    <div class="section-title">Recent Activity <a onclick="showView('transactions')">See all <i class="fas fa-chevron-right" style="font-size:10px"></i></a></div>
+    <div class="tx-list" id="homeTxList"><div class="empty-state"><i class="fas fa-clock"></i><p>Sign in to see your transactions</p></div></div>
+  </section>
+
+  <!-- ============================================================
+       VIEW: RECHARGE (airtime)
+       ============================================================ -->
+  <section class="view" id="view-recharge">
+    <div class="page-head">
+      <button class="back-btn" onclick="showView('home')" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
+      <h1>Recharge airtime</h1>
+    </div>
+
+    <div class="card n365-hero-card">
+      <div class="field">
+        <label class="field-label" for="phoneInput"><i class="fas fa-mobile-screen-button"></i> Phone number</label>
+        <div class="phone-wrap">
+          <i class="fas fa-phone"></i>
+          <input type="tel" id="phoneInput" class="phone-input" placeholder="08012345678" autocomplete="tel" inputmode="tel" oninput="onPhoneInput()" />
+          <span class="n365-check" id="n365PhoneCheck"><i class="fas fa-check"></i></span>
         </div>
-        <div class="n365-secure-pill"><i class="fas fa-shield-halved"></i> Secure</div>
       </div>
 
-      <div class="n365-phone-wrap">
-        <span class="n365-phone-prefix"><i class="fas fa-mobile-screen-button"></i></span>
-        <input type="tel" id="phoneInput" class="n365-phone-input" placeholder="Enter phone number" autocomplete="tel" oninput="onPhoneInput()" />
-        <span class="n365-check" id="n365PhoneCheck"><i class="fas fa-check"></i></span>
-      </div>
-
-      <div class="n365-detected" id="detectCard">
+      <div class="detect-card" id="detectCard" role="status" aria-live="polite">
         <div class="detect-icon" id="detectIcon"><i class="fas fa-satellite-dish"></i></div>
         <div class="detect-info">
           <div class="detect-name" id="detectName">Ready to detect</div>
-          <div class="detect-sub" id="detectSub">Your network will be detected automatically</div>
+          <div class="detect-sub" id="detectSub">Your network is detected automatically</div>
         </div>
         <div class="detect-badge" id="detectBadge">AUTO</div>
       </div>
 
-      <div class="n365-country-row">
-        <i class="fas fa-globe"></i>
-        <span>Country</span>
-        <select id="countryOverrideSelect" onchange="setManualCountry(this.value)">
+      <div class="country-row">
+        <i class="fas fa-globe"></i><span>Country</span>
+        <select id="countryOverrideSelect" onchange="setManualCountry(this.value)" aria-label="Country">
           <option value="">Auto-detect</option>
           <optgroup label="Africa">
             <option value="NG">🇳🇬 Nigeria</option>
@@ -1515,96 +1036,66 @@ select.input{
             <option value="US">🇺🇸 United States</option>
             <option value="CA">🇨🇦 Canada</option>
           </optgroup>
-          <optgroup label="Europe">
-            <option value="GB">🇬🇧 United Kingdom</option>
-          </optgroup>
-          <optgroup label="Asia">
-            <option value="IN">🇮🇳 India</option>
-          </optgroup>
+          <optgroup label="Europe"><option value="GB">🇬🇧 United Kingdom</option></optgroup>
+          <optgroup label="Asia"><option value="IN">🇮🇳 India</option></optgroup>
         </select>
       </div>
 
-      <div class="manual-block n365-manual" id="manualBlock">
-        <div class="manual-head"><strong><i class="fas fa-list" style="margin-right:6px;"></i>Choose Network</strong><button onclick="loadManualOperators()">Refresh</button></div>
-        <select id="networkSelect" class="input" onchange="selectManualOperator(this.value)"><option value="">Select operator</option></select>
+      <div class="manual-block" id="manualBlock">
+        <div class="manual-head"><strong><i class="fas fa-list" style="margin-right:6px"></i>Choose network</strong><button onclick="loadManualOperators()">Refresh</button></div>
+        <select id="networkSelect" class="input" onchange="selectManualOperator(this.value)" aria-label="Network"><option value="">Select operator</option></select>
       </div>
 
-      <div class="n365-amount-label"><span>Amount</span><span id="n365CurrencyHint">NGN</span></div>
-      <div class="n365-amount-box">
+      <div class="amount-label"><span>Amount</span><span id="n365CurrencyHint">NGN</span></div>
+      <div class="amount-wrap">
         <span class="amount-symbol" id="amtSymbol">₦</span>
-        <input type="tel" id="amountInput" class="n365-amount-input" placeholder="0" inputmode="decimal" oninput="onAmountInput()" />
+        <input type="tel" id="amountInput" class="amount-input" placeholder="0" inputmode="decimal" oninput="onAmountInput()" aria-label="Amount" />
       </div>
-      <div class="n365-quick-row">
-        <button onclick="setQuick(100,event)">₦100</button><button onclick="setQuick(200,event)">₦200</button><button onclick="setQuick(500,event)">₦500</button><button onclick="setQuick(1000,event)">₦1k</button><button onclick="setQuick(2000,event)">₦2k</button>
+      <div class="quick-row">
+        <button class="quick-pill" onclick="setQuick(100,event)">₦100</button>
+        <button class="quick-pill" onclick="setQuick(200,event)">₦200</button>
+        <button class="quick-pill" onclick="setQuick(500,event)">₦500</button>
+        <button class="quick-pill" onclick="setQuick(1000,event)">₦1,000</button>
+        <button class="quick-pill" onclick="setQuick(2000,event)">₦2,000</button>
       </div>
 
-      <div class="n365-total" id="n365TotalRow">
+      <div class="total-box" id="n365TotalRow">
         <div><span>You'll pay</span><strong id="bdTotal">₦0.00</strong></div>
         <small id="bdFee">Service fee ₦0.00</small>
         <span id="bdAirtime" class="n365-hidden-value">₦0.00</span>
       </div>
 
-      <div class="n365-payment-strip">
-        <span><i class="fas fa-lock"></i> Payment</span>
-        <div class="n365-pm-mini">
-          <button class="pm-btn" data-method="paystack" onclick="selectPM('paystack')"><div class="pm-icon"><i class="fas fa-bolt"></i></div><div>Paystack<small>NGN</small></div></button>
-          <button class="pm-btn" data-method="stripe" onclick="selectPM('stripe')"><div class="pm-icon"><i class="fas fa-credit-card"></i></div><div>Stripe<small>Card</small></div></button>
-          <button class="pm-btn" data-method="flutterwave" onclick="selectPM('flutterwave')"><div class="pm-icon"><i class="fas fa-water"></i></div><div>Flutter<small>Africa</small></div></button>
-          <button class="pm-btn" data-method="wallet" onclick="selectPM('wallet')"><div class="pm-icon"><i class="fas fa-wallet"></i></div><div>Wallet<small id="walletSub">Sign in</small></div></button>
-        </div>
+      <div class="pm-label"><i class="fas fa-lock"></i> Pay with</div>
+      <div class="pm-grid">
+        <button class="pm-btn" data-method="paystack" onclick="selectPM('paystack')"><span class="pm-icon"><i class="fas fa-bolt"></i></span>Paystack<small>NGN</small></button>
+        <button class="pm-btn" data-method="stripe" onclick="selectPM('stripe')"><span class="pm-icon"><i class="fas fa-credit-card"></i></span>Card<small>Stripe</small></button>
+        <button class="pm-btn" data-method="flutterwave" onclick="selectPM('flutterwave')"><span class="pm-icon"><i class="fas fa-water"></i></span>Flutterwave<small>Africa</small></button>
+        <button class="pm-btn" data-method="wallet" onclick="selectPM('wallet')"><span class="pm-icon"><i class="fas fa-wallet"></i></span>Wallet<small id="walletSub">Sign in</small></button>
       </div>
 
-      <button class="n365-main-cta" id="payBtn" disabled onclick="openPaymentModal()">
-        <span id="payBtnLabel">Enter your number</span><i class="fas fa-arrow-right"></i>
+      <button class="btn-hero inline" id="payBtn" style="margin-top:18px" disabled onclick="openPaymentModal()">
+        <span id="payBtnLabel">Enter phone number</span><i class="fas fa-arrow-right"></i>
       </button>
-      <div class="n365-cta-hint" id="payBtnHint">Your operator and payment option are selected automatically.</div>
+      <div class="cta-hint" id="payBtnHint">Your network and payment option are picked automatically.</div>
     </div>
-
-    <div class="n365-services-head"><div><span>DO MORE</span><h2>One app. Many possibilities.</h2></div><a onclick="showView('utilities')">See all <i class="fas fa-arrow-right"></i></a></div>
-    <div class="n365-service-grid">
-      <button onclick="showView('home');document.getElementById('phoneInput')?.focus()"><i class="fas fa-mobile-screen-button"></i><b>Airtime</b><small>Instant top-up</small></button>
-      <button onclick="showView('utilities')"><i class="fas fa-bolt"></i><b>Utilities</b><small>Power & bills</small></button>
-      <button onclick="showView('utilities')"><i class="fas fa-wifi"></i><b>Data</b><small>Stay connected</small></button>
-      <button onclick="openSheet('referralSheet')"><i class="fas fa-gift"></i><b>Rewards</b><small>Refer & earn</small></button>
-      <button onclick="window.location.href='/scheduler'"><i class="fas fa-calendar-check"></i><b>Schedule</b><small>Automate payments</small></button>
-      <button onclick="window.location.href='/business'"><i class="fas fa-building"></i><b>Business</b><small>Power your users</small></button>
-    </div>
-
-    <section class="n365-discover-card">
-      <div class="n365-discover-copy"><span>SMART DISCOVERY</span><h3>Useful offers,<br>not noisy ads.</h3><p>After you recharge or pay, Net365 can surface relevant offers based on what you actually use.</p></div>
-      <div class="n365-discover-orb"><i class="fas fa-sparkles"></i><i class="fas fa-bolt"></i><i class="fas fa-gift"></i></div>
-    </section>
-
-    <section class="n365-business-card" onclick="window.location.href='/business'">
-      <div><span>NET365 FOR BUSINESS</span><h3>One API. High-volume distribution.</h3><p>Distribute airtime, data, utilities and digital value to customers, agents and beneficiaries at scale.</p></div>
-      <div class="n365-api-flow"><span>API</span><i class="fas fa-arrow-right"></i><span>NET365</span><i class="fas fa-arrow-right"></i><span>∞</span></div>
-    </section>
-
-    <div class="section-title n365-activity-title">Recent Activity <a onclick="showView('transactions')">View all <i class="fas fa-arrow-right" style="font-size:10px;"></i></a></div>
-    <div class="tx-list" id="homeTxList"><div class="empty-state"><i class="fas fa-clock"></i><p>Sign in to see your transactions</p></div></div>
   </section>
 
   <!-- ============================================================
        VIEW: WALLET
        ============================================================ -->
   <section class="view" id="view-wallet">
-    <div class="balance-hero">
-      <div class="balance-label">
-        <i class="fas fa-shield-halved"></i>
-        <span id="walletLabelText">Available Balance</span>
-      </div>
-      <div class="balance-value" id="walletBalanceValue">₦0.00</div>
-      <div class="balance-currency" id="walletCurrencyLabel">Nigerian Naira</div>
-      <div class="balance-actions">
-        <button class="btn-secondary" onclick="openSheet('addMoneyModal')">
-          <i class="fas fa-plus" style="margin-right:6px;"></i>Add Money
-        </button>
-        <button class="btn-ghost" style="flex:1;" onclick="openSheet('sendMoneyModal')">
-          <i class="fas fa-paper-plane" style="margin-right:6px;"></i>Send
-        </button>
+    <div class="page-head">
+      <button class="back-btn" onclick="showView('home')" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
+      <h1>My wallet</h1>
+    </div>
+    <div class="wallet-card">
+      <div class="wallet-label"><i class="fas fa-shield-halved"></i> <span id="walletLabelText">Available balance</span></div>
+      <div class="wallet-amount" id="walletBalanceValue">₦0.00</div>
+      <div class="wallet-sub" id="walletCurrencyLabel">Nigerian Naira</div>
+      <div class="wallet-actions">
+        <button class="pill-btn light" onclick="onFundWallet()"><i class="fas fa-plus"></i> Add money</button>
       </div>
     </div>
-
     <div class="cur-chips" id="walletChips">
       <button class="cur-chip active" data-cur="NGN" onclick="selectCurrency('NGN', event)">₦ NGN</button>
       <button class="cur-chip" data-cur="USD" onclick="selectCurrency('USD', event)">$ USD</button>
@@ -1614,207 +1105,146 @@ select.input{
       <button class="cur-chip" data-cur="KES" onclick="selectCurrency('KES', event)">KSh KES</button>
       <button class="cur-chip" data-cur="ZAR" onclick="selectCurrency('ZAR', event)">R ZAR</button>
     </div>
-
-    <div class="section-title">Wallet Activity</div>
-    <div class="tx-list" id="walletTxList">
-      <div class="empty-state">
-        <i class="fas fa-receipt"></i>
-        <p>No wallet activity yet</p>
-      </div>
-    </div>
+    <div class="section-title">Wallet activity</div>
+    <div class="tx-list" id="walletTxList"><div class="empty-state"><i class="fas fa-receipt"></i><p>No wallet activity yet</p></div></div>
   </section>
 
   <!-- ============================================================
        VIEW: TRANSACTIONS
        ============================================================ -->
   <section class="view" id="view-transactions">
-    <div class="section-title" style="margin-top:0;">
-      All Activity
-      <a onclick="exportTransactionsCSV()"><i class="fas fa-download"></i> CSV</a>
+    <div class="page-head">
+      <button class="back-btn" onclick="showView('home')" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
+      <h1>History</h1>
     </div>
-
-    <div class="quick-row" style="margin-bottom:6px;">
+    <div class="section-title" style="margin-top:0">
+      All activity
+      <a onclick="exportTransactionsCSV()" role="button" tabindex="0"><i class="fas fa-download"></i> CSV</a>
+    </div>
+    <div class="quick-row" style="margin-top:0">
       <button class="quick-pill active" data-filter="all" onclick="filterTx('all',event)">All</button>
-      <button class="quick-pill" data-filter="topup" onclick="filterTx('topup',event)">Top-ups</button>
-      <button class="quick-pill" data-filter="utility" onclick="filterTx('utility',event)">Utilities</button>
+      <button class="quick-pill" data-filter="topup" onclick="filterTx('topup',event)">Airtime</button>
+      <button class="quick-pill" data-filter="utility" onclick="filterTx('utility',event)">Bills</button>
       <button class="quick-pill" data-filter="wallet_funding" onclick="filterTx('wallet_funding',event)">Funding</button>
-      <button class="quick-pill" data-filter="transfer" onclick="filterTx('transfer',event)">Transfers</button>
       <button class="quick-pill" data-filter="reward" onclick="filterTx('reward',event)">Rewards</button>
     </div>
-
-    <input type="text" id="txSearch" class="input" placeholder="Search by reference, phone, or amount" oninput="renderTransactions()" style="margin-bottom:14px;" />
-
-    <div class="tx-list" id="fullTxList">
-      <div class="empty-state">
-        <i class="fas fa-inbox"></i>
-        <p>No transactions to show</p>
-      </div>
-    </div>
+    <input type="text" id="txSearch" class="input" placeholder="Search reference, phone or amount" oninput="renderTransactions()" style="margin:10px 0 14px" aria-label="Search transactions" />
+    <div class="tx-list" id="fullTxList"><div class="empty-state"><i class="fas fa-inbox"></i><p>No transactions to show</p></div></div>
   </section>
 
   <!-- ============================================================
-       VIEW: UTILITIES
+       VIEW: UTILITIES (bills)
        ============================================================ -->
   <section class="view" id="view-utilities">
-    <div class="biller-group">
-      <div class="biller-head"><i class="fas fa-bolt"></i> Electricity</div>
-      <div class="biller-grid" id="electricityGrid"></div>
+    <div class="page-head">
+      <button class="back-btn" onclick="showView('home')" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
+      <h1>Pay bills</h1>
     </div>
-    <div class="biller-group">
-      <div class="biller-head"><i class="fas fa-tv"></i> Cable TV</div>
-      <div class="biller-grid" id="cableGrid"></div>
+    <div id="utilitiesSoon" class="coming" style="display:none">
+      <div class="ico c-purple"><i class="fas fa-lightbulb"></i></div>
+      <h2>Bill payments are coming soon</h2>
+      <p>Electricity and cable TV are being upgraded. Airtime recharge, gift cards and your wallet are fully available now.</p>
+      <button class="btn-hero inline" style="margin-top:18px" onclick="showView('recharge')"><i class="fas fa-mobile-screen-button"></i> Recharge airtime</button>
     </div>
-    <div class="biller-group">
-      <div class="biller-head"><i class="fas fa-mobile-alt"></i> Airtime & Data</div>
-      <div class="biller-grid" id="airtimeGrid"></div>
+    <div id="utilitiesLive">
+      <div class="biller-group"><div class="biller-head"><i class="fas fa-bolt"></i> Electricity</div><div class="biller-grid" id="electricityGrid"></div></div>
+      <div class="biller-group"><div class="biller-head"><i class="fas fa-tv"></i> Cable TV</div><div class="biller-grid" id="cableGrid"></div></div>
+      <div class="biller-group"><div class="biller-head"><i class="fas fa-mobile-alt"></i> Airtime &amp; Data</div><div class="biller-grid" id="airtimeGrid"></div></div>
     </div>
   </section>
 
 </main>
 
 <!-- ============ BOTTOM NAV ============ -->
-<nav class="bottom-nav">
-  <button class="nav-item active" data-view="home" onclick="showView('home')">
-    <span class="nav-icon"><i class="fas fa-house"></i></span>
-    <span class="nav-label">Home</span>
-  </button>
-  <button class="nav-item" data-view="wallet" onclick="showView('wallet')">
-    <span class="nav-icon"><i class="fas fa-wallet"></i></span>
-    <span class="nav-label">Wallet</span>
-  </button>
-  <button class="nav-item" data-view="transactions" onclick="showView('transactions')">
-    <span class="nav-icon"><i class="fas fa-chart-simple"></i></span>
-    <span class="nav-label">Activity</span>
-  </button>
-  <button class="nav-item" data-view="utilities" onclick="showView('utilities')">
-    <span class="nav-icon"><i class="fas fa-bolt"></i></span>
-    <span class="nav-label">Utilities</span>
-  </button>
+<nav class="bottom-nav" aria-label="Main">
+  <div class="inner">
+    <button class="nav-item active" data-view="home" onclick="showView('home')"><span class="nav-icon"><i class="fas fa-house"></i></span><span class="nav-label">Home</span></button>
+    <button class="nav-item" data-view="transactions" onclick="showView('transactions')"><span class="nav-icon"><i class="fas fa-clock-rotate-left"></i></span><span class="nav-label">History</span></button>
+    <button class="nav-fab" onclick="showView('recharge')" aria-label="Recharge airtime"><span class="disc"><i class="fas fa-bolt"></i></span><span class="lbl">Recharge</span></button>
+    <button class="nav-item" onclick="openSheet('supportSheet')"><span class="nav-icon"><i class="fas fa-headset"></i></span><span class="nav-label">Support</span></button>
+    <button class="nav-item" onclick="onAvatarTap()"><span class="nav-icon"><i class="fas fa-user"></i></span><span class="nav-label">Profile</span></button>
+  </div>
 </nav>
 
 <!-- ============ SUPPORT SHEET ============ -->
 <div class="sheet-backdrop" id="supportSheet" onclick="if(event.target===this) closeSheet('supportSheet')">
-  <div class="sheet">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="supportTitle">
     <div class="sheet-handle"></div>
     <div class="sheet-relative">
-      <button class="sheet-close" onclick="closeSheet('supportSheet')"><i class="fas fa-times"></i></button>
-      <div class="sheet-title">How can we help?</div>
+      <button class="sheet-close" onclick="closeSheet('supportSheet')" aria-label="Close"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="supportTitle">How can we help?</div>
       <div class="sheet-sub">We typically reply within a few minutes.</div>
     </div>
     <div class="user-menu-list">
-      <button class="um-item" onclick="closeSheet('supportSheet'); openLiveChat();">
-        <i class="fas fa-comments"></i> Live Chat
-      </button>
-      <button class="um-item" onclick="closeSheet('supportSheet'); window.location.href='mailto:support@net365co.com?subject=Net365%20Support';">
-        <i class="fas fa-envelope"></i> Email Support
-      </button>
-      <button class="um-item" onclick="closeSheet('supportSheet'); window.open('https://wa.me/2348150450890','_blank');">
-        <i class="fab fa-whatsapp"></i> WhatsApp
-      </button>
-      <button class="um-item" onclick="closeSheet('supportSheet'); toast('Help Center coming soon','info');">
-        <i class="fas fa-book-open"></i> Help Center
-      </button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); openLiveChat();"><i class="fas fa-comments"></i> Live chat</button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); window.location.href='mailto:support@net365co.com?subject=Net365%20Support';"><i class="fas fa-envelope"></i> Email support</button>
+      <button class="um-item" onclick="closeSheet('supportSheet'); window.open('https://wa.me/2348150450890','_blank');"><i class="fab fa-whatsapp"></i> WhatsApp</button>
     </div>
   </div>
 </div>
 
-<!-- ============ BILLER SHEET (In-app utilities) ============ -->
+<!-- ============ BILLER SHEET ============ -->
 <div class="sheet-backdrop" id="billerSheet" onclick="if(event.target===this) closeSheet('billerSheet')">
-  <div class="sheet">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="billerSheetTitle">
     <div class="sheet-handle"></div>
     <div class="sheet-relative">
-      <button class="sheet-close" onclick="closeSheet('billerSheet')"><i class="fas fa-times"></i></button>
-      <div class="sheet-title" id="billerSheetTitle">Pay Bill</div>
+      <button class="sheet-close" onclick="closeSheet('billerSheet')" aria-label="Close"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="billerSheetTitle">Pay bill</div>
       <div class="sheet-sub" id="billerSheetSub">Enter your account details</div>
     </div>
-
     <div class="field">
-      <label class="field-label"><i class="fas fa-hashtag"></i> <span id="billerAccountLabel">Meter / Account Number</span></label>
+      <label class="field-label" for="billerAccount"><i class="fas fa-hashtag"></i> <span id="billerAccountLabel">Meter / Account Number</span></label>
       <input type="tel" id="billerAccount" class="input" placeholder="Enter account number" inputmode="numeric" />
     </div>
-
-    <button class="btn-ghost" id="billerValidateBtn" onclick="validateBillerAccount()" style="margin-bottom:14px;">
-      <i class="fas fa-check-circle" style="margin-right:6px;"></i> Validate Account
-    </button>
-
-    <div id="billerCustomerBox" style="display:none;padding:14px 16px;border-radius:14px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.30);margin-bottom:14px;">
-      <div style="font-size:11px;font-weight:800;letter-spacing:0.10em;color:var(--success);text-transform:uppercase;">Account Verified</div>
-      <div style="font-size:15px;font-weight:800;color:#fff;margin-top:4px;" id="billerCustomerName">—</div>
+    <button class="btn-ghost" id="billerValidateBtn" onclick="validateBillerAccount()" style="margin-bottom:14px"><i class="fas fa-check-circle" style="margin-right:6px"></i> Validate account</button>
+    <div id="billerCustomerBox" class="notice ok" style="display:none;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase">Account verified</div>
+      <div style="font-size:16px;font-weight:800;margin-top:4px" id="billerCustomerName">—</div>
     </div>
-
     <div class="field">
-      <label class="field-label"><i class="fas fa-coins"></i> Amount</label>
-      <div class="amount-wrap">
-        <span class="amount-symbol">₦</span>
-        <input type="tel" id="billerAmount" class="amount-input" placeholder="0" inputmode="decimal" />
-      </div>
+      <label class="field-label" for="billerAmount"><i class="fas fa-coins"></i> Amount</label>
+      <div class="amount-wrap"><span class="amount-symbol">₦</span><input type="tel" id="billerAmount" class="amount-input" placeholder="0" inputmode="decimal" /></div>
     </div>
-
-    <button class="btn-hero" id="billerPayBtn" onclick="payBiller()">
-      <span id="billerPayLabel">Pay Bill</span>
-      <span class="btn-hint">Amount will be debited from your Net365 wallet</span>
-    </button>
+    <button class="btn-hero" id="billerPayBtn" onclick="payBiller()"><span id="billerPayLabel">Pay bill</span><span class="btn-hint">Debited from your Net365 wallet</span></button>
   </div>
 </div>
 
-<!-- ============ PAYMENT MODAL (two-step) ============ -->
+<!-- ============ PAYMENT REVIEW ============ -->
 <div class="sheet-backdrop" id="paymentModal" onclick="if(event.target===this) closePaymentModal()">
-  <div class="sheet">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="payReviewTitle">
     <div class="sheet-handle"></div>
     <div class="sheet-relative">
-      <button class="sheet-close" onclick="closePaymentModal()"><i class="fas fa-times"></i></button>
-      <div class="sheet-title">Review your payment</div>
-      <div class="sheet-sub">Confirm the details before we take you to the gateway.</div>
+      <button class="sheet-close" onclick="closePaymentModal()" aria-label="Close"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="payReviewTitle">Review your payment</div>
+      <div class="sheet-sub">Confirm the details before we continue.</div>
     </div>
-
-    <div class="breakdown" style="margin-top:0;">
-      <div class="bd-row">
-        <span class="lbl">Operator</span>
-        <span class="val" id="modalOperator" style="font-size:15px;">—</span>
-      </div>
-      <div class="bd-row">
-        <span class="lbl">Phone</span>
-        <span class="val" id="modalPhone" style="font-size:15px;">—</span>
-      </div>
-      <div class="bd-row">
-        <span class="lbl">Airtime</span>
-        <span class="val" id="modalAirtime">₦0.00</span>
-      </div>
-      <div class="bd-row">
-        <span class="lbl">Service Fee</span>
-        <span class="val" id="modalFee">₦0.00</span>
-      </div>
-      <div class="bd-row total">
-        <span class="lbl">Total</span>
-        <span class="val" id="modalTotal">₦0.00</span>
-      </div>
+    <div class="breakdown">
+      <div class="bd-row"><span class="lbl">Network</span><span class="val" id="modalOperator">—</span></div>
+      <div class="bd-row"><span class="lbl">Phone</span><span class="val" id="modalPhone">—</span></div>
+      <div class="bd-row"><span class="lbl">Airtime</span><span class="val" id="modalAirtime">₦0.00</span></div>
+      <div class="bd-row"><span class="lbl">Service fee</span><span class="val" id="modalFee">₦0.00</span></div>
+      <div class="bd-row total"><span class="lbl">Total</span><span class="val" id="modalTotal">₦0.00</span></div>
     </div>
-
-    <div style="font-size:12px;color:var(--text-2);margin:14px 2px 0;font-weight:600;">
-      <i class="fas fa-shield-halved" style="color:var(--cyan);margin-right:6px;"></i>
-      You'll be redirected to <span id="modalProvider" style="color:#fff;font-weight:800;">Paystack</span> to complete payment securely.
+    <div style="font-size:13px;color:var(--ink-2);margin:14px 2px 0;font-weight:600;line-height:1.45">
+      <i class="fas fa-shield-halved" style="color:var(--green);margin-right:6px"></i>
+      You'll continue with <b id="modalProvider" style="color:var(--ink)">Paystack</b> to pay securely.
     </div>
-
-    <button class="btn-hero" id="confirmPayBtn" onclick="processPayment()">
-      <span>Confirm & Pay</span>
-      <span class="btn-hint">Opens the payment gateway</span>
-    </button>
-    <div id="modalStatus" style="margin-top:12px;font-size:13px;color:var(--text-2);text-align:center;font-weight:600;"></div>
+    <button class="btn-hero" id="confirmPayBtn" style="margin-top:16px" onclick="processPayment()"><span>Confirm &amp; pay</span><span class="btn-hint">Secure checkout</span></button>
+    <div id="modalStatus" style="margin-top:12px;font-size:13px;color:var(--ink-2);text-align:center;font-weight:600"></div>
   </div>
 </div>
 
 <!-- ============ ADD MONEY ============ -->
 <div class="sheet-backdrop" id="addMoneyModal" onclick="if(event.target===this) closeSheet('addMoneyModal')">
-  <div class="sheet">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="addMoneyTitle">
     <div class="sheet-handle"></div>
     <div class="sheet-relative">
-      <button class="sheet-close" onclick="closeSheet('addMoneyModal')"><i class="fas fa-times"></i></button>
-      <div class="sheet-title">Add Money to Wallet</div>
-      <div class="sheet-sub">Fund your Net365 wallet to pay for recharges, utilities and transfers.</div>
+      <button class="sheet-close" onclick="closeSheet('addMoneyModal')" aria-label="Close"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="addMoneyTitle">Add money</div>
+      <div class="sheet-sub">Fund your Net365 wallet to pay for recharges and more.</div>
     </div>
-
     <div class="field">
-      <label class="field-label"><i class="fas fa-coins"></i> Wallet Currency</label>
+      <label class="field-label" for="addMoneyCurrency"><i class="fas fa-coins"></i> Wallet currency</label>
       <select id="addMoneyCurrency" class="input">
         <option value="NGN">₦ Nigerian Naira (NGN)</option>
         <option value="USD">$ US Dollar (USD)</option>
@@ -1826,183 +1256,157 @@ select.input{
         <option value="ZAR">R South African Rand (ZAR)</option>
       </select>
     </div>
-
     <div class="field">
-      <label class="field-label"><i class="fas fa-money-bill-wave"></i> Amount</label>
-      <div class="amount-wrap">
-        <span class="amount-symbol" id="addMoneySymbol">₦</span>
-        <input type="tel" id="addMoneyAmount" class="amount-input" placeholder="0" inputmode="decimal" />
-      </div>
+      <label class="field-label" for="addMoneyAmount"><i class="fas fa-money-bill-wave"></i> Amount</label>
+      <div class="amount-wrap"><span class="amount-symbol" id="addMoneySymbol">₦</span><input type="tel" id="addMoneyAmount" class="amount-input" placeholder="0" inputmode="decimal" /></div>
     </div>
-
-    <button class="btn-hero" onclick="submitAddMoney()">
-      <span id="addMoneyBtnLabel">Continue to Checkout</span>
-      <span class="btn-hint">You'll be redirected to the payment gateway</span>
-    </button>
+    <button class="btn-hero" onclick="submitAddMoney()"><span id="addMoneyBtnLabel">Continue to checkout</span><span class="btn-hint">You'll be taken to the payment gateway</span></button>
   </div>
 </div>
 
-<!-- ============ SEND MONEY ============ -->
-<div class="sheet-backdrop" id="sendMoneyModal" onclick="if(event.target===this) closeSheet('sendMoneyModal')">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-relative">
-      <button class="sheet-close" onclick="closeSheet('sendMoneyModal')"><i class="fas fa-times"></i></button>
-      <div class="sheet-title">Send Money</div>
-      <div class="sheet-sub">Transfer funds to another Net365 user by email or phone.</div>
-    </div>
-
-    <div class="field">
-      <label class="field-label"><i class="fas fa-user"></i> Recipient</label>
-      <input type="text" id="transferRecipient" class="input" placeholder="email@example.com or 08012345678" />
-    </div>
-
-    <div class="field">
-      <label class="field-label"><i class="fas fa-coins"></i> Amount</label>
-      <div class="amount-wrap">
-        <span class="amount-symbol" id="transferSymbol">₦</span>
-        <input type="tel" id="transferAmount" class="amount-input" placeholder="0" inputmode="decimal" />
-      </div>
-    </div>
-
-    <button class="btn-hero" onclick="submitTransfer()">
-      <span>Send Money</span>
-      <span class="btn-hint">Instant wallet-to-wallet transfer</span>
-    </button>
-  </div>
-</div>
-
-<!-- ============ AUTH MODAL ============ -->
+<!-- ============ AUTH ============ -->
 <div class="sheet-backdrop" id="authModal" onclick="if(event.target===this) closeSheet('authModal')">
-  <div class="sheet">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <div class="sheet-handle"></div>
     <div class="sheet-relative">
-      <button class="sheet-close" onclick="closeSheet('authModal')"><i class="fas fa-times"></i></button>
+      <button class="sheet-close" onclick="closeSheet('authModal')" aria-label="Close"><i class="fas fa-times"></i></button>
       <div class="sheet-title" id="authTitle">Welcome back</div>
       <div class="sheet-sub" id="authSub">Sign in to your Net365 account</div>
     </div>
 
-    <div class="field" id="authNameField" style="display:none;">
-      <label class="field-label"><i class="fas fa-user"></i> Full Name</label>
+    <a class="btn-google" id="googleBtn" href="/api/auth/google/login">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.2 6.9-17.6z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 019.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A23.9 23.9 0 000 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+      Continue with Google
+    </a>
+    <div class="divider-or">or use email</div>
+
+    <div class="field" id="authNameField" style="display:none">
+      <label class="field-label" for="authName"><i class="fas fa-user"></i> Full name</label>
       <input type="text" id="authName" class="input" placeholder="Your full name" autocomplete="name" />
     </div>
-
     <div class="field">
-      <label class="field-label"><i class="fas fa-envelope"></i> Email</label>
+      <label class="field-label" for="authEmail"><i class="fas fa-envelope"></i> Email</label>
       <input type="email" id="authEmail" class="input" placeholder="you@example.com" autocomplete="email" />
     </div>
-
     <div class="field">
-      <label class="field-label"><i class="fas fa-lock"></i> Password</label>
-      <input type="password" id="authPassword" class="input" placeholder="••••••••" autocomplete="current-password" />
+      <label class="field-label" for="authPassword"><i class="fas fa-lock"></i> Password</label>
+      <input type="password" id="authPassword" class="input" placeholder="At least 8 characters" autocomplete="current-password" />
     </div>
-
-    <div id="authError" style="display:none;padding:12px;border-radius:12px;background:rgba(244,63,94,0.10);border:1px solid rgba(244,63,94,0.3);color:#FCA5A5;font-size:13px;margin-bottom:14px;font-weight:500;"></div>
-
-    <button class="btn-hero" id="authSubmitBtn" onclick="submitAuth()">
-      <span id="authSubmitLabel">Sign In</span>
-    </button>
-
-    <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-2);">
+    <div id="authError" class="notice error" style="display:none;margin-bottom:14px" role="alert"></div>
+    <button class="btn-hero" id="authSubmitBtn" onclick="submitAuth()"><span id="authSubmitLabel">Sign in</span></button>
+    <div style="text-align:center;margin-top:12px">
+      <button class="link-btn" id="forgotLink" onclick="openForgotSheet()">Forgot password?</button>
+    </div>
+    <div style="text-align:center;font-size:14px;color:var(--ink-2)">
       <span id="authSwitchText">New to Net365?</span>
-      <button onclick="toggleAuthMode()" style="background:none;border:none;color:var(--violet-bright);font-family:inherit;font-weight:800;cursor:pointer;font-size:13px;padding:0;margin-left:4px;">
-        <span id="authSwitchAction">Create an account</span>
-      </button>
+      <button class="link-btn" onclick="toggleAuthMode()"><span id="authSwitchAction">Create an account</span></button>
     </div>
   </div>
 </div>
 
-<!-- ============ USER MENU ============ -->
+<!-- ============ FORGOT PASSWORD ============ -->
+<div class="sheet-backdrop" id="forgotSheet" onclick="if(event.target===this) closeSheet('forgotSheet')">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="forgotTitle">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('forgotSheet')" aria-label="Close"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="forgotTitle">Reset password</div>
+      <div class="sheet-sub" id="forgotSub">Enter your email and we'll send a 6-digit code.</div>
+    </div>
+    <div class="field"><label class="field-label" for="forgotEmail"><i class="fas fa-envelope"></i> Email</label>
+      <input type="email" id="forgotEmail" class="input" placeholder="you@example.com" autocomplete="email" /></div>
+    <div id="forgotStep2" style="display:none">
+      <div class="field"><label class="field-label" for="forgotCode"><i class="fas fa-key"></i> Code from your email</label>
+        <input type="tel" id="forgotCode" class="input otp-input" maxlength="8" inputmode="numeric" autocomplete="one-time-code" /></div>
+      <div class="field"><label class="field-label" for="forgotNewPw"><i class="fas fa-lock"></i> New password</label>
+        <input type="password" id="forgotNewPw" class="input" placeholder="At least 8 characters" autocomplete="new-password" /></div>
+    </div>
+    <div id="forgotMsg" class="notice" style="display:none;margin-bottom:14px" role="alert"></div>
+    <button class="btn-hero" id="forgotBtn" onclick="submitForgot()"><span id="forgotBtnLabel">Send code</span></button>
+  </div>
+</div>
+
+<!-- ============ VERIFY EMAIL ============ -->
+<div class="sheet-backdrop" id="verifySheet" onclick="if(event.target===this) closeSheet('verifySheet')">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="verifyTitle">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('verifySheet')" aria-label="Close"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="verifyTitle">Verify your email</div>
+      <div class="sheet-sub" id="verifySub">Enter the code we sent to your email.</div>
+    </div>
+    <div class="field"><label class="field-label" for="verifyCode"><i class="fas fa-key"></i> Verification code</label>
+      <input type="tel" id="verifyCode" class="input otp-input" maxlength="8" inputmode="numeric" autocomplete="one-time-code" /></div>
+    <div id="verifyMsg" class="notice" style="display:none;margin-bottom:14px" role="alert"></div>
+    <button class="btn-hero" id="verifyBtn" onclick="submitVerify()"><span id="verifyBtnLabel">Verify email</span></button>
+    <div style="text-align:center;margin-top:8px"><button class="link-btn" onclick="resendVerify()">Send a new code</button></div>
+  </div>
+</div>
+
+<!-- ============ PROFILE / USER MENU ============ -->
 <div class="sheet-backdrop" id="userMenuModal" onclick="if(event.target===this) closeSheet('userMenuModal')">
-  <div class="sheet">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="userMenuName">
     <div class="sheet-handle"></div>
     <div class="sheet-relative">
       <div class="sheet-title" id="userMenuName">Hello 👋</div>
       <div class="sheet-sub" id="userMenuEmail">Welcome to Net365</div>
-      <button class="sheet-close" onclick="closeSheet('userMenuModal')"><i class="fas fa-times"></i></button>
+      <button class="sheet-close" onclick="closeSheet('userMenuModal')" aria-label="Close"><i class="fas fa-times"></i></button>
     </div>
-
     <div class="user-menu-list">
-      <button class="um-item" id="umAuthToggle" onclick="fromUserMenuAuth()">
-        <i class="fas fa-user-gear"></i>
-        <span id="umAuthLabel">Account Settings</span>
-      </button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); showView('wallet');">
-        <i class="fas fa-wallet"></i> My Wallet
-      </button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); showView('transactions');">
-        <i class="fas fa-list"></i> Transaction History
-      </button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); openSheet('referralSheet');">
-        <i class="fas fa-user-plus"></i> Refer & Earn
-      </button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/scheduler';">
-        <i class="fas fa-calendar-check"></i> Scheduled Payments
-      </button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/business';">
-        <i class="fas fa-briefcase"></i> Business Tools
-      </button>
-      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/';">
-        <i class="fas fa-desktop"></i> Full Platform
-      </button>
-      <button class="um-item danger" id="umLogout" style="display:none;" onclick="doLogout()">
-        <i class="fas fa-right-from-bracket"></i> Sign Out
-      </button>
+      <button class="um-item" id="umAuthToggle" onclick="fromUserMenuAuth()"><i class="fas fa-user-gear"></i><span id="umAuthLabel">Account settings</span></button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); showView('wallet');"><i class="fas fa-wallet"></i> My wallet</button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); showView('transactions');"><i class="fas fa-list"></i> Transaction history</button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); openRewards();"><i class="fas fa-star"></i> Rewards &amp; referrals</button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/scheduler';"><i class="fas fa-calendar-check"></i> Scheduled payments</button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/giftcards';"><i class="fas fa-gift"></i> Gift cards</button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/business';"><i class="fas fa-briefcase"></i> Business tools</button>
+      <button class="um-item" onclick="closeSheet('userMenuModal'); window.location.href='/?full=1';"><i class="fas fa-desktop"></i> Full platform</button>
+      <button class="um-item danger" id="umLogout" style="display:none" onclick="doLogout()"><i class="fas fa-right-from-bracket"></i> Sign out</button>
     </div>
   </div>
 </div>
 
-<!-- ============ REFERRAL ============ -->
+<!-- ============ REWARDS / REFERRAL ============ -->
 <div class="sheet-backdrop" id="referralSheet" onclick="if(event.target===this) closeSheet('referralSheet')">
-  <div class="sheet">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="rewardsTitle">
     <div class="sheet-handle"></div>
     <div class="sheet-relative">
-      <button class="sheet-close" onclick="closeSheet('referralSheet')"><i class="fas fa-times"></i></button>
-      <div class="sheet-title">Refer & Earn 🎁</div>
-      <div class="sheet-sub">Share your referral code and earn rewards when your friends recharge.</div>
+      <button class="sheet-close" onclick="closeSheet('referralSheet')" aria-label="Close"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="rewardsTitle">Rewards &amp; referrals</div>
+      <div class="sheet-sub">Earn when you recharge, and when friends join with your code.</div>
     </div>
-    <div style="padding:20px;border-radius:20px;background:rgba(124,58,237,0.10);border:1px solid var(--border-strong);text-align:center;">
-      <div style="font-size:11px;color:var(--text-2);font-weight:800;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px;">Your Referral Code</div>
-      <div style="font-size:32px;font-weight:900;letter-spacing:0.05em;color:#fff;" id="referralCodeDisplay">NET-XXXXX</div>
+    <div class="stat-row">
+      <div class="stat"><b id="rwLevel">—</b><small>Level</small></div>
+      <div class="stat"><b id="rwPoints">0</b><small>Points</small></div>
+      <div class="stat"><b id="rwCash">₦0</b><small>Cashback</small></div>
     </div>
-    <button class="btn-hero" style="margin-top:18px;" onclick="shareReferral()">
-      <span><i class="fas fa-share-nodes" style="margin-right:8px;"></i>Share Invite Link</span>
-    </button>
+    <div class="ref-box"><small>Your referral code</small><b id="referralCodeDisplay">NET-XXXXX</b></div>
+    <button class="btn-hero inline" style="margin-top:16px" onclick="shareReferral()"><i class="fas fa-share-nodes"></i> Share invite link</button>
   </div>
 </div>
 
 <!-- ============ LIVE CHAT ============ -->
-<button class="chat-fab" id="chatFab" onclick="openLiveChat()" title="Chat with Support">
-  <i class="fas fa-comment-dots"></i>
-</button>
-
-<div class="chat-widget" id="chatWidget">
+<button class="chat-fab" id="chatFab" onclick="openLiveChat()" aria-label="Chat with support"><i class="fas fa-comment-dots"></i></button>
+<div class="chat-widget" id="chatWidget" role="dialog" aria-label="Net365 support chat">
   <div class="chat-header">
     <div>
-      <h3 style="margin:0;font-size:15px;font-weight:800;">
-        <span style="display:inline-block;width:7px;height:7px;background:#22C55E;border-radius:50%;margin-right:7px;"></span>
-        Net365 Support
-      </h3>
-      <div style="font-size:11px;opacity:0.75;margin-top:2px;">Typically replies in minutes</div>
+      <h3 style="margin:0;font-size:15px;font-weight:800"><span style="display:inline-block;width:8px;height:8px;background:#4ADE80;border-radius:50%;margin-right:8px"></span>Net365 Support</h3>
+      <div style="font-size:12px;opacity:.85;margin-top:2px">Typically replies in minutes</div>
     </div>
-    <button onclick="closeLiveChat()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:4px;">
-      <i class="fas fa-times"></i>
-    </button>
+    <button onclick="closeLiveChat()" style="background:none;border:none;color:#fff;font-size:18px" aria-label="Close chat"><i class="fas fa-times"></i></button>
   </div>
-  <div class="chat-body" id="chatBody">
-    <div class="chat-msg support">👋 Hi! Welcome to Net365 Support. How can we help you today?</div>
-  </div>
+  <div class="chat-body" id="chatBody"><div class="chat-msg support">👋 Hi! Welcome to Net365 Support. How can we help you today?</div></div>
   <div class="chat-footer">
-    <input type="text" id="chatInput" placeholder="Type a message…" onkeypress="if(event.key==='Enter') sendChatMessage()" />
-    <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+    <input type="text" id="chatInput" placeholder="Type a message…" aria-label="Message" onkeypress="if(event.key==='Enter') sendChatMessage()" />
+    <button onclick="sendChatMessage()" aria-label="Send"><i class="fas fa-paper-plane"></i></button>
   </div>
 </div>
 
-<!-- ============ NET365 TRANSACTION RECEIPT ============ -->
+<!-- ============ TRANSACTION RECEIPT ============ -->
 <div class="receipt-backdrop" id="receiptBackdrop" role="dialog" aria-modal="true" aria-labelledby="receiptTitle" onclick="if(event.target===this)closeReceipt()">
   <section class="receipt-card" id="receiptCard">
     <div class="receipt-top">
-      <div class="receipt-brand"><span class="receipt-brand-mark"><i class="fas fa-bolt"></i></span><span>NET365</span></div>
+      <div class="receipt-brand"><span class="receipt-brand-mark"><i class="fas fa-bolt"></i></span><span>Net365</span></div>
       <button class="receipt-close" type="button" onclick="closeReceipt()" aria-label="Close receipt"><i class="fas fa-xmark"></i></button>
     </div>
     <div class="receipt-status" id="receiptStatus"><i class="fas fa-circle-check"></i><span>Transaction receipt</span></div>
@@ -2044,6 +1448,9 @@ select.input{
     </button>
   </div>
 </div>
+
+<div id="toastWrap"></div>
+
 
 <div id="toastWrap"></div>
 
@@ -2089,6 +1496,9 @@ let isAuthRegisterMode = false;
 let pendingPayment = null;
 let isProcessing = false;
 
+// Feature switches. Flip a value to true/false to show/hide a service in the app.
+const FEATURES = { utilities: false };   // electricity / cable bill payments
+
 // ============================================================
 // VIEW MANAGER
 // ============================================================
@@ -2099,6 +1509,7 @@ function showView(name){
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.view === name);
   });
+  document.body.dataset.view = name;
   window.scrollTo({top:0, behavior:'smooth'});
   if (name === 'wallet') refreshWalletView();
   if (name === 'transactions') renderTransactions();
@@ -2493,10 +1904,12 @@ function toggleAuthMode(){
   document.getElementById('authTitle').textContent = isAuthRegisterMode ? 'Create account' : 'Welcome back';
   document.getElementById('authSub').textContent = isAuthRegisterMode ? 'Join Net365 in seconds' : 'Sign in to your Net365 account';
   document.getElementById('authNameField').style.display = isAuthRegisterMode ? 'block' : 'none';
-  document.getElementById('authSubmitLabel').textContent = isAuthRegisterMode ? 'Create Account' : 'Sign In';
+  document.getElementById('authSubmitLabel').textContent = isAuthRegisterMode ? 'Create account' : 'Sign in';
   document.getElementById('authSwitchText').textContent = isAuthRegisterMode ? 'Already have an account?' : 'New to Net365?';
   document.getElementById('authSwitchAction').textContent = isAuthRegisterMode ? 'Sign in' : 'Create an account';
   document.getElementById('authError').style.display = 'none';
+  const fl = document.getElementById('forgotLink'); if (fl) fl.style.display = isAuthRegisterMode ? 'none' : 'inline-block';
+  document.getElementById('authPassword').autocomplete = isAuthRegisterMode ? 'new-password' : 'current-password';
 }
 
 async function submitAuth(){
@@ -2516,7 +1929,8 @@ async function submitAuth(){
 
   try{
     const endpoint = isAuthRegisterMode ? '/api/auth/register' : '/api/auth/login';
-    const body = isAuthRegisterMode ? { email, password, full_name: name } : { email, password };
+    const refCode = (new URLSearchParams(location.search).get('ref') || (()=>{try{return sessionStorage.getItem('net365_ref')}catch(e){return null}})() || '').trim().toUpperCase();
+    const body = isAuthRegisterMode ? { email, password, full_name: name, ...(refCode ? { referral_code: refCode } : {}) } : { email, password };
     const res = await fetch(endpoint, {
       method:'POST',
       credentials:'include',
@@ -2532,12 +1946,13 @@ async function submitAuth(){
     await refreshUserData();
     updateAuthUI();
     selectPM(selectedPaymentMethod);
+    if (isAuthRegisterMode && currentUser && !Number(currentUser.email_verified)) setTimeout(openVerifySheet, 450);
   } catch(e){
     errEl.textContent = e.message;
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<span id="authSubmitLabel">${isAuthRegisterMode ? 'Create Account' : 'Sign In'}</span>`;
+    btn.innerHTML = `<span id="authSubmitLabel">${isAuthRegisterMode ? 'Create account' : 'Sign in'}</span>`;
   }
 }
 
@@ -2560,16 +1975,19 @@ async function doLogout(){
 
 function updateAuthUI(){
   const avatar = document.getElementById('avatarBtn');
-  const chip = document.getElementById('walletChip');
   if (currentUser){
     avatar.classList.add('logged-in');
-    avatar.innerHTML = (currentUser.full_name || 'U').slice(0,1).toUpperCase();
-    chip.classList.add('show');
+    avatar.textContent = (currentUser.full_name || currentUser.email || 'U').slice(0,1).toUpperCase();
   } else {
     avatar.classList.remove('logged-in');
     avatar.innerHTML = '<i class="fas fa-user"></i>';
-    chip.classList.remove('show');
   }
+  const first = currentUser ? String(currentUser.full_name || '').trim().split(/\s+/)[0] : '';
+  document.getElementById('greetHello').textContent = greetingWord();
+  document.getElementById('greetName').textContent = first || 'Welcome to Net365';
+  const unverified = !!currentUser && currentUser.email_verified !== undefined && !Number(currentUser.email_verified);
+  document.getElementById('verifyBanner').classList.toggle('show', unverified);
+  renderHomeWallet();
 }
 
 // ============================================================
@@ -2606,12 +2024,13 @@ function updateWalletChip(){
   const sym = CURRENCY_SYMBOLS[currentCurrency] || '₦';
   const chip = document.getElementById('walletChipValue');
   if (chip) chip.textContent = `${sym}${bal.toFixed(2)}`;
+  renderHomeWallet();
 }
 
 function refreshWalletView(){
   const bal = walletBalances[activeWalletCurrency] || 0;
   const sym = CURRENCY_SYMBOLS[activeWalletCurrency] || '₦';
-  document.getElementById('walletBalanceValue').textContent = `${sym}${bal.toFixed(2)}`;
+  document.getElementById('walletBalanceValue').textContent = fmtMoney(sym, bal);
   document.getElementById('walletCurrencyLabel').textContent = `${activeWalletCurrency} · Net365 Wallet`;
 
   const wtx = allTransactions.filter(t => t.tx_type === 'wallet_funding' || t.tx_type === 'transfer' || t.tx_type === 'referral');
@@ -2742,7 +2161,7 @@ function renderReceipt(tx){
   const label = good ? 'Payment confirmed' : pending ? 'Payment pending' : 'Payment not completed';
   status.innerHTML = `<i class="fas ${good?'fa-circle-check':pending?'fa-clock':'fa-circle-xmark'}"></i><span></span>`;
   status.lastElementChild.textContent = label;
-  status.style.color = good ? '#78E5A4' : pending ? '#FFCA75' : '#FF8191';
+  status.style.color = good ? '#15803D' : pending ? '#A16207' : '#B91C1C';
   title.textContent = `${symbols}${amount.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   caption.textContent = String(tx.description || tx.tx_type || 'Net365 transaction').replace(/_/g,' ');
   const payload = tx.payload && typeof tx.payload === 'object' ? tx.payload : {};
@@ -2835,48 +2254,8 @@ document.getElementById('addMoneyCurrency')?.addEventListener('change', function
   document.getElementById('addMoneySymbol').textContent = CURRENCY_SYMBOLS[c] || '$';
 });
 
-async function submitTransfer(){
-  const recipient = document.getElementById('transferRecipient').value.trim();
-  const amount = parseFloat(document.getElementById('transferAmount').value);
-  if (!currentUser){ toast('Please sign in','warning'); openSheet('authModal'); return; }
-  if (!recipient || !amount || amount <= 0){ toast('Enter recipient and amount','warning'); return; }
-
-  const btn = document.querySelector('#sendMoneyModal .btn-hero');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Sending…';
-
-  try{
-    const isEmail = recipient.includes('@');
-    const lookup = await fetch(isEmail
-      ? `/api/auth/user/by-email?email=${encodeURIComponent(recipient)}`
-      : `/api/auth/user/by-phone?phone=${encodeURIComponent(recipient)}`,
-      {credentials:'include'});
-    const lookupData = await lookup.json();
-    if (!lookupData.success) throw new Error('Recipient not found');
-
-    const res = await fetch('/api/wallet/transfer', {
-      method:'POST',
-      credentials:'include',
-      headers:{'Content-Type':'application/json','Accept':'application/json'},
-      body:JSON.stringify({
-        to_user_id: lookupData.user.id,
-        amount: amount,
-        currency: activeWalletCurrency,
-        description: 'Net365 transfer'
-      })
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || 'Transfer failed');
-    toast(`Sent ${CURRENCY_SYMBOLS[activeWalletCurrency]}${amount.toFixed(2)} successfully`,'success');
-    closeSheet('sendMoneyModal');
-    await refreshUserData();
-  } catch(e){
-    toast(e.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<span>Send Money</span><span class="btn-hint">Instant wallet-to-wallet transfer</span>';
-  }
-}
+// Wallet-to-wallet transfers are disabled and removed from the app.
+async function submitTransfer(){ toast('Transfers are not available','info'); }
 
 // ============================================================
 // REFERRAL
@@ -2907,6 +2286,9 @@ function shareReferral(){
 // UTILITIES — IN-APP BILLER FLOW
 // ============================================================
 function renderUtilities(){
+  const live = document.getElementById('utilitiesLive'), soon = document.getElementById('utilitiesSoon');
+  if (live) live.style.display = FEATURES.utilities ? 'block' : 'none';
+  if (soon) soon.style.display = FEATURES.utilities ? 'none' : 'block';
   const electricity = [
     {id:38, name:'Eko Electric', short:'EKEDC'},
     {id:39, name:'Ikeja Electric', short:'IKEDC'},
@@ -2941,6 +2323,7 @@ function billerBtn(b){
 let currentBiller = null;
 
 function openBiller(id, name){
+  if (!FEATURES.utilities){ soonToast('Bill payments'); return; }
   if (!currentUser){
     toast('Please sign in to pay bills', 'warning');
     openSheet('authModal');
@@ -3764,51 +3147,187 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('%cNET365 Mobile · Calm Luxury', 'font-size:16px;font-weight:900;color:#FF6D00;');
   console.log('Ready.');
 });
-</script>
-<style id="net365-brand-redesign-v1">
-/* NET365 Calm Luxury — brand-alignment layer. Existing markup and JavaScript are preserved. */
-:root{
- --bg-0:#080B14;--bg-1:#0B1020;--bg-2:#111827;
- --surface:rgba(18,24,39,.82);--surface-2:rgba(24,31,48,.88);
- --border:rgba(255,255,255,.085);--border-strong:rgba(255,109,0,.34);
- --violet:#E53935;--violet-bright:#FF6D00;--violet-soft:rgba(229,57,53,.13);
- --cyan:#65D9E8;--cyan-soft:rgba(101,217,232,.10);
- --brand-ember:#E53935;--brand-orange:#FF6D00;--brand-gold:#FFB454;
- --text-0:#FAFAFB;--text-1:#D5D9E2;--text-2:#9AA4B5;--text-3:#717C90;
- --shadow-card:0 18px 48px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.045);
- --radius-xl:26px;--radius-lg:20px;--radius-md:14px;--radius-sm:10px;
+
+// ============================================================
+// NET365 v5 ADDITIONS — home wallet, rewards, verify, reset
+// ============================================================
+function soonToast(name){ toast(`${name} are coming soon`, 'info'); }
+function greetingWord(){
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 }
-html{background:#080B14;scroll-behavior:smooth}
-body{background:radial-gradient(900px 520px at 100% -8%,rgba(255,109,0,.095),transparent 58%),radial-gradient(700px 450px at -12% 22%,rgba(229,57,53,.075),transparent 62%),linear-gradient(180deg,#080B14 0%,#0B1020 55%,#080B14 100%)!important;color:var(--text-0)}
-body:before{opacity:.28!important;background-size:54px 54px!important}
-button,.btn,.nav-item,[role="button"]{transition:background .2s ease,border-color .2s ease,box-shadow .2s ease,transform .2s ease}
-button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid #FF8A3D!important;outline-offset:3px}
-/* Surfaces: glossy glass, not excessive neon */
-.card,.panel,.sheet,.modal,.wallet-card,.service-card,.transaction-card,.payment-card,.section-card,.balance-card,.form-card,.settings-card,.smart-ad-card,.ad-card,.quick-action,.quick-actions,.stat-card,.history-card,.content-card{
- background:linear-gradient(145deg,rgba(24,31,48,.92),rgba(13,18,32,.88))!important;border:1px solid rgba(255,255,255,.075)!important;box-shadow:var(--shadow-card)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:var(--radius-lg)}
-header,.topbar,.top-nav,.app-header,.bottom-nav,.mobile-nav{background:rgba(8,11,20,.82)!important;border-color:rgba(255,255,255,.075)!important;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
-.logo,.brand,.brand-name,.app-name{letter-spacing:-.035em}
-.brand-mark,.logo-mark,.app-logo{box-shadow:0 7px 24px rgba(229,57,53,.18)!important}
-button.primary,.btn-primary,.primary-btn,.cta-button,.submit-btn,.pay-button,.btn-brand,.button-primary,.action-primary,.checkout-btn,.confirm-btn{
- color:#fff!important;background:linear-gradient(110deg,#E53935 0%,#FF6D00 100%)!important;border:1px solid rgba(255,255,255,.14)!important;box-shadow:0 8px 24px rgba(229,57,53,.20),inset 0 1px 0 rgba(255,255,255,.18)!important;font-weight:750!important}
-button.primary:hover,.btn-primary:hover,.primary-btn:hover,.cta-button:hover,.submit-btn:hover,.pay-button:hover,.btn-brand:hover,.button-primary:hover,.action-primary:hover,.checkout-btn:hover,.confirm-btn:hover{filter:brightness(1.06);transform:translateY(-1px);box-shadow:0 12px 28px rgba(255,109,0,.22)!important}
-/* Remove competing purple/indigo styling from controls and navigation */
-.nav-item.active,.nav-item[aria-current="page"],.tab.active,.tab-button.active,.payment-method.active,.payment-option.active,.service-item.active,.filter-chip.active,.selected,.is-selected{border-color:rgba(255,109,0,.38)!important}
-.nav-item.active,.nav-item[aria-current="page"],.tab.active,.tab-button.active{background:linear-gradient(100deg,rgba(229,57,53,.18),rgba(255,109,0,.11))!important;color:#fff!important;box-shadow:inset 3px 0 0 #FF6D00!important}
-.payment-method.active,.payment-option.active,.service-item.active,.filter-chip.active,.selected,.is-selected{background:rgba(255,109,0,.09)!important;box-shadow:0 0 0 1px rgba(255,109,0,.08)!important}
-input,select,textarea,.input,.form-control,.search-input{background:rgba(7,11,20,.68)!important;color:#F8FAFC!important;border-color:rgba(255,255,255,.11)!important;border-radius:12px!important}
-input::placeholder,textarea::placeholder{color:#788397!important}
-input:focus,select:focus,textarea:focus,.input:focus,.form-control:focus{border-color:rgba(255,109,0,.65)!important;box-shadow:0 0 0 3px rgba(255,109,0,.11)!important}
-/* Purple icon backgrounds become restrained brand-tinted surfaces */
-.icon-box,.service-icon,.action-icon,.feature-icon,.payment-icon,.quick-icon{background:linear-gradient(145deg,rgba(229,57,53,.14),rgba(255,109,0,.10))!important;border-color:rgba(255,109,0,.16)!important}
-[style*="#7C3AED"],[style*="#7c3aed"],[style*="#4F46E5"],[style*="#4f46e5"],[style*="#8B5CF6"],[style*="#8b5cf6"]{border-color:rgba(255,109,0,.24)}
-.badge,.pill,.eyebrow,.section-label{letter-spacing:.045em}
-.divider,hr{border-color:rgba(255,255,255,.075)!important}
-.success,.status-success{color:#4ADE80}.warning,.status-pending{color:#FBBF24}.error,.status-failed{color:#FB7185}
-/* Restraint: premium depth over glowing neon */
-*{text-shadow:none}
-.card:hover,.service-card:hover,.quick-action:hover{border-color:rgba(255,109,0,.20)!important;box-shadow:0 22px 55px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.05)!important}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
-</style>
+let balanceHidden = false;
+try { balanceHidden = localStorage.getItem('net365_hide_bal') === '1'; } catch(e){}
+function toggleBalance(){
+  balanceHidden = !balanceHidden;
+  try { localStorage.setItem('net365_hide_bal', balanceHidden ? '1' : '0'); } catch(e){}
+  renderHomeWallet();
+}
+function fmtMoney(sym, v){
+  return sym + Number(v || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function renderHomeWallet(){
+  const amt = document.getElementById('homeBalance');
+  if (!amt) return;
+  const sub = document.getElementById('homeBalanceSub');
+  const fund = document.getElementById('homeFundLabel');
+  const eye = document.querySelector('#eyeBtn i');
+  const sym = CURRENCY_SYMBOLS[currentCurrency] || '₦';
+  if (!currentUser){
+    amt.textContent = sym + ' —';
+    sub.textContent = 'Sign in to see your balance';
+    fund.textContent = 'Sign in';
+  } else {
+    amt.textContent = balanceHidden ? sym + ' ••••••' : fmtMoney(sym, walletBalances[currentCurrency] || 0);
+    sub.textContent = `${currentCurrency} · Net365 wallet`;
+    fund.textContent = 'Add money';
+  }
+  if (eye) eye.className = balanceHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
+}
+function onFundWallet(){
+  if (!currentUser){ openSheet('authModal'); return; }
+  openSheet('addMoneyModal');
+}
+
+// ---- Rewards ----
+async function loadRewards(){
+  try{
+    const res = await fetch('/api/rewards', {credentials:'include'});
+    const d = await res.json();
+    const x = d.rewards || {};
+    document.getElementById('rwLevel').textContent = x.level || 'Bronze';
+    document.getElementById('rwPoints').textContent = Number(x.points || 0).toLocaleString();
+    const sym = CURRENCY_SYMBOLS[currentCurrency] || '₦';
+    document.getElementById('rwCash').textContent = sym + Number(x.cashback_value || 0).toFixed(2);
+  } catch(e){}
+}
+function openRewards(){
+  if (!currentUser){ toast('Sign in to see your rewards', 'info'); openSheet('authModal'); return; }
+  openSheet('referralSheet');
+  loadReferralCode();
+  loadRewards();
+}
+
+// ---- Email verification ----
+function setMsg(id, text, kind){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text || '';
+  el.className = 'notice ' + (kind || 'error');
+  el.style.display = text ? 'block' : 'none';
+}
+function openVerifySheet(){
+  if (!currentUser) { openSheet('authModal'); return; }
+  document.getElementById('verifySub').textContent = `Enter the code we sent to ${currentUser.email || 'your email'}.`;
+  document.getElementById('verifyCode').value = '';
+  setMsg('verifyMsg', '');
+  openSheet('verifySheet');
+}
+async function submitVerify(){
+  const code = document.getElementById('verifyCode').value.trim();
+  if (!code){ setMsg('verifyMsg', 'Enter the code from your email'); return; }
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Verifying…';
+  try{
+    const res = await fetch('/api/auth/verify-email', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body: JSON.stringify({ email: currentUser.email, code })
+    });
+    const d = await res.json();
+    if (!res.ok || !d.success) throw new Error(d.error || 'Invalid or expired code');
+    currentUser.email_verified = 1;
+    closeSheet('verifySheet');
+    updateAuthUI();
+    toast('Email verified. You are all set!', 'success');
+  } catch(e){ setMsg('verifyMsg', e.message); }
+  finally { btn.disabled = false; btn.innerHTML = '<span id="verifyBtnLabel">Verify email</span>'; }
+}
+async function resendVerify(){
+  if (!currentUser) return;
+  try{
+    const res = await fetch('/api/auth/resend-otp', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body: JSON.stringify({ email: currentUser.email })
+    });
+    const d = await res.json().catch(()=>({}));
+    if (res.status === 429) throw new Error('Too many requests. Please wait a few minutes.');
+    setMsg('verifyMsg', d.message || 'A new code has been sent if your email is registered.', 'ok');
+  } catch(e){ setMsg('verifyMsg', e.message); }
+}
+
+// ---- Forgot / reset password ----
+let forgotStep = 1;
+function openForgotSheet(){
+  closeSheet('authModal');
+  forgotStep = 1;
+  document.getElementById('forgotEmail').value = document.getElementById('authEmail').value || '';
+  document.getElementById('forgotStep2').style.display = 'none';
+  document.getElementById('forgotSub').textContent = "Enter your email and we'll send a 6-digit code.";
+  document.getElementById('forgotBtn').innerHTML = '<span id="forgotBtnLabel">Send code</span>';
+  setMsg('forgotMsg', '');
+  openSheet('forgotSheet');
+}
+async function submitForgot(){
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email){ setMsg('forgotMsg', 'Enter your email address'); return; }
+  const btn = document.getElementById('forgotBtn');
+  const label = forgotStep === 1 ? 'Send code' : 'Reset password';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Please wait…';
+  try{
+    if (forgotStep === 1){
+      const res = await fetch('/api/auth/forgot-password', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email })
+      });
+      const d = await res.json().catch(()=>({}));
+      if (res.status === 429) throw new Error('Too many attempts. Please wait a few minutes.');
+      if (!res.ok || d.success === false) throw new Error(d.error || 'Could not send the code');
+      forgotStep = 2;
+      document.getElementById('forgotStep2').style.display = 'block';
+      document.getElementById('forgotSub').textContent = 'Enter the code we emailed you and choose a new password.';
+      setMsg('forgotMsg', d.message || 'If that email is registered, a reset code has been sent.', 'ok');
+      btn.innerHTML = '<span>Reset password</span>';
+    } else {
+      const code = document.getElementById('forgotCode').value.trim();
+      const pw = document.getElementById('forgotNewPw').value;
+      if (!code || pw.length < 8) throw new Error('Enter the code and a password of at least 8 characters');
+      const res = await fetch('/api/auth/reset-password', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, code, new_password: pw })
+      });
+      const d = await res.json().catch(()=>({}));
+      if (!res.ok || !d.success) throw new Error(d.error || 'Invalid or expired code');
+      closeSheet('forgotSheet');
+      toast('Password updated. Please sign in.', 'success');
+      document.getElementById('authEmail').value = email;
+      openSheet('authModal');
+      btn.innerHTML = '<span>Send code</span>';
+    }
+  } catch(e){
+    setMsg('forgotMsg', e.message);
+    btn.innerHTML = `<span>${label}</span>`;
+  } finally { btn.disabled = false; }
+}
+
+// ---- Boot: referral link + Google error banner ----
+document.addEventListener('DOMContentLoaded', () => {
+  try{
+    const p = new URLSearchParams(location.search);
+    const ref = p.get('ref');
+    if (ref){
+      try{ sessionStorage.setItem('net365_ref', ref); }catch(e){}
+      const g = document.getElementById('googleBtn');
+      if (g) g.href = '/api/auth/google/login?ref=' + encodeURIComponent(ref);
+      if (!currentUser){ isAuthRegisterMode = false; toggleAuthMode(); setTimeout(()=>openSheet('authModal'), 600); }
+    }
+    const ge = p.get('google_error');
+    if (ge){ setTimeout(()=>toast('Google sign-in: ' + ge, 'error'), 500); history.replaceState(null,'',location.pathname); }
+  }catch(e){}
+  renderHomeWallet();
+  document.getElementById('greetHello').textContent = greetingWord();
+});
+
+</script>
+<script src="/pwa.js" defer></script>
 </body>
 </html>
