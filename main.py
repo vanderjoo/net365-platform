@@ -7273,6 +7273,12 @@ class ReloadlyWebApp:
         except Exception as ads_init_error:
             # Fail visibly in logs but keep the payment/recharge app bootable.
             logger.exception("Net365 Smart Media could not initialize: %s", ads_init_error)
+        # WhatsApp banking: account linking + PIN auth for the Node bot (needs WHATSAPP_BOT_SECRET).
+        try:
+            from net365_whatsapp import init_whatsapp_banking
+            init_whatsapp_banking(self.app, db, send_email_notification)
+        except Exception as e:
+            logger.warning(f"WhatsApp banking API not loaded: {e}")
         self.setup_routes()
         self.app.before_request(log_page_visit)
 
@@ -8898,7 +8904,9 @@ class ReloadlyWebApp:
         @self.app.route("/")
         def index():
             device_type = parse_user_agent(request.headers.get("User-Agent", ""))["device_type"]
-            template = "mobile.html" if device_type == "Mobile" else "index.html"
+            # ?full=1 lets phone users open the full desktop platform on purpose
+            use_mobile = device_type == "Mobile" and not request.args.get("full")
+            template = "mobile.html" if use_mobile else "index.html"
             return render_template(
                 template,
                 environment=self.credentials.environment.value,
@@ -8949,6 +8957,40 @@ class ReloadlyWebApp:
                     "Analytics page not found. Please create analytics.html in the root directory.",
                     404,
                 )
+
+        # ============ PWA (installable app) ============
+        _pwa_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pwa")
+
+        @self.app.route("/manifest.webmanifest")
+        def pwa_manifest():
+            resp = send_from_directory(_pwa_dir, "manifest.webmanifest",
+                                       mimetype="application/manifest+json")
+            resp.headers["Cache-Control"] = "no-cache"
+            return resp
+
+        @self.app.route("/sw.js")
+        def pwa_service_worker():
+            # Must be served from the site root so it can control every page.
+            resp = send_from_directory(_pwa_dir, "sw.js", mimetype="application/javascript")
+            resp.headers["Cache-Control"] = "no-cache, max-age=0"
+            resp.headers["Service-Worker-Allowed"] = "/"
+            return resp
+
+        @self.app.route("/pwa.js")
+        def pwa_loader():
+            resp = send_from_directory(_pwa_dir, "pwa.js", mimetype="application/javascript")
+            resp.headers["Cache-Control"] = "no-cache"
+            return resp
+
+        @self.app.route("/offline.html")
+        def pwa_offline():
+            return send_from_directory(_pwa_dir, "offline.html")
+
+        @self.app.route("/icons/<path:filename>")
+        def pwa_icons(filename):
+            resp = send_from_directory(os.path.join(_pwa_dir, "icons"), filename)
+            resp.headers["Cache-Control"] = "public, max-age=604800"
+            return resp
 
         @self.app.route("/giftcards")
         def giftcards_page():
