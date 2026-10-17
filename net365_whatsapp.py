@@ -398,3 +398,26 @@ def wa_unlink():
 #         init_whatsapp_banking(self.app, db, send_email_notification)
 #     except Exception as e:
 #         logger.warning(f"WhatsApp banking API not loaded: {e}")
+
+@wa_bp.route("/api/whatsapp/webhook", methods=["GET", "POST"])
+def whatsapp_webhook():
+    """Handles Meta webhook verification (GET) and incoming message events (POST)."""
+    if request.method == "GET":
+        mode = request.args.get("hub.mode")
+        token = request.args.get("hub.verify_token")
+        challenge = request.args.get("hub.challenge")
+
+        verify_secret = os.getenv("WHATSAPP_BOT_SECRET", "").strip()
+
+        if mode == "subscribe" and token and hmac.compare_digest(token.encode(), verify_secret.encode()):
+            logger.info("WhatsApp webhook verified successfully.")
+            return challenge, 200
+        
+        logger.warning("WhatsApp webhook verification failed: Token mismatch or invalid mode.")
+        return jsonify({"error": "Forbidden"}), 403
+
+    elif request.method == "POST":
+        data = _body()
+        # Process your incoming WhatsApp messages/events here or forward to your bot service
+        logger.info(f"Received WhatsApp webhook event: {data}")
+        return jsonify({"status": "EVENT_RECEIVED"}), 200
