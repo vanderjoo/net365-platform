@@ -133,6 +133,9 @@ import database as db
 from ip_intel import IPIntel, detect_bot
 from webhook_security import verify_paystack_signature, verify_flutterwave_signature
 from net365_ua import DeviceDetector, parse_device_model
+from geo_resolver import GeoResolver
+
+GeoResolver.configure(db.get_db_connection)
 
 # ============ CHECK ENCRYPTION KEY IN PRODUCTION ============
 if os.getenv("ENVIRONMENT", "").lower() == "production":
@@ -4248,6 +4251,11 @@ def parse_device_model(ua_string, request_obj=None):
     
 
 def get_client_ip() -> str:
+    # Behind Cloudflare, X-Forwarded-For can start with a client-supplied value, while
+    # CF-Connecting-IP is set by Cloudflare itself.
+    cf_ip = request.headers.get("CF-Connecting-IP", "").strip()
+    if cf_ip:
+        return cf_ip
     forwarded = request.headers.get("X-Forwarded-For", "")
     if forwarded:
         return forwarded.split(",")[0].strip()
@@ -4357,6 +4365,15 @@ def log_page_visit():
             except Exception as e:
                 # Enrichment failures must never break visitor logging.
                 logger.debug(f"IPIntel.enqueue failed for {ip}: {e}")
+
+            # Country / city fallback. Cloudflare's headers are missing when the site is
+            # served directly from Railway, so resolve the location from the IP in the
+            # background and write it onto this visit's row (never overwrites CF values).
+            if not payload.get("country") or not payload.get("city"):
+                try:
+                    GeoResolver.enqueue(ip)
+                except Exception as e:
+                    logger.debug(f"GeoResolver.enqueue failed for {ip}: {e}")
 
     except TypeError as e:
         # A TypeError that reaches here means something other than the
@@ -16837,6 +16854,38 @@ def _admin_bot_summary():
         })
     except Exception as _e:
         return _flask_jsonify({"success": False, "error": str(_e)}), 500
+
+@app.route("/api/admin/visitors/geo-status", methods=["GET"])
+@admin_required
+def _admin_geo_status():
+    """How many visitor IPs still lack a country or city, and how the resolver is doing."""
+    try:
+        return _flask_jsonify({
+            "success": True,
+            "missing_ips": GeoResolver.missing_count(),
+            "resolver": GeoResolver.status(),
+        })
+    except Exception as _e:
+        return _flask_jsonify({"success": False, "error": str(_e)}), 500
+
+
+@app.route("/api/admin/visitors/backfill-geo", methods=["POST"])
+@admin_required
+def _admin_backfill_geo():
+    """Queue the most recent visitor IPs with no country/city for a background lookup."""
+    try:
+        if GeoResolver.provider() == "off":
+            return _flask_jsonify({"success": False,
+                                   "error": "Geo lookups are disabled (GEO_PROVIDER=off)"}), 400
+        limit = _flask_request.args.get("limit", 300, type=int)
+        queued = GeoResolver.backfill(limit)
+        return _flask_jsonify({"success": True, "queued": queued,
+                               "missing_ips": GeoResolver.missing_count(),
+                               "resolver": GeoResolver.status()})
+    except Exception as _e:
+        logger.error(f"Geo backfill failed: {_e}")
+        return _flask_jsonify({"success": False, "error": str(_e)}), 500
+
 
 @app.route("/api/visitor/signals", methods=["POST"])
 def visitor_signals():
