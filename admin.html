@@ -546,7 +546,8 @@
                                onchange="loadVisitors(0)" />
                         <input type="date" id="filterStart" onchange="loadVisitors(0)" />
                         <input type="date" id="filterEnd" onchange="loadVisitors(0)" />
-                        <button class="btn btn-sm btn-primary" onclick="exportVisitorCSV()"><i class="fas fa-download"></i> Export</button>
+                        <button class="btn btn-sm btn-primary" id="exportVisitorBtn" onclick="exportVisitorCSV()"><i class="fas fa-download"></i> Export</button>
+                        <button class="btn btn-sm btn-info" id="backfillGeoBtn" onclick="backfillGeo()" title="Look up country and city for visits saved without one"><i class="fas fa-location-dot"></i> Fill missing locations</button>
                     </div>
                     <div style="overflow-x:auto;">
                         <table>
@@ -648,7 +649,7 @@
                         <input type="date" id="referralFilterDate" onchange="loadReferrals()" />
                         <button class="btn btn-primary btn-sm" onclick="loadReferrals()"><i class="fas fa-refresh"></i> Refresh</button>
                         <button class="btn btn-success btn-sm" onclick="processPendingReferrals()"><i class="fas fa-play"></i> Process Pending</button>
-                        <button class="btn btn-warning btn-sm" onclick="exportReferralData()"><i class="fas fa-download"></i> Export</button>
+                        <button class="btn btn-warning btn-sm" id="exportReferralBtn" onclick="exportReferralData()"><i class="fas fa-download"></i> Export</button>
                     </div>
 
                     <div class="metric-grid" style="grid-template-columns:repeat(4,1fr);">
@@ -991,7 +992,7 @@
                         </select>
                         <input type="date" id="txFilterDate" onchange="loadAdminTransactions()" />
                         <button class="btn btn-primary btn-sm" onclick="loadAdminTransactions()"><i class="fas fa-refresh"></i> Refresh</button>
-                        <button class="btn btn-success btn-sm" onclick="exportTransactionsCSV()"><i class="fas fa-download"></i> Export CSV</button>
+                        <button class="btn btn-success btn-sm" id="exportTransactionsBtn" onclick="exportTransactionsCSV()"><i class="fas fa-download"></i> Export CSV</button>
                     </div>
                     <div style="overflow-x:auto;">
                         <table>
@@ -1912,7 +1913,7 @@
             const el = document.getElementById('countryBreakdown');
             if (!el) return;
             if (!byCountry.length) {
-                el.innerHTML = '<div class="empty-state">No geo data yet — this populates once requests come through Cloudflare (which supplies the country header).</div>';
+                el.innerHTML = '<div class="empty-state">No geo data yet. It fills in as visits are logged; click "Fill missing locations" on the visitor list to backfill older visits.</div>';
                 return;
             }
             const flagEmoji = (code) => {
@@ -2076,8 +2077,114 @@
         // ============================================
         // EXPORT VISITOR CSV
         // ============================================
+        // ---- shared export helpers -------------------------------------------------
+        // One cell of CSV. Quotes fields with commas/quotes/newlines, and defuses text that
+        // a spreadsheet would run as a formula (=, +, -, @) so exported data cannot execute.
+        function csvCell(value) {
+            if (value === null || value === undefined) return '';
+            if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '';
+            let text = String(value);
+            if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+            if (/[",\r\n]/.test(text)) text = '"' + text.replace(/"/g, '""') + '"';
+            return text;
+        }
+
+        function downloadCSV(filename, headers, rows) {
+            const lines = [headers.map(csvCell).join(',')];
+            rows.forEach(r => lines.push(r.map(csvCell).join(',')));
+            // BOM so Excel opens UTF-8 (names, cities) correctly
+            const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+
+        // Walks every page of a list endpoint (the server caps page size) up to maxRows.
+        async function fetchAllPages(buildPath, listKey, pageSize, maxRows) {
+            const out = [];
+            for (let offset = 0; out.length < maxRows; offset += pageSize) {
+                const data = await adminFetch(buildPath(pageSize, offset));
+                if (!data || data.success === false) {
+                    throw new Error((data && data.error) || 'The server could not return the data');
+                }
+                const rows = data[listKey] || [];
+                out.push(...rows);
+                if (rows.length < pageSize) break;
+            }
+            return out.slice(0, maxRows);
+        }
+
+        const _exportBusy = {};
+        async function runExport(key, btnId, job) {
+            if (_exportBusy[key]) return;
+            _exportBusy[key] = true;
+            const btn = document.getElementById(btnId);
+            const label = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...'; }
+            try {
+                await job();
+            } catch (e) {
+                if (e.message === 'unauthorized') { showGateAgain(); }
+                else { showToast('Export failed: ' + e.message, 'error'); }
+            } finally {
+                _exportBusy[key] = false;
+                if (btn) { btn.disabled = false; btn.innerHTML = label; }
+            }
+        }
+
+        const EXPORT_MAX_ROWS = 20000;
+        const todayStamp = () => new Date().toISOString().split('T')[0];
+
         function exportVisitorCSV() {
-            showToast('Exporting visitor data...', 'info');
+            return runExport('visitors', 'exportVisitorBtn', async () => {
+                showToast('Exporting visitor data...', 'info');
+                const device = document.getElementById('filterDevice').value;
+                const country = (document.getElementById('filterCountry').value || '').trim().toUpperCase();
+                const start = document.getElementById('filterStart').value;
+                const end = document.getElementById('filterEnd').value;
+                const build = (limit, offset) => {
+                    let path = `/api/admin/visitors?limit=${limit}&offset=${offset}`;
+                    if (device) path += `&device_type=${encodeURIComponent(device)}`;
+                    if (country) path += `&country=${encodeURIComponent(country)}`;
+                    if (start) path += `&start_date=${encodeURIComponent(start)}`;
+                    if (end) path += `&end_date=${encodeURIComponent(end)}T23:59:59`;
+                    return path;
+                };
+                const rows = await fetchAllPages(build, 'visitors', 500, EXPORT_MAX_ROWS);
+                if (!rows.length) { showToast('No visits match the current filters', 'warning'); return; }
+                downloadCSV(`net365_visitors_${todayStamp()}.csv`,
+                    ['Visited (UTC)', 'Visitor', 'Page', 'Organization', 'ASN', 'Network type', 'Device',
+                     'Device model', 'OS', 'Browser', 'Country', 'City', 'Region', 'IP address', 'Referrer'],
+                    rows.map(v => [v.visited_at, v.visitor_name || 'Guest', v.path, v.org_name, v.asn, v.ip_kind,
+                                   v.device_type, v.device_model, v.os_name || v.os, v.browser, v.country,
+                                   v.city, v.region, v.ip_address, v.referrer]));
+                showToast(`Exported ${rows.length} visits` +
+                          (rows.length >= EXPORT_MAX_ROWS ? ` (limit of ${EXPORT_MAX_ROWS} reached; narrow the dates for the rest)` : ''),
+                          'success');
+            });
+        }
+
+        // Asks the server to look up country/city for visits saved without them.
+        async function backfillGeo() {
+            const btn = document.getElementById('backfillGeoBtn');
+            if (btn) btn.disabled = true;
+            try {
+                const data = await adminFetch('/api/admin/visitors/backfill-geo?limit=300', { method: 'POST' });
+                if (!data.success) throw new Error(data.error || 'Request failed');
+                showToast(data.queued
+                    ? `Looking up ${data.queued} visitor locations in the background. Refresh in a minute or two.`
+                    : 'Nothing to look up right now.', data.queued ? 'success' : 'info');
+            } catch (e) {
+                if (e.message === 'unauthorized') { showGateAgain(); }
+                else { showToast('Could not start the lookup: ' + e.message, 'error'); }
+            } finally {
+                if (btn) btn.disabled = false;
+            }
         }
 
         // ============================================
@@ -2328,7 +2435,27 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
         }
 
         function exportReferralData() {
-            showToast('Export started...', 'info');
+            return runExport('referrals', 'exportReferralBtn', async () => {
+                showToast('Exporting referrals...', 'info');
+                const status = document.getElementById('referralFilterStatus').value;
+                const date = document.getElementById('referralFilterDate').value;
+                const build = (limit, offset) => {
+                    let url = `/api/admin/referrals/all?limit=${limit}&offset=${offset}`;
+                    if (status) url += `&status=${encodeURIComponent(status)}`;
+                    if (date) url += `&date=${encodeURIComponent(date)}`;
+                    return url;
+                };
+                const rows = await fetchAllPages(build, 'referrals', 100, EXPORT_MAX_ROWS);
+                if (!rows.length) { showToast('No referrals match the current filters', 'warning'); return; }
+                downloadCSV(`net365_referrals_${todayStamp()}.csv`,
+                    ['ID', 'Created (UTC)', 'Referrer', 'Referred user', 'Status', 'Reward amount',
+                     'Reward currency', 'Transaction amount', 'Bonus %'],
+                    rows.map(r => [r.id, r.created_at, r.referrer_name || ('User #' + r.referrer_id),
+                                   r.referred_name || ('User #' + r.referred_id), r.status,
+                                   Number(r.reward_amount || 0), r.reward_currency || 'NGN',
+                                   Number(r.transaction_amount || 0), Number(r.bonus_percentage || 0)]));
+                showToast(`Exported ${rows.length} referrals`, 'success');
+            });
         }
 
         // ============================================
@@ -3849,29 +3976,27 @@ Payload: ${JSON.stringify(tx.payload || {}, null, 2)}
         }
 
         function exportTransactionsCSV() {
-            if (!allTransactions || allTransactions.length === 0) {
-                showToast('No transactions to export', 'warning');
-                return;
-            }
-            let csv = 'Date,Reference,Type,Amount,Currency,Status,Provider,User\n';
-            allTransactions.forEach(t => {
-                csv += `${t.created_at || ''},`;
-                csv += `${t.reference || ''},`;
-                csv += `${t.tx_type || 'unknown'},`;
-                csv += `${Number(t.amount || 0).toFixed(2)},`;
-                csv += `${t.currency || 'NGN'},`;
-                csv += `${t.status || 'pending'},`;
-                csv += `${t.provider || 'N/A'},`;
-                csv += `${t.user_id || 'Guest'}\n`;
+            return runExport('transactions', 'exportTransactionsBtn', async () => {
+                showToast('Exporting transactions...', 'info');
+                const status = document.getElementById('txFilterStatus').value;
+                const type = document.getElementById('txFilterType').value;
+                const date = document.getElementById('txFilterDate').value;
+                const build = (limit, offset) => {
+                    let url = `/api/admin/transactions?limit=${limit}&offset=${offset}`;
+                    if (status) url += `&status=${encodeURIComponent(status)}`;
+                    if (type) url += `&tx_type=${encodeURIComponent(type)}`;
+                    if (date) url += `&date=${encodeURIComponent(date)}`;
+                    return url;
+                };
+                const rows = await fetchAllPages(build, 'transactions', 100, EXPORT_MAX_ROWS);
+                if (!rows.length) { showToast('No transactions match the current filters', 'warning'); return; }
+                downloadCSV(`net365_transactions_${todayStamp()}.csv`,
+                    ['Date (UTC)', 'Reference', 'Type', 'Amount', 'Currency', 'Status', 'Provider', 'User'],
+                    rows.map(t => [t.created_at, t.reference, t.tx_type || 'unknown', Number(t.amount || 0),
+                                   t.currency || 'NGN', t.status || 'pending', t.provider || 'N/A',
+                                   t.user_id || 'Guest']));
+                showToast(`Exported ${rows.length} transactions`, 'success');
             });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `admin_transactions_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            showToast('CSV exported successfully', 'success');
         }
 
         // ============================================
