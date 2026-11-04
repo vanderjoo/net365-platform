@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#101820">
+  <meta name="description" content="Meet Net365 AI, your intelligent digital services companion.">
+  <title>Net365 AI Concierge</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root{color-scheme:dark;--bg:#101820;--panel:#17232d;--panel2:#1d2b36;--ink:#f7f9fb;--muted:#aab8c2;--red:#e53935;--orange:#ff6d00;--line:rgba(255,255,255,.09);--mint:#75e0bd}
+    *{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:radial-gradient(ellipse at 50% -15%,rgba(229,57,53,.24),transparent 42%),radial-gradient(ellipse at 100% 30%,rgba(255,109,0,.10),transparent 34%),var(--bg)}
+    button{font:inherit}.shell{max-width:760px;margin:auto;padding:calc(18px + env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom))}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:25px}.brand{display:flex;align-items:center;gap:10px;font-weight:850;letter-spacing:.12em;font-size:15px}.brand-mark{width:34px;height:34px;border-radius:11px;background:linear-gradient(140deg,var(--red),var(--orange));display:grid;place-items:center;box-shadow:0 7px 22px rgba(229,57,53,.28)}.brand-mark svg{width:21px}.status{font-size:11px;color:#b7f4df;border:1px solid rgba(117,224,189,.25);background:rgba(117,224,189,.07);border-radius:99px;padding:7px 10px;letter-spacing:.04em}
+    .hero{text-align:center;padding:8px 8px 24px}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.2em;color:#ffb18a;font-weight:750}.avatar-wrap{width:174px;height:174px;margin:13px auto 17px;position:relative;display:grid;place-items:center}.orbit,.orbit:before,.orbit:after{position:absolute;inset:0;border:1px solid rgba(255,109,0,.27);border-radius:50%;animation:spin 18s linear infinite}.orbit:before{content:"";inset:12px;border-color:rgba(229,57,53,.36);animation:spin 12s linear infinite reverse}.orbit:after{content:"";inset:25px;border-style:dashed;border-color:rgba(255,255,255,.14);animation:spin 30s linear infinite}.avatar{width:112px;height:112px;border-radius:38px;background:linear-gradient(145deg,#273b49,#111c25);border:1px solid rgba(255,255,255,.18);box-shadow:0 0 0 9px rgba(255,109,0,.045),0 0 55px rgba(229,57,53,.24);display:grid;place-items:center;position:relative;animation:float 4s ease-in-out infinite}.avatar svg{width:78px;height:78px;overflow:visible}.pulse{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--mint);right:11px;bottom:11px;box-shadow:0 0 0 5px rgba(117,224,189,.12),0 0 16px var(--mint)}
+    h1{font-size:clamp(29px,7vw,43px);line-height:1.08;letter-spacing:-.045em;margin:0 0 10px}.gradient{background:linear-gradient(90deg,#fff 15%,#ffb18a 75%,#ff6d00);-webkit-background-clip:text;background-clip:text;color:transparent}.intro{max-width:510px;margin:0 auto;color:var(--muted);font-size:15px;line-height:1.65}.voice-row{display:flex;gap:10px;justify-content:center;margin-top:18px}.voice{border:1px solid var(--line);background:rgba(255,255,255,.055);color:#fff;border-radius:99px;padding:10px 15px;font-size:12px;font-weight:700;cursor:pointer}.voice.primary{background:linear-gradient(100deg,var(--red),var(--orange));border:0;box-shadow:0 8px 22px rgba(229,57,53,.2)}
+    .section-head{display:flex;align-items:end;justify-content:space-between;margin:10px 2px 13px}.section-head h2{font-size:17px;margin:0;letter-spacing:-.02em}.section-head span{font-size:11px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.tile{position:relative;min-height:119px;text-align:left;padding:16px;border:1px solid var(--line);border-radius:19px;background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.025));color:var(--ink);cursor:pointer;transition:transform .18s,border-color .18s,background .18s;overflow:hidden}.tile:active{transform:scale(.98)}.tile:hover{border-color:rgba(255,109,0,.48);background:linear-gradient(145deg,rgba(229,57,53,.13),rgba(255,255,255,.035))}.tile:after{content:"↗";position:absolute;right:15px;top:15px;color:#82929d;font-size:15px}.ico{width:37px;height:37px;border-radius:12px;display:grid;place-items:center;background:rgba(255,109,0,.12);font-size:19px;margin-bottom:12px}.tile strong{display:block;font-size:14px;margin-bottom:4px}.tile small{display:block;color:var(--muted);font-size:11px;line-height:1.4}.tile[hidden]{display:none}
+    .note{margin-top:19px;padding:15px 16px;border:1px solid var(--line);border-radius:17px;background:rgba(255,255,255,.035);display:flex;gap:12px;align-items:flex-start}.note .spark{font-size:19px}.note strong{font-size:12px}.note p{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.55}.footer{text-align:center;color:#71818d;font-size:10px;margin:22px 0 0;letter-spacing:.06em}.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#f7f9fb;color:#101820;border-radius:99px;padding:11px 16px;font-size:12px;font-weight:700;transition:.25s;box-shadow:0 10px 30px #0005;white-space:nowrap}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @keyframes spin{to{transform:rotate(360deg)}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}@media(min-width:620px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.hero{padding-top:16px;padding-bottom:30px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="top"><div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 17.5 12 4l8 13.5h-5L12 12l-3 5.5H4Z" fill="white"/><path d="M8.5 20h7" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></span>NET365</div><span class="status">● CONCIERGE ONLINE</span></header>
+    <section class="hero" aria-labelledby="title">
+      <div class="eyebrow">Your digital world, intelligently connected</div>
+      <div class="avatar-wrap" aria-label="Animated Net365 AI assistant"><div class="orbit"></div><div class="avatar"><svg viewBox="0 0 100 100" fill="none" role="img" aria-label="Abstract friendly AI face"><path d="M50 13c-20 0-34 15-34 35v7c0 20 14 33 34 33s34-13 34-33v-7c0-20-14-35-34-35Z" fill="url(#face)" stroke="#ff9b68" stroke-opacity=".65" stroke-width="1.5"/><path d="M31 47c4-5 10-5 14 0M55 47c4-5 10-5 14 0" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M39 65c6 7 16 7 22 0" stroke="#ffb18a" stroke-width="3.5" stroke-linecap="round"/><path d="M50 6v7M12 36l7 3M88 36l-7 3" stroke="#ff9b68" stroke-width="2" stroke-linecap="round"/><defs><linearGradient id="face" x1="22" y1="18" x2="80" y2="86" gradientUnits="userSpaceOnUse"><stop stop-color="#e53935"/><stop offset="1" stop-color="#172b38"/></linearGradient></defs></svg><span class="pulse"></span></div></div>
+      <h1 id="title">Hello, I'm <span class="gradient">Net365 AI.</span></h1>
+      <p class="intro" id="greeting">Your intelligent digital services companion. I can help you recharge, pay supported bills, explore payment services and find your way around Net365 — simply tell me what you need.</p>
+      <div class="voice-row"><button class="voice primary" id="speak" type="button">🔊 Hear my welcome</button><button class="voice" id="stopVoice" type="button">Ⅱ Stop voice</button></div>
+    </section>
+    <section aria-labelledby="services-title"><div class="section-head"><h2 id="services-title">How can I help today?</h2><span>Choose a service to continue</span></div>
+      <div class="grid" id="services">
+        <button class="tile" data-service="airtime"><span class="ico">📱</span><strong>Airtime</strong><small>Recharge a Nigerian mobile number</small></button>
+        <button class="tile" data-service="bills" id="tile-bills"><span class="ico">💡</span><strong>Bills & TV</strong><small>Pay supported electricity and TV bills</small></button>
+        <button class="tile" data-service="abroad" id="tile-abroad"><span class="ico">🌍</span><strong>International</strong><small>Send airtime to supported countries</small></button>
+        <button class="tile" data-service="wallet" id="tile-wallet"><span class="ico">💳</span><strong>Wallet</strong><small>Access wallet services where enabled</small></button>
+        <button class="tile" data-service="schedules"><span class="ico">⏰</span><strong>Scheduled payments</strong><small>Manage reminders and recurring plans</small></button>
+        <button class="tile" data-service="status"><span class="ico">📦</span><strong>Track a transaction</strong><small>Check the status of a recent order</small></button>
+        <button class="tile" data-service="business"><span class="ico">🏪</span><strong>Business payments</strong><small>Explore business payment options</small></button>
+        <button class="tile" data-service="link"><span class="ico">🔐</span><strong>Link your account</strong><small>Connect your Net365 account securely</small></button>
+      </div>
+    </section>
+    <aside class="note"><span class="spark">✦</span><div><strong>More than a menu. A smarter way to get things done.</strong><p>I'll guide you through each step. Before a payment is made, you'll see the details and be asked to confirm. Never share your password, PIN or one-time code in this welcome screen.</p></div></aside>
+    <footer class="footer">NET365 · YOUR WORLD OF DIGITAL PAYMENTS, INTELLIGENTLY CONNECTED</footer>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    (() => {
+      const tg = window.Telegram?.WebApp;
+      const channel = new URLSearchParams(location.search).get('channel') || (tg ? 'telegram' : 'web');
+      const toast = (message) => { const el=document.getElementById('toast'); el.textContent=message; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2600); };
+      if (tg) { tg.ready(); tg.expand(); try { tg.setHeaderColor('#101820'); tg.setBackgroundColor('#101820'); } catch (_) {} }
+      let botName = '';
+      const serviceFlags = {airtime:true,bills:true,international:false,wallet:false,schedules:true,tracking:true,business:true};
+      const serviceMap = {airtime:'airtime',bills:'bills',abroad:'abroad',wallet:'menu',schedules:'schedules',status:'status',business:'business',link:'link'};
+      fetch('/app/api/config').then(r=>r.ok?r.json():null).then(cfg=>{
+        if(!cfg?.ok)return; botName=cfg.bot||''; Object.assign(serviceFlags,cfg.services||{});
+        document.getElementById('tile-bills').hidden=!serviceFlags.bills;
+        document.getElementById('tile-abroad').hidden=!serviceFlags.international;
+        document.getElementById('tile-wallet').hidden=!serviceFlags.wallet;
+      }).catch(()=>{});
+      if(tg?.initData){
+        fetch('/app/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData})})
+          .then(r=>r.ok?r.json():null).then(me=>{if(me?.ok&&me.first_name){document.getElementById('title').innerHTML=`Welcome, <span class="gradient">${escapeHtml(me.first_name)}.</span>`;document.getElementById('greeting').textContent='I’m Net365 AI, your intelligent digital services companion. What can I help you take care of today?';}}).catch(()=>{});
+      }
+      function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+      function openService(service){
+        const command=serviceMap[service]; if(!command)return;
+        if(service==='abroad'&&!serviceFlags.international){toast('International recharge is not enabled here yet.');return;}
+        if(service==='bills'&&!serviceFlags.bills){toast('Bill payments are temporarily unavailable.');return;}
+        if(service==='wallet'&&!serviceFlags.wallet){toast('Wallet services are not enabled in this channel.');return;}
+        if(channel==='whatsapp'){
+          const text=service==='wallet'?'menu':command;
+          if(navigator.clipboard?.writeText){navigator.clipboard.writeText(text).then(()=>toast(`Copied “${text}”. Return to your Net365 WhatsApp chat and paste it.`)).catch(()=>toast(`Return to your Net365 WhatsApp chat and type: ${text}`));}
+          else toast(`Return to your Net365 WhatsApp chat and type: ${text}`);
+          return;
+        }
+        if(!botName){toast('Open the Net365 bot and choose this service from the chat menu.');return;}
+        const url=`https://t.me/${encodeURIComponent(botName)}?start=${encodeURIComponent(command)}`;
+        if(tg?.openTelegramLink){tg.openTelegramLink(url);}else{window.open(url,'_blank','noopener,noreferrer');}
+      }
+      document.querySelectorAll('[data-service]').forEach(btn=>btn.addEventListener('click',()=>openService(btn.dataset.service)));
+      document.getElementById('speak').addEventListener('click',()=>{
+        if(!('speechSynthesis' in window)){toast('Voice playback is not supported by this browser.');return;}
+        window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance('Welcome to Net365. I am your intelligent digital services assistant. I can help you recharge airtime, pay supported bills and access digital payment services. Choose a service, or return to the chat to tell me what you need.');u.rate=.96;u.pitch=1.04;u.lang='en-NG';window.speechSynthesis.speak(u);
+      });
+      document.getElementById('stopVoice').addEventListener('click',()=>{if('speechSynthesis'in window)window.speechSynthesis.cancel();});
+    })();
+  </script>
+</body>
+</html>
