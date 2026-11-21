@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Net365 Bot Growth</title>
+<style>
+:root{--bg:#060912;--p:rgba(16,22,40,.8);--l:rgba(140,160,210,.15);--t0:#f3f6fc;--t2:#98a5bf;--e:#ff6a1a;--wa:#34d27b;--tg:#4cc0f2;--fire:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547)}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--t0);padding:24px;line-height:1.5}
+.w{max-width:1000px;margin:0 auto}h1{font-size:26px;letter-spacing:-.03em;margin-bottom:4px}p{color:var(--t2);font-size:14px}
+form{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap}input{flex:1;min-width:220px;padding:12px 14px;border-radius:12px;border:1px solid var(--l);background:var(--p);color:var(--t0);font:inherit}
+button{padding:12px 18px;border-radius:12px;border:0;background:var(--fire);color:#fff;font-weight:700;cursor:pointer}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.k{border:1px solid var(--l);background:var(--p);border-radius:16px;padding:14px 16px}.k small{color:var(--t2);font-size:12.5px}.k b{display:block;font-size:26px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.c{border:1px solid var(--l);background:var(--p);border-radius:18px;padding:18px;margin-bottom:14px}h2{font-size:16px;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}th,td{padding:8px 6px;text-align:right;border-bottom:1px solid var(--l)}th:first-child,td:first-child{text-align:left}th{color:var(--t2);font-weight:500}
+svg{width:100%;height:150px;display:block}.n{color:var(--t2);font-size:12.5px;margin-top:8px}#err{color:#ff6b6b;font-size:14px;min-height:20px}
+@media(max-width:700px){.g{grid-template-columns:1fr 1fr}}
+</style></head><body><div class="w">
+<h1>Bot growth</h1><p>Is the /bots page bringing people to WhatsApp and Telegram? Last 30 days. Counts only, no personal data.</p>
+<form id="f"><input id="s" type="password" autocomplete="off" placeholder="Admin secret (kept in this tab only)" aria-label="Admin secret"><button>Show</button></form><div id="err"></div><div id="out" hidden>
+<div class="g" id="k"></div>
+<div class="c"><h2>New chats per day</h2><svg id="nc" viewBox="0 0 600 150" preserveAspectRatio="none"></svg><div class="n" id="ncn"></div></div>
+<div class="c"><h2>Where visitors came from</h2><table id="t"></table><div class="n">Telegram starts are counted when someone opens the bot from a tagged link. WhatsApp starts cannot be tied to a page, so compare "new chats per day" before and after.</div></div>
+</div>
+<script>
+var $=function(i){return document.getElementById(i)};
+$('f').onsubmit=function(e){e.preventDefault();$('err').textContent='';
+ fetch('/api/admin/bots/funnel',{headers:{'X-Admin-Secret':$('s').value}}).then(function(r){if(r.status===401)throw new Error('That secret was not accepted.');if(!r.ok)throw new Error('The server could not load this right now.');return r.json()}).then(function(j){
+  var T=j.totals||{},f=function(n){return Number(n||0).toLocaleString()};
+  $('k').innerHTML=[['Page visits',f(T.view)],['Taps on Start',f((T.click_wa||0)+(T.click_tg||0))],['Tap rate',T.tap_rate==null?'-':T.tap_rate+'%'],['Telegram starts',f(T.bot_start)]].map(function(x){return '<div class="k"><small>'+x[0]+'</small><b>'+x[1]+'</b></div>'}).join('');
+  var src=j.by_source||{},rows=Object.keys(src).sort(function(a,b){return (src[b].view||0)-(src[a].view||0)});
+  $('t').innerHTML='<tr><th>Source</th><th>Visits</th><th>WhatsApp taps</th><th>Telegram taps</th><th>Telegram starts</th></tr>'+rows.map(function(s){var x=src[s];return '<tr><td>'+s.replace(/[<>&]/g,'')+'</td><td>'+f(x.view)+'</td><td>'+f(x.click_wa)+'</td><td>'+f(x.click_tg)+'</td><td>'+f(x.bot_start)+'</td></tr>'}).join('')||'<tr><td>No visits recorded yet</td></tr>';
+  var nc=j.new_chats_by_day;
+  if(!nc){$('ncn').textContent='Your chat table has no date column, so daily growth cannot be shown.';$('nc').innerHTML=''}
+  else{var days=(j.daily_views||[]).map(function(d){return d.d}),W=600,H=150,v=days.map(function(d){var e=nc[d]||{whatsapp:0,telegram:0};return [e.whatsapp,e.telegram]}),m=Math.max.apply(null,v.map(function(a){return a[0]+a[1]}).concat([1])),bw=W/days.length;
+   $('nc').innerHTML=v.map(function(a,i){var hw=a[0]/m*(H-14),ht=a[1]/m*(H-14);return '<rect x="'+(i*bw+2)+'" y="'+(H-hw)+'" width="'+(bw-4)+'" height="'+hw+'" fill="#34d27b"/><rect x="'+(i*bw+2)+'" y="'+(H-hw-ht)+'" width="'+(bw-4)+'" height="'+ht+'" fill="#4cc0f2"/>'}).join('');
+   var tot=v.reduce(function(a,b){return a+b[0]+b[1]},0),h=v.slice(0,15).reduce(function(a,b){return a+b[0]+b[1]},0);$('ncn').textContent=tot+' new chats in 30 days. First half: '+h+'. Second half: '+(tot-h)+'. Green WhatsApp, blue Telegram.'}
+  $('out').hidden=false}).catch(function(e){$('err').textContent=e.message})};
+</script></div></body></html>

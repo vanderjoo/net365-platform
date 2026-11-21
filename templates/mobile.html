@@ -107,6 +107,22 @@ a{color:inherit}
 }
 .icon-btn.logged-in{background:var(--navy-1);color:#fff;border-color:var(--navy-1);font-size:15px}
 
+/* notifications bell */
+.icon-btn{position:relative}
+.icon-btn .nb-dot{position:absolute;top:4px;right:4px;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;line-height:16px;display:none}
+.icon-btn .nb-dot.show{display:block}
+.icon-btn.nb-alert{background:var(--brand-soft);border-color:var(--brand);color:var(--brand)}
+.icon-btn.nb-alert i{animation:nbRing 2.4s ease-in-out 3}
+@keyframes nbRing{0%,60%,100%{transform:rotate(0)}10%{transform:rotate(14deg)}20%{transform:rotate(-12deg)}30%{transform:rotate(8deg)}40%{transform:rotate(-6deg)}}
+@media (prefers-reduced-motion:reduce){.icon-btn.nb-alert i{animation:none}}
+.nb-list{max-height:60vh;overflow:auto;margin:0 -4px}
+.nb-item{display:flex;gap:12px;padding:14px 4px;border-bottom:1px solid var(--line)}
+.nb-item.unread{background:var(--brand-soft);border-radius:12px;padding-left:10px;padding-right:10px}
+.nb-ic{font-size:18px;line-height:1.3}
+.nb-t{font-weight:800;font-size:15px;color:var(--ink)}.nb-m{font-size:14px;color:var(--ink-2);margin-top:2px;line-height:1.4}.nb-d{font-size:12px;color:var(--ink-3);margin-top:4px}
+.nb-empty{padding:28px 8px;text-align:center;color:var(--ink-2);font-size:14px;line-height:1.5}.nb-empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+.nb-all{border:0;background:none;color:var(--brand);font-weight:800;font-size:14px;padding:12px 4px;width:100%}
+
 /* ---------- views ---------- */
 .app-view{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:4px 16px 24px}
 .view{display:none}
@@ -264,6 +280,12 @@ select.input{appearance:none;-webkit-appearance:none;
 .detect-card.warn{background:var(--warning-soft);border-color:#F3D88A}
 .detect-icon{width:38px;height:38px;border-radius:12px;background:var(--success);color:#fff;display:grid;place-items:center;font-size:15px;flex:none}
 .detect-card.warn .detect-icon{background:var(--warning)}
+.port-card{display:none;margin:10px 0;padding:14px;border-radius:14px;background:var(--warning-soft);border:1px solid #F3D88A}
+.port-card.show{display:block}
+.port-card p{margin:0 0 10px;font-size:14px;line-height:1.4;color:var(--ink)}
+.port-btns{display:flex;gap:8px;flex-wrap:wrap}
+.port-btns button{flex:1 1 140px;padding:11px 12px;border-radius:12px;border:1px solid var(--ink-2);background:#fff;color:var(--ink);font-weight:700;font-size:14px;cursor:pointer}
+.port-btns button.primary{background:var(--ink);color:#fff}
 .detect-info{flex:1;min-width:0}
 .detect-name{font-weight:800;font-size:15px;color:var(--ink)}
 .detect-sub{font-size:12.5px;color:var(--ink-2);margin-top:1px}
@@ -924,6 +946,7 @@ select.input{appearance:none;-webkit-appearance:none;
   </div>
   <div class="topbar-actions">
     <div class="wallet-chip" id="walletChip" style="display:none"><span id="walletChipValue"></span></div>
+    <button class="icon-btn" id="nbBell" onclick="nbOpen()" aria-label="Notifications"><i class="fas fa-bell"></i><span class="nb-dot" data-nb-badge></span></button>
     <button class="icon-btn" onclick="openSheet('supportSheet')" aria-label="Support"><i class="fas fa-headset"></i></button>
     <button class="icon-btn" id="avatarBtn" onclick="onAvatarTap()" aria-label="Account"><i class="fas fa-user"></i></button>
   </div>
@@ -962,12 +985,25 @@ select.input{appearance:none;-webkit-appearance:none;
       </div>
     </div>
 
-    <!-- Top 4 tiles -->
+<!-- ASK NET365 + LIVE PULSE (Power Grid v6) -->
+    <section class="pg-ask" id="pgAsk" aria-label="Ask Net365">
+      <div class="pg-head"><div class="pg-orb"></div><div><b>Ask Net365</b><small>Say what you need. Nothing is paid until you confirm.</small></div></div>
+      <form class="pg-row" id="pgAskForm" autocomplete="off">
+        <input id="pgAskInput" type="text" maxlength="240" enterkeyhint="go" aria-label="Ask Net365" placeholder="Pay ₦5,000 electricity on Aba Power…">
+        <button type="button" id="pgMic" style="display:none" aria-label="Speak your request"><i class="fas fa-microphone"></i></button>
+        <button type="submit" class="go">Ask</button>
+      </form>
+      <div class="pg-chips" id="pgChips"></div>
+      <div class="pg-reply" id="pgReply" aria-live="polite"></div>
+      <div class="pg-pulse" id="pgPulse"></div>
+    </section>
+
+        <!-- Top 4 tiles -->
     <div class="tile-row">
       <button class="tile" onclick="showView('recharge')"><span class="ico c-blue"><i class="fas fa-mobile-screen-button"></i></span><b>Airtime</b><small>Recharge</small></button>
-      <button class="tile" onclick="soonToast('Data bundles')"><span class="soon">SOON</span><span class="ico c-green"><i class="fas fa-globe"></i></span><b>Data</b><small>Buy data</small></button>
+      <button class="tile" onclick="Net365Hub.open('data')"><span class="ico c-green"><i class="fas fa-globe"></i></span><b>Data</b><small>Buy data</small></button>
       <button class="tile" onclick="window.location.href='/giftcards'"><span class="ico c-orange"><i class="fas fa-gift"></i></span><b>Gift Cards</b><small>Buy now</small></button>
-      <button class="tile" onclick="showView('utilities')"><span class="ico c-purple"><i class="fas fa-lightbulb"></i></span><b>Bills</b><small>Pay bills</small></button>
+      <button class="tile" onclick="Net365Hub.open()"><span class="ico c-purple"><i class="fas fa-lightbulb"></i></span><b>Bills</b><small>Pay bills</small></button>
     </div>
 
     <!-- Quick services -->
@@ -977,8 +1013,10 @@ select.input{appearance:none;-webkit-appearance:none;
       <button class="svc" onclick="window.location.href='/giftcards'"><span class="ico c-orange"><i class="fas fa-gift"></i></span><span class="t"><b>Gift Cards</b><small>Netflix, Spotify &amp; more</small></span></button>
       <button class="svc" onclick="window.location.href='/scheduler'"><span class="ico c-teal"><i class="fas fa-calendar-check"></i></span><span class="t"><b>Scheduled</b><small>Auto-pay &amp; reminders</small></span></button>
       <button class="svc" onclick="openRewards()"><span class="ico c-pink"><i class="fas fa-star"></i></span><span class="t"><b>Rewards</b><small>Refer &amp; earn</small></span></button>
-      <button class="svc" onclick="showView('utilities')"><span class="ico c-purple"><i class="fas fa-bolt"></i></span><span class="t"><b>Electricity</b><small>Prepaid &amp; postpaid</small></span></button>
-      <button class="svc" onclick="showView('utilities')"><span class="ico c-red"><i class="fas fa-tv"></i></span><span class="t"><b>Cable TV</b><small>DStv, GOtv, StarTimes</small></span></button>
+      <button class="svc" onclick="Net365Hub.open('electricity')"><span class="ico c-purple"><i class="fas fa-bolt"></i></span><span class="t"><b>Electricity</b><small>Prepaid &amp; postpaid</small></span></button>
+      <button class="svc" onclick="Net365Hub.open('tv')"><span class="ico c-red"><i class="fas fa-tv"></i></span><span class="t"><b>Cable TV</b><small>DStv, GOtv, StarTimes</small></span></button>
+      <button class="svc" data-hub="education" style="display:none" onclick="Net365Hub.open('education')"><span class="ico c-blue"><i class="fas fa-graduation-cap"></i></span><span class="t"><b>Education</b><small>WAEC &amp; JAMB PINs</small></span></button>
+      <button class="svc" data-hub="insurance" style="display:none" onclick="Net365Hub.open('insurance')"><span class="ico c-green"><i class="fas fa-shield-alt"></i></span><span class="t"><b>Insurance</b><small>Motor third-party</small></span></button>
       <button class="svc" onclick="window.location.href='/?full=1'"><span class="ico c-slate"><i class="fas fa-upload"></i></span><span class="t"><b>Bulk Recharge</b><small>Contacts &amp; CSV</small></span></button>
       <button class="svc" onclick="window.location.href='/business'"><span class="ico c-green"><i class="fas fa-briefcase"></i></span><span class="t"><b>Business</b><small>SMS &amp; receipt ads</small></span></button>
     </div>
@@ -1018,6 +1056,14 @@ select.input{appearance:none;-webkit-appearance:none;
           <div class="detect-sub" id="detectSub">Your network is detected automatically</div>
         </div>
         <div class="detect-badge" id="detectBadge">AUTO</div>
+      </div>
+
+      <div class="port-card" id="portCard" role="alert" aria-live="assertive">
+        <p id="portText"></p>
+        <div class="port-btns">
+          <button type="button" class="primary" id="portNew" onclick="choosePort(true)"></button>
+          <button type="button" id="portOld" onclick="choosePort(false)"></button>
+        </div>
       </div>
 
       <div class="country-row">
@@ -1117,6 +1163,9 @@ select.input{appearance:none;-webkit-appearance:none;
       <button class="back-btn" onclick="showView('home')" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
       <h1>History</h1>
     </div>
+    <div class="pg-seg" id="pgSeg" role="group" aria-label="History view"><button type="button" class="on" data-t="insights" aria-pressed="true">Insights</button><button type="button" data-t="activity" aria-pressed="false">Activity</button></div>
+    <div id="pgaWrap"></div>
+    <div id="pgActivity">
     <div class="section-title" style="margin-top:0">
       All activity
       <a onclick="exportTransactionsCSV()" role="button" tabindex="0"><i class="fas fa-download"></i> CSV</a>
@@ -1130,6 +1179,7 @@ select.input{appearance:none;-webkit-appearance:none;
     </div>
     <input type="text" id="txSearch" class="input" placeholder="Search reference, phone or amount" oninput="renderTransactions()" style="margin:10px 0 14px" aria-label="Search transactions" />
     <div class="tx-list" id="fullTxList"><div class="empty-state"><i class="fas fa-inbox"></i><p>No transactions to show</p></div></div>
+    </div>
   </section>
 
   <!-- ============================================================
@@ -1165,6 +1215,20 @@ select.input{appearance:none;-webkit-appearance:none;
     <button class="nav-item" onclick="onAvatarTap()"><span class="nav-icon"><i class="fas fa-user"></i></span><span class="nav-label">Profile</span></button>
   </div>
 </nav>
+
+<!-- ============ NOTIFICATIONS SHEET ============ -->
+<div class="sheet-backdrop" id="notifSheet" onclick="if(event.target===this) closeSheet('notifSheet')">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="notifTitle">
+    <div class="sheet-handle"></div>
+    <div class="sheet-relative">
+      <button class="sheet-close" onclick="closeSheet('notifSheet')" aria-label="Close"><i class="fas fa-times"></i></button>
+      <div class="sheet-title" id="notifTitle">Notifications</div>
+      <div class="sheet-sub">Receipts, reminders and account notices.</div>
+    </div>
+    <div class="nb-list" id="nbList"></div>
+    <button class="nb-all" type="button" onclick="nbMarkAll()">Mark all as read</button>
+  </div>
+</div>
 
 <!-- ============ SUPPORT SHEET ============ -->
 <div class="sheet-backdrop" id="supportSheet" onclick="if(event.target===this) closeSheet('supportSheet')">
@@ -1291,6 +1355,12 @@ select.input{appearance:none;-webkit-appearance:none;
     <div class="field">
       <label class="field-label" for="authPassword"><i class="fas fa-lock"></i> Password</label>
       <input type="password" id="authPassword" class="input" placeholder="At least 8 characters" autocomplete="current-password" />
+    </div>
+    <div class="field" id="authTermsField" style="display:none">
+      <label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;cursor:pointer">
+        <input type="checkbox" id="authTerms" style="width:20px;height:20px;margin-top:1px;flex:none">
+        <span>I have read and agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and Privacy Policy.</span>
+      </label>
     </div>
     <div id="authError" class="notice error" style="display:none;margin-bottom:14px" role="alert"></div>
     <button class="btn-hero" id="authSubmitBtn" onclick="submitAuth()"><span id="authSubmitLabel">Sign in</span></button>
@@ -1465,20 +1535,31 @@ const SERVICE_FEES = {
   GHS: 2.00, KES: 25.00, ZAR: 5.00
 };
 const CURRENCY_SYMBOLS = {
-  NGN:'₦', USD:'$', CAD:'CA$', GBP:'£', EUR:'€', GHS:'₵', KES:'KSh', ZAR:'R'
+  NGN:'₦', USD:'$', CAD:'CA$', GBP:'£', EUR:'€', GHS:'₵', KES:'KSh', ZAR:'R',
+  UGX:'USh', TZS:'TSh', AUD:'A$', NZD:'NZ$', CNY:'CN¥', HKD:'HK$', SGD:'S$', JPY:'¥',
+  INR:'₹', PKR:'₨', BDT:'৳', MYR:'RM', THB:'฿', IDR:'Rp', PHP:'₱', KRW:'₩', VND:'₫',
+  AED:'د.إ', SAR:'﷼', QAR:'ر.ق', CHF:'CHF ', SEK:'kr', NOK:'kr', DKK:'kr', PLN:'zł',
+  BRL:'R$', MXN:'MX$', TRY:'₺', EGP:'E£', ILS:'₪'
 };
+// Same country -> currency map the server uses (COUNTRY_CURRENCY_MAP in app.py).
 const COUNTRY_CURRENCY = {
-  NG:'NGN', GH:'GHS', KE:'KES', ZA:'ZAR',
+  NG:'NGN', GH:'GHS', KE:'KES', ZA:'ZAR', UG:'UGX', TZ:'TZS',
   US:'USD', CA:'CAD', GB:'GBP',
-  FR:'EUR', DE:'EUR', IT:'EUR', ES:'EUR', NL:'EUR', IE:'EUR', PT:'EUR',
-  AU:'AUD', NZ:'NZD', JP:'JPY', SG:'SGD', IN:'INR'
+  FR:'EUR', DE:'EUR', IT:'EUR', ES:'EUR', NL:'EUR', BE:'EUR', AT:'EUR', IE:'EUR', PT:'EUR', FI:'EUR', GR:'EUR',
+  CH:'CHF', SE:'SEK', NO:'NOK', DK:'DKK', PL:'PLN',
+  AU:'AUD', NZ:'NZD', JP:'JPY', CN:'CNY', HK:'HKD', SG:'SGD', MY:'MYR', TH:'THB', ID:'IDR', PH:'PHP', IN:'INR', KR:'KRW',
+  AE:'AED', SA:'SAR', QA:'QAR', TR:'TRY', IL:'ILS', EG:'EGP', BR:'BRL', MX:'MXN'
 };
+// Longest prefix wins. +1 is shared by US and Canada: US by default, the country dropdown overrides.
 const PREFIX_COUNTRY = {
   '234':'NG','233':'GH','254':'KE','256':'UG','255':'TZ','27':'ZA',
-  // +1 is shared by US and Canada. We default to US (majority);
-  // Canadian users override via the country dropdown.
-  '1':'US','44':'GB','91':'IN'
+  '1':'US','44':'GB','91':'IN',
+  '49':'DE','33':'FR','39':'IT','34':'ES','31':'NL','32':'BE','43':'AT','353':'IE','351':'PT','358':'FI','30':'GR',
+  '41':'CH','46':'SE','47':'NO','45':'DK','48':'PL',
+  '61':'AU','64':'NZ','81':'JP','86':'CN','852':'HK','65':'SG','60':'MY','66':'TH','62':'ID','63':'PH','82':'KR',
+  '971':'AE','966':'SA','974':'QA','972':'IL','90':'TR','20':'EG','55':'BR','52':'MX'
 };
+function symbolFor(cur){ return CURRENCY_SYMBOLS[cur] || (cur ? cur + ' ' : '₦'); }
 
 let manualCountryOverride = null;
 let currentCountry = 'NG';
@@ -1528,6 +1609,72 @@ function closeSheet(id){
 }
 
 // ============================================================
+// NOTIFICATIONS
+// ============================================================
+function NB_SIGNED(){ return !!currentUser; }
+
+/* ===== Notifications bell: shows the account's alerts (/api/notifications), marks them read when opened ===== */
+var NB = { list: [], timer: null, open: false };
+function nbEsc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function nbAgo(v){
+  var d = new Date(String(v || '').replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(v || '')) ? '' : 'Z'));
+  if (isNaN(d)) return '';
+  var m = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (m < 1) return 'Just now'; if (m < 60) return m + ' min ago';
+  var h = Math.floor(m / 60); if (h < 24) return h + ' hr ago';
+  var dd = Math.floor(h / 24); return dd < 7 ? dd + (dd === 1 ? ' day ago' : ' days ago') : d.toLocaleDateString();
+}
+function nbIsRead(n){ return !!(n.is_read || n.read || n.read_at); }
+function nbIcon(t){ t = String(t || '').toLowerCase(); return t === 'success' ? '✅' : t === 'warning' || t === 'error' ? '⚠️' : '🔔'; }
+function nbSignedIn(){ try { return !!(typeof NB_SIGNED === 'function' ? NB_SIGNED() : false); } catch (e) { return false; } }
+async function nbLoad(){
+  if (!nbSignedIn()) { NB.list = []; nbBadge(0); return; }
+  try {
+    var r = await fetch('/api/notifications?limit=20', { credentials: 'include', headers: { Accept: 'application/json' } });
+    if (!r.ok) return;
+    var d = await r.json();
+    if (!d || !d.success) return;
+    NB.list = d.notifications || [];
+    nbBadge(typeof d.unread_count === 'number' ? d.unread_count : NB.list.filter(function(n){ return !nbIsRead(n); }).length);
+    if (NB.open) nbRender();
+  } catch (e) {}
+}
+function nbBadge(n){
+  document.querySelectorAll('#nbBell').forEach(function(b){ b.classList.toggle('nb-alert', n > 0); b.setAttribute('aria-label', n > 0 ? 'Notifications, ' + n + ' unread' : 'Notifications'); });
+  document.querySelectorAll('[data-nb-badge]').forEach(function(b){
+    b.textContent = n > 9 ? '9+' : String(n || '');
+    b.classList.toggle('show', n > 0);
+  });
+}
+function nbRender(){
+  var box = document.getElementById('nbList'); if (!box) return;
+  if (!nbSignedIn()) { box.innerHTML = '<div class="nb-empty"><b>Sign in to see your alerts</b>Payment receipts, scheduled-payment reminders and account notices show up here.</div>'; return; }
+  if (!NB.list.length) { box.innerHTML = '<div class="nb-empty"><b>Nothing yet</b>When you buy airtime, pay a bill or a scheduled payment runs, you will see it here.</div>'; return; }
+  box.innerHTML = NB.list.map(function(n){
+    return '<div class="nb-item' + (nbIsRead(n) ? '' : ' unread') + '" data-id="' + nbEsc(n.id) + '"><span class="nb-ic">' + nbIcon(n.type) + '</span><div><div class="nb-t">' + nbEsc(n.title || 'Notification') + '</div><div class="nb-m">' + nbEsc(n.message || n.body || '') + '</div><div class="nb-d">' + nbEsc(nbAgo(n.created_at)) + '</div></div></div>';
+  }).join('');
+}
+async function nbMarkAll(){
+  var unread = NB.list.filter(function(n){ return !nbIsRead(n) && n.id != null; });
+  if (!unread.length) return;
+  unread.forEach(function(n){ n.is_read = 1; });
+  nbBadge(0); nbRender();
+  await Promise.all(unread.slice(0, 30).map(function(n){
+    return fetch('/api/notifications/read/' + encodeURIComponent(n.id), { method: 'POST', credentials: 'include' }).catch(function(){});
+  }));
+}
+function nbStart(){
+  nbLoad();
+  if (!NB.timer) NB.timer = setInterval(nbLoad, 60000);
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) nbLoad(); });
+}
+
+function nbOpen(){ openSheet('notifSheet'); NB.open = true; nbRender(); nbLoad(); }
+(function(){ var c = window.closeSheet; window.closeSheet = function(id){ if (id === 'notifSheet') NB.open = false; return c.apply(this, arguments); }; })();
+(function(){ var u = window.updateAuthUI; if (typeof u === 'function') window.updateAuthUI = function(){ var r = u.apply(this, arguments); nbLoad(); return r; }; })();
+document.addEventListener('DOMContentLoaded', nbStart);
+
+// ============================================================
 // TOAST
 // ============================================================
 function toast(msg, type='info'){
@@ -1558,22 +1705,45 @@ function detectCountryFromPhone(phone){
   if (manualCountryOverride) return manualCountryOverride;
   let digits = String(phone||'').replace(/\D/g,'');
   if (!digits) return null;
-  if (digits.startsWith('234')) return 'NG';
-  if (digits.startsWith('233')) return 'GH';
-  if (digits.startsWith('254')) return 'KE';
-  if (digits.startsWith('256')) return 'UG';
-  if (digits.startsWith('255')) return 'TZ';
-  if (digits.startsWith('27')) return 'ZA';
-  if (digits.startsWith('44')) return 'GB';
-  if (digits.startsWith('91')) return 'IN';
-  if (digits.startsWith('1')) return 'US';
-  if (digits.startsWith('0')) return 'NG';
-  return 'NG';
+  // Nigerian local format 0803...: a single leading 0 is a trunk prefix, not "00" international dialling.
+  if (digits.startsWith('0') && !digits.startsWith('00') && digits.length >= 10) return 'NG';
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  for (const len of [3,2,1]){
+    const c = PREFIX_COUNTRY[digits.slice(0,len)];
+    if (c) return c;
+  }
+  return null; // unknown: keep what is selected instead of guessing Nigeria
+}
+
+// One place that switches country AND repaints everything that shows a currency.
+function applyCountry(code){
+  const cur = COUNTRY_CURRENCY[code];
+  if (!code || !cur) return false;
+  currentCountry = code;
+  currentCurrency = cur;
+  currentSymbol = symbolFor(cur);
+  repaintCurrency();
+  return true;
+}
+function repaintCurrency(){
+  const symEl = document.getElementById('amtSymbol');
+  if (symEl) symEl.textContent = currentSymbol;
+  const hint = document.getElementById('n365CurrencyHint');
+  if (hint) hint.textContent = currentCurrency;
+  const sel = document.getElementById('countryOverrideSelect');
+  if (sel && !manualCountryOverride && sel.value !== '') sel.value = '';
+  updateBreakdown();
 }
 
 function setManualCountry(code){
   manualCountryOverride = code || null;
   const phone = document.getElementById('phoneInput').value.trim();
+  if (code && COUNTRY_CURRENCY[code] && code !== currentCountry){
+    selectedOperator = null; detectedOperator = null;
+    applyCountry(code);
+    loadManualOperators();
+    autoSelectPaymentMethod();
+  }
   if (phone.length >= 5){
     onPhoneInput();
   }
@@ -1582,23 +1752,30 @@ function setManualCountry(code){
 // ============================================================
 // AUTO-SELECT PAYMENT METHOD per country
 // ============================================================
+let _prefSeq = 0;
 async function autoSelectPaymentMethod(){
   const country = currentCountry || 'NG';
+  const seq = ++_prefSeq;
   try{
     const res = await fetch(`${API_BASE}/payment/preferences`, {
       credentials: 'include',
       headers: { 'X-Country-Code': country }
     });
     const data = await res.json();
+    if (seq !== _prefSeq || country !== currentCountry) return; // a newer country choice won the race
     if (data.success){
-      if (data.recommended_provider){
-        selectPM(data.recommended_provider);
+      // learn symbols the server knows but this page does not
+      if (data.supported_currencies){
+        for (const [code, info] of Object.entries(data.supported_currencies)){
+          if (!CURRENCY_SYMBOLS[code] && info && info.symbol) CURRENCY_SYMBOLS[code] = info.symbol;
+        }
       }
-      if (data.currency){
+      if (data.recommended_provider) selectPM(data.recommended_provider);
+      // Only trust the server's currency when it answered for the country we asked about.
+      if (data.currency && String(data.country||'').toUpperCase() === country){
         currentCurrency = data.currency;
-        currentSymbol = CURRENCY_SYMBOLS[currentCurrency] || data.currency;
-        const symEl = document.getElementById('amtSymbol');
-        if (symEl) symEl.textContent = currentSymbol;
+        currentSymbol = symbolFor(currentCurrency);
+        repaintCurrency();
       }
     }
   } catch(e){
@@ -1612,6 +1789,7 @@ async function autoSelectPaymentMethod(){
 function onPhoneInput(){
   const phone = document.getElementById('phoneInput').value.trim();
   if (phone.replace(/\D/g,'').length < 8){
+    hidePort();
     document.getElementById('detectCard').classList.remove('show');
     document.getElementById('manualBlock').classList.remove('show');
     detectedOperator = null;
@@ -1622,10 +1800,8 @@ function onPhoneInput(){
 
   const detected = detectCountryFromPhone(phone);
   if (detected && detected !== currentCountry && COUNTRY_CURRENCY[detected]){
-    currentCountry = detected;
-    currentCurrency = COUNTRY_CURRENCY[detected];
-    currentSymbol = CURRENCY_SYMBOLS[currentCurrency] || '$';
-    document.getElementById('amtSymbol').textContent = currentSymbol;
+    selectedOperator = null; detectedOperator = null;
+    applyCountry(detected);
     loadManualOperators();
     autoSelectPaymentMethod();
   }
@@ -1635,7 +1811,57 @@ function onPhoneInput(){
   updatePayButton();
 }
 
+// ---- Network memory: numbers get ported, so a past success is a hint, never an answer.
+let _portCtx = null;
+function hidePort(){ _portCtx = null; const p = document.getElementById('portCard'); if (p) p.classList.remove('show'); }
+async function applyNetworkMemory(phone, isGuess, op, seq){
+  hidePort();
+  let mem = null;
+  try{
+    const r = await fetch(`${API_BASE}/network-memory?phone=${encodeURIComponent(phone)}&country=${encodeURIComponent(currentCountry)}`, {credentials:'include'});
+    if (r.ok){ const j = await r.json(); if (j && j.found && j.operator_id) mem = j; }
+  } catch(e){ /* not signed in or offline: detection alone */ }
+  if (!mem || seq !== window._detectSeq) return;
+  const detectedId = String(op.operatorId || op.id);
+  if (String(mem.operator_id) === detectedId) return;                 // same as before: nothing to ask
+  const memName = mem.operator_name || 'your previous network';
+  const detName = op.name || 'the detected network';
+  if (isGuess){                                                      // detection is only a stand-in: trust the last success
+    selectedOperator = { operatorId: String(mem.operator_id), name: memName, countryCode: currentCountry, currency: currentCurrency };
+    detectedOperator = selectedOperator;
+    document.getElementById('detectName').textContent = memName;
+    document.getElementById('detectSub').textContent = 'From your last successful top-up. Change it below if the number moved.';
+    document.getElementById('detectBadge').textContent = 'LAST USED';
+    return;
+  }
+  // live detection disagrees with the past: ask, and do not let the order continue until answered
+  selectedOperator = null;
+  _portCtx = { phone, mem, op };
+  document.getElementById('portText').textContent = `This number was on ${memName} last time, but we now detect ${detName}. Did it move to ${detName}?`;
+  document.getElementById('portNew').textContent = `Yes, ${detName}`;
+  document.getElementById('portOld').textContent = `No, still ${memName}`;
+  document.getElementById('portCard').classList.add('show');
+}
+async function choosePort(useNew){
+  if (!_portCtx) return;
+  const { phone, mem, op } = _portCtx;
+  const id = useNew ? String(op.operatorId || op.id) : String(mem.operator_id);
+  const name = useNew ? (op.name || 'Network operator') : (mem.operator_name || 'Network operator');
+  selectedOperator = { operatorId: id, name, countryCode: currentCountry, currency: op.currencyCode || op.localCurrencyCode || currentCurrency };
+  detectedOperator = selectedOperator;
+  hidePort();
+  document.getElementById('detectName').textContent = name;
+  document.getElementById('detectSub').textContent = useNew ? 'Confirmed: the number moved' : 'Confirmed: same network as before';
+  try{
+    await fetch(`${API_BASE}/network-memory`, {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone, country: currentCountry, operator_id: id, operator_name: name})});
+  } catch(e){}
+  updatePayButton();
+}
+
 async function runAutoDetect(phone){
+  const seq = window._detectSeq = (window._detectSeq || 0) + 1;
+  hidePort();
   const card = document.getElementById('detectCard');
   card.classList.add('show');
   card.classList.remove('warn');
@@ -1672,6 +1898,8 @@ async function runAutoDetect(phone){
       document.getElementById('manualBlock').classList.toggle('show', isGuess);
       if (isGuess) loadManualOperators();
 
+      await applyNetworkMemory(phone, isGuess, op, seq);
+      if (seq !== window._detectSeq) return;
       updatePayButton();
       return;
     }
@@ -1722,6 +1950,12 @@ function selectManualOperator(id){
     currency: currentCurrency
   };
   detectedOperator = selectedOperator;
+  hidePort();
+  try{
+    const ph = (document.getElementById('phoneInput') || {}).value || '';
+    if (ph) fetch(`${API_BASE}/network-memory`, {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone: ph, country: currentCountry, operator_id: String(id), operator_name: opt.textContent})}).catch(()=>{});
+  } catch(e){}
   document.getElementById('detectCard').classList.remove('warn');
   document.getElementById('detectIcon').innerHTML = '<i class="fas fa-check"></i>';
   document.getElementById('detectName').textContent = opt.textContent;
@@ -1740,12 +1974,14 @@ function setQuick(v, evt){
   if (evt && evt.target) evt.target.classList.add('active');
   updateBreakdown();
 }
-function getFee(){
-  return SERVICE_FEES[currentCurrency] !== undefined ? SERVICE_FEES[currentCurrency] : 100;
+// One fee rule, same as the website and enforced by the server: FEE_PERCENT of the airtime.
+const FEE_PERCENT = 2.5;
+function getFee(amt){
+  return Math.round((Number(amt) || 0) * FEE_PERCENT) / 100;
 }
 function updateBreakdown(){
   const amt = parseFloat(document.getElementById('amountInput').value) || 0;
-  const fee = amt > 0 ? getFee() : 0;
+  const fee = amt > 0 ? getFee(amt) : 0;
   const total = amt + fee;
   document.getElementById('bdAirtime').textContent = `${currentSymbol}${amt.toFixed(2)}`;
   document.getElementById('bdFee').textContent = `${currentSymbol}${fee.toFixed(2)}`;
@@ -1758,7 +1994,7 @@ function updatePayButton(){
   const hint = document.getElementById('payBtnHint');
   const amt = parseFloat(document.getElementById('amountInput').value) || 0;
   const phone = document.getElementById('phoneInput').value.trim();
-  const fee = amt > 0 ? getFee() : 0;
+  const fee = amt > 0 ? getFee(amt) : 0;
   const total = amt + fee;
 
   if (!phone || phone.replace(/\D/g,'').length < 8){
@@ -1811,7 +2047,7 @@ function openPaymentModal(){
   }
   const phone = document.getElementById('phoneInput').value.trim();
   const amt = parseFloat(document.getElementById('amountInput').value) || 0;
-  const fee = getFee();
+  const fee = getFee(amt);
   const total = amt + fee;
 
   document.getElementById('modalOperator').textContent = selectedOperator.name || '—';
@@ -1854,23 +2090,50 @@ async function processPayment(){
   status.textContent = 'Connecting to payment gateway…';
 
   try{
-    const cleanPhone = pendingPayment.phone.replace(/\s/g,'').replace(/^\+?234/,'').replace(/^0/,'');
+    // Send the number as typed (digits only): the server normalises it per country. Stripping a
+    // leading 0 / 234 here was lossy for non-Nigerian numbers.
+    const cleanPhone = pendingPayment.phone.replace(/[^\d+]/g,'');
     const res = await fetch(`${API_BASE}/payment/init`, {
       method:'POST',
       credentials:'include',
       headers:{'Content-Type':'application/json','Accept':'application/json'},
       body:JSON.stringify({
         type:'topup',
-        amount: pendingPayment.amount,
+        amount: Math.round(pendingPayment.amount * 100) / 100,
+        service_amount: Math.round(pendingPayment.airtimeAmount * 100) / 100,   // airtime only; the fee stays with Net365
         currency: pendingPayment.currency,
         operator_id: pendingPayment.operator_id,
+        operator_name: pendingPayment.operator_name,
         phone: cleanPhone || pendingPayment.phone,
         country_code: pendingPayment.country_code,
         provider: pendingPayment.provider,
+        email: (currentUser && currentUser.email) || undefined,
+        confirm_network: pendingPayment.confirm_network || undefined,
         return_url: window.location.origin + '/payment/success'
       })
     });
-    const data = await res.json();
+    // Read as text first: a gateway/proxy error page is HTML, and res.json() would throw a cryptic
+    // "Unexpected token <" instead of telling the customer what happened.
+    const raw = await res.text();
+    let data = {};
+    try { data = JSON.parse(raw); } catch(_) { /* non-JSON body */ }
+    if (!res.ok && !data.error){
+      const map = {401:'Your session expired. Please sign in again.',403:'This action is not allowed for your account.',
+                   429:'Too many attempts. Please wait a minute and try again.',502:'Payment service is busy. Please try again.',
+                   503:'Payment service is temporarily unavailable. Please try again.',504:'Payment service timed out. Please try again.'};
+      throw new Error(map[res.status] || `Payment failed to start (HTTP ${res.status}).`);
+    }
+    if (data.error_code === 'EMAIL_NOT_VERIFIED'){
+      throw new Error('Please verify your email address first. Check your inbox for the code.');
+    }
+    if (res.status === 409 && data.code === 'NETWORK_MISMATCH'){
+      const goOn = window.confirm('⚠️ ' + data.error + '\n\nPress OK to continue with ' + data.chosen + ', or Cancel to change the network.');
+      if (goOn){ pendingPayment.confirm_network = true; isProcessing = false; btn.disabled = false; btn.innerHTML = originalHtml; setTimeout(processPayment, 0); return; }
+      throw new Error('Not charged. Please select ' + data.detected + ' for this number, or check the number.');
+    }
+    if (data.code === 'LIMIT_EXCEEDED' || data.code === 'WALLET_DISABLED' || data.code === 'RATES_UNAVAILABLE'){
+      throw new Error(data.error);
+    }
     if (!data.success) throw new Error(data.error || 'Payment failed to initialize');
     const url = data.authorization_url || data.checkout_url;
     if (url){ window.location.href = url; return; }
@@ -1904,6 +2167,7 @@ function toggleAuthMode(){
   document.getElementById('authTitle').textContent = isAuthRegisterMode ? 'Create account' : 'Welcome back';
   document.getElementById('authSub').textContent = isAuthRegisterMode ? 'Join Net365 in seconds' : 'Sign in to your Net365 account';
   document.getElementById('authNameField').style.display = isAuthRegisterMode ? 'block' : 'none';
+  document.getElementById('authTermsField').style.display = isAuthRegisterMode ? 'block' : 'none';
   document.getElementById('authSubmitLabel').textContent = isAuthRegisterMode ? 'Create account' : 'Sign in';
   document.getElementById('authSwitchText').textContent = isAuthRegisterMode ? 'Already have an account?' : 'New to Net365?';
   document.getElementById('authSwitchAction').textContent = isAuthRegisterMode ? 'Sign in' : 'Create an account';
@@ -1922,6 +2186,7 @@ async function submitAuth(){
   if (!email || !password){ errEl.textContent = 'Email and password required'; errEl.style.display = 'block'; return; }
   if (isAuthRegisterMode && !name){ errEl.textContent = 'Please enter your full name'; errEl.style.display = 'block'; return; }
   if (password.length < 8){ errEl.textContent = 'Password must be at least 8 characters'; errEl.style.display = 'block'; return; }
+  if (isAuthRegisterMode && !document.getElementById('authTerms').checked){ errEl.textContent = 'Please read and accept the Terms to create an account'; errEl.style.display = 'block'; return; }
 
   const btn = document.getElementById('authSubmitBtn');
   btn.disabled = true;
@@ -1930,7 +2195,7 @@ async function submitAuth(){
   try{
     const endpoint = isAuthRegisterMode ? '/api/auth/register' : '/api/auth/login';
     const refCode = (new URLSearchParams(location.search).get('ref') || (()=>{try{return sessionStorage.getItem('net365_ref')}catch(e){return null}})() || '').trim().toUpperCase();
-    const body = isAuthRegisterMode ? { email, password, full_name: name, ...(refCode ? { referral_code: refCode } : {}) } : { email, password };
+    const body = isAuthRegisterMode ? { email, password, full_name: name, accept_terms: true, terms_version: window.__net365TermsVersion || undefined, channel: 'mobile', ...(refCode ? { referral_code: refCode } : {}) } : { email, password };
     const res = await fetch(endpoint, {
       method:'POST',
       credentials:'include',
@@ -1946,6 +2211,7 @@ async function submitAuth(){
     await refreshUserData();
     updateAuthUI();
     selectPM(selectedPaymentMethod);
+    try { if (window.Net365Terms) Net365Terms.gate('mobile'); } catch(e) {}
     if (isAuthRegisterMode && currentUser && !Number(currentUser.email_verified)) setTimeout(openVerifySheet, 450);
   } catch(e){
     errEl.textContent = e.message;
@@ -3049,6 +3315,7 @@ async function checkSession(){
         updateAuthUI();
         await refreshUserData();
         loadReferralCode();
+        try { if (window.Net365Terms) Net365Terms.gate('mobile'); } catch(e) {}
         return;
       }
     }
@@ -3287,7 +3554,7 @@ async function submitForgot(){
       document.getElementById('forgotStep2').style.display = 'block';
       document.getElementById('forgotSub').textContent = 'Enter the code we emailed you and choose a new password.';
       setMsg('forgotMsg', d.message || 'If that email is registered, a reset code has been sent.', 'ok');
-      btn.innerHTML = '<span>Reset password</span>';
+      btn.innerHTML = '<span id="forgotBtnLabel">Reset password</span>';
     } else {
       const code = document.getElementById('forgotCode').value.trim();
       const pw = document.getElementById('forgotNewPw').value;
@@ -3301,11 +3568,11 @@ async function submitForgot(){
       toast('Password updated. Please sign in.', 'success');
       document.getElementById('authEmail').value = email;
       openSheet('authModal');
-      btn.innerHTML = '<span>Send code</span>';
+      btn.innerHTML = '<span id="forgotBtnLabel">Send code</span>';
     }
   } catch(e){
     setMsg('forgotMsg', e.message);
-    btn.innerHTML = `<span>${label}</span>`;
+    btn.innerHTML = `<span id="forgotBtnLabel">${label}</span>`;
   } finally { btn.disabled = false; }
 }
 
@@ -3329,5 +3596,1129 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </script>
 <script src="/pwa.js" defer></script>
+<script src="/onepay.js" defer></script>
+<script>
+/* Hide wallet features when the server has wallets switched off (WALLET_ENABLED=false). */
+(function(){
+  fetch('/api/app/config',{credentials:'include'}).then(function(r){return r.json();}).then(function(cfg){
+    if(!cfg || cfg.wallet_enabled !== false) return;
+    window.NET365_WALLET_OFF = true;
+    var st=document.createElement('style');
+    st.textContent = '#walletFuturistic,#walletPaymentMethodBtn,#homeFundBtn,#walletChip,[data-method="wallet"],'
+      + '[onclick*="handleAddMoneyClick"],[onclick*="onFundWallet"],[onclick*="showView(\'wallet\')"],'
+      + '[onclick*="selectBulkPaymentMethod(\'wallet\'"]{display:none !important}';
+    document.head.appendChild(st);
+    try{
+      if (typeof selectedPaymentMethod !== 'undefined' && selectedPaymentMethod === 'wallet') {
+        if (typeof selectPM === 'function') selectPM('paystack');
+      }
+    }catch(e){}
+  }).catch(function(){});
+})();
+</script>
+<script>
+/* NET365 Terms client: shared by the website (index.html) and the mobile app (mobile.html). No dependencies.
+ *   Net365Terms.load()          -> fetches the current version (also sets window.__net365TermsVersion)
+ *   Net365Terms.gate(channel)   -> call after a user is signed in. If they have not accepted the current Terms,
+ *                                  shows a screen they cannot dismiss until they accept (or decline and sign out).
+ * Fails open on network errors: a hiccup in this check never locks a customer out of their account. */
+(function () {
+  'use strict';
+  var S = { info: null, loading: null, shown: false };
+
+  function api(path, opts) {
+    var o = Object.assign({ credentials: 'include', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' } }, opts || {});
+    return fetch(path, o).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, data: d }; });
+    });
+  }
+
+  function load() {
+    if (S.loading) return S.loading;
+    S.loading = api('/api/legal/terms/current').then(function (r) {
+      if (r.ok && r.data && r.data.success) {
+        S.info = r.data;
+        window.__net365TermsVersion = r.data.version;
+        window.__net365TermsAvailable = !!r.data.available;
+      }
+      return S.info;
+    }).catch(function () { return null; });
+    return S.loading;
+  }
+
+  var CSS = '#n365t{position:fixed;inset:0;z-index:2147483000;background:rgba(10,10,14,.72);display:flex;align-items:center;justify-content:center;padding:16px;font-family:-apple-system,Segoe UI,Roboto,sans-serif}' +
+    '#n365t .c{background:#fff;color:#1e293b;max-width:440px;width:100%;max-height:92vh;overflow:auto;border-radius:16px;padding:22px 20px;box-shadow:0 20px 60px rgba(0,0,0,.4)}' +
+    '@media (prefers-color-scheme:dark){ #n365t .c{background:#1c1c20;color:#e8e8ec}#n365t .m{color:#9a9aa6}#n365t .o{border-color:#34343c}}' +
+    '#n365t .b{height:4px;border-radius:2px;background:linear-gradient(90deg,#E53935,#FF6D00);margin-bottom:16px}' +
+    '#n365t h2{margin:0 0 6px;font-size:20px}#n365t p,#n365t li{font-size:14px;line-height:1.55}#n365t ul{padding-left:18px;margin:8px 0 12px}' +
+    '#n365t .m{color:#64748b;font-size:13px}#n365t a{color:#E53935}' +
+    '#n365t label{display:flex;gap:10px;align-items:flex-start;margin:14px 0;font-size:14px;cursor:pointer}#n365t input[type=checkbox]{width:20px;height:20px;margin-top:1px;flex:none}' +
+    '#n365t button{width:100%;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}' +
+    '#n365t .go{background:linear-gradient(90deg,#E53935,#FF6D00);color:#fff}#n365t .go[disabled]{opacity:.5;cursor:not-allowed}' +
+    '#n365t .o{background:transparent;border:1px solid #cbd5e1;color:inherit;font-weight:600}#n365t .e{color:#c93434;font-size:13px;margin-top:8px;display:none}';
+
+  function show(channel) {
+    if (S.shown || document.getElementById('n365t')) return;
+    S.shown = true;
+    if (!document.getElementById('n365t-style')) {
+      var st = document.createElement('style'); st.id = 'n365t-style'; st.textContent = CSS; document.head.appendChild(st);
+    }
+    var d = document.createElement('div');
+    d.id = 'n365t'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 'n365t-h');
+    d.innerHTML = '<div class="c"><div class="b"></div><h2 id="n365t-h">Please review our Terms</h2>' +
+      '<p class="m">Before you continue, please accept the Net365 Terms of Service (version ' + (S.info.version || '') + ').</p>' +
+      '<ul><li>Net365 is a payments and digital-services platform. Some services are delivered by third parties.</li>' +
+      '<li>Net365 staff will <b>never</b> ask for your PIN, OTP or password.</li>' +
+      '<li>We log activity and may automatically block suspicious access to keep your money safe.</li>' +
+      '<li>You can contact support from the app or website at any time.</li></ul>' +
+      '<p><a href="/terms" target="_blank" rel="noopener">Read the full Terms and Conditions</a></p>' +
+      '<label><input type="checkbox" id="n365t-ck"><span>I have read and agree to the Terms of Service and Privacy Policy.</span></label>' +
+      '<button class="go" id="n365t-ok" disabled>Accept and continue</button>' +
+      '<button class="o" id="n365t-no">Decline and sign out</button><div class="e" id="n365t-err" role="alert"></div></div>';
+    document.body.appendChild(d);
+    var ck = document.getElementById('n365t-ck'), ok = document.getElementById('n365t-ok'), no = document.getElementById('n365t-no'), er = document.getElementById('n365t-err');
+    ck.addEventListener('change', function () { ok.disabled = !ck.checked; });
+    ok.addEventListener('click', function () {
+      ok.disabled = true; ok.textContent = 'Saving...'; er.style.display = 'none';
+      api('/api/legal/accept', { method: 'POST', body: JSON.stringify({ version: S.info.version, channel: channel || 'web' }) }).then(function (r) {
+        if (r.ok && r.data && r.data.success) { d.remove(); S.shown = false; return; }
+        er.textContent = (r.data && r.data.error) || 'Could not save. Please try again.'; er.style.display = 'block';
+        ok.disabled = !ck.checked; ok.textContent = 'Accept and continue';
+        if (r.status === 409) { S.loading = null; load(); }
+      }).catch(function () { er.textContent = 'No connection. Please try again.'; er.style.display = 'block'; ok.disabled = false; ok.textContent = 'Accept and continue'; });
+    });
+    no.addEventListener('click', function () {
+      api('/api/auth/logout', { method: 'POST' }).catch(function () {}).then(function () { location.reload(); });
+    });
+    setTimeout(function () { try { ck.focus(); } catch (e) {} }, 50);
+  }
+
+  function gate(channel) {
+    return load().then(function (info) {
+      if (!info || !info.available) return;
+      return api('/api/legal/status').then(function (r) {
+        if (r.ok && r.data && r.data.success && r.data.accepted === false) show(channel);
+      });
+    }).catch(function () { /* fail open */ });
+  }
+
+  window.Net365Terms = { load: load, gate: gate };
+  load();
+})();
+
+</script>
+<script>
+/* NET365 Support client: shared by the website (index.html) and the mobile app (mobile.html). No dependencies.
+ *   Net365Support.open()   opens the support panel (list of reports, new report, conversation, reply, "is it fixed?")
+ *   A small floating "Help" button is added automatically; call Net365Support.hideButton() if you have your own entry point.
+ * Everything customer-supplied is written with textContent, never innerHTML. */
+(function () {
+  'use strict';
+  var CH = (/mobile/i.test(location.pathname) || document.querySelector('meta[name="net365-channel"][content="mobile"]')) ? 'mobile' : 'web';
+  var CATS = [['failed', 'Failed or slow transaction'], ['missing', 'Payment taken, service not received'], ['wrong', 'Wrong amount or wrong service'],
+    ['login', 'Login or account problem'], ['security', 'Security concern (someone else used my account)'], ['support', 'Poor customer service'], ['other', 'Something else']];
+  var ST = { OPEN: 'Open', UNDER_REVIEW: 'Under review', IN_PROGRESS: 'In progress', WAITING_CUSTOMER: 'Waiting for your reply', RESOLVED: 'Resolved', CONFIRMED: 'Closed', REOPENED: 'Reopened' };
+  var root, body, btn, state = { ticket: null };
+
+  function api(path, opts) {
+    var o = Object.assign({ credentials: 'include', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' } }, opts || {});
+    return fetch(path, o).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); });
+  }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function clear() { while (body.firstChild) body.removeChild(body.firstChild); }
+  function when(s) { try { return new Date(s.replace(' ', 'T') + 'Z').toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { return s || ''; } }
+
+  var CSS = '#n365s-b{position:fixed;right:16px;bottom:' + (CH === 'mobile' ? '88px' : '18px') + ';z-index:2147482000;border:0;border-radius:999px;padding:11px 16px;font:700 14px -apple-system,Segoe UI,Roboto,sans-serif;color:#fff;background:linear-gradient(90deg,#E53935,#FF6D00);box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer}' +
+    '#n365s-b .d{display:inline-block;min-width:18px;height:18px;line-height:18px;border-radius:9px;background:#fff;color:#E53935;font-size:11px;margin-left:6px;text-align:center}' +
+    '#n365s{position:fixed;inset:0;z-index:2147482500;background:rgba(10,10,14,.6);display:none;align-items:flex-end;justify-content:center;font-family:-apple-system,Segoe UI,Roboto,sans-serif}' +
+    '#n365s.on{display:flex}@media(min-width:640px){ #n365s{align-items:center}}' +
+    '#n365s .p{background:#fff;color:#1e293b;width:100%;max-width:480px;max-height:92vh;display:flex;flex-direction:column;border-radius:18px 18px 0 0;overflow:hidden}@media(min-width:640px){ #n365s .p{border-radius:18px}}' +
+    '@media(prefers-color-scheme:dark){ #n365s .p{background:#1c1c20;color:#e8e8ec}#n365s .m,#n365s .t{color:#9a9aa6}#n365s .i,#n365s textarea,#n365s select{background:#26262c;color:#e8e8ec;border-color:#34343c}#n365s .row{border-color:#2c2c34}}' +
+    '#n365s .h{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid #e2e8f0}#n365s .h b{flex:1;font-size:16px}' +
+    '#n365s .x{border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:inherit}' +
+    '#n365s .bd{padding:14px 16px;overflow:auto;flex:1}#n365s .m,#n365s .t{color:#64748b;font-size:12px}' +
+    '#n365s .row{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #e2e8f0;padding:11px 0;cursor:pointer;color:inherit;font:inherit}' +
+    '#n365s .row b{font-size:14px}#n365s .tag{font-size:11px;padding:2px 8px;border-radius:9px;background:#fff1ea;color:#c2410c;margin-left:6px}#n365s .tag.w{background:#e6f4ea;color:#166534}' +
+    '#n365s textarea,#n365s select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:10px;font:inherit;font-size:14px;margin:6px 0 10px;background:#fff;color:inherit}#n365s textarea{min-height:110px;resize:vertical}' +
+    '#n365s .go{width:100%;border:0;border-radius:12px;padding:12px;font-size:15px;font-weight:700;color:#fff;background:linear-gradient(90deg,#E53935,#FF6D00);cursor:pointer}#n365s .go[disabled]{opacity:.5}' +
+    '#n365s .sec{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:11px;font-size:14px;font-weight:600;background:none;color:inherit;cursor:pointer;margin-top:8px}' +
+    '#n365s .msg{max-width:86%;margin:8px 0;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word;background:#f1f5f9;color:#1e293b}' +
+    '#n365s .msg.me{margin-left:auto;background:#E53935;color:#fff}#n365s .e{color:#c93434;font-size:13px;margin:6px 0;display:none}#n365s .w2{font-size:12px;color:#64748b;margin:6px 0}';
+
+  function build() {
+    if (root) return;
+    root = el('div'); root.id = 'n365s'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'Net365 support');
+    var p = el('div', 'p'), h = el('div', 'h'), t = el('b', null, 'Support'), x = el('button', 'x', '×');
+    x.setAttribute('aria-label', 'Close'); x.addEventListener('click', close);
+    h.appendChild(t); h.appendChild(x); body = el('div', 'bd'); p.appendChild(h); p.appendChild(body); root.appendChild(p);
+    root.addEventListener('click', function (e) { if (e.target === root) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    document.body.appendChild(root);
+    state.title = t;
+  }
+  function close() { if (root) root.classList.remove('on'); }
+  function title(s) { state.title.textContent = s; }
+  function err(box, d, fallback) {
+    var m = { too_short: 'Please give a little more detail.', too_many: 'You have opened several reports today. Our team is working on them.', slow_down: 'You are sending messages very quickly. Please wait a few minutes.', closed: 'This report is closed. Please open a new one.' };
+    box.textContent = m[d && d.error] || (d && d.message) || fallback || 'Something went wrong. Please try again.'; box.style.display = 'block';
+  }
+
+  function list() {
+    title('Support'); clear(); state.ticket = null;
+    body.appendChild(el('p', 'm', 'Tell us about a problem or a security concern. We reply here, by email and in the chat you used.'));
+    var nb = el('button', 'go', 'Report a problem'); nb.addEventListener('click', form); body.appendChild(nb);
+    var box = el('div'); body.appendChild(box);
+    api('/api/support/tickets').then(function (r) {
+      if (r.status === 401) { box.appendChild(el('p', 'm', 'Please sign in to see your reports. You can also email support@net365co.com.')); nb.disabled = true; return; }
+      var ts = (r.data && r.data.tickets) || [];
+      setBadge(r.data && r.data.waiting_for_you || 0);
+      if (!ts.length) { box.appendChild(el('p', 'm', 'You have no reports yet.')); return; }
+      box.appendChild(el('h4', null, 'Your reports'));
+      ts.forEach(function (x) {
+        var b = el('button', 'row'), l = el('b', null, x.category_label + ' '), g = el('span', 'tag' + (x.status === 'RESOLVED' || x.status === 'CONFIRMED' ? ' w' : ''), ST[x.status] || x.status);
+        l.appendChild(g); if (x.kind === 'incident') l.appendChild(el('span', 'tag', 'Incident'));
+        b.appendChild(l); b.appendChild(el('div', 't', x.ticket_no + ' · ' + when(x.updated_at) + (x.waiting_for_you ? ' · new reply' : '')));
+        b.addEventListener('click', function () { thread(x.ticket_no); }); box.appendChild(b);
+      });
+    }).catch(function () { box.appendChild(el('p', 'm', 'Could not load your reports. Please check your connection.')); });
+  }
+
+  function form() {
+    title('Report a problem'); clear();
+    var sel = el('select'); CATS.forEach(function (c) { var o = el('option', null, c[1]); o.value = c[0]; sel.appendChild(o); });
+    var ta = el('textarea'); ta.placeholder = 'What happened? If it was an order, we attach your latest one automatically.'; ta.maxLength = 4000;
+    var w = el('p', 'w2', 'Never send your PIN, OTP, password or full card number.'), e = el('div', 'e'), go = el('button', 'go', 'Send to support'), bk = el('button', 'sec', 'Back');
+    [el('label', 'm', 'What is this about?'), sel, ta, w, e, go, bk].forEach(function (n) { body.appendChild(n); });
+    bk.addEventListener('click', list);
+    go.addEventListener('click', function () {
+      e.style.display = 'none'; go.disabled = true; go.textContent = 'Sending...';
+      api('/api/support/tickets', { method: 'POST', body: JSON.stringify({ category: sel.value, message: ta.value, channel: CH }) }).then(function (r) {
+        if (r.ok && r.data && r.data.success) { thread(r.data.ticket_no, r.data.kind === 'incident'); return; }
+        err(e, r.data, r.status === 401 ? 'Please sign in first.' : null); go.disabled = false; go.textContent = 'Send to support';
+      }).catch(function () { err(e, null, 'No connection. Please try again.'); go.disabled = false; go.textContent = 'Send to support'; });
+    });
+  }
+
+  function thread(no, justCreated) {
+    title(no); clear(); state.ticket = no;
+    var top = el('div'); body.appendChild(top);
+    api('/api/support/tickets/' + encodeURIComponent(no)).then(function (r) {
+      if (!r.ok) { top.appendChild(el('p', 'm', 'We could not open this report.')); return; }
+      var t = r.data.ticket;
+      top.appendChild(el('p', 'm', (t.category_label || '') + ' · ' + (ST[t.status] || t.status) + (t.reference ? ' · Order ' + t.reference : '')));
+      if (justCreated) top.appendChild(el('p', 'm', t.kind === 'incident' ? 'We have flagged this as urgent and our team has been alerted.' : 'We have it. Our team will reply here, by email and in your chat.'));
+      (r.data.messages || []).forEach(function (m) { var b = el('div', 'msg' + (m.sender === 'customer' ? ' me' : ''), m.body); top.appendChild(b); top.appendChild(el('div', 't', (m.sender === 'agent' ? 'Net365 Support' : 'You') + ' · ' + when(m.created_at))); });
+      if (t.status === 'RESOLVED') {
+        top.appendChild(el('p', null, 'Is this sorted now?'));
+        var y = el('button', 'go', 'Yes, it is fixed'), n = el('button', 'sec', 'No, it is not fixed');
+        y.addEventListener('click', function () { confirm(no, true); }); n.addEventListener('click', function () { confirm(no, false); });
+        top.appendChild(y); top.appendChild(n);
+      }
+      if (t.status !== 'CONFIRMED') {
+        var ta = el('textarea'); ta.placeholder = 'Write a reply...'; ta.style.minHeight = '70px'; ta.maxLength = 4000;
+        var e = el('div', 'e'), go = el('button', 'go', 'Send reply');
+        top.appendChild(ta); top.appendChild(e); top.appendChild(go);
+        go.addEventListener('click', function () {
+          e.style.display = 'none'; go.disabled = true;
+          api('/api/support/tickets/' + encodeURIComponent(no) + '/reply', { method: 'POST', body: JSON.stringify({ message: ta.value, channel: CH }) }).then(function (r2) {
+            if (r2.ok && r2.data && r2.data.success) thread(no); else { err(e, r2.data); go.disabled = false; }
+          }).catch(function () { err(e, null, 'No connection.'); go.disabled = false; });
+        });
+      } else top.appendChild(el('p', 'm', 'This report is closed. Open a new one if you need more help.'));
+      var bk = el('button', 'sec', 'All my reports'); bk.addEventListener('click', list); top.appendChild(bk);
+      refreshBadge();
+    }).catch(function () { top.appendChild(el('p', 'm', 'No connection. Please try again.')); });
+  }
+  function confirm(no, fixed) {
+    api('/api/support/tickets/' + encodeURIComponent(no) + '/confirm', { method: 'POST', body: JSON.stringify({ fixed: fixed }) }).then(function () { thread(no); });
+  }
+
+  function setBadge(n) {
+    if (!btn) return; var d = btn.querySelector('.d'); if (d) d.remove();
+    if (n > 0) { var s = el('span', 'd', String(n)); btn.appendChild(s); }
+  }
+  function refreshBadge() { api('/api/support/tickets').then(function (r) { if (r.ok) setBadge(r.data.waiting_for_you || 0); }).catch(function () {}); }
+
+  function open() { build(); root.classList.add('on'); list(); }
+  function mountButton() {
+    if (btn || document.getElementById('n365s-b')) return;
+    var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
+    btn = el('button', null, 'Help'); btn.id = 'n365s-b'; btn.type = 'button'; btn.setAttribute('aria-label', 'Contact Net365 support');
+    btn.addEventListener('click', open); document.body.appendChild(btn);
+    setTimeout(refreshBadge, 2500);
+  }
+  window.Net365Support = { open: open, hideButton: function () { if (btn) btn.style.display = 'none'; }, refresh: refreshBadge };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountButton); else mountButton();
+})();
+
+</script>
+<script>
+/* NET365 Bills & Services hub: shared by the website (index.html) and the mobile app (mobile.html). No dependencies.
+ *   Net365Hub.open()              opens the hub home (tiles)
+ *   Net365Hub.open('electricity') opens straight into a service: electricity | tv | data | education | insurance
+ * Which tiles are live comes from /api/hub/config (HUB_* settings on the server), so nothing is sold before you switch it on.
+ * Prices always come from the server. Everything customer-supplied is written with textContent, never innerHTML. */
+(function () {
+  'use strict';
+  var S = { cfg: null, root: null, body: null, title: null, backBtn: null, back: null, busy: false };
+  var NAIRA = '₦';
+  var SERVICES = [
+    ['electricity', 'Electricity', 'Prepaid and postpaid', 'fa-bolt', '#f59e0b'],
+    ['tv', 'Cable TV', 'DStv, GOtv, StarTimes, Showmax', 'fa-tv', '#ef4444'],
+    ['data', 'Data', 'MTN, Airtel, Glo, 9mobile', 'fa-wifi', '#22d3ee'],
+    ['education', 'Education', 'WAEC and JAMB PINs', 'fa-graduation-cap', '#6366f1'],
+    ['insurance', 'Insurance', 'Motor third-party', 'fa-shield-alt', '#10b981']
+  ];
+  var TV = [['dstv', 'DStv'], ['gotv', 'GOtv'], ['startimes', 'StarTimes'], ['showmax', 'Showmax']];
+  var NET = [['mtn', 'MTN'], ['airtel', 'Airtel'], ['glo', 'Glo'], ['9mobile', '9mobile']];
+  var EDU = [['waec', 'WAEC result checker PIN'], ['waec-registration', 'WAEC registration PIN'], ['jamb', 'JAMB PIN (UTME / Direct Entry)']];
+
+  function api(path, opts) {
+    var o = Object.assign({ credentials: 'include', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' } }, opts || {});
+    return fetch(path, o).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); });
+  }
+  function post(path, body) { return api(path, { method: 'POST', body: JSON.stringify(body) }); }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function clear() { while (S.body.firstChild) S.body.removeChild(S.body.firstChild); }
+  function money(n) { return NAIRA + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 }); }
+  function add(parent) { for (var i = 1; i < arguments.length; i++) if (arguments[i]) parent.appendChild(arguments[i]); return parent; }
+
+  var CSS = '#n365h{position:fixed;inset:0;z-index:2147482400;background:rgba(10,10,14,.6);display:none;align-items:flex-end;justify-content:center;font-family:-apple-system,Segoe UI,Roboto,sans-serif}' +
+    '#n365h.on{display:flex}@media(min-width:640px){ #n365h{align-items:center}}' +
+    '#n365h .p{background:#fff;color:#1e293b;width:100%;max-width:520px;height:92vh;max-height:92vh;display:flex;flex-direction:column;border-radius:18px 18px 0 0;overflow:hidden}@media(min-width:640px){ #n365h .p{height:auto;max-height:90vh;min-height:520px;border-radius:18px}}' +
+    '@media(prefers-color-scheme:dark){ #n365h .p{background:#1c1c20;color:#e8e8ec}#n365h .m{color:#9a9aa6}#n365h .i,#n365h select,#n365h input{background:#26262c;color:#e8e8ec;border-color:#34343c}#n365h .row,#n365h .h{border-color:#2c2c34}#n365h .ok{background:#12301f;color:#86efac}#n365h .chip{border-color:#34343c}}' +
+    '#n365h .h{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #e2e8f0}#n365h .h b{flex:1;font-size:16px}' +
+    '#n365h .x{border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:inherit;padding:4px 8px}' +
+    '#n365h .bd{padding:14px 16px 22px;overflow:auto;flex:1}#n365h .m{color:#64748b;font-size:13px}' +
+    '#n365h .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}' +
+    '#n365h .tile{display:block;text-align:left;border:1px solid #e2e8f0;border-radius:14px;padding:14px;background:none;color:inherit;cursor:pointer;font:inherit}#n365h .tile[disabled]{opacity:.55;cursor:default}' +
+    '#n365h .ico{display:inline-flex;width:38px;height:38px;border-radius:11px;align-items:center;justify-content:center;color:#fff;margin-bottom:8px}' +
+    '#n365h .tile b{display:block;font-size:14px}#n365h .tile small{font-size:12px;color:#64748b}' +
+    '#n365h .row{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid #e2e8f0;padding:12px 2px;cursor:pointer;color:inherit;font:inherit}#n365h .row b{font-size:14px}' +
+    '#n365h .tag{font-size:11px;padding:2px 8px;border-radius:9px;background:#eef2ff;color:#4338ca;margin-left:6px}' +
+    '#n365h label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}' +
+    '#n365h input,#n365h select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:11px;font:inherit;font-size:15px;background:#fff;color:inherit}' +
+    '#n365h .chips{display:flex;gap:8px;flex-wrap:wrap}#n365h .chip{border:1px solid #cbd5e1;border-radius:999px;padding:8px 13px;font-size:13px;background:none;color:inherit;cursor:pointer;font-weight:600}#n365h .chip.on{background:#E53935;border-color:#E53935;color:#fff}' +
+    '#n365h .go{width:100%;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:700;color:#fff;background:linear-gradient(90deg,#E53935,#FF6D00);cursor:pointer;margin-top:16px}#n365h .go[disabled]{opacity:.5;cursor:not-allowed}' +
+    '#n365h .sec{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:12px;font-size:14px;font-weight:600;background:none;color:inherit;cursor:pointer;margin-top:10px}' +
+    '#n365h .ok{background:#e6f4ea;color:#14532d;border-radius:12px;padding:11px 13px;font-size:14px;margin-top:12px}#n365h .e{color:#c93434;font-size:13px;margin-top:10px;display:none}' +
+    '#n365h .chk{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:13px;font-weight:400}#n365h .chk input{width:20px;height:20px;flex:none;margin-top:1px}' +
+    '#n365h .ct{border:1px solid #e2e8f0;border-radius:12px;padding:11px 13px;margin-top:14px;font-size:14px}@media(prefers-color-scheme:dark){ #n365h .ct{border-color:#34343c}}' +
+    '#n365h .ct .ln{display:flex;justify-content:space-between;gap:10px;margin:3px 0;word-break:break-all}#n365h .ct .lk{border:0;background:none;color:#E53935;font:inherit;font-weight:700;cursor:pointer;padding:6px 0 0}';
+
+  function build() {
+    if (S.root) return;
+    var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
+    S.root = el('div'); S.root.id = 'n365h'; S.root.setAttribute('role', 'dialog'); S.root.setAttribute('aria-modal', 'true'); S.root.setAttribute('aria-label', 'Bills and services');
+    var p = el('div', 'p'), h = el('div', 'h');
+    S.backBtn = el('button', 'x', '‹'); S.backBtn.setAttribute('aria-label', 'Back'); S.backBtn.style.display = 'none';
+    S.backBtn.addEventListener('click', function () { if (S.back) S.back(); });
+    S.title = el('b', null, 'Bills & Services');
+    var x = el('button', 'x', '×'); x.setAttribute('aria-label', 'Close'); x.addEventListener('click', close);
+    add(h, S.backBtn, S.title, x); S.body = el('div', 'bd'); add(p, h, S.body); S.root.appendChild(p);
+    S.root.addEventListener('click', function (e) { if (e.target === S.root) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    document.body.appendChild(S.root);
+  }
+  function close() { if (S.root) S.root.classList.remove('on'); }
+  function screen(title, back) { S.title.textContent = title; clear(); S.back = back || null; S.backBtn.style.display = back ? '' : 'none'; S.body.scrollTop = 0; }
+  function errBox() { return el('div', 'e'); }
+  function showErr(box, msg) { box.textContent = msg || 'Something went wrong. Please try again.'; box.style.display = 'block'; }
+  function field(label, input) { var w = el('div'); add(w, el('label', null, label), input); return w; }
+  function textInput(type, ph, max) { var i = el('input'); i.type = type || 'text'; if (ph) i.placeholder = ph; if (max) i.maxLength = max; i.autocomplete = 'off'; return i; }
+  function select(options) { var s = el('select'); options.forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; s.appendChild(op); }); return s; }
+  function needSignIn(r) {
+    if (r.status !== 401) return false;
+    screen('Sign in', home);
+    add(S.body, el('p', null, 'Please sign in to continue.'), el('p', 'm', 'Your account keeps your receipts and lets us deliver tokens and PINs to you.'));
+    var b = el('button', 'go', 'Sign in'); b.addEventListener('click', function () {
+      close();
+      try { if (typeof showLoginScreen === 'function') showLoginScreen(); else if (typeof fromUserMenuAuth === 'function') fromUserMenuAuth(); } catch (e) { /* page has its own sign-in */ }
+    }); S.body.appendChild(b); return true;
+  }
+  function payNow(btn, errEl, path, body) {
+    if (S.busy) return; S.busy = true; btn.disabled = true; var old = btn.textContent; btn.textContent = 'Preparing payment...'; errEl.style.display = 'none';
+    post(path, body).then(function (r) {
+      S.busy = false;
+      if (needSignIn(r)) return;
+      if (r.status === 409 && r.data && r.data.code === 'NETWORK_MISMATCH') {
+        btn.disabled = false; btn.textContent = old;
+        if (window.confirm('\u26a0\ufe0f ' + r.data.error + '\n\nPress OK to continue with ' + r.data.chosen + ', or Cancel to change the network.')) { body.confirm_network = true; return payNow(btn, errEl, path, body); }
+        showErr(errEl, 'Not charged. Please choose ' + r.data.detected + ' for this number, or check the number.'); return;
+      }
+      if (r.ok && r.data && r.data.success && r.data.authorization_url) { btn.textContent = 'Opening payment page...'; window.location.href = r.data.authorization_url; return; }
+      showErr(errEl, (r.data && (r.data.error || r.data.message)) || (r.status === 403 ? 'Please verify your email first.' : null)); btn.disabled = false; btn.textContent = old;
+    }).catch(function () { S.busy = false; showErr(errEl, 'No connection. Please try again.'); btn.disabled = false; btn.textContent = old; });
+  }
+  var CONTACT = null; /* the customer's own registered phone and email, from the server */
+  function userPhone() { if (CONTACT && CONTACT.phone) return CONTACT.phone; try { return (typeof currentUser !== 'undefined' && currentUser && currentUser.phone) ? String(currentUser.phone) : ''; } catch (e) { return ''; } }
+  function userEmail() { if (CONTACT && CONTACT.email) return CONTACT.email; try { return (typeof currentUser !== 'undefined' && currentUser && currentUser.email) ? String(currentUser.email) : ''; } catch (e) { return ''; } }
+  function loadContact() {
+    if (CONTACT) return Promise.resolve(CONTACT);
+    return api('/api/hub/contact').then(function (r) { if (r.ok && r.data && r.data.success) CONTACT = { phone: r.data.phone || '', email: r.data.email || '' }; return CONTACT; }).catch(function () { return null; });
+  }
+  /* "Your receipt and token go to <email> / <phone>" with a Change link. The customer only confirms; typing is optional. */
+  function contactBlock() {
+    var box = el('div', 'ct'), phone = textInput('tel', '08012345678', 15), email = textInput('email', 'you@example.com', 120);
+    var sumP = el('span'), sumE = el('span'), edit = el('div'), chg = el('button', 'lk', 'Change'); chg.type = 'button'; edit.style.display = 'none';
+    var l1 = el('div', 'ln'), l2 = el('div', 'ln');
+    add(l1, el('span', 'm', 'Receipt email'), sumE); add(l2, el('span', 'm', 'Phone number'), sumP);
+    add(edit, field('Receipt email', email), field('Phone number', phone));
+    add(box, l1, l2, chg, edit);
+    function fill() { phone.value = phone.value || userPhone(); email.value = email.value || userEmail(); show(); }
+    function show() { sumE.textContent = email.value || 'Not set'; sumP.textContent = phone.value || 'Not set'; if (!email.value || !phone.value) open(true); }
+    function open(on) { edit.style.display = on ? 'block' : 'none'; chg.style.display = on ? 'none' : ''; }
+    chg.addEventListener('click', function () { open(true); });
+    [phone, email].forEach(function (i) { i.addEventListener('input', function () { sumE.textContent = email.value || 'Not set'; sumP.textContent = phone.value || 'Not set'; }); });
+    fill(); loadContact().then(function () { fill(); });
+    return {
+      node: box, phone: function () { return phone.value.trim(); }, email: function () { return email.value.trim(); },
+      check: function () {
+        if (!phone.value.trim()) { open(true); return 'Enter your phone number.'; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { open(true); return 'Enter a valid email address for your receipt.'; }
+        return '';
+      }
+    };
+  }
+
+  /* ---------------------------------------------------------------- home */
+  function home() {
+    screen('Bills & Services', null);
+    add(S.body, el('p', 'm', 'Pick what you need. You pay securely online and we deliver to your account.'));
+    var g = el('div', 'grid');
+    SERVICES.forEach(function (s) {
+      var st = (S.cfg && S.cfg.services && S.cfg.services[s[0]]) || 'off';
+      if (st === 'off') return;
+      var b = el('button', 'tile'), i = el('span', 'ico'); i.style.background = s[4]; var ic = el('i', 'fas ' + s[3]); i.appendChild(ic);
+      add(b, i, el('b', null, s[1]), el('small', null, st === 'live' ? s[2] : 'Coming soon'));
+      if (st !== 'live') b.disabled = true; else b.addEventListener('click', function () { go(s[0]); });
+      g.appendChild(b);
+    });
+    S.body.appendChild(g);
+    add(S.body, el('p', 'm', 'Country: Nigeria. More countries are coming soon.'));
+  }
+  function go(svc) {
+    var st = S.cfg && S.cfg.services && S.cfg.services[svc];
+    if (st !== 'live') { screen('Coming soon', home); add(S.body, el('p', null, 'This service is not open yet. Please check back soon.')); return; }
+    ({ electricity: elecList, tv: tvProducts, data: dataNetworks, education: eduProducts, insurance: insPlans })[svc]();
+  }
+
+  /* ---------------------------------------------------------------- electricity */
+  function elecList() {
+    screen('Electricity', home); add(S.body, el('p', 'm', 'Loading electricity companies...'));
+    api('/api/electricity/providers?country=NG').then(function (r) {
+      screen('Electricity', home);
+      if (!r.ok || !r.data.success) { add(S.body, el('p', null, (r.data && r.data.error) || 'Electricity is unavailable right now. Please try again shortly.')); return; }
+      var q = textInput('search', 'Search your electricity company'), box = el('div');
+      var dm = textInput('text', 'Not sure? Type your meter number', 20), dt = select([['prepaid', 'Prepaid'], ['postpaid', 'Postpaid']]), db = el('button', 'sec', 'Find my company'), dout = el('div'), derr = errBox();
+      db.addEventListener('click', function () {
+        derr.style.display = 'none'; while (dout.firstChild) dout.removeChild(dout.firstChild); db.disabled = true; db.textContent = 'Checking...';
+        post('/api/electricity/detect', { meter: dm.value, meter_type: dt.value }).then(function (x) {
+          db.disabled = false; db.textContent = 'Find my company'; if (needSignIn(x)) return;
+          if (x.ok && x.data.success) x.data.matches.forEach(function (m) { var b = el('button', 'row'); add(b, el('b', null, m.name), m.customer ? el('div', 'm', m.customer) : null); b.addEventListener('click', function () { elecForm({ key: m.key, name: m.name }); }); dout.appendChild(b); });
+          else showErr(derr, x.data && (x.data.error || x.data.message));
+        }).catch(function () { db.disabled = false; db.textContent = 'Find my company'; showErr(derr, 'No connection. Please try again.'); });
+      });
+      add(S.body, q, box, el('p', 'm', 'Or let us find it from your meter number:'), dm, dt, db, dout, derr);
+      function draw() {
+        while (box.firstChild) box.removeChild(box.firstChild);
+        var t = q.value.trim().toLowerCase();
+        r.data.discos.filter(function (d) { return !t || d.name.toLowerCase().indexOf(t) >= 0; }).forEach(function (d) {
+          var b = el('button', 'row'), l = el('b', null, d.name);
+          b.appendChild(l); b.addEventListener('click', function () { elecForm(d); }); box.appendChild(b);
+        });
+        if (!box.firstChild) box.appendChild(el('p', 'm', 'No match. Try another name.'));
+      }
+      q.addEventListener('input', draw); draw();
+    }).catch(function () { screen('Electricity', home); add(S.body, el('p', null, 'No connection. Please try again.')); });
+  }
+  function elecForm(d) {
+    screen(d.name, elecList);
+    var verified = false;
+    var meterType = select([['prepaid', 'Prepaid'], ['postpaid', 'Postpaid']]), meter = textInput('text', 'Meter number', 20), amount = textInput('number', 'Amount in ' + NAIRA), contact = contactBlock();
+    amount.min = '0'; amount.inputMode = 'numeric';
+    var info = el('div'), err = errBox(), checkBtn = el('button', 'sec', 'Check meter'), payBtn = el('button', 'go', 'Pay'); payBtn.disabled = true;
+    function reset() { verified = false; payBtn.disabled = true; while (info.firstChild) info.removeChild(info.firstChild); }
+    add(S.body, field('Meter type', meterType), field('Meter number', meter), field('Amount', amount), checkBtn, info, contact.node, payBtn, err);
+    [meterType, meter].forEach(function (x) { x.addEventListener('input', reset); x.addEventListener('change', reset); });
+    var min = 500;
+    function upd() { var v = Number(amount.value); payBtn.textContent = v > 0 ? 'Pay ' + money(v) : 'Pay'; payBtn.disabled = !(verified && v >= min); }
+    amount.addEventListener('input', upd);
+    checkBtn.addEventListener('click', function () {
+      err.style.display = 'none'; reset(); checkBtn.disabled = true; checkBtn.textContent = 'Checking...';
+      post('/api/electricity/verify', { key: d.key, meter: meter.value, meter_type: meterType.value }).then(function (r) {
+        checkBtn.disabled = false; checkBtn.textContent = 'Check meter';
+        if (needSignIn(r)) return;
+        if (r.ok && r.data.success) {
+          verified = true; min = r.data.min_amount || 500;
+          var ok = el('div', 'ok'); add(ok, el('b', null, r.data.name || 'Meter found'), r.data.address ? el('div', 'm', r.data.address) : null, el('div', 'm', 'Minimum purchase ' + money(min)));
+          info.appendChild(ok); upd();
+        } else if (r.data && r.data.code === 'WRONG_DISCO' && r.data.suggested) {
+          showErr(err, r.data.error);
+          var sw = el('button', 'sec', 'Switch to ' + r.data.suggested.name); sw.addEventListener('click', function () { elecForm({ key: r.data.suggested.key, name: r.data.suggested.name }); });
+          info.appendChild(sw);
+        } else showErr(err, r.data && (r.data.error || r.data.message));
+      }).catch(function () { checkBtn.disabled = false; checkBtn.textContent = 'Check meter'; showErr(err, 'No connection. Please try again.'); });
+    });
+    payBtn.addEventListener('click', function () {
+      var bad = contact.check(); if (bad) { showErr(err, bad); return; }
+      payNow(payBtn, err, '/api/electricity/checkout', { key: d.key, meter: meter.value, meter_type: meterType.value, phone: contact.phone(), email: contact.email(), amount: Number(amount.value) });
+    });
+  }
+
+  /* ---------------------------------------------------------------- plan-based services: TV, data, education */
+  function productList(title, items, next) {
+    screen(title, home);
+    items.forEach(function (it) { var b = el('button', 'row'); b.appendChild(el('b', null, it[1])); b.addEventListener('click', function () { next(it); }); S.body.appendChild(b); });
+  }
+  function loadPlans(url, title, back, ready) {
+    screen(title, back); add(S.body, el('p', 'm', 'Loading plans...'));
+    api(url).then(function (r) {
+      screen(title, back);
+      var plans = r.data && r.data.plans;
+      if (!r.ok || !plans || !plans.length) { add(S.body, el('p', null, (r.data && r.data.error) || 'Plans are unavailable right now. Please try again shortly.')); return; }
+      ready(plans.slice().sort(function (a, b) { return a.price - b.price; }));
+    }).catch(function () { screen(title, back); add(S.body, el('p', null, 'No connection. Please try again.')); });
+  }
+  function planRows(plans, pick) {
+    plans.forEach(function (p) { var b = el('button', 'row'); add(b, el('b', null, p.name), el('div', 'm', money(p.price))); b.addEventListener('click', function () { pick(p); }); S.body.appendChild(b); });
+  }
+
+  function tvProducts() { productList('Cable TV', TV, function (it) { loadPlans('/api/services/catalog?product=' + it[0], it[1], tvProducts, function (plans) { add(S.body, el('p', 'm', 'Choose a package')); planRows(plans, function (p) { tvForm(it, p); }); }); }); }
+  function tvForm(prod, plan) {
+    screen(prod[1], function () { tvProducts(); });
+    var card = prod[0] !== 'showmax', verified = !card, err = errBox(), info = el('div');
+    var acct = textInput('text', 'Smartcard / IUC number', 16), contact = contactBlock();
+    var payBtn = el('button', 'go', 'Pay ' + money(plan.price)), chk = el('button', 'sec', 'Check smartcard'); payBtn.disabled = card;
+    add(S.body, el('p', null, plan.name + ' - ' + money(plan.price)));
+    if (card) { add(S.body, field('Smartcard number', acct), chk, info); acct.addEventListener('input', function () { verified = false; payBtn.disabled = true; while (info.firstChild) info.removeChild(info.firstChild); }); }
+    add(S.body, contact.node, payBtn, err);
+    chk.addEventListener('click', function () {
+      err.style.display = 'none'; chk.disabled = true; chk.textContent = 'Checking...';
+      post('/api/services/verify', { product: prod[0], billers_code: acct.value }).then(function (r) {
+        chk.disabled = false; chk.textContent = 'Check smartcard'; if (needSignIn(r)) return;
+        if (r.ok && r.data.success) { verified = true; payBtn.disabled = false; var ok = el('div', 'ok'); add(ok, el('b', null, r.data.name || 'Smartcard found'), r.data.bouquet ? el('div', 'm', 'Current: ' + r.data.bouquet) : null); info.appendChild(ok); }
+        else showErr(err, r.data && (r.data.error || r.data.message));
+      }).catch(function () { chk.disabled = false; chk.textContent = 'Check smartcard'; showErr(err, 'No connection. Please try again.'); });
+    });
+    payBtn.addEventListener('click', function () { if (!verified) return; var bad = contact.check(); if (bad) { showErr(err, bad); return; } payNow(payBtn, err, '/api/services/checkout', { service: 'tv', product: prod[0], variation_code: plan.code, billers_code: acct.value, phone: contact.phone(), email: contact.email(), subscription_type: 'change' }); });
+  }
+
+  function dataNetworks() { productList('Data', NET, function (it) { loadPlans('/api/data/plans?network=' + it[0], it[1] + ' data', dataNetworks, function (plans) { add(S.body, el('p', 'm', 'Choose a bundle')); planRows(plans, function (p) { dataForm(it, p); }); }); }); }
+  function dataForm(net, plan) {
+    screen(net[1] + ' data', function () { dataNetworks(); });
+    var phone = textInput('tel', '08012345678', 15), contact = contactBlock(), err = errBox(), payBtn = el('button', 'go', 'Pay ' + money(plan.price)); phone.value = userPhone();
+    add(S.body, el('p', null, plan.name + ' - ' + money(plan.price)), field('Number to credit with data', phone), contact.node, payBtn, err);
+    loadContact().then(function () { if (!phone.value) phone.value = userPhone(); });
+    payBtn.addEventListener('click', function () { var bad = contact.check(); if (bad) { showErr(err, bad); return; } payNow(payBtn, err, '/api/services/checkout', { service: 'data', product: net[0], variation_code: plan.code, phone: phone.value || contact.phone(), email: contact.email() }); });
+  }
+
+  function eduProducts() { productList('Education', EDU, function (it) { loadPlans('/api/services/catalog?product=' + it[0], it[1], eduProducts, function (plans) { add(S.body, el('p', 'm', 'Choose an option')); planRows(plans, function (p) { eduForm(it, p); }); }); }); }
+  function eduForm(prod, plan) {
+    screen(prod[1], function () { eduProducts(); });
+    var jamb = prod[0] === 'jamb', verified = !jamb, err = errBox(), info = el('div');
+    var profile = textInput('text', 'JAMB profile code', 16), contact = contactBlock(), qty = select([['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']]);
+    var payBtn = el('button', 'go', 'Pay ' + money(plan.price)), chk = el('button', 'sec', 'Check profile'); payBtn.disabled = jamb;
+    add(S.body, el('p', null, plan.name + ' - ' + money(plan.price)));
+    if (jamb) { add(S.body, field('JAMB profile code', profile), chk, info); profile.addEventListener('input', function () { verified = false; payBtn.disabled = true; while (info.firstChild) info.removeChild(info.firstChild); }); }
+    else { add(S.body, field('How many PINs?', qty)); qty.addEventListener('change', function () { payBtn.textContent = 'Pay ' + money(plan.price * Number(qty.value)); }); }
+    add(S.body, contact.node, payBtn, err);
+    chk.addEventListener('click', function () {
+      err.style.display = 'none'; chk.disabled = true; chk.textContent = 'Checking...';
+      post('/api/services/verify', { product: 'jamb', billers_code: profile.value, variation_code: plan.code }).then(function (r) {
+        chk.disabled = false; chk.textContent = 'Check profile'; if (needSignIn(r)) return;
+        if (r.ok && r.data.success) { verified = true; payBtn.disabled = false; var ok = el('div', 'ok'); add(ok, el('b', null, r.data.name || 'Profile found')); info.appendChild(ok); }
+        else showErr(err, r.data && (r.data.error || r.data.message));
+      }).catch(function () { chk.disabled = false; chk.textContent = 'Check profile'; showErr(err, 'No connection. Please try again.'); });
+    });
+    payBtn.addEventListener('click', function () {
+      if (!verified) return;
+      var bad = contact.check(); if (bad) { showErr(err, bad); return; }
+      payNow(payBtn, err, '/api/services/checkout', { service: 'education', product: prod[0], variation_code: plan.code, billers_code: jamb ? profile.value : '', phone: contact.phone(), email: contact.email(), quantity: jamb ? 1 : Number(qty.value) });
+    });
+  }
+
+  /* ---------------------------------------------------------------- insurance */
+  function insPlans() {
+    screen('Motor insurance', home); add(S.body, el('p', 'm', 'Loading cover options...'));
+    api('/api/insurance/products').then(function (r) {
+      screen('Motor insurance', home);
+      var prod = r.ok && r.data.success && r.data.products && r.data.products[0];
+      if (!prod) { add(S.body, el('p', null, (r.data && r.data.error) || 'Insurance is unavailable right now. Please try again shortly.')); return; }
+      add(S.body, el('p', 'm', 'Third-party motor insurance is the legal minimum cover. Choose your vehicle type.'));
+      planRows(prod.plans.slice().sort(function (a, b) { return a.price - b.price; }), function (p) { insForm(prod, p); });
+    }).catch(function () { screen('Motor insurance', home); add(S.body, el('p', null, 'No connection. Please try again.')); });
+  }
+  function insForm(prod, plan) {
+    screen('Vehicle details', insPlans);
+    var F = [['Insured_Name', 'Owner\'s full name', 'text', 60], ['Plate_Number', 'Plate number', 'text', 12], ['Chasis_Number', 'Chassis number (VIN)', 'text', 25],
+      ['vehicle_Make', 'Vehicle make (e.g. Toyota)', 'text', 30], ['vehicle_Model', 'Vehicle model (e.g. Corolla)', 'text', 30], ['vehicle_Color', 'Colour', 'text', 30],
+      ['YearofMake', 'Year made (e.g. 2018)', 'number', 4], ['engine_capacity', 'Engine size in cc (e.g. 1600)', 'number', 5], ['state', 'State', 'text', 40],
+      ['lga', 'Local government area', 'text', 40], ['email', 'Email for your certificate', 'email', 120]];
+    var inputs = {}, err = errBox();
+    add(S.body, el('p', null, plan.name + ' - ' + money(plan.price)), el('p', 'm', 'Enter the details exactly as they appear on the vehicle papers. They go on your policy and cannot be changed afterwards.'));
+    F.forEach(function (f) { var i = textInput(f[2], '', f[3]); if (f[0] === 'email') { try { if (typeof currentUser !== 'undefined' && currentUser && currentUser.email) i.value = currentUser.email; } catch (e) { /* none */ } } inputs[f[0]] = i; S.body.appendChild(field(f[1], i)); });
+    var phone = textInput('tel', '08012345678', 15); phone.value = userPhone(); S.body.appendChild(field('Phone number', phone));
+    var acc = el('input'); acc.type = 'checkbox';
+    var lab = el('label', 'chk'); lab.appendChild(acc);
+    var sp = el('span'); add(sp, document.createTextNode('I confirm these details are correct and I accept the insurance terms in the '), (function () { var a = el('a', null, 'Terms of Service'); a.href = '/terms'; a.target = '_blank'; a.rel = 'noopener'; return a; })(), document.createTextNode('.'));
+    lab.appendChild(sp); S.body.appendChild(lab);
+    var payBtn = el('button', 'go', 'Pay ' + money(plan.price)); payBtn.disabled = true; add(S.body, payBtn, err);
+    acc.addEventListener('change', function () { payBtn.disabled = !acc.checked; });
+    payBtn.addEventListener('click', function () {
+      var details = {}; Object.keys(inputs).forEach(function (k) { details[k] = inputs[k].value; });
+      payNow(payBtn, err, '/api/insurance/checkout', { product: prod.product, variation_code: plan.code, details: details, phone: phone.value, accept: acc.checked });
+    });
+  }
+
+  /* ---------------------------------------------------------------- entry points */
+  function loadCfg() {
+    if (S.cfg) return Promise.resolve(S.cfg);
+    return api('/api/hub/config').then(function (r) { if (r.ok && r.data.success) S.cfg = r.data; return S.cfg; }).catch(function () { return null; });
+  }
+  function open(svc) {
+    build(); S.root.classList.add('on'); screen('Bills & Services', null); add(S.body, el('p', 'm', 'Loading...')); loadContact();
+    loadCfg().then(function (cfg) {
+      if (!cfg) { screen('Bills & Services', null); add(S.body, el('p', null, 'Could not load services. Please check your connection and try again.')); return; }
+      if (svc) go(svc); else home();
+    });
+  }
+  /* Elements marked data-hub="insurance" (etc.) stay hidden until that service is switched on. */
+  function revealTiles() {
+    loadCfg().then(function (cfg) {
+      if (!cfg) return;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-hub]'), function (n) {
+        var st = cfg.services[n.getAttribute('data-hub')];
+        if (st && st !== 'off') n.style.display = '';
+      });
+    });
+  }
+  window.Net365Hub = { open: open, reveal: revealTiles };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', revealTiles); else revealTiles();
+})();
+
+</script>
+<style id="net365-power-grid-v6">
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&display=swap');
+/* ============================================================
+   NET365 MOBILE — POWER GRID v6
+   A design layer on top of the v5 light system. It only redefines the colour variables
+   and restyles a few surfaces, so every screen and flow keeps working unchanged.
+   Remove the pg classes from <body> (or delete this block) to get the previous look back.
+   ============================================================ */
+body.pg{
+  --pg-ember:#ff6a1a;--pg-red:#ff3b30;--pg-amber:#ffb547;--pg-arc:#3be3ff;--pg-signal:#34e39a;
+  --pg-fire:linear-gradient(135deg,#ff3b30 0%,#ff6a1a 55%,#ffb547 100%);
+  --pg-display:'Sora','Inter',system-ui,sans-serif;--pg-ease:cubic-bezier(.16,1,.3,1);
+  --brand:#ff6a1a;--brand-2:#ff3b30;--brand-grad:var(--pg-fire);
+}
+/* ---------- dark (default) ---------- */
+body.pg.pg-dark{
+  --bg:#060912;--card:#0e1426;--ink:#f3f6fc;--ink-2:#c6d0e3;--ink-3:#93a0ba;--line:#1b2540;--line-strong:#2c3a5e;
+  --pg-panel:#0e1426;--pg-panel-2:#141c36;--pg-line-2:rgba(255,106,26,.5);--pg-glow:rgba(255,106,26,.26);--pg-grid:rgba(140,160,210,.06);
+  --navy-1:#0b1226;--navy-2:#16224a;--brand-soft:rgba(255,106,26,.14);
+  --blue:#6aa3ff;--blue-soft:rgba(106,163,255,.14);--green:#34e39a;--green-soft:rgba(52,227,154,.13);--orange:#ffb547;--orange-soft:rgba(255,181,71,.14);
+  --purple:#b49cff;--purple-soft:rgba(180,156,255,.14);--pink:#ff7ab6;--pink-soft:rgba(255,122,182,.14);--teal:#3be3ff;--teal-soft:rgba(59,227,255,.12);--slate:#9aa7c0;--slate-soft:rgba(154,167,192,.14);
+  --success:#34e39a;--success-soft:rgba(52,227,154,.13);--warning:#ffb547;--warning-soft:rgba(255,181,71,.14);--danger:#ff6b61;--danger-soft:rgba(255,107,97,.14);
+  --shadow-1:0 1px 0 rgba(255,255,255,.03) inset;--shadow-2:0 24px 60px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+body.pg.pg-light{
+  --pg-panel:#ffffff;--pg-panel-2:#f3f6fb;--pg-line-2:rgba(255,106,26,.4);--pg-glow:rgba(255,106,26,.2);--pg-grid:rgba(15,23,42,.045);
+  --brand-soft:#FFEEE3;--blue:#2563EB;
+}
+body.pg{background-color:var(--bg);font-feature-settings:'tnum' 1;
+  background-image:radial-gradient(520px 340px at 90% -4%,var(--pg-glow),transparent 66%),radial-gradient(460px 320px at -6% 104%,rgba(59,227,255,.09),transparent 64%),linear-gradient(var(--pg-grid) 1px,transparent 1px),linear-gradient(90deg,var(--pg-grid) 1px,transparent 1px);
+  background-size:auto,auto,40px 40px,40px 40px;background-attachment:fixed}
+body.pg :focus-visible{outline:3px solid var(--pg-arc)}
+body.pg h1,body.pg .section-title,body.pg .sheet-title,body.pg .brand-name,body.pg .wallet-amount,body.pg .promo b{font-family:var(--pg-display)}
+
+/* top bar */
+body.pg .topbar{background:color-mix(in srgb,var(--bg) 78%,transparent);border-bottom:1px solid var(--line)}
+body.pg .brand-mark{background:var(--pg-fire);box-shadow:0 8px 22px var(--pg-glow)}
+body.pg .brand-name b{color:var(--pg-ember)}
+body.pg .icon-btn{background:var(--pg-panel-2);border-color:var(--line);box-shadow:none}
+body.pg .icon-btn.logged-in{background:var(--pg-fire);border-color:transparent;color:#fff}
+body.pg .wallet-chip{background:var(--pg-panel-2);border:1px solid var(--line);color:var(--ink)}
+
+/* wallet card = the hero */
+body.pg .wallet-card{border:1px solid var(--pg-line-2);border-radius:28px;background:radial-gradient(260px 180px at 100% 0%,rgba(255,106,26,.34),transparent 70%),radial-gradient(240px 180px at 0% 100%,rgba(59,227,255,.16),transparent 70%),linear-gradient(145deg,#0b1226,#111a35 60%,#1a1426);box-shadow:0 24px 60px rgba(5,8,20,.5),inset 0 1px 0 rgba(255,255,255,.08)}
+body.pg .wallet-card::before{right:-46px;top:-46px;width:190px;height:190px;border-radius:50%;background:none;border:1px solid rgba(255,181,71,.42);box-shadow:0 0 0 24px rgba(255,106,26,.05),0 0 0 50px rgba(255,106,26,.035),0 0 70px rgba(255,106,26,.3) inset}
+body.pg .wallet-card::after{left:0;right:0;bottom:0;top:0;width:auto;height:auto;border-radius:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:30px 30px;-webkit-mask-image:linear-gradient(115deg,transparent 30%,#000 100%);mask-image:linear-gradient(115deg,transparent 30%,#000 100%)}
+body.pg .wallet-amount{font-weight:800;letter-spacing:-.045em;font-size:36px}
+body.pg .pill-btn.light{background:var(--pg-fire);color:#fff;box-shadow:0 10px 26px rgba(255,106,26,.4)}
+body.pg .pill-btn.ghost{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.2)}
+
+/* cards and tiles */
+body.pg .tile-row,body.pg .card,body.pg .svc,body.pg .tx-list,body.pg .biller-grid>*{background:var(--pg-panel);border:1px solid var(--line);box-shadow:var(--shadow-1)}
+body.pg:not(.pg-dark) .tile-row,body.pg:not(.pg-dark) .card,body.pg:not(.pg-dark) .svc,body.pg:not(.pg-dark) .tx-list{box-shadow:0 10px 30px rgba(15,23,42,.06)}
+body.pg .svc:active,body.pg .tile:active{transform:scale(.97);border-color:var(--pg-line-2)}
+body.pg .tile .ico,body.pg .svc .ico{box-shadow:0 8px 20px rgba(0,0,0,.25)}
+body.pg .section-title a{color:var(--pg-ember)}
+body.pg .promo{background:var(--pg-fire);box-shadow:0 16px 40px var(--pg-glow)}
+body.pg .input,body.pg select.input,body.pg .phone-input,body.pg .amount-input{background:var(--pg-panel-2);border-color:var(--line);color:var(--ink)}
+body.pg .input:focus{border-color:var(--pg-ember);box-shadow:0 0 0 3px var(--pg-glow)}
+body.pg .quick-pill{background:var(--pg-panel-2);border-color:var(--line);color:var(--ink-2)}
+body.pg .quick-pill.active{background:var(--pg-fire);border-color:transparent;color:#fff}
+body.pg .tx-row:active{background:var(--pg-panel-2)}
+body.pg .empty-state{color:var(--ink-3)}
+body.pg .back-btn{background:var(--pg-panel-2);border-color:var(--line);box-shadow:none}
+
+/* floating glass bottom bar */
+body.pg .bottom-nav{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));height:var(--nav-h);padding:0;border:1px solid var(--pg-line-2);border-radius:26px;background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 18px 50px rgba(0,0,0,.45)}
+body.pg .nav-item.active{color:var(--pg-ember)}
+body.pg .nav-item.active .nav-icon{filter:drop-shadow(0 0 8px var(--pg-glow))}
+body.pg .nav-fab .disc{background:var(--pg-fire);border:5px solid var(--bg);box-shadow:0 10px 30px rgba(255,106,26,.55)}
+body.pg{padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 30px)}
+
+/* the support module's floating Help button sat on top of the Profile tab: lift it above the bar */
+body.pg #n365s-b{bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 34px)!important;right:14px!important;box-shadow:0 12px 30px rgba(255,106,26,.45)!important}
+
+/* surfaces the v5 sheet hard-coded as white: turn them into dark panels (zero-weight selector, so every selected/active state still wins) */
+:where(body.pg.pg-dark) :is(.input,select.input,.amount-wrap,.quick-pill,.phone-wrap,.port-btns button,.country-row select,.pm-btn,.btn-ghost,.cur-chip,.um-item,.chat-msg.support,.chat-footer,.chat-footer input,.receipt-action,.detect-badge){background:var(--pg-panel-2);color:var(--ink);border-color:var(--line-strong)}
+:where(body.pg.pg-dark) :is(.chat-widget,.receipt-card,.chat-footer){background:var(--card);color:var(--ink)}
+:where(body.pg.pg-dark) .input::placeholder,:where(body.pg.pg-dark) .phone-input::placeholder,:where(body.pg.pg-dark) .amount-input::placeholder{color:var(--ink-3)}
+body.pg .btn-google{background:#fff;color:#1f2937;border-color:#cbd5e5}
+/* printed receipts stay dark-on-white whatever the theme */
+@media print{body.pg{--ink:#0E1A33;--ink-2:#44546F;--ink-3:#5F6E86;--line:#E3E9F3;--line-strong:#CBD5E5;background:#fff!important}body.pg .receipt-card{background:#fff!important;color:#0E1A33!important}}
+
+body.pg.pg-dark .receipt-note{color:#bcd6ff}
+/* sheets */
+body.pg .sheet-backdrop{background:rgba(3,5,12,.7)}
+body.pg .sheet{border-top:1px solid var(--pg-line-2)}
+body.pg.pg-dark .sheet-close{background:var(--pg-panel-2)}
+
+/* hub, support and terms panels inject their own light/dark CSS: keep them in step with the chosen theme */
+body.pg.pg-dark #n365h .p,body.pg.pg-dark #n365s .p,body.pg.pg-dark #n365t .c{background:#0e1426!important;color:#f3f6fc!important;border:1px solid #1b2540}
+body.pg.pg-dark #n365h .m,body.pg.pg-dark #n365s .m,body.pg.pg-dark #n365s .t,body.pg.pg-dark #n365t .m{color:#93a0ba!important}
+body.pg.pg-dark #n365h .i,body.pg.pg-dark #n365h select,body.pg.pg-dark #n365h input,body.pg.pg-dark #n365s .i,body.pg.pg-dark #n365s textarea,body.pg.pg-dark #n365s select{background:#141c36!important;color:#f3f6fc!important;border-color:#2c3a5e!important}
+body.pg.pg-dark #n365h .row,body.pg.pg-dark #n365h .h,body.pg.pg-dark #n365s .row,body.pg.pg-dark #n365t .o,body.pg.pg-dark #n365h .ct,body.pg.pg-dark #n365h .chip{border-color:#1b2540!important}
+body.pg.pg-dark #n365h .ok{background:rgba(52,227,154,.13)!important;color:#34e39a!important}
+body.pg.pg-light #n365h .p,body.pg.pg-light #n365s .p,body.pg.pg-light #n365t .c{background:#fff!important;color:#0E1A33!important}
+body.pg.pg-light #n365h .i,body.pg.pg-light #n365h select,body.pg.pg-light #n365h input,body.pg.pg-light #n365s .i,body.pg.pg-light #n365s textarea,body.pg.pg-light #n365s select{background:#fff!important;color:#0E1A33!important}
+
+/* ---------- Ask Net365 ---------- */
+.pg-ask{position:relative;margin-top:16px;border:1px solid rgba(59,227,255,.3);border-radius:22px;padding:16px;background:var(--pg-panel)}
+.pg-ask:before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(140deg,rgba(59,227,255,.6),transparent 40%,rgba(255,106,26,.45));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.pg-head{display:flex;align-items:center;gap:11px;margin-bottom:11px}
+.pg-head b{display:block;font-family:var(--pg-display);font-size:16px;letter-spacing:-.02em;color:var(--ink)}
+.pg-head small{display:block;font-size:12.5px;color:var(--ink-3);line-height:1.35}
+.pg-orb{width:30px;height:30px;border-radius:50%;flex:none;background:radial-gradient(circle at 32% 28%,#fff,var(--pg-arc) 38%,#1167ff 80%);box-shadow:0 0 22px rgba(59,227,255,.65);animation:pgbr 4s ease-in-out infinite}
+@keyframes pgbr{50%{transform:scale(.9);box-shadow:0 0 12px rgba(59,227,255,.4)}}
+.pg-row{display:flex;gap:6px;align-items:center;padding:5px 5px 5px 13px;border-radius:15px;border:1px solid rgba(59,227,255,.3);background:var(--pg-panel-2)}
+.pg-row:focus-within{border-color:var(--pg-arc);box-shadow:0 0 0 3px rgba(59,227,255,.15)}
+.pg-row input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;padding:10px 0;color:var(--ink);outline:0}
+.pg-row input::placeholder{color:var(--ink-3)}
+.pg-row button{border:0;border-radius:11px;height:44px;min-width:44px;display:grid;place-items:center;font-weight:800;font-size:14px;background:var(--pg-panel);color:var(--ink-2);border:1px solid var(--line)}
+.pg-row button.go{background:linear-gradient(135deg,#1aa7ff,#3be3ff);color:#03121c;border:0;padding:0 16px}
+.pg-row button.on{background:var(--pg-red);color:#fff;border-color:transparent;animation:pgbr 1.2s infinite}
+.pg-chips{display:flex;gap:7px;overflow-x:auto;margin:11px -16px 0;padding:0 16px 2px;scrollbar-width:none}
+.pg-chips::-webkit-scrollbar{display:none}
+.pg-chip{flex:none;border:1px solid var(--line);background:var(--pg-panel-2);border-radius:99px;padding:9px 14px;font-size:13px;font-weight:600;color:var(--ink-2);min-height:40px}
+.pg-chip:active{border-color:var(--pg-arc);color:var(--ink)}
+.pg-reply{display:none;margin-top:12px;padding:12px 14px;border-radius:13px;background:rgba(59,227,255,.07);border:1px solid rgba(59,227,255,.24);font-size:14px;color:var(--ink-2);line-height:1.45}
+.pg-reply.on{display:block}.pg-reply b{color:var(--ink)}
+.pg-pulse{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:14px -16px 0;padding:0 16px 2px;scrollbar-width:none}
+.pg-pulse::-webkit-scrollbar{display:none}
+.pg-p{flex:0 0 78%;scroll-snap-align:start;border:1px solid var(--line);background:var(--pg-panel-2);border-radius:16px;padding:13px 14px}
+.pg-p .k{font-size:12px;color:var(--ink-3)}
+.pg-p .v{font-family:var(--pg-display);font-weight:700;font-size:22px;letter-spacing:-.03em;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pg-p .d{font-size:12px;color:var(--ink-3);margin-top:2px}
+.pg-p .d.up{color:var(--success)}.pg-p .d.dn{color:var(--danger)}
+.pg-p a{color:var(--pg-ember);font-weight:700}
+
+/* ---------- History: Insights / Activity switch ---------- */
+.pg-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:16px;border:1px solid var(--line);background:var(--pg-panel-2);margin:0 0 16px}
+.pg-seg button{border:0;background:transparent;border-radius:12px;min-height:44px;font-weight:700;font-size:14px;color:var(--ink-3)}
+.pg-seg button.on{background:var(--pg-fire);color:#fff;box-shadow:0 8px 22px var(--pg-glow)}
+.pga-panel{position:relative;border:1px solid var(--line);background:var(--pg-panel);border-radius:22px;padding:18px;margin-bottom:14px;color:var(--ink);overflow:hidden}
+.pga-ph h3{font-family:var(--pg-display);font-size:16px;margin:0;color:var(--ink);letter-spacing:-.02em}
+.pga-sub{font-size:12.5px;color:var(--ink-3)}
+.pga-ph{margin-bottom:14px}
+.pga-spend:after{content:"";position:absolute;right:-70px;bottom:-100px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,var(--pg-glow),transparent 70%);pointer-events:none}
+.pga-spend .k{font-size:13px;color:var(--ink-3)}
+.pga-big{font-family:var(--pg-display);font-weight:800;font-size:clamp(38px,12vw,52px);letter-spacing:-.045em;line-height:1.05;font-variant-numeric:tabular-nums;margin:4px 0;background:var(--pg-fire);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pga-spark{width:100%;height:56px;margin-top:10px;display:block}
+.pga-row{display:flex;gap:22px;flex-wrap:wrap;margin-top:14px;position:relative;z-index:1}
+.pga-row b{display:block;font-family:var(--pg-display);font-size:17px;letter-spacing:-.02em;color:var(--ink)}.pga-row span{font-size:12px;color:var(--ink-3)}
+.pga-health{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.pga-ring{position:relative;width:126px;height:126px}.pga-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.pga-ring .t{fill:none;stroke:var(--line);stroke-width:10}.pga-ring .s{fill:none;stroke-width:10;transition:stroke-dasharray 1.2s var(--pg-ease)}
+.pga-ring .m{position:absolute;inset:0;display:grid;place-content:center;text-align:center}.pga-ring .m b{font-family:var(--pg-display);font-size:24px;letter-spacing:-.03em;color:var(--ink)}.pga-ring .m span{font-size:11px;color:var(--ink-3)}
+.pga-leg{display:grid;gap:9px;font-size:13.5px}.pga-leg div{display:flex;align-items:center;gap:9px;color:var(--ink-2)}.pga-leg b{margin-left:auto;color:var(--ink)}
+.pga-dot{width:10px;height:10px;border-radius:3px;flex:none}
+.pga-rank{display:grid;gap:13px}
+.pga-rank .it{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:6px 10px;align-items:center}
+.pga-rank .n{font-family:var(--pg-display);font-size:12px;color:var(--ink-3)}
+.pga-rank .nm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.pga-rank .ct{font-family:var(--pg-display);font-size:13px;color:var(--ink)}.pga-rank .ct small{color:var(--ink-3);font-family:var(--font);font-size:11.5px;margin-left:4px}
+.pga-rank .tr{grid-column:2/4;height:7px;border-radius:7px;background:var(--line);overflow:hidden}
+.pga-rank .tr i{display:block;height:100%;width:0;border-radius:7px;background:var(--pg-fire);transition:width 1s var(--pg-ease)}
+.pga-ai{border-color:rgba(59,227,255,.3)}
+.pga-ins{display:grid;gap:12px}.pga-ins div{display:flex;gap:11px;font-size:14px;color:var(--ink-2);line-height:1.45}
+.pga-ins i{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:rgba(59,227,255,.1);color:var(--pg-arc);font-size:13px;flex:none}
+.pga-ins b{color:var(--ink)}
+.pga-wal{display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:15px;border:1px solid var(--line);background:var(--pg-panel-2);margin-bottom:10px}
+.pga-wal:last-child{margin-bottom:0}
+.pga-wal .c{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-family:var(--pg-display);font-weight:700;font-size:16px;color:#fff;background:var(--pg-fire);flex:none}
+.pga-wal .c.USD{background:linear-gradient(135deg,#0fb872,#34e39a);color:#04140c}.pga-wal .c.GBP{background:linear-gradient(135deg,#6f63ff,#9b7cff)}.pga-wal .c.EUR{background:linear-gradient(135deg,#12b5d6,#3be3ff);color:#03121c}
+.pga-wal b{display:block;font-size:14px;color:var(--ink)}.pga-wal span{font-size:12px;color:var(--ink-3)}
+.pga-wal .amt{margin-left:auto;font-family:var(--pg-display);font-weight:700;font-size:17px;letter-spacing:-.02em;color:var(--ink)}
+.pga-empty{padding:22px 8px;text-align:center;color:var(--ink-3);font-size:14px}
+.pga-empty button{margin-top:12px;border:0;border-radius:13px;min-height:46px;padding:0 22px;font-weight:800;background:var(--pg-fire);color:#fff}
+.pga-skel{height:14px;border-radius:7px;margin:8px 0;background:linear-gradient(90deg,var(--pg-panel-2),var(--line),var(--pg-panel-2));background-size:200% 100%;animation:pgsh 1.4s infinite}
+@keyframes pgsh{to{background-position:-200% 0}}
+@media (max-width:360px){.pga-health{grid-template-columns:1fr;justify-items:center}.pga-leg{width:100%}.pg-p{flex-basis:86%}}
+@media (min-width:560px){.pg-p{flex-basis:44%}}
+@media (prefers-reduced-motion:reduce){.pg-orb,.pga-skel,.pg-row button.on{animation:none!important}*{scroll-behavior:auto!important}}
+
+</style>
+<script id="net365-power-grid-v6-js">
+/* Net365Geo: gives "Ask Net365" a sense of where the customer is.
+ *  - works out a country (saved choice > timezone > browser language > Nigeria)
+ *  - never offers Nigerian-only services (Aba Power, DStv, WAEC...) to someone abroad unless they ask for them
+ *  - answers services Net365 does not carry (Starlink...) honestly and lists real alternatives
+ *    from the Reloadly operator list for the customer's country (/api/operators/country/XX)
+ * It only reads, explains and navigates. It never pays. */
+(function () {
+  if (window.Net365Geo) return;
+  var KEY = 'net365_geo_country';
+  var NAMES = { NG: 'Nigeria', GH: 'Ghana', KE: 'Kenya', ZA: 'South Africa', UG: 'Uganda', TZ: 'Tanzania', US: 'United States', CA: 'Canada', GB: 'United Kingdom', FR: 'France', DE: 'Germany', IT: 'Italy', ES: 'Spain', NL: 'Netherlands', BE: 'Belgium', AT: 'Austria', IE: 'Ireland', PT: 'Portugal', FI: 'Finland', GR: 'Greece', CH: 'Switzerland', SE: 'Sweden', NO: 'Norway', DK: 'Denmark', PL: 'Poland', AU: 'Australia', NZ: 'New Zealand', JP: 'Japan', CN: 'China', HK: 'Hong Kong', SG: 'Singapore', MY: 'Malaysia', TH: 'Thailand', ID: 'Indonesia', PH: 'Philippines', IN: 'India', KR: 'South Korea', AE: 'United Arab Emirates', SA: 'Saudi Arabia', QA: 'Qatar', TR: 'Turkey', IL: 'Israel', EG: 'Egypt', BR: 'Brazil', MX: 'Mexico' };
+  var TZ = { 'Africa/Lagos': 'NG', 'Africa/Accra': 'GH', 'Africa/Nairobi': 'KE', 'Africa/Johannesburg': 'ZA', 'Africa/Kampala': 'UG', 'Africa/Dar_es_Salaam': 'TZ', 'Africa/Cairo': 'EG', 'Europe/London': 'GB', 'Europe/Paris': 'FR', 'Europe/Berlin': 'DE', 'Europe/Rome': 'IT', 'Europe/Madrid': 'ES', 'Europe/Amsterdam': 'NL', 'Europe/Brussels': 'BE', 'Europe/Vienna': 'AT', 'Europe/Dublin': 'IE', 'Europe/Lisbon': 'PT', 'Europe/Helsinki': 'FI', 'Europe/Athens': 'GR', 'Europe/Zurich': 'CH', 'Europe/Stockholm': 'SE', 'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK', 'Europe/Warsaw': 'PL', 'Europe/Istanbul': 'TR', 'Pacific/Auckland': 'NZ', 'Asia/Tokyo': 'JP', 'Asia/Shanghai': 'CN', 'Asia/Hong_Kong': 'HK', 'Asia/Singapore': 'SG', 'Asia/Kuala_Lumpur': 'MY', 'Asia/Bangkok': 'TH', 'Asia/Jakarta': 'ID', 'Asia/Manila': 'PH', 'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN', 'Asia/Seoul': 'KR', 'Asia/Dubai': 'AE', 'Asia/Riyadh': 'SA', 'Asia/Qatar': 'QA', 'Asia/Jerusalem': 'IL', 'America/Sao_Paulo': 'BR', 'America/Mexico_City': 'MX' };
+  var CA_ZONES = /^America\/(Toronto|Vancouver|Edmonton|Winnipeg|Halifax|St_Johns|Regina|Montreal|Moncton|Glace_Bay|Goose_Bay|Iqaluit|Rankin_Inlet|Resolute|Thunder_Bay|Nipigon|Yellowknife|Whitehorse|Dawson|Dawson_Creek|Fort_Nelson|Cambridge_Bay|Inuvik|Swift_Current|Atikokan|Blanc-Sablon|Pangnirtung|Rainy_River)$/;
+  var US_ZONES = /^(America\/(New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Detroit|Boise|Indiana\/.*|Kentucky\/.*|North_Dakota\/.*|Juneau|Sitka|Nome|Adak|Menominee)|Pacific\/Honolulu)$/;
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function store(get, v) { try { if (get) return localStorage.getItem(KEY); if (v) localStorage.setItem(KEY, v); else localStorage.removeItem(KEY); } catch (e) { } return null; }
+  function name(cc) { return NAMES[cc] || cc; }
+
+  function detect() {
+    var saved = store(true); if (saved && NAMES[saved]) return { code: saved, source: 'saved' };
+    var tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { }
+    if (TZ[tz]) return { code: TZ[tz], source: 'tz' };
+    if (CA_ZONES.test(tz)) return { code: 'CA', source: 'tz' };
+    if (US_ZONES.test(tz)) return { code: 'US', source: 'tz' };
+    if (/^Australia\//.test(tz)) return { code: 'AU', source: 'tz' };
+    var lang = (navigator.language || '').split('-')[1];
+    if (lang && NAMES[lang.toUpperCase()]) return { code: lang.toUpperCase(), source: 'lang' };
+    return { code: 'NG', source: 'default' };
+  }
+  var cur = detect(), listeners = [];
+  function country() { return { code: cur.code, name: name(cur.code), source: cur.source }; }
+  function set(cc) { cc = String(cc || '').toUpperCase(); if (!NAMES[cc]) return false; cur = { code: cc, source: 'saved' }; store(false, cc); listeners.forEach(function (f) { try { f(country()); } catch (e) { } }); return true; }
+  function reset() { store(false, ''); cur = detect(); listeners.forEach(function (f) { try { f(country()); } catch (e) { } }); }
+  function onChange(f) { listeners.push(f); }
+
+  /* ---- what the customer typed ---- */
+  var NG_SIGNAL = /\baba\b|nigeria|lagos|abuja|\bnaira\b|₦|dstv|gotv|startimes|waec|neco|jamb|ikeja|\beko\b|ibadan|enugu|kaduna|kano|harcourt|\bphed\b|\bnepa\b/i;
+  var NG_ONLY = [
+    ['electricity', /electric|light bill|nepa|meter|prepaid|postpaid|token|disco|\baba\b|ikeja|\beko\b|ibadan|enugu|kaduna|kano|harcourt/i, 'Electricity'],
+    ['tv', /dstv|gotv|startimes|showmax|cable|\btv\b/i, 'Cable TV'],
+    ['education', /waec|neco|jamb|exam pin|school fees/i, 'Education pins'],
+    ['insurance', /third.?party|insur/i, 'Insurance']
+  ];
+  var NOT_ON_NET365 = { starlink: 'Starlink', hughesnet: 'HughesNet', viasat: 'Viasat', 'project kuiper': 'Project Kuiper', kuiper: 'Project Kuiper' };
+  var INTERNET = /starlink|hughesnet|viasat|kuiper|satellite|broadband|fib(?:re|er)|wi-?fi|router|home internet|internet (?:plan|subscription|bill)|\binternet\b|spectranet|smile\b|ipnx|swift\b|rogers|bell\b|telus|comcast|xfinity|spectrum|verizon|at&t|vodafone|bt\b|sky\b/i;
+  var DATA_WORDS = /\bdata\b|\bgb\b|\bmb\b|bundle|mobile data/i;
+  var COUNTRY_RX = null;
+  function countryFromText(t) {
+    if (!COUNTRY_RX) COUNTRY_RX = Object.keys(NAMES).map(function (k) { return [k, NAMES[k].toLowerCase()]; });
+    t = t.toLowerCase(); var hit = null;
+    COUNTRY_RX.forEach(function (p) { if (t.indexOf(p[1]) > -1 && (!hit || p[1].length > hit[1].length)) hit = p; });
+    if (!hit) { if (/\buk\b/.test(t)) return 'GB'; if (/\busa\b|\bu\.s\.?\b/.test(t)) return 'US'; if (/\buae\b|dubai/.test(t)) return 'AE'; }
+    return hit ? hit[0] : null;
+  }
+
+  /* ---- live operator list (Reloadly through our backend) ---- */
+  var cache = {};
+  function operators(cc) {
+    if (cache[cc]) return cache[cc];
+    cache[cc] = fetch('/api/operators/country/' + encodeURIComponent(cc), { credentials: 'include' }).then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); }).then(function (d) {
+      var list = Array.isArray(d) ? d : (d && (d.operators || d.data)) || [];
+      var seen = {}, out = [];
+      list.forEach(function (o) { var iso = o && o.country && (o.country.isoName || o.country.code); if (iso && String(iso).toUpperCase() !== cc) return; if (cc !== 'NG' && /nigeria/i.test(String(o && o.name || ''))) return; var n = String(o && (o.name || o.operatorName) || '').replace(/\s+/g, ' ').trim(); if (!n) return; var k = n.toLowerCase(); if (seen[k]) return; seen[k] = 1; out.push({ name: n, data: !!(o.data || o.bundle || o.dataBundle) }); });
+      out.sort(function (a, b) { return (b.data ? 1 : 0) - (a.data ? 1 : 0); });
+      return out;
+    }).catch(function (e) { delete cache[cc]; throw e; });
+    return cache[cc];
+  }
+
+  /* ---- buttons in replies ---- */
+  var CTX = null;
+  function btn(act, label, extra) { return '<button type="button" class="ng-act" data-ng="' + esc(act) + '"' + (extra ? ' data-x="' + esc(extra) + '"' : '') + '>' + esc(label) + '</button>'; }
+  function acts(list) { return '<div class="ng-acts">' + list.join('') + '</div>'; }
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('.ng-act') : null; if (!b || !CTX) return;
+    var a = b.getAttribute('data-ng'), x = b.getAttribute('data-x');
+    if (a === 'proceed') CTX.proceed();
+    else if (a === 'open') CTX.open(x || 'airtime', cur.code);
+    else if (a === 'gift') CTX.open('giftcards', cur.code);
+    else if (a === 'here') { CTX.reply('Okay. I will use <b>' + esc(name(cur.code)) + '</b> for what you ask next. Try “mobile data” or “gift cards”.'); }
+    else if (a === 'country') { set(x); CTX.reply('Location set to <b>' + esc(name(x)) + '</b>.'); }
+  });
+  (function () {
+    var s = document.createElement('style');
+    s.textContent = '.ng-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.ng-act{font:600 13px/1 inherit;font-family:inherit;color:inherit;background:rgba(255,106,26,.14);border:1px solid rgba(255,106,26,.55);border-radius:999px;padding:9px 13px;cursor:pointer;min-height:38px}.ng-act:hover{background:rgba(255,106,26,.26)}.ng-act:focus-visible{outline:2px solid #3be3ff;outline-offset:2px}.ng-ops{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.ng-ops span{font-size:12.5px;padding:5px 10px;border-radius:999px;border:1px solid rgba(127,140,170,.4)}.ng-ops span.d{border-color:rgba(59,227,255,.6)}.ng-note{opacity:.8;font-size:12.5px;margin-top:8px;display:block}.ng-pill{display:inline-flex;align-items:center;gap:6px;font:600 12.5px/1 inherit;font-family:inherit;margin:8px 0 0;color:inherit}.ng-pill select{font:inherit;color:inherit;background:rgba(127,140,170,.14);border:1px solid rgba(127,140,170,.4);border-radius:999px;padding:6px 10px;max-width:60vw}.ng-pill select option{color:#111;background:#fff}';
+    document.head.appendChild(s);
+  })();
+
+  /* ---- alternatives card ---- */
+  function alternatives(cc, ctx, intro, seq) {
+    ctx.reply(intro + '<span class="ng-note">Checking mobile providers in ' + esc(name(cc)) + '…</span>');
+    return operators(cc).then(function (ops) {
+      if (seq !== SEQ) return;
+      var hasData = ops.some(function (o) { return o.data; });
+      var shown = ops.slice(0, 10);
+      var html = intro;
+      if (shown.length) {
+        html += '<div class="ng-note">Providers Net365 can top up in ' + esc(name(cc)) + (hasData ? ' (cyan ones also sell data bundles)' : '') + ':</div><div class="ng-ops">' + shown.map(function (o) { return '<span' + (o.data ? ' class="d"' : '') + '>' + esc(o.name) + '</span>'; }).join('') + '</div>';
+        html += '<span class="ng-note">These are mobile networks. Net365 does not list fixed home internet providers for ' + esc(name(cc)) + '.</span>';
+        html += acts([btn('open', 'Recharge a ' + name(cc) + ' number', 'airtime'), btn('gift', 'Gift cards')]);
+      } else {
+        html += '<span class="ng-note">I could not find any providers for ' + esc(name(cc)) + ' on Net365.</span>' + acts([btn('gift', 'Gift cards')]);
+      }
+      ctx.reply(html);
+    }).catch(function () {
+      if (seq !== SEQ) return;
+      ctx.reply(intro + '<span class="ng-note">I could not load the provider list just now.</span>' + acts([btn('open', 'Open Recharge', 'airtime'), btn('gift', 'Gift cards')]));
+    });
+  }
+  var SEQ = 0;
+
+  /* returns true when it answered; false lets the page handle the text as before */
+  function handle(text, ctx) {
+    text = String(text || ''); CTX = ctx; var seq = ++SEQ, t = text.toLowerCase(), cc = cur.code, nm = name(cc);
+    /* "I'm in Canada" */
+    var m = t.match(/\b(?:i'?m|i am|am|live|living|based|located|currently)\s+(?:in|at)\s+(?:the\s+)?([a-z .]+)/);
+    if (m) { var c = countryFromText(m[1]); if (c) { set(c); ctx.reply('Got it. I will use <b>' + esc(name(c)) + '</b> from now on. You can change it any time under the Ask box.'); return true; } }
+    var ngSignal = NG_SIGNAL.test(text);
+    /* services Net365 does not carry */
+    var named = null; Object.keys(NOT_ON_NET365).forEach(function (k) { if (t.indexOf(k) > -1 && !named) named = NOT_ON_NET365[k]; });
+    if (named) {
+      var how = named === 'Starlink' ? 'Starlink bills inside its own app and at starlink.com, usually by card. Net365 cannot pay it for you.' : named + ' bills through its own account, so Net365 cannot pay it for you.';
+      alternatives(cc, ctx, '<b>' + esc(named) + ' is not on Net365 yet.</b> ' + how + ' Here is what I can pay in ' + esc(nm) + ' instead.', seq);
+      return true;
+    }
+    if (INTERNET.test(text) && !NG_ONLY.some(function (r) { return r[1].test(text) && r[0] !== 'insurance'; })) {
+      alternatives(cc, ctx, 'I cannot confirm that provider is on Net365, and I would rather not guess. Here is what I can pay in ' + esc(nm) + '.', seq);
+      return true;
+    }
+    if (cc === 'NG') return false;
+    /* Nigerian-only services asked for from abroad */
+    for (var i = 0; i < NG_ONLY.length; i++) {
+      if (NG_ONLY[i][1].test(text)) {
+        if (ngSignal) return false;
+        ctx.reply('<b>' + esc(NG_ONLY[i][2]) + ' is a Nigerian service.</b> You seem to be in ' + esc(nm) + '. Are you paying for someone in Nigeria?' + acts([btn('proceed', 'Yes, pay in Nigeria'), btn('open', 'Show what I can pay in ' + nm, 'airtime'), btn('gift', 'Gift cards')]));
+        return true;
+      }
+    }
+    /* mobile data / airtime from abroad: Nigerian data plans would be wrong here */
+    if (DATA_WORDS.test(text) && !ngSignal) { alternatives(cc, ctx, 'Mobile data in <b>' + esc(nm) + '</b>.', seq); return true; }
+    return false;
+  }
+
+  /* chips that fit the country */
+  function chips() {
+    return cur.code === 'NG' ? ['Pay electricity', 'Pay Aba Power', 'DStv', 'Buy data', 'What did I spend?', 'Fund my wallet']
+      : ['Recharge a phone', 'Mobile data', 'Gift cards', 'What did I spend?', 'Fund my wallet', 'Pay electricity in Nigeria'];
+  }
+  function placeholder() { return cur.code === 'NG' ? null : 'Try “mobile data”, “gift cards” or “Starlink”…'; }
+
+  /* "Location: Canada" picker under the Ask box */
+  function mount(host, after) {
+    if (!host || host.querySelector('.ng-pill')) return;
+    var w = document.createElement('label'); w.className = 'ng-pill';
+    var s = document.createElement('select'); s.setAttribute('aria-label', 'Your country');
+    Object.keys(NAMES).sort(function (a, b) { return NAMES[a].localeCompare(NAMES[b]); }).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = NAMES[k]; s.appendChild(o); });
+    function sync() { s.value = cur.code; }
+    var t = document.createElement('span'); t.textContent = 'Your location';
+    w.appendChild(t); w.appendChild(s); host.appendChild(w); sync();
+    s.addEventListener('change', function () { set(s.value); });
+    onChange(function () { sync(); if (after) after(country()); });
+  }
+
+  window.Net365Geo = { country: country, set: set, reset: reset, handle: handle, chips: chips, placeholder: placeholder, mount: mount, onChange: onChange, names: NAMES };
+})();
+
+/* NET365 MOBILE — POWER GRID v6 behaviour.
+   Additive: reads the app's own globals (currentUser, allTransactions) and wraps showView, renderHomeTx and updateAuthUI
+   without changing what they do. */
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function money(n, cur) { var sy = { NGN: '₦', USD: '$', GBP: '£', EUR: '€' }; cur = cur || 'NGN'; return (sy[cur] || cur + ' ') + Math.round(Number(n || 0)).toLocaleString('en-NG'); }
+  function user() { try { return currentUser || null; } catch (e) { return null; } }
+  function txs() { try { return allTransactions || []; } catch (e) { return []; } }
+  function jget(p) { return fetch(p, { credentials: 'include', headers: { 'Accept': 'application/json' } }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, data: d }; }); }); }
+  function parseDate(c) { c = String(c || ''); return new Date(c.replace(' ', 'T') + (/Z|[+-]\d\d:?\d\d$/.test(c) ? '' : 'Z')); }
+  function isOk(s) { return ['fulfilled', 'completed', 'success'].indexOf(String(s).toLowerCase()) >= 0; }
+  function isBad(s) { return ['failed', 'fulfillment_failed', 'refunded', 'cancelled'].indexOf(String(s).toLowerCase()) >= 0; }
+  function signIn() { if (typeof onAvatarTap === 'function') onAvatarTap(); }
+  var KINDS = ['topup', 'electricity', 'tv', 'data', 'education', 'utility', 'insurance'];
+
+  /* ---------- theme: dark by default, light on request ---------- */
+  function applyTheme(t) {
+    var b = document.body; b.classList.add('pg'); b.classList.toggle('pg-dark', t !== 'light'); b.classList.toggle('pg-light', t === 'light');
+    document.documentElement.style.background = t === 'light' ? '#F3F6FB' : '#060912';
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', t === 'light' ? '#F3F6FB' : '#060912');
+    var i = document.querySelector('#pgTheme i'); if (i) i.className = t === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+    try { localStorage.setItem('net365_m_theme', t); } catch (e) { }
+  }
+  function theme() { try { return localStorage.getItem('net365_m_theme') === 'light' ? 'light' : 'dark'; } catch (e) { return 'dark'; } }
+  (function () {
+    var bar = document.querySelector('.topbar-actions'), av = $('avatarBtn');
+    if (bar && av) { var b = document.createElement('button'); b.className = 'icon-btn'; b.id = 'pgTheme'; b.type = 'button'; b.setAttribute('aria-label', 'Switch light or dark theme'); b.innerHTML = '<i class="fas fa-sun"></i>'; b.addEventListener('click', function () { applyTheme(document.body.classList.contains('pg-dark') ? 'light' : 'dark'); }); bar.insertBefore(b, av); }
+    applyTheme(theme());
+  })();
+
+  /* ---------- Home pulse tiles (from the person's own payments, already loaded by the app) ---------- */
+  var PULSE = { thisM: 0, nextDate: null, loaded: false };
+  function tile(label, value, note, cls, link) {
+    var d = document.createElement('div'); d.className = 'pg-p';
+    d.innerHTML = '<div class="k">' + esc(label) + '</div><div class="v">' + esc(value) + '</div><div class="d ' + (cls || '') + '">' + (link ? '<a role="button" tabindex="0">' + esc(note) + '</a>' : esc(note)) + '</div>';
+    if (link) d.querySelector('a').addEventListener('click', link);
+    return d;
+  }
+  function drawPulse() {
+    var box = $('pgPulse'); if (!box) return; box.innerHTML = '';
+    if (!user()) {
+      box.appendChild(tile('Spent this month', '—', 'Sign in to see', '', signIn));
+      box.appendChild(tile('Next electricity top-up', '—', 'Needs 3 purchases'));
+      box.appendChild(tile('Delivered', '—', 'Your success rate')); PULSE.loaded = false; return;
+    }
+    var list = txs(), now = new Date(), s = new Date(now.getFullYear(), now.getMonth(), 1), p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    var bills = list.filter(function (t) { return KINDS.indexOf(String(t.tx_type || '').toLowerCase()) >= 0; }).map(function (t) { return { st: t.status, ty: String(t.tx_type).toLowerCase(), d: parseDate(t.created_at), a: Number(t.amount) || 0 }; });
+    var done = bills.filter(function (t) { return isOk(t.st); }), settled = bills.filter(function (t) { return isOk(t.st) || isBad(t.st); });
+    var thisM = done.filter(function (t) { return t.d >= s; }).reduce(function (a, t) { return a + t.a; }, 0), prevM = done.filter(function (t) { return t.d >= p && t.d < s; }).reduce(function (a, t) { return a + t.a; }, 0);
+    var chg = prevM ? Math.round((thisM - prevM) / prevM * 100) : null, rel = settled.length ? Math.round(done.length / settled.length * 100) : 100;
+    var el = done.filter(function (t) { return t.ty === 'electricity'; }).sort(function (a, b) { return a.d - b.d; }), nxt = null, gap = null;
+    if (el.length >= 3) { var g = []; for (var i = 1; i < el.length; i++) g.push((el[i].d - el[i - 1].d) / 864e5); g.sort(function (a, b) { return a - b; }); gap = Math.max(1, Math.round(g[Math.floor(g.length / 2)])); nxt = new Date(+el[el.length - 1].d + gap * 864e5); }
+    PULSE.thisM = thisM; PULSE.nextDate = nxt; PULSE.loaded = true;
+    box.appendChild(tile('Spent this month', money(thisM), chg === null ? 'First month on Net365' : (chg > 0 ? '▲ ' : chg < 0 ? '▼ ' : '') + Math.abs(chg) + '% vs last month', chg === null ? '' : chg > 0 ? 'dn' : 'up'));
+    var days = nxt ? Math.ceil((nxt - now) / 864e5) : null;
+    box.appendChild(tile('Next electricity top-up', nxt ? (days <= 0 ? 'Due now' : 'in ' + days + ' days') : '—', nxt ? 'About every ' + gap + ' days · set a reminder' : 'Needs 3 purchases', '', nxt ? function () { window.location.href = '/scheduler'; } : null));
+    box.appendChild(tile('Delivered', rel + '%', settled.length + ' completed orders', rel >= 95 ? 'up' : ''));
+  }
+
+  /* ---------- Ask Net365: reads a sentence and opens the right screen. It never pays. ---------- */
+  function reply(html) { var r = $('pgReply'); r.innerHTML = html; r.classList.add('on'); }
+  function parse(q) {
+    var t = q.toLowerCase(), o = { amount: null, meter: null };
+    var am = t.match(/(?:₦|ngn\s*|naira\s*|\bn\s?)(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?/) || t.match(/\b(\d[\d,]*(?:\.\d+)?)\s*(k|thousand|naira)\b/);
+    if (am) { var n = parseFloat(am[1].replace(/,/g, '')); if (am[2] === 'k' || am[2] === 'thousand') n *= 1000; if (n > 0) o.amount = Math.round(n); }
+    var mm = q.match(/(^|[^\d,.])(\d{7,13})(?![\d,])/); if (mm) o.meter = mm[2];
+    o.aba = /\baba\b/.test(t);
+    var R = [['electricity', /electric|light|nepa|meter|prepaid|postpaid|token|disco|ikeja|eko\b|abuja|ibadan|enugu|benin|kaduna|kano|harcourt|\baba\b/], ['tv', /dstv|gotv|startimes|showmax|cable|\btv\b/], ['data', /\bdata\b|\bgb\b|\bmb\b|bundle/], ['education', /waec|neco|jamb|exam|school|education/], ['insurance', /insur|third.?party/],
+      ['giftcard', /gift|netflix|spotify|google play|itunes/], ['airtime', /airtime|recharge|top ?up/], ['history', /history|transactions|recent|receipt|analytics|spent|spend|how much|summary/], ['fund', /fund|add money|deposit/], ['wallet', /wallet|balance/], ['schedule', /schedul|remind|next top/], ['refer', /refer|invite|earn|reward/], ['support', /help|support|agent|complain|ticket/], ['theme', /dark mode|light mode|\bdark\b/]];
+    o.intent = null; for (var i = 0; i < R.length; i++) { if (R[i][1].test(t)) { o.intent = R[i][0]; break; } }
+    return o;
+  }
+  function hubOpen(svc, label) { reply('Opening <b>' + esc(label) + '</b>. You review the price before you pay.'); if (window.Net365Hub) window.Net365Hub.open(svc); else window.location.href = '/utilities?svc=' + svc; }
+  function go(url, msg) { reply(msg); setTimeout(function () { window.location.href = url; }, 600); }
+  function geoOpen(kind, cc) { if (kind === 'giftcards') { go('/giftcards', 'Opening <b>Gift Cards</b>.'); return; } if (typeof setManualCountry === 'function') { try { setManualCountry(cc); } catch (e) { } } reply('Opening <b>Recharge</b> for ' + esc(window.Net365Geo.country().name) + '.'); showView('recharge'); }
+  function run(text, skipGeo) {
+    text = String(text || '').trim(); if (!text) return;
+    if (!skipGeo && window.Net365Geo && window.Net365Geo.handle(text, { reply: reply, proceed: function () { run(text, true); }, open: geoOpen })) return;
+    var o = parse(text);
+    switch (o.intent) {
+      case 'electricity':
+        if (o.meter || o.amount || o.aba) { var bits = [o.aba ? 'Aba Power' : '', o.meter ? 'meter ' + o.meter : '', o.amount ? money(o.amount) : ''].filter(Boolean).join(' · '); go('/utilities?ask=' + encodeURIComponent(text), 'Taking you to <b>Utilities</b> with ' + esc(bits) + ' filled in. You check the meter and confirm. Nothing is charged yet.'); }
+        else hubOpen('electricity', 'Electricity');
+        break;
+      case 'tv': hubOpen('tv', 'Cable TV'); break;
+      case 'data': hubOpen('data', 'Data'); break;
+      case 'education': hubOpen('education', 'Education'); break;
+      case 'insurance': hubOpen('insurance', 'Insurance'); break;
+      case 'giftcard': go('/giftcards', 'Opening <b>Gift Cards</b>.'); break;
+      case 'airtime': reply('Opening <b>Recharge</b>.'); showView('recharge'); break;
+      case 'history': reply(user() && PULSE.loaded ? 'You have spent <b>' + esc(money(PULSE.thisM)) + '</b> on bills this month. Opening your insights.' : 'Opening your insights.'); showView('transactions'); break;
+      case 'fund': reply('Opening <b>Add money</b>.'); if (typeof onFundWallet === 'function') onFundWallet(); else showView('wallet'); break;
+      case 'wallet': reply('Opening your wallet.'); showView('wallet'); break;
+      case 'schedule': go('/scheduler', PULSE.nextDate ? 'Your next electricity top-up looks due around <b>' + esc(PULSE.nextDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })) + '</b>. Opening Scheduled Payments.' : 'Opening Scheduled Payments.'); break;
+      case 'refer': reply('Opening Rewards.'); if (typeof openRewards === 'function') openRewards(); break;
+      case 'support': reply('Opening Support.'); if (typeof openSheet === 'function') openSheet('supportSheet'); break;
+      case 'theme': reply('Theme changed.'); applyTheme(/light/.test(text.toLowerCase()) ? 'light' : 'dark'); break;
+      default: reply('I did not catch that. Try “pay electricity”, “DStv”, “buy data”, “what did I spend”, “fund my wallet” or “when is my next top-up”.');
+    }
+  }
+  (function initAsk() {
+    var f = $('pgAskForm'); if (!f) return;
+    f.addEventListener('submit', function (e) { e.preventDefault(); run($('pgAskInput').value); });
+    function renderChips() { var box = $('pgChips'); if (!box) return; box.innerHTML = ''; (window.Net365Geo ? window.Net365Geo.chips() : ['Pay electricity', 'Buy data']).forEach(function (s) { var b = document.createElement('button'); b.type = 'button'; b.className = 'pg-chip'; b.textContent = s; b.addEventListener('click', function () { $('pgAskInput').value = s; run(s); }); box.appendChild(b); });
+      var ph = window.Net365Geo && window.Net365Geo.placeholder(); var inp = $('pgAskInput'); if (inp) { if (ph) inp.placeholder = ph; else if (inp.dataset.ph0) inp.placeholder = inp.dataset.ph0; } }
+    if ($('pgAskInput')) $('pgAskInput').dataset.ph0 = $('pgAskInput').placeholder;
+    renderChips();
+    if (window.Net365Geo) { window.Net365Geo.mount($('pgChips').parentNode.insertBefore(document.createElement('div'), $('pgReply')), function () { renderChips(); var r = $('pgReply'); if (r) { r.classList.remove('on'); r.innerHTML = ''; } }); }
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition, mic = $('pgMic');
+    if (SR && mic) { mic.style.display = 'grid'; var on = false; mic.addEventListener('click', function () { if (on) return; var r = new SR(); r.lang = 'en-NG'; r.interimResults = false; r.continuous = false; on = true; mic.classList.add('on'); r.onresult = function (ev) { var t = ev.results[0][0].transcript; $('pgAskInput').value = t; run(t); }; r.onend = function () { on = false; mic.classList.remove('on'); }; r.onerror = function () { on = false; mic.classList.remove('on'); reply('I could not hear that. Try again or type it.'); }; try { r.start(); } catch (e) { on = false; mic.classList.remove('on'); } }); }
+  })();
+
+  /* ---------- History: Insights | Activity ---------- */
+  var TYPES = { electricity: 'Electricity', tv: 'Cable TV', data: 'Data', topup: 'Airtime', education: 'Education', insurance: 'Insurance' }, DATA = null, TAB = 'insights';
+  function setTab(t) {
+    TAB = t; var a = $('pgActivity'), w = $('pgaWrap'); if (!a || !w) return;
+    a.style.display = t === 'activity' ? '' : 'none'; w.style.display = t === 'insights' ? '' : 'none';
+    Array.prototype.forEach.call(document.querySelectorAll('#pgSeg button'), function (b) { b.classList.toggle('on', b.getAttribute('data-t') === t); b.setAttribute('aria-pressed', b.getAttribute('data-t') === t ? 'true' : 'false'); });
+    if (t === 'insights') pgaLoad();
+  }
+  function rank(list) {
+    if (!list || !list.length) return '<div class="pga-empty">No data yet. It fills in as you create schedules.</div>';
+    var rows = list.slice(0, 6), max = Math.max.apply(null, rows.map(function (r) { return Number(r.count) || 0; }).concat([1])), tot = rows.reduce(function (a, r) { return a + (Number(r.count) || 0); }, 0) || 1;
+    return '<div class="pga-rank">' + rows.map(function (r, i) { return '<div class="it"><span class="n">' + (i + 1) + '</span><span class="nm">' + esc(r.name || 'Unknown') + '</span><span class="ct">' + esc(r.count) + '<small>' + Math.round((Number(r.count) || 0) / tot * 100) + '%</small></span><div class="tr"><i data-w="' + ((Number(r.count) || 0) / max * 100).toFixed(1) + '"></i></div></div>'; }).join('') + '</div>';
+  }
+  function countUp(node, to) { var red = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches; to = Number(to) || 0; if (red || !to) { node.textContent = money(to); return; } var t0 = performance.now(); (function f(t) { var p = Math.min(1, (t - t0) / 900); node.textContent = money(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(f); })(t0); }
+  function pgaLoad() {
+    var w = $('pgaWrap'); if (!w) return Promise.resolve();
+    if (!user()) { w.innerHTML = '<div class="pga-panel pga-empty">Sign in to see your spending, schedules and wallets here.<br><button type="button" id="pgaSign">Sign in</button></div>'; var sb = $('pgaSign'); if (sb) sb.addEventListener('click', signIn); return Promise.resolve(); }
+    if (!w.firstChild || !DATA) w.innerHTML = '<div class="pga-panel"><div class="pga-skel"></div><div class="pga-skel" style="width:60%"></div><div class="pga-skel"></div></div>';
+    return jget('/api/analytics/dashboard').then(function (r) {
+      if (r.ok && r.data && r.data.success && r.data.data) { DATA = r.data.data; pgaDraw(); }
+      else { w.innerHTML = '<div class="pga-panel pga-empty">Could not load your insights.<br><button type="button" id="pgaRetry">Try again</button></div>'; var b = $('pgaRetry'); if (b) b.addEventListener('click', pgaLoad); }
+    }).catch(function () { w.innerHTML = '<div class="pga-panel pga-empty">No connection.<br><button type="button" id="pgaRetry">Try again</button></div>'; var b = $('pgaRetry'); if (b) b.addEventListener('click', pgaLoad); });
+  }
+  function pgaDraw() {
+    var d = DATA, s = d.summary || {}, tx = (d.recent_transactions || []).slice(0, 10);
+    var paid = tx.filter(function (t) { return isOk(t.status); }), avg = paid.length ? paid.reduce(function (a, t) { return a + Number(t.amount || 0); }, 0) / paid.length : 0;
+    var share = Number(s.total_spent) > 0 ? Math.round(Number(s.monthly_spent || 0) / Number(s.total_spent) * 100) : 0;
+    var total = Number(s.total_schedules) || 0, act = Number(s.active_schedules) || 0, done = Number(s.completed_schedules) || 0, rest = Math.max(0, total - act - done), C = 2 * Math.PI * 48;
+    var segs = [['Active', act, '#34e39a'], ['Completed', done, '#ff6a1a'], ['Paused or other', rest, '#8f9cb6']];
+    var vals = paid.slice().reverse().map(function (t) { return Number(t.amount) || 0; }), spark = '';
+    if (vals.length > 1) { var mx = Math.max.apply(null, vals.concat([1])), pts = vals.map(function (v, i) { return (i / (vals.length - 1) * 300).toFixed(1) + ',' + (50 - v / mx * 42).toFixed(1); }); spark = '<svg class="pga-spark" viewBox="0 0 300 56" preserveAspectRatio="none" role="img" aria-label="Recent spending trend"><defs><linearGradient id="pgag" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ff6a1a" stop-opacity=".45"/><stop offset="1" stop-color="#ff6a1a" stop-opacity="0"/></linearGradient></defs><polygon points="0,56 ' + pts.join(' ') + ' 300,56" fill="url(#pgag)"/><polyline points="' + pts.join(' ') + '" fill="none" stroke="#ff6a1a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg>'; }
+    var ops = d.top_operators || [], opTot = ops.reduce(function (a, r) { return a + (Number(r.count) || 0); }, 0), L = [];
+    var by = {}; paid.forEach(function (t) { var k = TYPES[String(t.tx_type || '').toLowerCase()] || String(t.tx_type || 'Payment').replace(/_/g, ' '); by[k] = (by[k] || 0) + (Number(t.amount) || 0); });
+    var best = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; })[0];
+    if (best) L.push(['fa-chart-pie', 'Most of your recent money went to <b>' + esc(best) + '</b> (' + esc(money(by[best])) + ').']);
+    if (ops[0]) L.push(['fa-signal', '<b>' + esc(ops[0].name) + '</b> is your top operator at ' + (opTot ? Math.round(ops[0].count / opTot * 100) : 0) + '% of operator activity.']);
+    if (total) L.push(['fa-circle-check', done + ' of ' + total + ' schedules are complete (<b>' + Math.round(done / total * 100) + '%</b>), and ' + act + ' are still running.']);
+    var failed = tx.filter(function (t) { return isBad(t.status); }).length, pend = tx.filter(function (t) { return !isOk(t.status) && !isBad(t.status); }).length;
+    if (failed) L.push(['fa-triangle-exclamation', '<b>' + failed + ' recent payment' + (failed > 1 ? 's' : '') + ' failed.</b> Net365 refunds failed orders automatically.']);
+    else if (pend) L.push(['fa-hourglass-half', pend + ' recent payment' + (pend > 1 ? 's are' : ' is') + ' still pending.']);
+    if (PULSE.nextDate) L.push(['fa-bolt', 'Your next electricity top-up looks due around <b>' + esc(PULSE.nextDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })) + '</b>.']);
+    if (!L.length) L.push(['fa-seedling', 'Nothing to analyse yet. Pay a bill or create a schedule and this starts reading your numbers.']);
+    var wal = (d.wallets || []).length ? d.wallets.map(function (w) { var c = String(w.currency || 'NGN'); return '<div class="pga-wal"><div class="c ' + esc(c) + '">' + esc({ NGN: '₦', USD: '$', GBP: '£', EUR: '€' }[c] || c.slice(0, 1)) + '</div><div><b>' + esc(c) + ' wallet</b><span>Available balance</span></div><div class="amt">' + esc(money(w.balance, c)) + '</div></div>'; }).join('') : '<div class="pga-empty">No wallets yet.</div>';
+    $('pgaWrap').innerHTML =
+      '<div class="pga-panel pga-spend"><div class="k">Spent this month</div><div class="pga-big" id="pgaBig">₦0</div><div class="pga-sub">' + (Number(s.total_spent) > 0 ? 'That is ' + share + '% of everything you have spent on Net365.' : 'Make your first payment and this lights up.') + '</div>' + spark +
+      '<div class="pga-row"><div><b>' + esc(money(s.total_spent)) + '</b><span>All-time</span></div><div><b>' + esc(money(avg)) + '</b><span>Average</span></div><div><b>' + tx.length + '</b><span>Recent</span></div></div></div>' +
+      '<div class="pga-panel"><div class="pga-ph"><h3>Schedule health</h3><p class="pga-sub">How your automated payments are doing</p></div><div class="pga-health"><div class="pga-ring" role="img" aria-label="Schedules by status"><svg viewBox="0 0 120 120" id="pgaRing"><circle class="t" cx="60" cy="60" r="48"/></svg><div class="m"><b>' + total + '</b><span>schedules</span></div></div><div class="pga-leg">' + segs.map(function (g) { return '<div><span class="pga-dot" style="background:' + g[2] + '"></span>' + esc(g[0]) + '<b>' + g[1] + '</b></div>'; }).join('') + '</div></div></div>' +
+      '<div class="pga-panel pga-ai"><div class="pga-ph" style="display:flex;gap:11px;align-items:center"><div class="pg-orb"></div><div><h3>What the numbers say</h3><p class="pga-sub">Read straight from your own data</p></div></div><div class="pga-ins">' + L.map(function (x) { return '<div><i class="fas ' + x[0] + '"></i><span>' + x[1] + '</span></div>'; }).join('') + '</div></div>' +
+      '<div class="pga-panel"><div class="pga-ph"><h3>Top operators</h3><p class="pga-sub">Networks and providers you use most</p></div>' + rank(d.top_operators) + '</div>' +
+      '<div class="pga-panel"><div class="pga-ph"><h3>Top departments</h3><p class="pga-sub">Where most of your schedules sit</p></div>' + rank(d.top_departments) + '</div>' +
+      '<div class="pga-panel"><div class="pga-ph"><h3>Wallets</h3><p class="pga-sub">Balances by currency</p></div>' + wal + '</div>';
+    countUp($('pgaBig'), s.monthly_spent);
+    var svg = $('pgaRing'), off = 0; segs.forEach(function (g) { if (!g[1] || !total) return; var len = g[1] / total * C, c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); c.setAttribute('class', 's'); c.setAttribute('cx', 60); c.setAttribute('cy', 60); c.setAttribute('r', 48); c.setAttribute('stroke', g[2]); c.setAttribute('stroke-dashoffset', -off); c.setAttribute('stroke-dasharray', '0 ' + C); svg.appendChild(c); off += len; requestAnimationFrame(function () { c.setAttribute('stroke-dasharray', Math.max(len - 2, 0) + ' ' + C); }); });
+    requestAnimationFrame(function () { Array.prototype.forEach.call($('pgaWrap').querySelectorAll('i[data-w]'), function (n) { n.style.width = n.getAttribute('data-w') + '%'; }); });
+  }
+  var seg = $('pgSeg'); if (seg) Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b) { b.addEventListener('click', function () { setTab(b.getAttribute('data-t')); }); });
+
+  /* ---------- hooks into existing functions (behaviour preserved) ---------- */
+  try { var _sv = window.showView; if (typeof _sv === 'function') window.showView = function (n) { var r = _sv.apply(this, arguments); if (n === 'transactions') { setTab(TAB); } return r; }; } catch (e) { }
+  try { var _rh = window.renderHomeTx; if (typeof _rh === 'function') window.renderHomeTx = function () { var r = _rh.apply(this, arguments); drawPulse(); return r; }; } catch (e) { }
+  try { var _ua = window.updateAuthUI; if (typeof _ua === 'function') window.updateAuthUI = function () { var r = _ua.apply(this, arguments); drawPulse(); if (document.body.dataset.view === 'transactions' && TAB === 'insights') { DATA = null; pgaLoad(); } return r; }; } catch (e) { }
+
+  drawPulse(); setTab('insights');
+})();
+
+</script>
 </body>
 </html>

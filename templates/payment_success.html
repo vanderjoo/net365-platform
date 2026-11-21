@@ -336,19 +336,102 @@
     }
     .ad-body { font-size: 12.5px; line-height: 1.5; }
   }
+
+  /* ── Mode switch ─────────────────────────────── */
+  .mode-switch { display:flex; justify-content:flex-end; gap:6px; }
+  .mode-switch a { padding:6px 14px; border-radius:999px; font-size:12px; font-weight:700; text-decoration:none;
+    color:var(--muted); border:1px solid var(--line); background:rgba(255,255,255,.04); }
+  .mode-switch a.on { color:#fff; background:linear-gradient(135deg,#e53935,#ff6d00); border-color:transparent; }
+
+  /* ── Rewards ─────────────────────────────────── */
+  .rewards { background:rgba(15,23,42,.72); border:1px solid rgba(255,179,71,.25); border-radius:20px; padding:18px 20px;
+    animation: fadeUp .5s .1s both; }
+  .rewards-top { display:flex; align-items:center; gap:14px; }
+  .lvl-badge { width:54px; height:54px; border-radius:16px; display:grid; place-items:center; font-size:28px;
+    background:linear-gradient(135deg,#43311f,#2a2220); border:1px solid rgba(255,157,69,.35); flex-shrink:0; }
+  .rewards-title { font-weight:800; font-size:15px; }
+  .rewards-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+  .earned { margin-left:auto; text-align:right; font-weight:900; color:#ffd166; font-size:20px; white-space:nowrap; }
+  .earned small { display:block; font-size:10.5px; font-weight:700; color:var(--muted); letter-spacing:.08em; }
+  .bar { height:9px; background:rgba(255,255,255,.08); border-radius:20px; overflow:hidden; margin:14px 0 6px; }
+  .bar > div { height:100%; border-radius:20px; background:linear-gradient(90deg,#e53935,#ffb347); transition:width 1s ease; }
+  .bar-label { display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .chip { font-size:11.5px; padding:5px 11px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid var(--line); }
+  .chip.new { background:rgba(34,197,94,.15); border-color:rgba(34,197,94,.4); color:#bbf7d0; }
+  .chip.next { opacity:.7; border-style:dashed; }
+  .rewards-note { font-size:11px; color:var(--muted); margin-top:12px; line-height:1.5; }
+  .rewards.guest { text-align:center; }
+
+  /* ── Headlines (Pro) ─────────────────────────── */
+  .briefing { background:rgba(255,255,255,.035); border:1px solid var(--line); border-radius:18px; padding:16px 18px; }
+  .briefing h2 { font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+  .briefing a, .briefing div.h { display:block; padding:9px 0; border-bottom:1px solid var(--line); color:#e5eaf3;
+    text-decoration:none; font-size:14px; font-weight:600; line-height:1.4; }
+  .briefing > :last-child { border-bottom:none; }
+  .briefing small { display:block; color:var(--muted); font-size:11px; font-weight:500; margin-top:2px; }
+
+  /* ── PLAY mode (kids): bright, big, friendly. House content only. ── */
+  body[data-mode="play"] {
+    --bg:#1b1458; --panel:#2a1f7a; --text:#fff; --muted:#cfc8ff; --line:rgba(255,255,255,.22);
+    background: radial-gradient(800px 500px at 85% -10%, rgba(255,220,64,.30), transparent 60%),
+                radial-gradient(700px 500px at 0% 40%, rgba(64,224,255,.25), transparent 60%),
+                linear-gradient(160deg,#2b1a8c,#4a1fa8 60%,#2b1a8c);
+  }
+  body[data-mode="play"] * { font-family:'Trebuchet MS','Comic Sans MS','Segoe UI',system-ui,sans-serif; }
+  body[data-mode="play"] .success-banner { background:linear-gradient(135deg,#16a34a,#22c55e); border-color:#bbf7d0; border-radius:28px; }
+  body[data-mode="play"] .success-banner h1 { font-size:26px; }
+  body[data-mode="play"] .success-banner p { color:#f0fdf4; font-size:15px; }
+  body[data-mode="play"] .summary,
+  body[data-mode="play"] .rewards,
+  body[data-mode="play"] .briefing { background:rgba(255,255,255,.12); border-radius:26px; border-color:rgba(255,255,255,.28); }
+  body[data-mode="play"] .rewards-title { font-size:19px; }
+  body[data-mode="play"] .bar { height:16px; }
+  body[data-mode="play"] .btn-primary { background:linear-gradient(135deg,#f59e0b,#ef4444); border-radius:20px; font-size:14px; padding:14px 24px; }
+  body[data-mode="play"] .btn-ghost { border-radius:20px; font-size:14px; }
+  body[data-mode="play"] .ref { display:none; }
+
+  /* ── Mini game ───────────────────────────────── */
+  .game { background:rgba(15,23,42,.72); border:1px solid var(--line); border-radius:20px; padding:16px 18px; animation: fadeUp .5s .2s both; }
+  .game-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .game-head h2 { font-size:15px; font-weight:800; }
+  .game-stats { font-size:12px; color:var(--muted); display:flex; gap:12px; }
+  .game-stats b { color:#ffd166; }
+  .arena { position:relative; height:220px; margin-top:12px; border-radius:16px; overflow:hidden; touch-action:manipulation;
+    background:radial-gradient(circle at 50% 0%, rgba(255,109,0,.18), transparent 70%), rgba(255,255,255,.05);
+    border:1px dashed var(--line); user-select:none; -webkit-user-select:none; }
+  .arena .msg { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; padding:12px; font-size:13px; color:var(--muted); }
+  .bolt { position:absolute; width:46px; height:46px; border-radius:50%; border:0; font-size:26px; line-height:1;
+    background:radial-gradient(circle at 35% 30%, #ffe082, #ff9800); box-shadow:0 6px 18px rgba(255,152,0,.5);
+    animation: pop .15s ease-out; cursor:pointer; padding:0; }
+  .game-btn { padding:10px 22px; border-radius:14px; border:0; font-weight:800; font-size:13px; color:#fff;
+    background:linear-gradient(135deg,#e53935,#ff6d00); cursor:pointer; }
+  body[data-mode="play"] .game { background:rgba(255,255,255,.12); border-radius:26px; border-color:rgba(255,255,255,.28); }
+  body[data-mode="play"] .arena { height:260px; border-radius:22px; }
+  body[data-mode="play"] .bolt { width:58px; height:58px; font-size:32px; }
 </style>
 </head>
-<body>
+<body data-mode="{{ mode or 'pro' }}">
 
 <div class="confetti" id="confetti"></div>
 
 <div class="page">
 
+  <div class="mode-switch" role="group" aria-label="Display mode">
+    <a href="?reference={{ reference|urlencode }}&mode=pro" class="{{ 'on' if mode != 'play' else '' }}">💼 Pro</a>
+    <a href="?reference={{ reference|urlencode }}&mode=play" class="{{ 'on' if mode == 'play' else '' }}">🎮 Play</a>
+  </div>
+
   <!-- ── SUCCESS BANNER ────────────────────────── -->
   <div class="success-banner">
-    <div class="check">✓</div>
-    <h1>Payment Successful</h1>
-    <p>Your transaction is being processed. A receipt is on its way.</p>
+    <div class="check">{{ '🎉' if mode == 'play' else '✓' }}</div>
+    {% if mode == 'play' %}
+      <h1>Quest complete!</h1>
+      <p>Your top-up is on its way. Great job!</p>
+    {% else %}
+      <h1>Payment Successful</h1>
+      <p>Your transaction is being processed. A receipt is on its way.</p>
+    {% endif %}
     {% if reference %}
       <div class="ref">Reference: {{ reference }}</div>
     {% endif %}
@@ -372,12 +455,92 @@
         {% if result.success %}Completed{% else %}Processing{% endif %}
       </span>
     </div>
-    {% if tx.payload and tx.payload.get('phone') %}
+    {% if recipient_masked %}
     <div class="summary-row">
-      <span class="label">Phone</span>
-      <span class="value">{{ tx.payload.phone }}</span>
+      <span class="label">Recharged number</span>
+      <span class="value">{{ recipient_masked }}</span>
     </div>
     {% endif %}
+    {% if airtime_value %}
+    <div class="summary-row">
+      <span class="label">Value delivered</span>
+      <span class="value">{{ tx.currency or 'NGN' }} {{ '%.2f'|format(airtime_value) }}</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+
+  <!-- ── REWARDS ─────────────────────────────── -->
+  {% if rewards %}
+  <div class="rewards" id="rewards">
+    <div class="rewards-top">
+      <div class="lvl-badge">{{ rewards.level_emoji }}</div>
+      <div>
+        <div class="rewards-title">Level {{ rewards.level }} · {{ rewards.level_title }}</div>
+        <div class="rewards-sub">
+          {{ rewards.total }} points{% if rewards.streak > 1 %} · 🔥 {{ rewards.streak }}-day streak{% endif %}
+        </div>
+      </div>
+      {% if rewards.award and rewards.award.awarded %}
+      <div class="earned">+{{ rewards.award.points }}<small>POINTS</small></div>
+      {% endif %}
+    </div>
+    <div class="bar"><div id="xpbar" style="width:0%" data-w="{{ rewards.progress_pct }}"></div></div>
+    <div class="bar-label">
+      <span>{{ rewards.total }} pts</span>
+      <span>{% if rewards.next_at %}{{ rewards.next_at }} pts → {{ rewards.next_title }}{% else %}Top level reached{% endif %}</span>
+    </div>
+    {% if rewards.award and rewards.award.new_level %}
+      <div class="chips"><span class="chip new">⬆️ Level up! You are now {{ rewards.level_title }}</span></div>
+    {% endif %}
+    <div class="chips">
+      {% if rewards.award %}{% for u in rewards.award.new_unlocks %}
+        <span class="chip new">{{ u.emoji }} Unlocked: {{ u.name }}</span>
+      {% endfor %}{% endif %}
+      {% for u in rewards.unlocked %}<span class="chip">{{ u.emoji }} {{ u.name }}</span>{% endfor %}
+      {% if rewards.next_unlock %}<span class="chip next">🔒 {{ rewards.next_unlock.emoji }} {{ rewards.next_unlock.name }} · {{ rewards.next_unlock.at }} pts</span>{% endif %}
+    </div>
+    {% if not (rewards.award and rewards.award.awarded) and result and not result.success %}
+      <div class="rewards-note">Points are added as soon as your top-up completes. Refresh this page in a moment.</div>
+    {% endif %}
+    <div class="rewards-note">Points are loyalty rewards with no cash value. Unlocks are fixed: reach the points, get the unlock. No luck involved.</div>
+  </div>
+  {% else %}
+  <div class="rewards guest">
+    <div class="rewards-title">🎁 Earn points on every top-up</div>
+    <div class="rewards-sub">Create a free Net365 account to collect points, build streaks and unlock rewards.</div>
+    <div class="footer-actions" style="margin-top:12px"><a class="btn-primary" href="{{ frontend_url }}/">Create free account</a></div>
+  </div>
+  {% endif %}
+
+
+  <!-- ── MINI GAME ───────────────────────────── -->
+  <div class="game" id="game">
+    <div class="game-head">
+      <h2>{{ '🎮 Power Catch' if mode == 'play' else '⚡ 20-second challenge' }}</h2>
+      <div class="game-stats"><span>Score <b id="gScore">0</b></span><span>Time <b id="gTime">20</b></span><span>Best <b id="gBest">0</b></span></div>
+    </div>
+    <div class="arena" id="arena">
+      <div class="msg" id="gMsg">
+        <div>Tap the power bolts as fast as you can!</div>
+        <button class="game-btn" id="gStart" type="button">Play</button>
+      </div>
+    </div>
+    <div class="rewards-note">Just for fun. Game scores do not earn points or prizes.</div>
+  </div>
+
+  <!-- ── HEADLINES ───────────────────────────── -->
+  {% if headlines %}
+  <div class="briefing">
+    <h2>{{ '⭐ Fun corner' if mode == 'play' else '📰 Business briefing' }}</h2>
+    {% for h in headlines %}
+      {% if h.url and mode != 'play' %}
+        <a href="{{ h.url }}" target="_blank" rel="noopener noreferrer nofollow">{{ h.title }}{% if h.source %}<small>{{ h.source }}</small>{% endif %}</a>
+      {% else %}
+        <div class="h">{{ h.title }}{% if h.source %}<small>{{ h.source }}</small>{% endif %}</div>
+      {% endif %}
+    {% endfor %}
   </div>
   {% endif %}
 
@@ -502,6 +665,51 @@
 </div>
 
 <script>
+  // Animate the points bar
+  (function(){ var b=document.getElementById('xpbar'); if(b) setTimeout(function(){ b.style.width=b.dataset.w+'%'; },300); })();
+
+
+  // ── Mini game: tap the bolts for 20 seconds. Fun only; the score is never sent anywhere. ──
+  (function () {
+    var arena = document.getElementById('arena'); if (!arena) return;
+    var msg = document.getElementById('gMsg'), startBtn = document.getElementById('gStart');
+    var elScore = document.getElementById('gScore'), elTime = document.getElementById('gTime'), elBest = document.getElementById('gBest');
+    var score = 0, left = 20, tick = null, spawn = null, running = false, best = 0;
+    try { best = parseInt(localStorage.getItem('n365_game_best') || '0', 10) || 0; } catch (e) {}
+    elBest.textContent = best;
+
+    function spawnBolt() {
+      if (!running) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'bolt'; b.textContent = '⚡'; b.setAttribute('aria-label', 'Power bolt');
+      var w = arena.clientWidth, h = arena.clientHeight;
+      b.style.left = Math.max(0, Math.random() * (w - 60)) + 'px';
+      b.style.top = Math.max(0, Math.random() * (h - 60)) + 'px';
+      var ttl = Math.max(550, 1100 - (20 - left) * 25);
+      var gone = setTimeout(function () { b.remove(); }, ttl);
+      b.addEventListener('pointerdown', function (e) {
+        e.preventDefault(); clearTimeout(gone); b.remove();
+        score++; elScore.textContent = score;
+      });
+      arena.appendChild(b);
+    }
+    function end() {
+      running = false; clearInterval(tick); clearInterval(spawn);
+      arena.querySelectorAll('.bolt').forEach(function (n) { n.remove(); });
+      var isBest = score > best;
+      if (isBest) { best = score; elBest.textContent = best; try { localStorage.setItem('n365_game_best', String(best)); } catch (e) {} }
+      msg.style.display = 'flex';
+      msg.firstElementChild.textContent = score + ' bolts caught!' + (isBest ? ' New best 🎉' : '');
+      startBtn.textContent = 'Play again';
+    }
+    startBtn.addEventListener('click', function () {
+      score = 0; left = 20; running = true;
+      elScore.textContent = 0; elTime.textContent = left; msg.style.display = 'none';
+      tick = setInterval(function () { left--; elTime.textContent = left; if (left <= 0) end(); }, 1000);
+      spawn = setInterval(spawnBolt, 520); spawnBolt();
+    });
+  })();
+
   // Confetti burst
   (function () {
     const colors = ['#22c55e','#4f8cff','#f59e0b','#ec4899','#8b5cf6','#06b6d4'];
@@ -534,6 +742,8 @@
     if (action === 'utilities') { window.location.href = '{{ frontend_url }}/utilities'; return; }
     if (action === 'wallet')    { window.location.href = '{{ frontend_url }}/?action=add_money'; return; }
     if (action === 'referral')  { window.location.href = '{{ frontend_url }}/?action=referral'; return; }
+    // Play mode (children): never open outside links.
+    if (document.body.dataset.mode === 'play') { return; }
     if (url) { window.open(url, '_blank', 'noopener,noreferrer'); }
   }
 
@@ -566,6 +776,21 @@
       handleAdNavigation(el.dataset.action, el.dataset.url);
     });
   });
+</script>
+<script>
+/* Send the customer back to the page they paid from (utilities, scheduler, home...). Only known pages are allowed. */
+(function(){
+  try {
+    var MAP = { '/': ['Back to Dashboard', 'fa-home'], '/utilities': ['Back to Utilities', 'fa-bolt'], '/scheduler': ['Back to Scheduled Payments', 'fa-calendar-check'], '/business': ['Back to Business', 'fa-briefcase'], '/marketplace': ['Back to Marketplace', 'fa-bullhorn'], '/services': ['Back to Services', 'fa-toolbox'] };
+    var q = new URLSearchParams(location.search).get('from'), to = null;
+    if (q && MAP['/' + q.replace(/^\/+/, '')]) to = '/' + q.replace(/^\/+/, '');
+    if (!to) { var o = JSON.parse(localStorage.getItem('n365_return') || 'null'); if (o && MAP[o.to] && Date.now() - o.t < 7200000) to = o.to; }
+    if (!to) return;
+    var fa = document.querySelectorAll('.footer-actions'); var a = fa.length ? fa[fa.length - 1].querySelector('.btn-primary') : null; if (!a) return;
+    var base = (a.getAttribute('href') || '/').replace(/\/+$/, '');
+    a.setAttribute('href', base + to); a.innerHTML = '<i class="fas ' + MAP[to][1] + '"></i> ' + MAP[to][0];
+  } catch (e) {}
+})();
 </script>
 </body>
 </html>
