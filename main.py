@@ -17,7 +17,6 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("net365.log", encoding="utf-8"),
         logging.StreamHandler(sys.stdout),
     ],
 )
@@ -42,9 +41,18 @@ _smtp_user_check = os.getenv("SMTP_USER")
 _smtp_pass_check = os.getenv("SMTP_PASSWORD")
 print(f"SMTP_USER loaded: [{'SET as ' + _smtp_user_check if _smtp_user_check else 'NOT SET'}]")
 print(f"SMTP_PASSWORD loaded: [{'SET' if _smtp_pass_check else 'NOT SET'}]")
-if not _smtp_user_check or not _smtp_pass_check:
-    print("⚠️ WARNING: SMTP_USER/SMTP_PASSWORD missing — send_email_notification() will "
-          "silently return False for every email until these are set.")
+_resend_check = os.getenv("RESEND_API_KEY")
+_mg_check = os.getenv("MAILGUN_API_KEY") and os.getenv("MAILGUN_DOMAIN")
+if _resend_check:
+    print("Email provider: Resend API (HTTPS)")
+elif _mg_check:
+    print(f"Email provider: Mailgun API (HTTPS), domain {os.getenv('MAILGUN_DOMAIN')}, base {os.getenv('MAILGUN_API_BASE', 'https://api.mailgun.net')}")
+elif _smtp_user_check and _smtp_pass_check:
+    print("Email provider: SMTP only. NOTE: Render free services block SMTP ports 25/465/587, so mail will fail there. "
+          "Set RESEND_API_KEY or MAILGUN_API_KEY + MAILGUN_DOMAIN.")
+else:
+    print("⚠️ WARNING: no email provider configured. Set RESEND_API_KEY, or MAILGUN_API_KEY + MAILGUN_DOMAIN "
+          "(HTTPS, works on Render). Until then every email (login codes, chat-link codes, receipts) is silently skipped.")
 
 # ============ ENVIRONMENT VARIABLES CHECK ============
 print("=" * 60)
@@ -121,7 +129,7 @@ import threading
 import re
 import hashlib
 import sqlite3
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit, quote
 from io import BytesIO
 import smtplib
 from email.mime.text import MIMEText
@@ -133,12 +141,13 @@ import database as db
 from ip_intel import IPIntel, detect_bot
 from webhook_security import verify_paystack_signature, verify_flutterwave_signature
 from net365_ua import DeviceDetector, parse_device_model
-from geo_resolver import GeoResolver
+from geo_resolver import GeoResolver, is_public_ip
 
 GeoResolver.configure(db.get_db_connection)
 
 # ============ CHECK ENCRYPTION KEY IN PRODUCTION ============
-if os.getenv("ENVIRONMENT", "").lower() == "production":
+if (os.getenv("ENVIRONMENT", "").lower() == "production"
+        or os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID")):
     if not os.getenv("ENCRYPTION_KEY"):
         raise ValueError(
             "ENCRYPTION_KEY required in production! Please set ENCRYPTION_KEY in .env file."
@@ -151,13 +160,20 @@ else:
 
 
 # ============ EXCHANGE RATE SERVICE WITH AUTO-REFRESH ============
+def _env_float_early(name, default):
+    try:
+        return float(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return float(default)
+
+
 class ExchangeRateService:
     """Dynamic exchange rate service with automatic refresh"""
 
     FALLBACK_RATES = {
         # ── units per 1 USD ───────────────────────────────────────────
         "USD": 1.0,
-        "NGN": 1350.0,
+        "NGN": _env_float_early("FALLBACK_NGN_PER_USD", 1350.0),   # set to today's rate on Railway
         "GBP": 0.79,       # 1 USD ≈ 0.79 GBP  ← was 1.25 (wrong direction)
         "EUR": 0.92,       # 1 USD ≈ 0.92 EUR  ← was 1.08 (wrong direction)
         "CAD": 1.36,       # 1 USD ≈ 1.36 CAD
@@ -291,6 +307,13 @@ class ExchangeRateService:
                 logger.error(f"Error fetching exchange rates: {e}")
                 return False
 
+    _last_live = 0.0
+
+    @classmethod
+    def rates_are_live(cls, max_age_seconds: int = 6 * 3600) -> bool:
+        """True only if a real (non-fallback) rate fetch succeeded recently."""
+        return (time.time() - cls._last_live) < max_age_seconds
+
     @classmethod
     def _fetch_from_multiple_sources(cls) -> Dict[str, float]:
         for source in cls._api_sources:
@@ -301,6 +324,7 @@ class ExchangeRateService:
                     rates = source["parser"](data)
                     if rates and len(rates) > 0:
                         if "NGN" in rates or "NGN" in str(rates).upper():
+                            cls._last_live = time.time()
                             logger.info(f"✅ Got rates from {source['name']}")
                             return {k.upper(): v for k, v in rates.items()}
             except Exception as e:
@@ -1152,6 +1176,13 @@ class UtilityBillerValidator:
 
 
 # ============ SUPPORTED CURRENCIES CONFIGURATION ============
+# Stripe currencies with no minor unit: amounts are whole units, NOT cents. Used both when creating a
+# checkout session and when verifying what was paid (dividing these by 100 would under-report 100x).
+STRIPE_ZERO_DECIMAL = {
+    "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga",
+    "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf",
+}
+
 SUPPORTED_CURRENCIES = {
     # ── Local / primary ──────────────────────────────────────────────
     "NGN": {"name": "Nigerian Naira",   "symbol": "₦",   "gateway": "paystack",    "min_amount": 100,  "step": 100, "is_local": True,  "country": "NG", "decimals": 2},
@@ -1161,34 +1192,17 @@ SUPPORTED_CURRENCIES = {
 
     # ── Americas ─────────────────────────────────────────────────────
     "CAD": {"name": "Canadian Dollar",  "symbol": "CA$", "gateway": "stripe",      "min_amount": 1,    "step": 1,   "is_local": False, "country": "CA", "decimals": 2},
-    "BRL": {"name": "Brazilian Real",   "symbol": "R$",  "gateway": "stripe",      "min_amount": 5,    "step": 1,   "is_local": False, "country": "BR", "decimals": 2},
-    "MXN": {"name": "Mexican Peso",     "symbol": "MX$", "gateway": "stripe",      "min_amount": 20,   "step": 10,  "is_local": False, "country": "MX", "decimals": 2},
-    "ARS": {"name": "Argentine Peso",   "symbol": "AR$", "gateway": "stripe",      "min_amount": 100,  "step": 50,  "is_local": False, "country": "AR", "decimals": 2},
-    "CLP": {"name": "Chilean Peso",     "symbol": "CL$", "gateway": "stripe",      "min_amount": 500,  "step": 100, "is_local": False, "country": "CL", "decimals": 0},
-    "COP": {"name": "Colombian Peso",   "symbol": "CO$", "gateway": "stripe",      "min_amount": 3000, "step": 1000,"is_local": False, "country": "CO", "decimals": 2},
-    "PEN": {"name": "Peruvian Sol",     "symbol": "S/",  "gateway": "stripe",      "min_amount": 5,    "step": 1,   "is_local": False, "country": "PE", "decimals": 2},
 
     # ── Asia-Pacific ─────────────────────────────────────────────────
     "AUD": {"name": "Australian Dollar","symbol": "A$",  "gateway": "stripe",      "min_amount": 1,    "step": 1,   "is_local": False, "country": "AU", "decimals": 2},
     "NZD": {"name": "New Zealand Dollar","symbol": "NZ$","gateway": "stripe",      "min_amount": 1,    "step": 1,   "is_local": False, "country": "NZ", "decimals": 2},
-    "JPY": {"name": "Japanese Yen",     "symbol": "¥",   "gateway": "stripe",      "min_amount": 100,  "step": 50,  "is_local": False, "country": "JP", "decimals": 0},
     "CNY": {"name": "Chinese Yuan",     "symbol": "CN¥", "gateway": "stripe",      "min_amount": 10,   "step": 5,   "is_local": False, "country": "CN", "decimals": 2},
-    "HKD": {"name": "Hong Kong Dollar", "symbol": "HK$", "gateway": "stripe",      "min_amount": 10,   "step": 5,   "is_local": False, "country": "HK", "decimals": 2},
-    "SGD": {"name": "Singapore Dollar", "symbol": "S$",  "gateway": "stripe",      "min_amount": 2,    "step": 1,   "is_local": False, "country": "SG", "decimals": 2},
-    "MYR": {"name": "Malaysian Ringgit","symbol": "RM",  "gateway": "stripe",      "min_amount": 5,    "step": 1,   "is_local": False, "country": "MY", "decimals": 2},
-    "THB": {"name": "Thai Baht",        "symbol": "฿",   "gateway": "stripe",      "min_amount": 30,   "step": 10,  "is_local": False, "country": "TH", "decimals": 2},
     "VND": {"name": "Vietnamese Dong",  "symbol": "₫",   "gateway": "stripe",      "min_amount": 20000,"step": 5000,"is_local": False, "country": "VN", "decimals": 0},
-    "PHP": {"name": "Philippine Peso",  "symbol": "₱",   "gateway": "stripe",      "min_amount": 50,   "step": 10,  "is_local": False, "country": "PH", "decimals": 2},
-    "IDR": {"name": "Indonesian Rupiah","symbol": "Rp",  "gateway": "stripe",      "min_amount": 15000,"step": 5000,"is_local": False, "country": "ID", "decimals": 0},
     "INR": {"name": "Indian Rupee",     "symbol": "₹",   "gateway": "stripe",      "min_amount": 50,   "step": 10,  "is_local": False, "country": "IN", "decimals": 2},
     "PKR": {"name": "Pakistani Rupee",  "symbol": "₨",   "gateway": "stripe",      "min_amount": 200,  "step": 50,  "is_local": False, "country": "PK", "decimals": 2},
     "BDT": {"name": "Bangladeshi Taka", "symbol": "৳",   "gateway": "stripe",      "min_amount": 100,  "step": 50,  "is_local": False, "country": "BD", "decimals": 2},
 
     # ── Middle East / North Africa ───────────────────────────────────
-    "AED": {"name": "UAE Dirham",       "symbol": "د.إ", "gateway": "stripe",      "min_amount": 5,    "step": 1,   "is_local": False, "country": "AE", "decimals": 2},
-    "SAR": {"name": "Saudi Riyal",      "symbol": "﷼",   "gateway": "stripe",      "min_amount": 5,    "step": 1,   "is_local": False, "country": "SA", "decimals": 2},
-    "EGP": {"name": "Egyptian Pound",   "symbol": "E£",  "gateway": "stripe",      "min_amount": 30,   "step": 10,  "is_local": False, "country": "EG", "decimals": 2},
-    "TRY": {"name": "Turkish Lira",     "symbol": "₺",   "gateway": "stripe",      "min_amount": 20,   "step": 10,  "is_local": False, "country": "TR", "decimals": 2},
 
     # ── Africa (Flutterwave territory) ───────────────────────────────
     "GHS": {"name": "Ghanaian Cedi",    "symbol": "₵",   "gateway": "flutterwave", "min_amount": 5,    "step": 1,   "is_local": False, "country": "GH", "decimals": 2},
@@ -1252,19 +1266,6 @@ COUNTRY_CURRENCY_MAP = {
     "AE": "AED", "SA": "SAR", "QA": "QAR", "KW": "KWD", "BH": "BHD", "OM": "OMR",
     "IL": "ILS", "TR": "TRY", "EG": "EGP",
     "BR": "BRL", "MX": "MXN", "AR": "ARS", "CL": "CLP", "CO": "COP", "PE": "PEN",
-}
-
-GATEWAY_CURRENCIES = {
-    "paystack": ["NGN"],
-    "stripe": [
-        "ZAR", "USD", "CAD", "GBP", "EUR", "CHF", "SEK", "NOK", "DKK", "PLN",
-        "AUD", "NZD", "JPY", "CNY", "HKD", "SGD", "MYR", "THB", "IDR", "PHP",
-        "INR", "KRW", "AED", "SAR", "QAR", "KWD", "BHD", "OMR", "ILS", "TRY",
-        "EGP", "BRL", "MXN", "ARS", "CLP", "COP", "PEN",
-        "NGN",  # accepted for international cards
-    ],
-    "flutterwave": ["NGN", "GHS", "KES", "ZAR", "UGX", "TZS", "USD", "EUR", "GBP"],
-    "wallet": ["NGN", "USD", "GBP", "EUR", "CAD", "AUD", "GHS", "KES", "ZAR"],
 }
 
 # ============ SANDBOX FALLBACK OPERATORS ============
@@ -1553,7 +1554,49 @@ def _send_sms_africastalking(contacts: list, message: str, sender_id: str) -> Di
 
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "")
 SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "net365_session")
-SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+# Secure cookies are ON by default whenever the site is served over HTTPS (any https:// PUBLIC_URL
+# or FRONTEND_URL, which is what Railway uses). Set SESSION_COOKIE_SECURE=false only for plain-http
+# local development.
+_scs_raw = os.getenv("SESSION_COOKIE_SECURE", "").strip().lower()
+if _scs_raw:
+    SESSION_COOKIE_SECURE = _scs_raw in ("1", "true", "yes", "on")
+else:
+    SESSION_COOKIE_SECURE = any(
+        (os.getenv(_k, "") or "").lower().startswith("https://")
+        for _k in ("PUBLIC_URL", "FRONTEND_URL")
+    )
+
+# ---- Soft-launch safety switches -------------------------------------------------------------
+# WALLET_ENABLED=false  -> no wallet funding, wallet payments, wallet utilities, bulk/scheduled wallet
+#                          spending. Customers pay per purchase through a licensed payment provider.
+# WALLET_TRANSFERS_ENABLED stays false until the regulatory position is confirmed.
+def _env_flag(name, default):
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+WALLET_ENABLED = _env_flag("WALLET_ENABLED", False)   # fail-safe: off unless explicitly enabled
+WALLET_TRANSFERS_ENABLED = _env_flag("WALLET_TRANSFERS_ENABLED", False)
+
+# Per-user spending caps, in NGN (0 disables a cap). Defaults suit a small soft launch.
+LIMIT_PER_TX_NGN = float(os.getenv("LIMIT_PER_TX_NGN", "20000"))
+LIMIT_DAILY_NGN = float(os.getenv("LIMIT_DAILY_NGN", "50000"))
+
+
+def validate_password_strength(password):
+    """Server-side password policy. Returns an error string, or None if the password is acceptable."""
+    if not isinstance(password, str) or not password:
+        return "Password is required"
+    if len(password) < 8:
+        return "Password must be at least 8 characters"
+    if len(password) > 128:
+        return "Password must be 128 characters or fewer"
+    if password.strip() == "" or password.lower() in {
+        "password", "password1", "12345678", "123456789", "qwertyui", "11111111", "iloveyou",
+    }:
+        return "That password is too easy to guess. Please choose another."
+    return None
 SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
 SESSION_COOKIE_MAX_AGE = int(os.getenv("SESSION_COOKIE_MAX_AGE", str(60 * 60 * 24 * 7)))
 # Optional parent-domain cookie for deployments where the authenticated app and
@@ -1564,15 +1607,15 @@ SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", "").strip() or None
 # Referral bonuses are OFF by default during the soft launch. Turn on by
 # setting REFERRAL_BONUS_ENABLED=true in your .env file (or your hosting
 # environment) once you're ready to run the program.
+def is_referral_bonus_enabled() -> bool:
+    """Read the env switch fresh every time (same rule as database.process_pending_referrals)."""
+    return os.getenv("REFERRAL_BONUS_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+
+
 REFERRAL_BONUS_ENABLED = (
     os.getenv("REFERRAL_BONUS_ENABLED", "false").lower() == "true"
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("net365.log"), logging.StreamHandler()],
-)
 logger = logging.getLogger(__name__)
 
 wallet_transfer_lock = threading.Lock()
@@ -1644,6 +1687,14 @@ def _safe_payment_return_url(candidate=None):
     destination remains the configured Net365 frontend origin.
     """
     configured = PAYMENT_RETURN_URL
+    if not FRONTEND_URL:
+        # No FRONTEND_URL configured: a relative URL is useless to a payment
+        # gateway, so fall back to this request's own origin.
+        try:
+            configured = request.host_url.rstrip("/") + "/payment/success"
+        except Exception:
+            pass
+        return configured
     if not candidate:
         return configured
     try:
@@ -1832,6 +1883,7 @@ class ReloadlyAPI:
                 if "headers" in kwargs:
                     headers.update(kwargs.pop("headers"))
 
+                kwargs.setdefault("timeout", 20)  # never hang a worker on Reloadly
                 response = self.session.request(method, url, headers=headers, **kwargs)
 
                 if response.status_code == 401:
@@ -1950,6 +2002,7 @@ class ReloadlyUtilitiesAPI:
                 if "headers" in kwargs:
                     headers.update(kwargs.pop("headers"))
 
+                kwargs.setdefault("timeout", 20)  # never hang a worker on Reloadly
                 response = self.session.request(method, url, headers=headers, **kwargs)
 
                 if response.status_code == 401:
@@ -3215,7 +3268,8 @@ class PaymentProcessor:
             stripe.api_key = api_key
 
     def init_paystack_payment(
-        self, email: str, amount: float, reference: str = None, return_url: str = None
+        self, email: str, amount: float, reference: str = None, return_url: str = None,
+        extra: Optional[Dict] = None,
     ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         # Returns (authorization_url, reference, error_detail). error_detail is
         # None on success. Previously a non-200 Paystack response (bad email,
@@ -3227,9 +3281,9 @@ class PaymentProcessor:
         if not self.api_key:
             return None, None, "Paystack secret key not configured on the server"
         reference = reference or generate_reference("PSK")
-        amount_kobo = int(amount * 100)
+        amount_kobo = int(round(float(amount) * 100))
         return_url = return_url or os.getenv("PAYSTACK_RETURN_URL", DEFAULT_RETURN_URL)
-        callback_url = f"{PAYMENT_SERVICE_URL}/payment/callback?return_url={return_url}&reference={reference}"
+        callback_url = f"{PAYMENT_SERVICE_URL}/payment/callback?return_url={quote(str(return_url), safe='')}&reference={reference}"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -3241,6 +3295,8 @@ class PaymentProcessor:
             "reference": reference,
             "callback_url": callback_url,
         }
+        if extra:
+            payload.update(extra)  # e.g. subaccount / transaction_charge / bearer for business payments
         try:
             response = requests.post(
                 f"{self.paystack_base_url}/transaction/initialize",
@@ -3288,7 +3344,7 @@ class PaymentProcessor:
         return_url = return_url or os.getenv(
             "FLUTTERWAVE_RETURN_URL", DEFAULT_RETURN_URL
         )
-        callback_url = f"{PAYMENT_SERVICE_URL}/payment/callback?return_url={return_url}&reference={reference}"
+        callback_url = f"{PAYMENT_SERVICE_URL}/payment/callback?return_url={quote(str(return_url), safe='')}&reference={reference}"
         headers = {
             "Authorization": f"Bearer {flutterwave_secret_key}",
             "Content-Type": "application/json",
@@ -3362,15 +3418,11 @@ class PaymentProcessor:
             # zero-decimal-currency payment (JPY, UGX, KRW, TZS...) was
             # silently charged 100x. NGN/USD were never affected by this
             # specific bug (neither is zero-decimal).
-            ZERO_DECIMAL = {
-                "bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga",
-                "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf",
-            }
-            if currency.lower() in ZERO_DECIMAL:
+            if currency.lower() in STRIPE_ZERO_DECIMAL:
                 amount_cents = int(round(amount))
             else:
                 amount = round(amount, 2)
-                amount_cents = int(amount * 100)
+                amount_cents = int(round(amount * 100))
 
             session = stripe.checkout.Session.create(
             #payment_method_types=["card"],
@@ -3422,20 +3474,41 @@ class PaymentProcessor:
         }
         try:
             response = requests.get(
-                f"{self.flutterwave_base_url}/transactions/{reference}/verify",
+                # Numeric id -> /transactions/{id}/verify. Our own tx_ref (a string) must use the
+                # by-reference endpoint, otherwise Flutterwave cannot find it.
+                (f"{self.flutterwave_base_url}/transactions/{reference}/verify"
+                 if str(reference).isdigit()
+                 else f"{self.flutterwave_base_url}/transactions/verify_by_reference?tx_ref={quote(str(reference), safe='')}"),
                 headers=headers,
                 timeout=30,
             )
             if response.status_code == 200:
                 data = response.json()
                 if data.get("status") == "success":
-                    payment_data = data.get("data", {})
+                    payment_data = data.get("data") or {}
+                    fw_status = str(payment_data.get("status") or "").lower()
+                    # The envelope "status":"success" only means the API call worked.
+                    # The PAYMENT status is data.status.
+                    if fw_status not in ("successful", "completed"):
+                        return {
+                            "success": False,
+                            "pending": fw_status in ("pending", "processing", "new"),
+                            "status": fw_status,
+                            "error": f"Payment status: {fw_status or 'unknown'}",
+                        }
+                    returned_ref = str(payment_data.get("tx_ref") or "")
+                    # When verifying by numeric transaction id, tx_ref is not our lookup key.
+                    if not str(reference).isdigit() and returned_ref != str(reference):
+                        logger.error(
+                            f"Flutterwave reference mismatch: asked {reference}, got {returned_ref}"
+                        )
+                        return {"success": False, "error": "Reference mismatch"}
                     return {
                         "success": True,
-                        "status": payment_data.get("status"),
+                        "status": fw_status,
                         "amount": float(payment_data.get("amount", 0)),
                         "currency": payment_data.get("currency", "NGN"),
-                        "reference": payment_data.get("tx_ref"),
+                        "reference": returned_ref,
                         "customer": payment_data.get("customer", {}),
                     }
             return {"success": False, "error": "Verification failed"}
@@ -3458,14 +3531,31 @@ class PaymentProcessor:
             if response.status_code == 200:
                 data = response.json()
                 if data.get("status"):
-                    payment_data = data.get("data", {})
+                    payment_data = data.get("data") or {}
+                    ps_status = str(payment_data.get("status") or "").lower()
+                    # data["status"] is True whenever the API call worked, even for
+                    # abandoned/failed payments. The payment itself is data.status.
+                    if ps_status != "success":
+                        return {
+                            "success": False,
+                            "pending": ps_status in ("ongoing", "pending", "processing", "queued", "abandoned"),
+                            "status": ps_status,
+                            "error": f"Payment status: {ps_status or 'unknown'}",
+                        }
+                    returned_ref = str(payment_data.get("reference") or "")
+                    if returned_ref != str(reference):
+                        logger.error(
+                            f"Paystack reference mismatch: asked {reference}, got {returned_ref}"
+                        )
+                        return {"success": False, "error": "Reference mismatch"}
                     return {
                         "success": True,
-                        "status": payment_data.get("status"),
+                        "status": ps_status,
                         "amount": float(payment_data.get("amount", 0)) / 100,
                         "currency": payment_data.get("currency", "NGN"),
-                        "reference": payment_data.get("reference"),
+                        "reference": returned_ref,
                         "customer": payment_data.get("customer", {}),
+                        "authorization": payment_data.get("authorization") or None,
                     }
             return {"success": False, "error": "Verification failed"}
         except Exception as e:
@@ -3482,12 +3572,16 @@ class PaymentProcessor:
                 f"Stripe session retrieved: status={session.payment_status}, id={session.id}"
             )
 
-            if session.payment_status == "paid":
+            if session.payment_status in ("paid", "no_payment_required"):
                 return {
                     "success": True,
                     "status": "success",
                     "reference": session_id,
-                    "amount": float(session.amount_total) / 100,
+                    "amount": (
+                        float(session.amount_total)
+                        if str(session.currency).lower() in STRIPE_ZERO_DECIMAL
+                        else float(session.amount_total) / 100
+                    ),
                     "currency": session.currency.upper(),
                     "customer": session.customer_details,
                     "metadata": session.metadata,
@@ -3495,6 +3589,7 @@ class PaymentProcessor:
             else:
                 return {
                     "success": False,
+                    "pending": session.payment_status == "unpaid" and getattr(session, "status", "") != "expired",
                     "status": session.payment_status,
                     "error": f"Payment status: {session.payment_status}",
                 }
@@ -3716,9 +3811,16 @@ def recommended_payment(country):
         "country": country,
         **PAYMENT_COUNTRY_CONFIG.get(
             country,
-            {"currency": "NGN", "provider": "paystack", "alternatives": ["stripe"]},
+            # Unlisted country: use its own currency via Stripe when we know it. Defaulting
+            # everyone to NGN/Paystack was what made foreign numbers show naira.
+            ({"currency": COUNTRY_CURRENCY_MAP.get(country), "provider": "stripe", "alternatives": ["flutterwave"]}
+             if COUNTRY_CURRENCY_MAP.get(country) in SUPPORTED_CURRENCIES
+             else {"currency": "NGN", "provider": "paystack", "alternatives": ["stripe"]}),
         ),
     }
+
+
+_access_enrich_user = None
 
 
 def sanitize_user(user):
@@ -3727,6 +3829,18 @@ def sanitize_user(user):
     clean = dict(user)
     for key in ("password_hash", "password", "session_token", "token"):
         clean.pop(key, None)
+    try:
+        from net365_identity import profile_status as _ps
+        if clean.get("id"):
+            clean["profile"] = _ps(clean["id"])
+    except Exception:
+        pass
+    _enrich = globals().get("_access_enrich_user")
+    if _enrich:
+        try:
+            clean = _enrich(clean)
+        except Exception:
+            pass
     return clean
 
 
@@ -3782,13 +3896,13 @@ def get_authenticated_user():
         # ============ ADD THESE ROUTES TO setup_routes() ============
         # Place them after the existing admin routes (around where you have admin_create_user, etc.)
         @self.app.route("/api/debug/session", methods=["GET"])
+        @admin_required
         def debug_session():
             """Debug endpoint — shows what the server sees about the current session."""
             token = _get_request_token()
             result = {
                 "cookie_name": SESSION_COOKIE_NAME,
                 "cookie_received": bool(token),
-                "cookie_prefix": token[:10] if token else None,
                 "session_found_in_db": False,
                 "user_id": None,
                 "all_cookies": list(request.cookies.keys()),
@@ -4020,9 +4134,23 @@ def email_verified_required(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
+        # Verified mobile number: every money route that already checks the email also checks this.
+        try:
+            from net365_identity import gate_error as _id_gate
+            _ge = _id_gate(getattr(g, "current_user_id", None))
+            if _ge:
+                return jsonify(_ge[0]), _ge[1]
+        except ImportError:
+            pass
         if not EMAIL_VERIFICATION_REQUIRED:
             return func(*args, **kwargs)
         user_id = getattr(g, "current_user_id", None)
+        try:
+            from net365_whatsapp import is_guest_user
+            if user_id and is_guest_user(user_id):
+                return func(*args, **kwargs)
+        except Exception:
+            pass
         if not user_id or not db.is_user_verified(user_id):
             return (
                 jsonify(
@@ -4119,136 +4247,8 @@ def parse_user_agent(ua_string: str) -> Dict[str, str]:
     return {"device_type": device_type, "os": os_name, "browser": browser}
 
 
-# ua_extract.py
-"""
-Minimal User-Agent device/brand/model extractor.
+# Device model parsing lives in net365_ua.py (imported at the top). Do not re-define it here.
 
-Exposes the exact interface main.py's parse_device_model() expects:
-    DeviceDetector(ua, headers=...).parse()
-        .device_brand() -> str
-        .device_model() -> str
-
-Strategy:
-  1. Prefer Client Hints (Sec-CH-UA-Model) when present — that's the only way
-     modern Chrome on Android reveals the exact model.
-  2. Fall back to parsing the User-Agent string.
-"""
-
-import re
-
-
-class _ParsedDevice:
-    def __init__(self, brand="", model=""):
-        self._brand = brand or ""
-        self._model = model or ""
-
-    def device_brand(self):
-        return self._brand
-
-    def device_model(self):
-        return self._model
-
-
-class DeviceDetector:
-    def __init__(self, user_agent="", headers=None):
-        self.user_agent = user_agent or ""
-        self.headers = headers or {}
-
-    def parse(self):
-        ua = self.user_agent
-        h = {k.lower(): v for k, v in self.headers.items()}
-
-        # ---- 1. Client Hints (most accurate for Android Chrome) ----
-        ch_model = h.get("sec-ch-ua-model", "").strip('"').strip()
-        if ch_model:
-            # "SM-G991B" → brand Samsung, model SM-G991B (best we can do)
-            brand = self._brand_from_model(ch_model)
-            return _ParsedDevice(brand, ch_model)
-
-        # ---- 2. iPhone / iPad ----
-        if re.search(r"iPhone", ua):
-            return _ParsedDevice("Apple", "iPhone")
-        if re.search(r"iPad", ua):
-            return _ParsedDevice("Apple", "iPad")
-        if re.search(r"iPod", ua):
-            return _ParsedDevice("Apple", "iPod")
-
-        # ---- 3. Android: "Android X; <model> Build/..." ----
-        m = re.search(r"Android[^;]*;\s*([^;)]+?)(?:\s+Build[/\s]|\)|;)", ua)
-        if m:
-            model = m.group(1).strip()
-            # Skip locale-style prefix ("en-us; Pixel 6")
-            model = re.sub(r"^[a-z]{2}-[a-z]{2}[;\s]*", "", model, flags=re.I).strip()
-            brand = self._brand_from_model(model)
-            return _ParsedDevice(brand, model)
-
-        # ---- 4. Windows / macOS / Linux desktop — no model ----
-        # Desktops genuinely have no model. Return empty strings, not None,
-        # so the caller's `or None` writes a real NULL.
-        return _ParsedDevice("", "")
-
-    @staticmethod
-    def _brand_from_model(model: str) -> str:
-        """Rough brand inference from a model code. Good enough for analytics."""
-        m = model.lower()
-        if m.startswith(("sm-", "gt-", "sgh-", "sch-")) or "samsung" in m:
-            return "Samsung"
-        if m.startswith("pixel") or "google" in m:
-            return "Google"
-        if m.startswith(("m2", "redmi", "mi ", "poco")) or "xiaomi" in m:
-            return "Xiaomi"
-        if m.startswith(("cph", "cph1", "cph2")) or "oppo" in m:
-            return "Oppo"
-        if m.startswith("vivo") or m.startswith("v2"):
-            return "Vivo"
-        if m.startswith("oneplus") or m.startswith("ne2"):
-            return "OnePlus"
-        if m.startswith(("moto", "xt", "x")) and "moto" in m:
-            return "Motorola"
-        if "huawei" in m or m.startswith(("ane-", "lya-", "ele-", "vog-")):
-            return "Huawei"
-        if "nokia" in m:
-            return "Nokia"
-        if "infinix" in m:
-            return "Infinix"
-        if "tecno" in m:
-            return "Tecno"
-        if "itel" in m:
-            return "Itel"
-        return ""
-
-def parse_device_model(ua_string, request_obj=None):
-    """Return 'Brand Model' (or just one of them) from a UA + client hints.
-
-    Returns "" when nothing meaningful could be determined. log_page_visit()
-    turns "" into None, so the DB column gets a real NULL for desktop visits
-    and a real string for phones.
-    """
-    headers = {}
-    if request_obj is not None:
-        try:
-            headers = dict(request_obj.headers)
-        except Exception:
-            headers = {}
-    try:
-        device = DeviceDetector(ua_string, headers=headers).parse()
-        brand = device.device_brand() or ""
-        model = device.device_model() or ""
-    except Exception:
-        return ""
-    # Chrome's reduced User-Agent reports a placeholder model ("K") on Android.
-    # That is not a real model; treat it as unknown rather than logging "K".
-    if model.strip().lower() in ("k", "android", "mobile", "unknown", "generic"):
-        model = ""
-        brand = ""
-    if brand and model:
-        # Avoid "Tecno TECNO KG5k" when the model already starts with the brand
-        if model.lower().startswith(brand.lower()):
-            return model
-        return f"{brand} {model}"
-    return model or brand or ""
-
-    
 
 def get_client_ip() -> str:
     # Behind Cloudflare, X-Forwarded-For can start with a client-supplied value, while
@@ -4257,8 +4257,15 @@ def get_client_ip() -> str:
     if cf_ip:
         return cf_ip
     forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+    for p in parts:                       # first public address: skips internal proxy hops (10.x, 100.64.x ...)
+        if is_public_ip(p):
+            return p
+    real = request.headers.get("X-Real-IP", "").strip()
+    if real and is_public_ip(real):
+        return real
+    if parts:
+        return parts[0]
     return request.remote_addr or "unknown"
 
 
@@ -4382,15 +4389,52 @@ def log_page_visit():
     except Exception as e:
         logger.warning(f"Visitor logging failed (non-fatal): {e}")
 
+def _enrich_visit_rows(logs, max_ips=8, budget=5.0):
+    """Resolve Organization / Kind / Country / City for the visitor rows being viewed, in parallel with a
+    time budget. Background workers do the same thing, but this guarantees the admin sees data even when
+    a worker thread died (for example after a gunicorn fork) or a lookup source was briefly down.
+    Returns how many IPs were attempted."""
+    try:
+        todo = []
+        for v in logs:
+            ip = str(v.get("ip_address") or "")
+            if not ip or ip.startswith("h:") or ip in todo:
+                continue
+            if not (v.get("org_name") and v.get("ip_kind") and v.get("city")):
+                todo.append(ip)
+            if len(todo) >= max_ips:
+                break
+        if not todo:
+            return 0
+        from concurrent.futures import ThreadPoolExecutor, wait
+
+        def work(ip):
+            try:
+                IPIntel.lookup(ip)                    # writes org / ASN / kind (and city when known) onto every row of this IP
+                geo = GeoResolver.lookup(ip)
+                if geo:
+                    GeoResolver.apply(ip, geo)
+            except Exception as e:
+                logger.debug(f"inline enrichment failed for {ip}: {e}")
+
+        ex = ThreadPoolExecutor(max_workers=6)
+        futs = [ex.submit(work, ip) for ip in todo]
+        wait(futs, timeout=budget)
+        ex.shutdown(wait=False)
+        return len(todo)
+    except Exception as e:
+        logger.debug(f"_enrich_visit_rows failed: {e}")
+        return 0
+
+
 def admin_required(func):
     """Gates admin-only endpoints behind ADMIN_SECRET. Denies access by default if
     ADMIN_SECRET isn't set — an unset secret should never mean 'open to everyone'."""
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        provided = request.headers.get("X-Admin-Secret", "") or request.args.get(
-            "admin_secret", ""
-        )
+        # Header only: secrets in URLs end up in access logs, browser history and Referer headers.
+        provided = request.headers.get("X-Admin-Secret", "")
         if not ADMIN_SECRET or not secrets.compare_digest(provided, ADMIN_SECRET):
             return jsonify({"success": False, "error": "Unauthorized"}), 401
         return func(*args, **kwargs)
@@ -4398,25 +4442,243 @@ def admin_required(func):
     return wrapper
 
 
-def rate_limit(max_requests=10, window_seconds=60):
-    requests_cache = {}
+def _live_rates_block(currency):
+    """Error text if a non-NGN payment must be refused because only stale fallback rates are available.
+    REQUIRE_LIVE_RATES (default true) controls this; set false to accept fallback rates."""
+    try:
+        if str(currency or "NGN").upper() == "NGN":
+            return None
+        if os.getenv("REQUIRE_LIVE_RATES", "true").strip().lower() not in ("1", "true", "yes", "on"):
+            return None
+        if ExchangeRateService.rates_are_live():
+            return None
+    except Exception:
+        return None
+    logger.error(f"Refusing {currency} payment: exchange rates are not live (fallback only)")
+    return "International top-ups are temporarily unavailable. Please try again shortly or pay in NGN."
 
+
+def _env_float(name, default):
+    try:
+        return float(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def server_fee_for(service_amount, currency="NGN"):
+    """THE fee rule (server-authoritative). Customer pays airtime + this fee.
+    FEE_PERCENT (default 2.5) of the airtime; FEE_MIN_NGN (default 0) is a floor for NGN only."""
+    pct = _env_float("FEE_PERCENT", 2.5)
+    fee = float(service_amount) * pct / 100.0
+    if str(currency or "").upper() == "NGN":
+        fee = max(fee, _env_float("FEE_MIN_NGN", 0))
+    return round(fee, 2)
+
+
+def split_topup_amounts(data, total_amount, user_id=None):
+    """Work out (service_amount, fee_amount) for a top-up. The SERVER owns the fee.
+
+    `amount` is what the customer pays (airtime + fee). Reloadly must only ever receive the airtime
+    part. If the client sends no service_amount we derive it from the total using the fee rule. If it
+    does, the fee implied (total - service_amount) must cover the required fee, allowing only a small
+    rounding tolerance plus, when a referral code was sent, the configured referral discount
+    (REFERRAL_DISCOUNT_MAX, default 50). Anything less is refused, so a edited request cannot
+    buy airtime without the fee.
+    Returns (service_amount, fee_amount) or raises ValueError.
+    """
+    total_amount = round(float(total_amount), 2)
+    currency = str((data or {}).get("currency") or "NGN").upper()
+    raw = (data or {}).get("service_amount")
+    if raw in (None, "", 0, "0"):
+        # Invert total = service + fee(service). Exact for pure percent; refined for the NGN floor.
+        pct = _env_float("FEE_PERCENT", 2.5)
+        service_amount = round(total_amount / (1 + pct / 100.0), 2)
+        if currency == "NGN":
+            floor = _env_float("FEE_MIN_NGN", 0)
+            if total_amount - service_amount < floor:
+                service_amount = round(total_amount - floor, 2)
+    else:
+        service_amount = round(float(raw), 2)
+    if service_amount <= 0 or service_amount > total_amount + 1e-9:
+        raise ValueError("Invalid recharge amount or checkout total")
+    fee_paid = round(total_amount - service_amount, 2)
+    required = server_fee_for(service_amount, currency)
+    allowed_discount = 0.0
+    _code = str((data or {}).get("referral_code") or "").strip()
+    if _code:
+        # Only a real code that is not the buyer's own earns the discount allowance.
+        try:
+            _owner = db.get_referral_code_owner(_code)
+        except Exception:
+            _owner = None
+        if _owner and (user_id is None or _owner.get("id") != user_id):
+            allowed_discount = _env_float("REFERRAL_DISCOUNT_MAX", 50)
+    if fee_paid + allowed_discount + 0.02 < required:
+        logger.warning(
+            f"FEE MISMATCH: total={total_amount} service={service_amount} paid_fee={fee_paid} "
+            f"required={required} {currency}"
+        )
+        raise ValueError("Fee mismatch")
+    return service_amount, fee_paid
+
+
+_rate_table_ready = False
+_rate_mem = {}
+_rate_mem_lock = threading.Lock()
+
+
+def _rate_limit_ip() -> str:
+    """Client IP for throttling. On Railway the edge appends the real client address as the LAST
+    X-Forwarded-For entry; earlier entries can be forged by the caller, so we never use them."""
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        last = forwarded.split(",")[-1].strip()
+        if last:
+            return last
+    return request.remote_addr or "unknown"
+
+
+def _rate_hit_db(key: str, window_seconds: int) -> int:
+    """Fixed-window counter stored in SQLite, so every gunicorn worker (and restart) shares it."""
+    global _rate_table_ready
+    bucket = int(time.time() // window_seconds)
+    conn = db.get_db_connection()
+    try:
+        if not _rate_table_ready:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS rate_limits ("
+                "k TEXT NOT NULL, bucket INTEGER NOT NULL, hits INTEGER NOT NULL DEFAULT 0, "
+                "PRIMARY KEY (k, bucket))"
+            )
+            _rate_table_ready = True
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            "INSERT INTO rate_limits (k, bucket, hits) VALUES (?, ?, 1) "
+            "ON CONFLICT(k, bucket) DO UPDATE SET hits = hits + 1",
+            (key, bucket),
+        )
+        hits = conn.execute(
+            "SELECT hits FROM rate_limits WHERE k = ? AND bucket = ?", (key, bucket)
+        ).fetchone()[0]
+        if secrets.randbelow(200) == 0:  # occasional cleanup of old windows
+            conn.execute("DELETE FROM rate_limits WHERE bucket < ?", (bucket - 2,))
+        conn.execute("COMMIT")
+        return int(hits)
+    except Exception:
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
+        raise
+    finally:
+        conn.close()
+
+
+def _rate_hit_memory(key: str, window_seconds: int) -> int:
+    now = time.time()
+    with _rate_mem_lock:
+        arr = [t for t in _rate_mem.get(key, []) if now - t < window_seconds]
+        arr.append(now)
+        _rate_mem[key] = arr
+        return len(arr)
+
+
+def rate_limit(max_requests=10, window_seconds=60):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            key = f"{request.remote_addr}-{func.__name__}"
-            now = time.time()
-            requests_cache[key] = [
-                t for t in requests_cache.get(key, []) if now - t < window_seconds
-            ]
-            if len(requests_cache.get(key, [])) >= max_requests:
-                return jsonify({"error": "Rate limit exceeded"}), 429
-            requests_cache.setdefault(key, []).append(now)
+            key = f"{_rate_limit_ip()}|{func.__name__}"
+            try:
+                hits = _rate_hit_db(key, window_seconds)
+            except Exception as e:  # never take an endpoint down because the limiter failed
+                logger.warning(f"rate_limit: shared store unavailable ({e}); using in-memory counter")
+                hits = _rate_hit_memory(key, window_seconds)
+            if hits > max_requests:
+                resp = jsonify({"success": False, "error": "Too many requests. Please slow down and try again shortly."})
+                resp.headers["Retry-After"] = str(window_seconds)
+                return resp, 429
             return func(*args, **kwargs)
 
         return wrapper
 
     return decorator
+
+
+# Routes that move customer wallet money. Blocked server-side when WALLET_ENABLED is false, because
+# hiding a button in the UI does not stop someone calling the API directly.
+_WALLET_BLOCKED_PATHS = (
+    "/api/wallet/fund",
+    "/api/wallet/utility",
+    "/api/receipt-ads/campaigns",
+)
+
+
+def _wallet_policy_guard():
+    """before_request: enforce wallet / transfer policy for every API call."""
+    if request.method not in ("POST", "PUT", "PATCH") or not request.path.startswith("/api/"):
+        return None
+    path = request.path
+    if path.rstrip("/") == "/api/wallet/transfer" and not WALLET_TRANSFERS_ENABLED:
+        return jsonify({"success": False, "code": "TRANSFERS_DISABLED",
+                        "error": "Wallet transfers are not available."}), 403
+    if WALLET_ENABLED:
+        return None
+    blocked = any(path.startswith(p) for p in _WALLET_BLOCKED_PATHS)
+    if not blocked and path.startswith("/api/bulk/recharge"):
+        # Bulk recharge pays from the wallet unless a gateway is named (it may arrive as a form field
+        # or JSON). Gateway-paid bulk recharges stay available.
+        body = request.get_json(silent=True)
+        method = request.form.get("payment_method") or (
+            body.get("payment_method") if isinstance(body, dict) else None
+        ) or "wallet"
+        blocked = str(method).strip().lower() == "wallet"
+    if not blocked:
+        body = request.get_json(silent=True)
+        if isinstance(body, dict):
+            method = str(body.get("provider") or body.get("payment_method") or "").strip().lower()
+            blocked = method == "wallet"
+    if blocked:
+        return jsonify({"success": False, "code": "WALLET_DISABLED",
+                        "error": "Wallet payments are not available right now. Please pay by card or bank transfer."}), 403
+    return None
+
+
+def _purchase_limit_error(user_id, amount, currency, per_tx_amount=None):
+    """Return an error string if this payment would break the per-transaction or daily cap (NGN only).
+    per_tx_amount: size to test against the per-transaction cap when it differs from `amount`
+    (a cart is several deliveries paid at once: each item is checked per-transaction, the whole
+    cart counts toward the daily cap)."""
+    if str(currency or "NGN").upper() != "NGN":
+        return None
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        return "Invalid amount"
+    _tx_size = float(per_tx_amount) if per_tx_amount is not None else amount
+    if LIMIT_PER_TX_NGN > 0 and _tx_size > LIMIT_PER_TX_NGN:
+        return f"During our launch period the maximum per transaction is ₦{LIMIT_PER_TX_NGN:,.0f}."
+    if LIMIT_DAILY_NGN > 0:
+        try:
+            conn = db.get_db_connection()
+            try:
+                row = conn.execute(
+                    "SELECT COALESCE(SUM(amount), 0) FROM transactions "
+                    "WHERE user_id = ? AND UPPER(COALESCE(currency,'NGN')) = 'NGN' "
+                    "AND created_at >= datetime('now', '-1 day') "
+                    "AND COALESCE(tx_type,'') != 'cart' "
+                    "AND status IN ('pending','paid','processing','fulfilled')",
+                    (user_id,),
+                ).fetchone()
+            finally:
+                conn.close()
+            used = float(row[0] or 0)
+            if used + amount > LIMIT_DAILY_NGN:
+                left = max(0.0, LIMIT_DAILY_NGN - used)
+                return (f"Daily limit reached. During our launch period you can spend up to "
+                        f"₦{LIMIT_DAILY_NGN:,.0f} per 24 hours (₦{left:,.0f} left).")
+        except Exception as e:
+            logger.warning(f"daily limit check failed for user {user_id}: {e}")
+    return None
 
 
 # ============ SAFE API RESPONSE DECORATOR ============
@@ -4561,6 +4823,45 @@ def detect_operator_from_prefix(phone: str, country_code: str = "NG"):
     names = {49: "MTN Nigeria", 50: "Glo Nigeria", 51: "Airtel Nigeria", 52: "9mobile Nigeria"}
     return {"operatorId": operator_id, "id": operator_id, "name": names.get(operator_id, "Network operator")}
 
+_NG_NET_LABEL = {"mtn": "MTN", "glo": "Glo", "airtel": "Airtel", "9mobile": "9mobile"}
+_NG_OP_KEY = {49: "mtn", 50: "glo", 51: "airtel", 52: "9mobile"}
+
+
+def _ng_network_key(operator_id=None, name=None):
+    """mtn | glo | airtel | 9mobile, from an operator id or a name like 'Airtel Nigeria'; None if unknown."""
+    try:
+        k = _NG_OP_KEY.get(int(operator_id))
+        if k:
+            return k
+    except (TypeError, ValueError):
+        pass
+    n = str(name or operator_id or "").lower()
+    for key in ("9mobile", "etisalat", "mtn", "glo", "airtel"):
+        if key in n:
+            return "9mobile" if key == "etisalat" else key
+    return None
+
+
+def network_mismatch_error(phone, operator_id=None, operator_name=None, confirmed=False):
+    """If a Nigerian number's prefix belongs to a different network than the one chosen, return a 409 payload.
+    Numbers can be ported between networks, so the customer may confirm and continue (confirmed=True)."""
+    if confirmed:
+        return None
+    try:
+        chosen = _ng_network_key(operator_id, operator_name)
+        det = detect_operator_from_prefix(re.sub(r"\D", "", str(phone or "")) if str(phone or "").startswith(("+", "234")) else
+                                          "234" + re.sub(r"\D", "", str(phone or "")).lstrip("0"), "NG")
+        detected = _NG_OP_KEY.get((det or {}).get("operatorId"))
+    except Exception:
+        return None
+    if chosen and detected and chosen != detected:
+        return {"success": False, "code": "NETWORK_MISMATCH", "chosen": _NG_NET_LABEL[chosen], "detected": _NG_NET_LABEL[detected],
+                "detected_key": detected,
+                "error": f"This number looks like an {_NG_NET_LABEL[detected]} number, but you selected {_NG_NET_LABEL[chosen]}. "
+                         f"Recharging the wrong network sends your money to the wrong place. If the number was ported to {_NG_NET_LABEL[chosen]}, you can continue."}
+    return None
+
+
 # ============ EMAIL NOTIFICATION / TRANSACTION PROMOTION ENGINE ============
 def _get_transaction_promo(
     user_id=None, reference=None, tx_type=None, amount=None, created_at=None
@@ -4595,6 +4896,12 @@ def _get_transaction_promo(
                     promo.get("body", "")
                     + f"\n\nYour referral code: {user['referral_code']}"
                 )
+        try:
+            from net365_adcredits import email_promo as _boost_email_promo
+            promo = _boost_email_promo(promo, {"user_id": user_id, "reference": reference,
+                                               "tx_type": str(tx_type or "").lower(), "amount": amount})
+        except Exception:
+            pass
         return promo
     except Exception as e:
         logger.error(f"Transaction email promo lookup failed (non-fatal): {e}")
@@ -4704,34 +5011,67 @@ from email.mime.text import MIMEText
 from email.utils import formataddr  # <-- Add this import
 
 
-def send_welcome_email(to_email: str, first_name: str = "") -> bool:
-    """Send the Net365 welcome email from the CEO. Non-fatal on failure."""
+def send_branded_email(to_email, subject, html_body, text_body=None, from_name=None, from_email=None, reply_to=None):
+    """Sends a fully custom HTML email and WAITS for the provider's answer. Returns (ok, error_text).
+
+    If the provider refuses the requested sender (the usual cause is a sender address that is not verified for the sending
+    domain), it retries once with the standard sender (FROM_EMAIL), keeping the display name and the Reply-To. Never raises."""
     smtp_host = os.getenv("SMTP_HOST", "smtp.mailgun.org")
     smtp_port = int(os.getenv("SMTP_PORT", 587))
     smtp_user = os.getenv("SMTP_USER")
     smtp_password = os.getenv("SMTP_PASSWORD")
-    from_email = os.getenv("WELCOME_FROM_EMAIL", "ceo@net365co.com")
-    from_name = os.getenv(
-        "WELCOME_FROM_NAME", "Chijioke C. Igbokwe, Founder & CEO"
-    )
-    reply_to = os.getenv("WELCOME_REPLY_TO", "ceo@net365co.com")
+    if not _https_email_configured() and (not smtp_user or not smtp_password):
+        return False, "no email provider configured (set RESEND_API_KEY, or MAILGUN_API_KEY + MAILGUN_DOMAIN, or SMTP_*)"
+    std_from = os.getenv("FROM_EMAIL") or smtp_user or f"support@{os.getenv('MAILGUN_DOMAIN') or 'net365co.com'}"
+    from_email = (from_email or std_from).strip()
+    from_name = from_name or os.getenv("FROM_NAME", "Net365 Support")
+    reply_to = reply_to or os.getenv("REPLY_TO") or from_email
+    subject = _clean_subject(subject)
+    senders = [from_email] + ([std_from] if std_from.lower() != from_email.lower() else [])
+    last_err = None
+    for addr in senders:
+        try:
+            if _https_email_configured():
+                res = {}
+                if _send_via_https_provider(formataddr((from_name, addr)), to_email, subject, html_body, None, None, res, text_body, reply_to):
+                    return True, None
+                last_err = str(res.get("error") or "the email provider did not accept the message")
+            else:
+                msg = MIMEMultipart("alternative")
+                msg["From"] = formataddr((from_name, addr))
+                msg["To"] = to_email
+                msg["Subject"] = subject
+                msg["Reply-To"] = reply_to
+                if text_body:
+                    msg.attach(MIMEText(text_body, "plain"))
+                msg.attach(MIMEText(html_body, "html"))
+                if smtp_port == 465:
+                    with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
+                        server.login(smtp_user, smtp_password)
+                        server.send_message(msg)
+                else:
+                    with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+                        server.starttls()
+                        server.login(smtp_user, smtp_password)
+                        server.send_message(msg)
+                return True, None
+        except Exception as e:
+            last_err = str(e)[:300]
+        logger.warning(f"Email to {to_email} refused with sender {addr}: {last_err}")
+    return False, last_err
 
-    if not smtp_user or not smtp_password:
-        logger.warning("SMTP not configured, skipping welcome email")
-        return False
 
-    safe_name = (first_name or "there").strip() or "there"
+def _welcome_content(first_name):
+    """(subject, html, text) of the CEO welcome email."""
     import html as _html
-
-    safe_name = _html.escape(safe_name)
-
-    subject = f"Welcome to Net365, {safe_name}!"
-
+    name = (first_name or "there").strip() or "there"
+    safe_name = _html.escape(name)
+    subject = f"Welcome to Net365, {name}!"
     html_body = f"""<!DOCTYPE html>
 <html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:24px;">
   <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;
               border:1px solid #e2e8f0;overflow:hidden;">
-    <div style="background:linear-gradient(145deg,#E31E24 0%,#991B1B 100%);
+    <div style="background:linear-gradient(145deg,#E53935 0%,#991B1B 100%);
                 padding:28px;text-align:center;color:#fff;">
       <div style="font-size:26px;font-weight:800;letter-spacing:1px;">NET365</div>
       <div style="font-size:11px;letter-spacing:2px;opacity:.85;margin-top:4px;">
@@ -4769,52 +5109,69 @@ def send_welcome_email(to_email: str, first_name: str = "") -> bool:
     </div>
   </div>
 </body></html>"""
+    text_body = (f"Hi {name},\n\nWelcome to Net365.\n\nI'm Chijioke C. Igbokwe, Founder & CEO of Net365 Communications, and I personally "
+                 f"want to thank you for joining us.\n\nThrough your new account you can instantly access everyday utilities (airtime, data and "
+                 f"bill payments), business tools and digital products.\n\nYour feedback is invaluable. Simply reply to this email if there is "
+                 f"anything you would like us to add, improve or do differently.\n\nWelcome to the Net365 family.\n\nWarm regards,\n"
+                 f"Chijioke C. Igbokwe\nFounder & CEO, NET365 COMMUNICATIONS LTD\n")
+    return subject, html_body, text_body
 
+
+def send_welcome_email(to_email: str, first_name: str = "") -> bool:
+    """Sends the CEO welcome email now and returns whether the provider accepted it. The result is always logged
+    (it used to be discarded on the HTTPS path, so a rejected sender address failed silently)."""
+    subject, html_body, text_body = _welcome_content(first_name)
+    ok, err = send_branded_email(
+        to_email, subject, html_body, text_body,
+        from_name=os.getenv("WELCOME_FROM_NAME", "Chijioke C. Igbokwe, Founder & CEO"),
+        from_email=os.getenv("WELCOME_FROM_EMAIL", "ceo@net365co.com"),
+        reply_to=os.getenv("WELCOME_REPLY_TO", "ceo@net365co.com"))
+    if ok:
+        logger.info(f"Welcome email sent to {to_email}")
+    else:
+        logger.error(f"Welcome email FAILED for {to_email}: {err}")
+    return ok
+
+
+def send_welcome_once(user_id, email, first_name="", source="web") -> bool:
+    """Starts the welcome email for a new customer in the background, AT MOST ONCE per account (a failed attempt may be retried
+    up to 3 times by a later call). Safe to call from every place an account is created or first linked. Never raises.
+    Returns True when an attempt was started."""
     try:
-        msg = MIMEMultipart("alternative")
-        # Fixed: formataddr safely formats names with special characters like commas
-        msg["From"] = formataddr((from_name, from_email))
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg["Reply-To"] = reply_to
-        msg.attach(MIMEText(html_body, "html"))
-
-        # Same fix as send_email_notification: I/O on a background thread so a
-        # hung DNS/socket connect can never block the request (signup) path,
-        # and prefer the Mailgun HTTP API over raw SMTP when available.
+        email = (email or "").strip()
+        if not user_id or not email or "@" not in email:
+            return False
+        conn = db.get_db_connection()
+        conn.execute("CREATE TABLE IF NOT EXISTS welcome_emails (user_id INTEGER PRIMARY KEY, email TEXT, source TEXT, status TEXT, "
+                     "attempts INTEGER NOT NULL DEFAULT 0, error TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, sent_at TEXT)")
+        cur = conn.execute("INSERT OR IGNORE INTO welcome_emails (user_id, email, source, status, attempts) VALUES (?,?,?,'sending',1)",
+                           (int(user_id), email, str(source)[:20]))
+        if cur.rowcount != 1:
+            cur = conn.execute("UPDATE welcome_emails SET status='sending', attempts=attempts+1 WHERE user_id=? AND status='failed' AND attempts<3",
+                               (int(user_id),))
+            if cur.rowcount != 1:
+                return False
         import threading as _threading
 
-        mailgun_api_key = os.getenv("MAILGUN_API_KEY")
-        mailgun_domain = os.getenv("MAILGUN_DOMAIN") or (
-            smtp_user.split("@", 1)[1] if smtp_user and "@" in smtp_user else None
-        )
-
-        def _bg_send():
-            if mailgun_api_key and mailgun_domain:
-                _r = {}
-                _send_via_mailgun_api(
-                    mailgun_domain, mailgun_api_key, formataddr((from_name, from_email)),
-                    to_email, subject, html_body, None, None, _r,
-                )
-                return
+        def _worker():
+            ok, err = False, None
             try:
-                if smtp_port == 465:
-                    with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
-                        server.login(smtp_user, smtp_password)
-                        server.send_message(msg)
-                else:
-                    with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-                        server.starttls()
-                        server.login(smtp_user, smtp_password)
-                        server.send_message(msg)
-                logger.info(f"Welcome email sent to {to_email}")
+                ok = send_welcome_email(email, first_name)
+                err = None if ok else "provider refused the message (see the log line above)"
             except Exception as e:
-                logger.error(f"Welcome email failed for {to_email}: {e}")
+                err = str(e)[:300]
+                logger.error(f"Welcome email worker crashed for {email}: {e}")
+            try:
+                c2 = db.get_db_connection()
+                c2.execute("UPDATE welcome_emails SET status=?, error=?, sent_at=CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE sent_at END WHERE user_id=?",
+                           ("sent" if ok else "failed", err, 1 if ok else 0, int(user_id)))
+            except Exception:
+                logger.exception("could not record the welcome email result")
 
-        _threading.Thread(target=_bg_send, daemon=True).start()
+        _threading.Thread(target=_worker, daemon=True).start()
         return True
     except Exception as e:
-        logger.error(f"Welcome email failed for {to_email}: {e}")
+        logger.error(f"Welcome email dispatch error for {email}: {e}")
         return False
 
 
@@ -4837,7 +5194,7 @@ logger = logging.getLogger(__name__)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://net365co.com")
 
 
-def _send_via_mailgun_api(mg_domain, mg_api_key, from_addr, to_email, subject, html_body, attachment, attachment_name, _result):
+def _send_via_mailgun_api(mg_domain, mg_api_key, from_addr, to_email, subject, html_body, attachment, attachment_name, _result, text_body=None, reply_to=None):
     """Sends via Mailgun's HTTPS API instead of raw SMTP. Used automatically
     whenever MAILGUN_API_KEY is set, because outbound SMTP (port 587/465/25)
     is commonly blocked or silently dropped by PaaS hosts like Railway —
@@ -4847,15 +5204,21 @@ def _send_via_mailgun_api(mg_domain, mg_api_key, from_addr, to_email, subject, h
     try:
         files = [("attachment", (attachment_name, attachment))] if (attachment and attachment_name) else None
         resp = requests.post(
-            f"https://api.mailgun.net/v3/{mg_domain}/messages",
+            f"{os.getenv('MAILGUN_API_BASE', 'https://api.mailgun.net').rstrip('/')}/v3/{mg_domain}/messages",
             auth=("api", mg_api_key),
-            data={"from": from_addr, "to": [to_email], "subject": subject, "html": html_body},
+            data={k: v for k, v in {"from": from_addr, "to": [to_email], "subject": subject, "html": html_body,
+                                    "text": text_body, "h:Reply-To": reply_to}.items() if v},
             files=files,
             timeout=15,
         )
         if resp.status_code == 200:
-            logger.info(f"Email sent via Mailgun API to {to_email}")
+            try:
+                _mid = resp.json().get("id")
+            except Exception:
+                _mid = None
+            logger.info(f"Email accepted by Mailgun for {to_email} id={_mid}")
             _result["success"] = True
+            _result["id"] = _mid
         else:
             logger.error(f"Mailgun API error {resp.status_code} sending to {to_email}: {resp.text[:300]}")
             _result["success"] = False
@@ -4864,6 +5227,59 @@ def _send_via_mailgun_api(mg_domain, mg_api_key, from_addr, to_email, subject, h
         logger.error(f"Mailgun API request failed for {to_email}: {e}")
         _result["success"] = False
         _result["error"] = str(e)
+
+
+def _send_via_resend(api_key, from_addr, to_email, subject, html_body, attachment, attachment_name, _result, text_body=None, reply_to=None):
+    """Sends via Resend's HTTPS API (port 443), so it works on hosts that block SMTP (Render free tier)."""
+    try:
+        import base64 as _b64
+        payload = {"from": from_addr, "to": [to_email], "subject": subject, "html": html_body}
+        if text_body:
+            payload["text"] = text_body
+        if reply_to:
+            payload["reply_to"] = reply_to
+        if attachment and attachment_name:
+            payload["attachments"] = [{"filename": attachment_name, "content": _b64.b64encode(attachment).decode()}]
+        resp = requests.post("https://api.resend.com/emails", json=payload,
+                             headers={"Authorization": f"Bearer {api_key}"}, timeout=15)
+        if resp.status_code in (200, 201, 202):
+            try:
+                _mid = resp.json().get("id")
+            except Exception:
+                _mid = None
+            logger.info(f"Email accepted by Resend for {to_email} id={_mid}")
+            _result["success"] = True
+            _result["id"] = _mid
+        else:
+            logger.error(f"Resend API error {resp.status_code} sending to {to_email}: {resp.text[:300]}")
+            _result["success"] = False
+            _result["error"] = f"HTTP {resp.status_code}: {resp.text[:300]}"
+    except Exception as e:
+        logger.error(f"Resend API request failed for {to_email}: {e}")
+        _result["success"] = False
+        _result["error"] = str(e)
+
+
+def _https_email_configured():
+    """True when an HTTPS email provider is set up (no SMTP needed)."""
+    return bool(os.getenv("RESEND_API_KEY") or (os.getenv("MAILGUN_API_KEY") and os.getenv("MAILGUN_DOMAIN")))
+
+
+def _send_via_https_provider(from_addr, to_email, subject, html_body, attachment, attachment_name, _result, text_body=None, reply_to=None):
+    """Resend first when RESEND_API_KEY is set, otherwise Mailgun's API. Retries once on a transient (5xx/timeout) failure."""
+    for attempt in (1, 2):
+        _result.clear()
+        if os.getenv("RESEND_API_KEY"):
+            _send_via_resend(os.getenv("RESEND_API_KEY"), from_addr, to_email, subject, html_body, attachment, attachment_name,
+                             _result, text_body, reply_to)
+        else:
+            _send_via_mailgun_api(os.getenv("MAILGUN_DOMAIN"), os.getenv("MAILGUN_API_KEY"), from_addr, to_email,
+                                  subject, html_body, attachment, attachment_name, _result, text_body, reply_to)
+        err = str(_result.get("error") or "")
+        if _result.get("success") or attempt == 2 or not (err.startswith("HTTP 5") or "timed out" in err.lower() or "connection" in err.lower()):
+            break
+        time.sleep(2)
+    return _result.get("success")
 
 
 def _deliver_smtp_message(smtp_host, smtp_port, smtp_user, smtp_password, msg, to_email, _result):
@@ -4886,6 +5302,33 @@ def _deliver_smtp_message(smtp_host, smtp_port, smtp_user, smtp_password, msg, t
         logger.error(f"Failed to send email to {to_email}: {e}")
         _result["success"] = False
         _result["error"] = str(e)
+
+
+_EMOJI_RE = re.compile("[\U0001F000-\U0001FFFF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]+")
+
+
+def _clean_subject(subject):
+    """Subjects without emoji or line breaks: emoji-heavy subjects are a common reason Gmail files mail under Spam."""
+    t = _EMOJI_RE.sub("", str(subject or "")).replace("\r", " ").replace("\n", " ")
+    return re.sub(r"\s{2,}", " ", t).strip()[:140] or "Net365 notification"
+
+
+def send_service_receipt(user_id, payload, subject, body, tx_type, reference, amount):
+    """Every successful purchase (airtime, data, electricity, cable TV, education, insurance) emails a receipt with the
+    Net365 promo block. It goes to the email the customer confirmed at checkout, falling back to the account email.
+    Never raises: a failed email must not affect a delivered order."""
+    try:
+        to = str((payload or {}).get("email") or "").strip()
+        if not to or "@" not in to or to.endswith("@net365.com"):
+            to = str(((db.get_user(user_id) if user_id else None) or {}).get("email") or "").strip()
+        if not to:
+            return False
+        return send_email_notification(
+            to, subject, body, include_promo=True,
+            promo_context={"user_id": user_id, "reference": reference, "tx_type": tx_type, "amount": amount})
+    except Exception as e:
+        logger.warning(f"{tx_type} receipt email failed for {reference}: {e}")
+        return False
 
 
 def send_email_notification(
@@ -4918,16 +5361,23 @@ def send_email_notification(
     from_name = os.getenv("FROM_NAME", "Net365 Support")
     reply_to = os.getenv("REPLY_TO") or from_email
 
-    if not smtp_user or not smtp_password:
-        logger.warning("SMTP credentials not configured, skipping email notification")
+    _https_ok = _https_email_configured()
+    if not _https_ok and (not smtp_user or not smtp_password):
+        logger.warning("No email provider configured (set RESEND_API_KEY, or MAILGUN_API_KEY + MAILGUN_DOMAIN, or SMTP_*), skipping email notification")
         return False
+    if not from_email:
+        _dom = os.getenv("MAILGUN_DOMAIN") or "net365co.com"
+        from_email = f"support@{_dom}"
 
     try:
-        msg = MIMEMultipart()
+        subject = _clean_subject(subject)
+        msg = MIMEMultipart("alternative" if not attachment else "mixed")
         msg["From"] = f"{from_name} <{from_email}>"
         msg["To"] = to_email
         msg["Subject"] = subject
         msg["Reply-To"] = reply_to
+        text_body = (f"{subject}\n\n{message}\n\nOpen your dashboard: {FRONTEND_URL}\n\n"
+                     f"Net365. Need help? support@net365co.com")
 
         promo_html = ""
         if include_promo:
@@ -4940,12 +5390,21 @@ def send_email_notification(
                     amount=context.get("amount"),
                     created_at=context.get("created_at"),
                 )
+                try:
+                    from net365_adengine import track_email_promo as _ae_track
+                    promo = _ae_track(promo, context)
+                except Exception:
+                    pass
                 promo_html = _build_email_promo_html(promo)
             except NameError:
                 logger.warning("Promo helpers not available, skipping promo block")
 
         safe_subject = _html.escape(str(subject))
         safe_message = _html.escape(str(message)).replace("\n", "<br>")
+        # Several flows (signup, reset and chat-link codes) wrap the code in <span class="amount">. Escaping turned that
+        # into visible text, so allow back exactly this one tag and nothing else.
+        safe_message = (safe_message.replace('&lt;span class=&quot;amount&quot;&gt;', '<span class="amount">')
+                                    .replace('&lt;/span&gt;', '</span>'))
 
         html_body = f"""
         <html>
@@ -4959,7 +5418,7 @@ def send_email_notification(
                 background: #f8fafc;
             }}
             .header {{
-                background: linear-gradient(145deg, #E31E24 0%, #991B1B 100%);
+                background: linear-gradient(135deg, #E53935 0%, #FF6D00 100%);
                 color: white;
                 padding: 32px 28px 28px 28px;
                 text-align: center;
@@ -4978,12 +5437,12 @@ def send_email_notification(
             .content h2 {{ color: #1e293b; font-size: 20px; margin-top: 0; }}
             .content p {{ color: #475569; line-height: 1.7; font-size: 15px; }}
             .message-box {{
-                background: #fef2f2; border-left: 4px solid #E31E24;
+                background: #fff5f2; border-left: 4px solid #E53935;
                 padding: 16px 20px; border-radius: 8px; margin: 16px 0;
             }}
             .message-box p {{ margin: 0; color: #1e293b; }}
             .button {{
-                background: linear-gradient(145deg, #E31E24 0%, #991B1B 100%);
+                background: linear-gradient(135deg, #E53935 0%, #FF6D00 100%);
                 color: white; padding: 14px 32px; text-decoration: none;
                 border-radius: 999px; display: inline-block;
                 font-weight: 700; font-size: 14px;
@@ -4994,7 +5453,7 @@ def send_email_notification(
                 border: 1px solid #e2e8f0; border-top: none;
             }}
             .footer p {{ margin: 0; color: #94a3b8; font-size: 12px; }}
-            .footer .link {{ color: #E31E24; text-decoration: none; font-weight: 600; }}
+            .footer .link {{ color: #E53935; text-decoration: none; font-weight: 600; }}
             .divider {{ height: 1px; background: #e2e8f0; margin: 16px 0; }}
         </style>
         </head>
@@ -5029,7 +5488,8 @@ def send_email_notification(
         </html>
         """
 
-        msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(text_body, "plain", "utf-8"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
 
         if attachment and attachment_name:
             part = MIMEBase("application", "octet-stream")
@@ -5053,13 +5513,10 @@ def send_email_notification(
         )
 
         _result: Dict = {}
-        if mailgun_api_key and mailgun_domain:
+        if _https_ok:
             t = threading.Thread(
-                target=_send_via_mailgun_api,
-                args=(
-                    mailgun_domain, mailgun_api_key, f"{from_name} <{from_email}>",
-                    to_email, subject, html_body, attachment, attachment_name, _result,
-                ),
+                target=_send_via_https_provider,
+                args=(f"{from_name} <{from_email}>", to_email, subject, html_body, attachment, attachment_name, _result, text_body, reply_to),
                 daemon=True,
             )
         else:
@@ -5785,15 +6242,14 @@ def log_event(
     c.execute("""
         CREATE TABLE IF NOT EXISTS user_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
+            user_id INTEGER,            -- NULL for guest checkouts
             event_type TEXT NOT NULL,
             status TEXT DEFAULT 'success',
             details TEXT,
             reference TEXT,
             amount REAL,
             currency TEXT DEFAULT 'NGN',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     c.execute(
@@ -6322,62 +6778,6 @@ def apply_promotion_to_transaction(
         }
 
 
-# ============ UPDATE: Apply promotion in payment flow ============
-
-
-# In your /api/payment/init endpoint, add this before creating the payment:
-def init_payment(self):
-    # ... existing code ...
-
-    # Apply promotion
-    promotion_result = apply_promotion_to_transaction(
-        user_id=user_id,
-        amount=float(amount),
-        service_type=tx_type,  # 'topup', 'utility', 'airtime', etc.
-        promo_code=data.get("promo_code"),
-        transaction_ref=reference if "reference" in locals() else None,
-    )
-
-    if promotion_result.get("discount_amount", 0) > 0:
-        # Store promotion in payload
-        payload["promotion"] = {
-            "id": promotion_result.get("promo_id"),
-            "name": promotion_result.get("promo_name"),
-            "discount_amount": promotion_result.get("discount_amount"),
-            "applied_value": promotion_result.get("applied_value"),
-            "discount_type": promotion_result.get("discount_type"),
-            "original_amount": amount,
-            "new_total": promotion_result.get("new_total"),
-        }
-        # Update amount for payment
-        amount = promotion_result.get("new_total")
-
-        # Log promotion usage
-        log_event(
-            user_id=user_id,
-            event_type="promotion_applied",
-            details={
-                "promo_id": promotion_result.get("promo_id"),
-                "promo_name": promotion_result.get("promo_name"),
-                "discount_amount": promotion_result.get("discount_amount"),
-                "original_amount": float(data.get("amount")),
-                "new_amount": amount,
-                "service_type": tx_type,
-            },
-            status="success",
-        )
-
-        db.create_notification(
-            user_id,
-            f'🎉 {promotion_result.get("promo_name") or "Promotion"} Applied!',
-            f'You saved {promotion_result.get("discount_amount"):.2f} on your {tx_type} transaction!',
-            "success",
-        )
-
-    # Continue with payment using the updated amount
-    # ... rest of payment code ...
-
-
 # ============ ADD TO app.py - Referral Token Processing ============
 
 
@@ -6385,6 +6785,305 @@ def init_payment(self):
 # ============ FIX: SCHEDULER TRANSACTION LOGGING ============
 # Add this to app.py - replace the existing _execute_schedule_fulfillment function
 # or add this missing create_pending call
+
+
+# Circuit breaker for the bill-payment provider. When Reloadly Utilities fails with a server-side error
+# (for example "Failed to retrieve balance"), stop taking customers' money for bills for a few minutes
+# instead of charging them for something we cannot deliver.
+_UTIL_STATE = {"down_until": 0.0, "reason": ""}
+_UTIL_ERR_HINTS = ("server error", "balance", "timed out", "timeout", " 502", " 503", " 504", "service unavailable")
+
+
+def _utility_provider_down():
+    return time.time() < _UTIL_STATE["down_until"]
+
+
+def _utility_trip(error_text):
+    t = str(error_text or "").lower()
+    if any(h in t for h in _UTIL_ERR_HINTS):
+        mins = max(1, int(os.getenv("UTILITY_BREAKER_MINUTES", "10") or 10))
+        _UTIL_STATE["down_until"] = time.time() + mins * 60
+        _UTIL_STATE["reason"] = str(error_text)[:200]
+        logger.error(f"Bill payments PAUSED for {mins} min (provider error): {_UTIL_STATE['reason']}")
+
+
+def _bg_return_url():
+    """Payment return URL for work done outside a web request (scheduler, sweeper)."""
+    try:
+        return _safe_payment_return_url(None)
+    except Exception:
+        base = (os.getenv("PUBLIC_URL") or os.getenv("FRONTEND_URL") or "").rstrip("/")
+        return (base + "/payment/success") if base else None
+
+
+def _svc_schedule_quote(schedule: Dict) -> Dict:
+    """Look up today's real price for a TV / data schedule (plan price, or the smartcard's renewal price).
+    Returns {ok, error, unavailable, price, plan, product, code, mode, acct, contact, cust_name, renewal, meta}."""
+    import net365_providers as _np
+    service_type = str(schedule.get("service_type") or "").lower()
+    meta = schedule.get("metadata") or {}
+    if isinstance(meta, str):
+        try:
+            meta = json.loads(meta or "{}")
+        except Exception:
+            meta = {}
+    product = str(meta.get("product") or "").lower()
+    code = str(meta.get("variation_code") or "")
+    mode = "renew" if str(meta.get("subscription_type")) == "renew" else "change"
+    raw_acct = re.sub(r"\s", "", str(schedule.get("subscriber_account") or ""))
+    contact = _np.local_number(str(schedule.get("phone") or meta.get("contact_phone") or ""))
+    out = {"ok": False, "meta": meta, "product": product, "code": code, "mode": mode, "contact": contact,
+           "cust_name": "", "renewal": 0.0}
+    if not _np.enabled():
+        out.update(unavailable=True, error="This service is not available right now. It will try again at the next run.")
+        return out
+    if not product or (not code and not (service_type == "tv" and mode == "renew" and product in ("dstv", "gotv"))):
+        out["error"] = "This schedule is missing its provider or plan. Please edit and fix."
+        return out
+    if service_type == "data":
+        if not contact:
+            out["error"] = "Missing phone number for the data bundle."
+            return out
+        plan = _np.find_plan(product, code)
+        acct = contact
+    else:
+        plan = _np.find_service_plan(product, code) if code else {"name": "Renew current bouquet", "price": 0}
+        acct = contact if product == "showmax" else raw_acct
+        if not acct:
+            out["error"] = "Missing smartcard number."
+            return out
+        if not contact:
+            out["error"] = "Add a contact phone number to this schedule (the provider needs one)."
+            return out
+    if not plan:
+        out["error"] = "That plan is no longer available. Please edit the schedule and pick another."
+        return out
+    price = float(plan["price"])
+    if service_type == "tv" and product in ("dstv", "gotv", "startimes"):
+        v = _np.verify_account(product, acct)
+        if v.get("unavailable"):
+            out.update(unavailable=True, error="Smartcard check is unavailable right now. It will try again at the next run.")
+            return out
+        if not v.get("ok"):
+            out["error"] = v.get("message") or "The smartcard could not be verified. Please check the number."
+            return out
+        out["cust_name"] = v.get("name", "")
+        if product in ("dstv", "gotv") and mode == "renew":
+            out["renewal"] = float(v.get("renewal_amount") or 0)
+            if out["renewal"] <= 0:
+                out["error"] = "The current renewal price is not available. Please try again later."
+                return out
+            price = out["renewal"]
+    out.update(ok=True, price=price, plan=plan, acct=acct)
+    return out
+
+
+def _schedule_price_alert(schedule: Dict, user_id: int, old: float, new: float, when_text: str = "") -> None:
+    """Tell the customer a scheduled TV / data price moved (chat, in-app and email)."""
+    up = new > old
+    name = str(schedule.get("name") or "Your schedule")
+    if up:
+        body = (f'The price of "{name}" has gone UP from ₦{old:,.2f} to ₦{new:,.2f}. '
+                f"We will send your pay link at the usual time with the new price. Nothing is charged unless you tap it. "
+                f"You can pause or edit the schedule if you do not want it.")
+        title = "📈 Scheduled price went up"
+    else:
+        body = (f'Good news: the price of "{name}" has gone DOWN from ₦{old:,.2f} to ₦{new:,.2f}. '
+                f"We will send your pay link at the usual time with the lower price.")
+        title = "📉 Scheduled price went down"
+    try:
+        db.create_notification(user_id, title, body, "warning" if up else "success")
+    except Exception:
+        logger.exception("price alert notification failed")
+    sent = False
+    try:
+        from net365_whatsapp import send_chat_price_alert
+        sent = send_chat_price_alert(user_id, {"name": name, "old": old, "new": new, "when": when_text})
+    except Exception:
+        logger.exception("price alert chat failed")
+    if not sent:
+        try:
+            user = db.get_user(user_id) or {}
+            if user.get("email"):
+                send_email_notification(user["email"], title, body)
+        except Exception:
+            logger.exception("price alert email failed")
+
+
+def _schedule_send_pay_link(schedule: Dict, user_id: int, platform) -> Dict:
+    """Pay-link scheduler (no wallet): when a schedule is due, create a normal Paystack payment for the
+    top-up or bill, and send the customer the link in their linked chat (or by email). When they pay,
+    the usual finalize + completion message takes over. Nothing is charged without the customer tapping pay."""
+    service_type = str(schedule.get("service_type") or "airtime").lower()
+    currency = str(schedule.get("currency") or "NGN").upper()
+    try:
+        amount = float(schedule.get("amount") or 0)
+    except (TypeError, ValueError):
+        amount = 0
+    if amount <= 0:
+        return {"success": False, "error": "Invalid scheduled amount"}
+    if currency != "NGN":
+        return {"success": False, "error": "Pay-link schedules support NGN only for now."}
+    user = db.get_user(user_id) or {}
+    email = user.get("email")
+    if not email:
+        return {"success": False, "error": "Your account needs an email address."}
+
+    country_code = str(schedule.get("country_code") or "NG").upper()
+    payload = {"email": email, "user_id": user_id, "schedule_id": schedule.get("id"),
+               "schedule_name": schedule.get("name"), "is_scheduled": True, "country_code": country_code}
+    if service_type == "airtime":
+        phone, operator_id = schedule.get("phone"), schedule.get("operator_id")
+        if not phone or not operator_id:
+            return {"success": False, "error": "Missing operator or phone number"}
+        _fp, ok = platform._format_phone_for_schedule(phone, country_code)
+        if not ok:
+            return {"success": False, "error": f"Invalid {country_code} phone number: '{phone}'"}
+        tx_type, target = "topup", "0" + re.sub(r"\D", "", str(phone))[-10:]
+        payload.update({"operator_id": operator_id, "phone": encrypt_pii(phone)})
+    elif service_type == "utility":
+        biller_id, acct = schedule.get("biller_id"), schedule.get("subscriber_account")
+        if not biller_id or not acct:
+            return {"success": False, "error": "Missing biller or account number"}
+        try:
+            if _utility_provider_down():
+                return {"success": False, "error": "Bill payments are temporarily unavailable. Nothing was charged; this schedule will try again at its next run."}
+        except Exception:
+            pass
+        try:
+            v = UtilityBillerValidator.validate_amount(int(biller_id), amount)
+            if not v["valid"]:
+                amount = v["adjusted"]
+        except (ValueError, TypeError):
+            return {"success": False, "error": f"Invalid biller_id: {biller_id}"}
+        tx_type = "utility"
+        a = str(acct)
+        target = (a[:2] + "••••" + a[-3:]) if len(a) > 6 else a
+        payload.update({"biller_id": biller_id, "subscriber_account": acct, "amount": amount,
+                        "currency": "NGN", "biller_name": str(schedule.get("biller_name") or "")[:60]})
+    elif service_type in ("tv", "data"):
+        # TV subscriptions (DStv / GOtv / StarTimes / Showmax) and data bundles, bought through the provider router.
+        # The price is looked up fresh on every run (renewal prices and plan prices change). A rise beyond the customer's
+        # limit is never charged: they are told instead.
+        import net365_providers as _np
+        q = _svc_schedule_quote(schedule)
+        if not q["ok"]:
+            return {"success": False, "error": q["error"]}
+        meta, product, code, mode = q["meta"], q["product"], q["code"], q["mode"]
+        contact, plan, acct = q["contact"], q["plan"], q["acct"]
+        cust_name, renewal, new_price = q["cust_name"], q["renewal"], q["price"]
+        old_price = amount
+        # Only a limit the customer set themselves can stop the link: they tap to pay, so a normal price change is
+        # simply shown to them (and they were warned hours earlier).
+        try:
+            cap = float(meta.get("max_amount") or 0)
+        except (TypeError, ValueError):
+            cap = 0.0
+        if cap > 0 and new_price > cap + 0.009:
+            msg = (f'"{schedule.get("name")}" was not charged: the price is now ₦{new_price:,.2f}, above your limit of ₦{cap:,.2f}. '
+                   f"Edit the schedule to approve the new price.")
+            try:
+                db.create_notification(user_id, "⏰ Scheduled payment paused", msg, "warning")
+            except Exception:
+                pass
+            try:
+                send_email_notification(email, "Your scheduled Net365 payment needs your approval", msg)
+            except Exception:
+                pass
+            return {"success": False, "error": f"Price rose to ₦{new_price:,.2f} (limit ₦{cap:,.2f}). Customer notified."}
+        amount = new_price
+        tx_type = service_type
+        label = _np.VTpassAdapter.TV.get(product) or product.upper()
+        biller = (f"{label} {plan['name']}" if service_type == "tv" else str(plan["name"]))[:60]
+        target = (acct[:2] + "••••" + acct[-3:]) if len(acct) > 6 else acct
+        payload.update({"product": product, "network": product if service_type == "data" else "", "variation_code": code,
+                        "phone": encrypt_pii(contact), "subscriber_account": encrypt_pii(acct),
+                        "quantity": 1, "subscription_type": mode if service_type == "tv" and product in ("dstv", "gotv") else "",
+                        "renewal_amount": renewal, "biller_name": biller, "customer_name": cust_name,
+                        "currency": "NGN", "payment_method": "paystack"})
+    else:
+        return {"success": False, "error": f"Unsupported service type: {service_type}"}
+
+    fee = server_fee_for(amount, "NGN")
+    total = round(amount + fee, 2)
+    link = None
+    try:
+        from net365_whatsapp import chat_link_for_user, chat_source_for_link
+        link = chat_link_for_user(user_id)
+        if link:
+            payload["source"] = chat_source_for_link(link)
+    except Exception:
+        link = None
+    payload["service_amount"], payload["fee_amount"] = amount, fee
+
+    res = platform.create_payment(amount=total, currency="NGN", operator_id=payload.get("operator_id"),
+                                  phone=schedule.get("phone") if tx_type == "topup" else None,
+                                  country_code=country_code, email=email, return_url=_bg_return_url(),
+                                  provider="paystack")
+    if not (res.get("success") and res.get("reference")):
+        return {"success": False, "error": res.get("error") or "Could not create the payment link"}
+    db.create_pending(reference=res["reference"], tx_type=tx_type, provider=res.get("provider", "paystack"),
+                      amount=total, currency="NGN", payload=payload, user_id=user_id)
+    pay_url = res.get("authorization_url") or res.get("checkout_url")
+
+    old_price = locals().get("old_price", amount)
+    if service_type in ("tv", "data") and abs(amount - old_price) > 0.009:
+        try:                                    # remember today's price so the next comparison starts from it
+            _c = db.get_db_connection()
+            _c.execute("UPDATE scheduler_schedules SET amount = ? WHERE id = ? AND user_id = ?",
+                       (amount, schedule.get("id"), user_id))
+            _c.commit()
+            _c.close()
+        except Exception:
+            logger.exception("could not store the new schedule price")
+    sent = False
+    try:
+        from net365_whatsapp import send_chat_reminder
+        sent = send_chat_reminder(user_id, {
+            "reference": res["reference"], "name": schedule.get("name") or "Scheduled payment",
+            "service": "airtime" if tx_type == "topup" else "bill", "target": target,
+            "biller_name": payload.get("biller_name"), "amount": amount, "fee": fee, "total": total, "url": pay_url,
+            "old_amount": old_price if abs(amount - old_price) > 0.009 else None})
+    except Exception:
+        logger.exception("schedule chat reminder failed")
+    if not sent:
+        try:
+            send_email_notification(
+                email, f"⏰ Your scheduled Net365 payment is due: {schedule.get('name') or ''}",
+                f"Your scheduled {'airtime top-up' if tx_type == 'topup' else 'bill payment'} of ₦{amount:,.2f} "
+                f"for {target} is due.\n\nTotal with service fee: ₦{total:,.2f}\nPay securely here: {pay_url}\n\n"
+                f"It is only paid when you tap the link. Ignore this email to skip.")
+        except Exception:
+            logger.exception("schedule reminder email failed")
+    try:
+        db.create_notification(user_id, "⏰ Payment due",
+                               f'"{schedule.get("name")}" is due: ₦{total:,.2f}. Tap the link we sent to pay.', "info")
+    except Exception:
+        pass
+    return {"success": True, "reminder_sent": True, "chat": bool(sent), "reference": res["reference"]}
+
+
+def _wallet_airtime_via_router(reference, data, phone, service_amount, rt):
+    """Nigerian airtime paid from the Net365 Wallet, offered to the provider router (VTpass / Flutterwave ...) in naira.
+    Same rule as card-paid airtime: returns a Reloadly-shaped result when the router accepted the order, None when it is
+    CERTAIN nothing was accepted (the caller may then use Reloadly), and RAISES when the outcome is unknown, so the caller
+    keeps the wallet debit for review instead of refunding or ordering twice."""
+    import net365_providers as _np
+    if not _np.enabled():
+        return None
+    routed = _np.route_purchase(reference=reference, service="airtime",
+                                network=_np.network_for(data.get("operator_name"), phone),
+                                phone=phone, amount=service_amount)
+    if routed.get("status") in ("success", "pending"):
+        logger.info(f"Wallet airtime {reference} routed via {routed.get('provider')} ({routed.get('status')})")
+        rt.record("vtpass", "airtime", True, reference)
+        return {"status": "SUCCESSFUL" if routed["status"] == "success" else "PENDING",
+                "transactionId": routed.get("provider_ref") or f"{routed.get('provider')}-{reference}",
+                "provider": routed.get("provider"), "routed": True}
+    if not routed.get("fallback_ok"):
+        raise Exception("Provider router could not confirm the order; not retrying elsewhere: " + str(routed.get("message") or ""))
+    rt.record("vtpass", "airtime", False, reference)
+    return None
 
 
 def _execute_schedule_fulfillment(schedule: Dict, user_id: int, platform) -> Dict:
@@ -6395,6 +7094,13 @@ def _execute_schedule_fulfillment(schedule: Dict, user_id: int, platform) -> Dic
     currency = str(schedule.get("currency") or "NGN").upper()
     wallet_currency = str(schedule.get("wallet_currency") or currency).upper()
     schedule_id = schedule.get("id")
+
+    if service_type in ("tv", "data"):
+        # Subscriptions and bundles always go through a pay link the customer confirms (prices move, so no silent debit).
+        return _schedule_send_pay_link(schedule, user_id, platform)
+
+    if not WALLET_ENABLED or str(schedule.get("pay_mode") or "").lower() == "link":
+        return _schedule_send_pay_link(schedule, user_id, platform)
 
     if amount <= 0:
         return {"success": False, "error": "Invalid scheduled amount"}
@@ -6647,6 +7353,7 @@ def _execute_schedule_fulfillment(schedule: Dict, user_id: int, platform) -> Dic
                 or result.get("error")
                 or "Top-up failed",
                 "refunded": refund.get("success", False),
+                "needs_review": not refund.get("success", False),
                 "reference": run_reference,
             }
 
@@ -6844,6 +7551,7 @@ def _execute_schedule_fulfillment(schedule: Dict, user_id: int, platform) -> Dic
             or result.get("error")
             or "Utility payment failed",
             "refunded": refund.get("success", False),
+            "needs_review": not refund.get("success", False),
             "reference": run_reference,
         }
 
@@ -6862,7 +7570,7 @@ def _execute_schedule_fulfillment(schedule: Dict, user_id: int, platform) -> Dic
         if debit_done:
             refund = db.credit_wallet(
                 user_id=user_id,
-                amount=amount,
+                amount=debit_amount if "debit_amount" in locals() else amount,
                 currency=wallet_currency,
                 description=f'Refund for failed scheduled payment {schedule.get("name")}',
                 reference=f"REFUND-{run_reference}",
@@ -6872,6 +7580,7 @@ def _execute_schedule_fulfillment(schedule: Dict, user_id: int, platform) -> Dic
                 "success": False,
                 "error": str(exc),
                 "refunded": refund.get("success", False),
+                "needs_review": not refund.get("success", False),
                 "reference": run_reference,
             }
 
@@ -6919,6 +7628,7 @@ def _finalize_schedule_run(
                 )
 
         conn.commit()
+        conn.close()  # release the SQLite handle before notifying (was leaked)
 
         log_event(
             user_id=user_id,
@@ -6930,15 +7640,21 @@ def _finalize_schedule_run(
             },
             status="success",
         )
-        db.create_notification(
-            user_id,
-            "✅ Schedule Executed",
-            f'Schedule "{schedule.get("name")}" executed successfully.',
-            "success",
-        )
+        if not result.get("reminder_sent"):
+            db.create_notification(
+                user_id,
+                "✅ Schedule Executed",
+                f'Schedule "{schedule.get("name")}" executed successfully.',
+                "success",
+            )
         return {"success": True, "status": "completed", "needs_review": False}
 
     review_required = bool(result.get("needs_review"))
+    if review_required:
+        logger.critical(
+            f"REFUND FAILED after failed scheduled run {result.get('reference')}: "
+            f"customer was debited and NOT refunded — needs manual review"
+        )
     schedule_status = "needs_review" if review_required else "failed"
     c.execute(
         """
@@ -6955,6 +7671,7 @@ def _finalize_schedule_run(
         ),
     )
     conn.commit()
+    conn.close()  # release the SQLite handle (was leaked)
 
     log_event(
         user_id=user_id,
@@ -7028,6 +7745,68 @@ class ScheduleAutoRunner:
             time.sleep(cls._poll_seconds)
 
     @classmethod
+    def _price_watch(cls, conn, c, candidates, now_utc):
+        """A few hours before a TV / data schedule is due, look up today's price and tell the customer if it moved
+        (up or down). Done once per due date; a failed lookup is retried after 30 minutes."""
+        lead = float(os.getenv("NET365_PRICE_WATCH_HOURS", "6") or 6)
+        if lead <= 0:
+            return
+        from datetime import timedelta as _td
+        for r in candidates:
+            norm = normalize_next_run(r["next_run"])
+            if not norm:
+                continue
+            due_at = datetime.fromisoformat(norm)
+            if due_at <= now_utc or due_at - now_utc > _td(hours=lead):
+                continue
+            row = c.execute("SELECT * FROM scheduler_schedules WHERE id = ? AND user_id = ? AND status = 'active'",
+                            (r["id"], r["user_id"])).fetchone()
+            if not row:
+                continue
+            sch = dict(row)
+            if str(sch.get("service_type") or "").lower() not in ("tv", "data"):
+                continue
+            try:
+                meta = json.loads(sch.get("metadata") or "{}") if isinstance(sch.get("metadata"), str) else dict(sch.get("metadata") or {})
+            except Exception:
+                meta = {}
+            if meta.get("price_watch_run") == norm:
+                continue
+            retry = meta.get("price_watch_retry")
+            if retry:
+                try:
+                    if datetime.fromisoformat(retry) > now_utc:
+                        continue
+                except Exception:
+                    pass
+            sch["metadata"] = meta
+            q = _svc_schedule_quote(sch)
+            if q.get("unavailable") or not q.get("ok"):
+                if q.get("unavailable"):
+                    meta["price_watch_retry"] = (now_utc + _td(minutes=30)).isoformat()
+                else:                                   # a real problem (card invalid, plan gone): tell them once
+                    meta["price_watch_run"] = norm
+                    try:
+                        db.create_notification(r["user_id"], "⚠️ Scheduled payment needs attention",
+                                               f'"{sch.get("name")}": {q.get("error")}', "warning")
+                    except Exception:
+                        pass
+            else:
+                meta["price_watch_run"] = norm
+                meta.pop("price_watch_retry", None)
+                old, new = float(sch.get("amount") or 0), float(q["price"])
+                if abs(new - old) > 0.009:
+                    try:
+                        _schedule_price_alert(sch, r["user_id"], old, new)
+                    except Exception:
+                        logger.exception("price alert failed")
+                    if old and meta.get("max_amount") and new > float(meta["max_amount"]) + 0.009:
+                        pass                            # the due-time run will hold it and tell them again
+            c.execute("UPDATE scheduler_schedules SET metadata = ? WHERE id = ? AND user_id = ? AND status = 'active'",
+                      (json.dumps(meta), r["id"], r["user_id"]))
+            conn.commit()
+
+    @classmethod
     def _tick(cls):
         conn = db.get_db_connection()
         c = conn.cursor()
@@ -7065,6 +7844,11 @@ class ScheduleAutoRunner:
                 continue
             if datetime.fromisoformat(norm) <= now_utc:
                 due.append(r)
+
+        try:
+            cls._price_watch(conn, c, candidates, now_utc)
+        except Exception as e:
+            logger.error(f"Price watch error: {e}")
 
         for row in due:
             schedule_id, user_id = row["id"], row["user_id"]
@@ -7145,6 +7929,11 @@ class ScheduleAutoRunner:
                     conn.commit()
                 except Exception:
                     pass
+
+        try:
+            conn.close()  # one handle per tick; release it explicitly
+        except Exception:
+            pass
 
 
 class SMSCampaignAutoRunner:
@@ -7244,8 +8033,14 @@ class ReloadlyWebApp:
         self.app = Flask(__name__)
         flask_secret = os.getenv("FLASK_SECRET_KEY", "").strip()
         if not flask_secret:
-            if os.getenv("ENVIRONMENT", "").lower() == "production":
-                raise ValueError("FLASK_SECRET_KEY is required in production")
+            _is_production = (
+                os.getenv("ENVIRONMENT", "").lower() == "production"
+                or os.getenv("FLASK_ENV", "").lower() == "production"
+                or bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"))
+                or bool(os.getenv("RENDER_SERVICE_ID"))
+            )
+            if _is_production:
+                raise ValueError("FLASK_SECRET_KEY is required in production deployments")
             flask_secret = "net365-development-secret-change-me"
             logger.warning("FLASK_SECRET_KEY not set; using development-only fallback")
         self.app.secret_key = flask_secret
@@ -7290,14 +8085,319 @@ class ReloadlyWebApp:
         except Exception as ads_init_error:
             # Fail visibly in logs but keep the payment/recharge app bootable.
             logger.exception("Net365 Smart Media could not initialize: %s", ads_init_error)
+        # Terms of Service: versioned document, proof of acceptance, web + mobile + chat endpoints.
+        try:
+            from net365_legal import init_legal
+            from net365_whatsapp import bot_required as _bot_required
+            init_legal(self.app, db, login_required, admin_required, _bot_required, get_client_ip)
+        except ImportError:
+            logger.warning("net365_legal.py not found: Terms acceptance is not active")
+        except Exception as _legal_err:
+            logger.error(f"Terms module failed to start: {_legal_err}")
+        # Support tickets and incidents for web, mobile, WhatsApp and Telegram, with an agent desk at /admin/support.
+        try:
+            from net365_support import init_support
+            from net365_whatsapp import bot_required as _bot_required_s
+            init_support(self.app, db, login_required, admin_required, _bot_required_s, send_email_notification)
+        except ImportError:
+            logger.warning("net365_support.py not found: support tickets are not active")
+        except Exception as _sup_err:
+            logger.error(f"Support module failed to start: {_sup_err}")
+        # Shield: scores hostile visitors, blocks them (app + Cloudflare edge), emails the team, reports to PostHog. Admin page: /admin/shield.
+        # Smart Share: location-aware recharge identity, one-time requests, gifting. Also serves /api/geo/context.
+        try:
+            from net365_smartshare import init_smartshare
+            init_smartshare(self.app, db, login_required, get_client_ip,
+                            referral_code_fn=lambda uid: db.get_referral_code_by_user_id(uid))
+        except ImportError:
+            logger.warning("net365_smartshare.py not found: Smart Share is not active")
+        except Exception as _ss_err:
+            logger.error(f"Smart Share failed to start: {_ss_err}")
+        # Account profile: types, tiers, workspaces, Affiliate programme.
+        try:
+            from net365_profile import init_profile
+            init_profile(self.app, db.get_db_connection, login_required, admin_required)
+        except ImportError:
+            logger.warning("net365_profile.py not found: account profiles are not active")
+        except Exception as _pf_err:
+            logger.error(f"Account profile module failed to start: {_pf_err}")
+        # Home adverts under Ask Net365 (managed in admin.html > Home Adverts).
+        try:
+            from net365_homeads import init_homeads
+            init_homeads(self.app, db.get_db_connection, admin_required, get_client_ip)
+        except ImportError:
+            logger.warning("net365_homeads.py not found: home adverts are not active (the chat animation still shows)")
+        except Exception as _ha_err:
+            logger.error(f"Home adverts failed to start: {_ha_err}")
+        # Membership: permanent number, Founders rank and badge (existing verified customers are numbered by sign-up order on first start).
+        try:
+            from net365_membership import init_membership
+            init_membership(self.app, db.get_db_connection, login_required, admin_required)
+        except ImportError:
+            logger.warning("net365_membership.py not found: membership numbers are not active")
+        except Exception as _mb_err:
+            logger.error(f"Membership failed to start: {_mb_err}")
+        # Ask Net365 question log, with admin replies (admin.html > Ask Net365).
+        try:
+            from net365_askqa import init_askqa
+            init_askqa(self.app, db.get_db_connection, admin_required, get_authenticated_user, get_client_ip,
+                       notify=lambda _uid, _t, _m: db.create_notification(_uid, _t, _m, "info"),
+                       send_email=lambda _to, _s, _m: send_email_notification(_to, _s, _m))
+        except ImportError:
+            logger.warning("net365_askqa.py not found: Ask Net365 questions are not logged")
+        except Exception as _aq_err:
+            logger.error(f"Ask Net365 log failed to start: {_aq_err}")
+        try:
+            from net365_shield import init_shield
+            init_shield(self.app, db, admin_required, get_client_ip, send_email_notification)
+        except ImportError:
+            logger.warning("net365_shield.py not found: the shield is not active")
+        except Exception as _shield_err:
+            logger.error(f"Shield failed to start: {_shield_err}")
+
         # WhatsApp banking: account linking + PIN auth for the Node bot (needs WHATSAPP_BOT_SECRET).
         try:
             from net365_whatsapp import init_whatsapp_banking
             init_whatsapp_banking(self.app, db, send_email_notification)
+            from net365_whatsapp import set_decryptor
+            set_decryptor(decrypt_payload)
+            try:
+                from net365_whatsapp import set_welcome_hook
+                set_welcome_hook(send_welcome_once)
+            except ImportError:
+                # An older net365_whatsapp.py on the server must not stop everything after this line from loading.
+                logger.warning("net365_whatsapp.py is out of date (no set_welcome_hook): chat sign-up welcome emails are off. Deploy the latest file.")
+            # Money Intelligence: one reporting engine for the web API, the bots and scheduled reports (additive; moves no money).
+            try:
+                import net365_money_intelligence as _mi
+                from net365_whatsapp import send_chat_report as _send_chat_report
+                _mi.set_decryptor(decrypt_payload)
+                _mi.init_money_intelligence(self.app, db, login_required, send_email_notification, _send_chat_report)
+            except Exception as _mi_err:
+                logger.exception("Money Intelligence could not initialize: %s", _mi_err)
+            from net365_whatsapp import is_guest_user as _is_guest_user
+            from net365_giftcards import init_giftcards, set_limit_check
+            init_giftcards(
+                self.app, login_required=login_required, credentials=self.credentials, db=db,
+                platform=self.platform, usd_to_ngn=lambda: ExchangeRateService.get_rate("NGN", "USD"),
+                safe_return_url=_safe_payment_return_url, is_guest_user=_is_guest_user,
+            )
+            set_limit_check(lambda uid, amt: _purchase_limit_error(uid, amt, "NGN"))
+            try:
+                from net365_saved import init_saved
+                init_saved(
+                    self.app, login_required=login_required, db=db, encrypt=encrypt_pii, decrypt=decrypt_pii,
+                    decrypt_payload=decrypt_payload, server_fee_for=server_fee_for,
+                    finalize=self._finalize_transaction,
+                    limit_check=lambda uid, amt: _purchase_limit_error(uid, amt, "NGN"),
+                    utility_down=_utility_provider_down,
+                )
+                from net365_network_memory import init_network_memory
+                init_network_memory(
+                    self.app, db, login_required,
+                    operator_lookup=lambda oid: self.platform.get_operator_by_id(int(oid)),
+                )
+                from net365_ratings import init_ratings
+                init_ratings(self.app, db, login_required, admin_required)
+                try:
+                    from net365_milestones import init_milestones
+                    init_milestones(
+                        self.app, db, admin_required,
+                        lambda to, subject, html, text: send_branded_email(
+                            to, subject, html, text, from_name=os.getenv("MILESTONE_FROM_NAME", "Net365")),
+                        public_url=PUBLIC_URL, frontend_url=FRONTEND_URL,
+                    )
+                except Exception as _ms:
+                    logger.warning(f"Milestones not loaded: {_ms}")
+                try:
+                    from net365_providers import init_providers
+
+                    def _provider_resolved(reference, provider, o):
+                        """A pending provider order reached its final state: keep the order row honest."""
+                        try:
+                            st = "completed" if o["status"] == "success" else "failed"
+                            conn = db.get_db_connection()
+                            try:
+                                conn.execute("UPDATE reloadly_transactions SET status = ? WHERE reference = ? AND status = 'processing'",
+                                             (st, reference))
+                                conn.commit()
+                            finally:
+                                conn.close()
+                        except Exception as _he:
+                            logger.warning(f"provider resolve update failed for {reference}: {_he}")
+
+                    init_providers(self.app, db, admin_required, on_resolved=_provider_resolved)
+                except Exception as _pv:
+                    logger.warning(f"Provider router not loaded: {_pv}")
+                try:
+                    from net365_routing import init_routing
+                    init_routing(self.app, db, admin_required)
+                except Exception as _rt_e:
+                    logger.warning(f"Provider routing policy not loaded: {_rt_e}")
+                try:
+                    from net365_identity import init_identity
+
+                    _WA_OTP = os.getenv("IDENTITY_WHATSAPP_OTP", "").lower() == "true" and bool(os.getenv("WHATSAPP_BOT_SECRET"))
+
+                    def _identity_whatsapp(e164, message):
+                        """Send the code to the customer's own WhatsApp through the bot. Because it goes to the number they
+                        typed, receiving it proves they control that number."""
+                        _m = re.search(r"\b(\d{6})\b", message)
+                        if not _m:
+                            return False
+                        try:
+                            _url = os.getenv("CHAT_BOT_NOTIFY_URL", "http://127.0.0.1:3001/internal/notify")
+                            _r = requests.post(
+                                _url,
+                                json={"wa": e164.lstrip("+"), "kind": "otp", "code": _m.group(1)},
+                                headers={"X-Bot-Secret": os.getenv("WHATSAPP_BOT_SECRET", "")},
+                                timeout=30,
+                            )
+                            return _r.status_code == 200 and bool((_r.json() or {}).get("ok"))
+                        except Exception as _we:
+                            logger.warning(f"identity: WhatsApp code delivery failed: {_we}")
+                            return False
+
+                    def _identity_sms(e164, message):
+                        if SMS_PROVIDER_CONFIGURED:
+                            num = e164 if SMS_PROVIDER_NAME == "twilio" else e164.lstrip("+")
+                            res = send_sms_via_provider([num], message, os.getenv("SMS_SENDER_ID", "Net365"))
+                            if res and res.get("sent"):
+                                return True
+                        return _identity_whatsapp(e164, message) if _WA_OTP else False
+
+                    init_identity(
+                        self.app, db, login_required, rate_limit,
+                        send_sms=_identity_sms,
+                        send_email=lambda to, subj, msg: send_email_notification(to, subj, msg),
+                        admin_required=admin_required,
+                        page_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "complete_profile.html"),
+                        sms_ready=lambda: SMS_PROVIDER_CONFIGURED or _WA_OTP,
+                    )
+                except Exception as _id_e:
+                    logger.warning(f"Identity engine not loaded: {_id_e}")
+                try:
+                    from net365_recovery import init_recovery
+                    init_recovery(self.app, db, admin_required)
+                except Exception as _rc_e:
+                    logger.warning(f"Recovery engine not loaded: {_rc_e}")
+                try:
+                    from net365_geoint import init_geoint
+                    init_geoint(self.app, db, login_required, admin_required)
+                except Exception as _ge:
+                    logger.warning(f"GEOINT not loaded: {_ge}")
+                from net365_merchants import init_merchants
+                init_merchants(
+                    self.app, login_required=login_required, db=db, admin_required=admin_required,
+                    limit_check=lambda uid, amt: _purchase_limit_error(uid, amt, "NGN"),
+                    init_paystack=lambda email, amt, ref, ret, extra: PaymentProcessor(
+                        "paystack", os.getenv("PAYSTACK_SECRET_KEY")).init_paystack_payment(email, amt, ref, ret, extra),
+                    return_url_for=_safe_payment_return_url,
+                )
+            except Exception as _e2:
+                logger.error(f"Saved/merchant modules failed to start: {_e2}")
         except Exception as e:
             logger.warning(f"WhatsApp banking API not loaded: {e}")
+        # Rewards: points/levels/streaks for the success page. Non-cash; failures never affect payments.
+        try:
+            from net365_rewards import init_rewards
+            init_rewards(self.app, db.get_db_connection, admin_required)
+        except Exception as e:
+            logger.warning(f"Rewards module not loaded: {e}")
+        # Ad engine (phase 1): ad view/click tracking for every surface. Never affects payments.
+        try:
+            from net365_adengine import init_adengine
+            init_adengine(self.app, db, admin_required, FRONTEND_URL)
+        except Exception as e:
+            logger.warning(f"Ad engine not loaded: {e}")
+        # Ad credits (phase 2): ad views earned by transacting, spent on Boost ads. OFF until admin enables it.
+        try:
+            from net365_adcredits import init_adcredits
+            init_adcredits(self.app, db, admin_required, login_required)
+        except Exception as e:
+            logger.warning(f"Ad credits not loaded: {e}")
         self.setup_routes()
+        self._start_pending_sweeper()
+        self.app.before_request(_wallet_policy_guard)
+
+        def _public_app_config():
+            """Lets the web pages hide wallet features that the server will refuse anyway."""
+            return jsonify({
+                "success": True,
+                "wallet_enabled": WALLET_ENABLED,
+                "transfers_enabled": WALLET_TRANSFERS_ENABLED,
+                "limits": {"per_transaction_ngn": LIMIT_PER_TX_NGN, "daily_ngn": LIMIT_DAILY_NGN},
+            })
+        self.app.add_url_rule("/api/app/config", "public_app_config", _public_app_config, methods=["GET"])
         self.app.before_request(log_page_visit)
+
+        # Request-level analytics, rate limiting, 404/403 monitoring (never blocks a customer on failure).
+        try:
+            from net365_traffic import init_traffic
+            init_traffic(
+                self.app, db.get_db_connection, admin_required, get_client_ip,
+                get_user=get_authenticated_user, rate_hit_db=_rate_hit_db, detect_bot=detect_bot, logger=logger,
+            )
+        except Exception as e:
+            logger.warning(f"Traffic analytics not loaded: {e}")
+
+        # Investor intelligence: organisation-level engagement with investor-facing pages.
+        try:
+            from net365_investors import init_investors
+            try:
+                import net365_traffic as _nt
+                _asn_fn = lambda _ip: _nt._asn_for(_ip, db.get_db_connection)
+            except Exception:
+                _asn_fn = None  # investors works without the traffic module (no network lookups)
+            init_investors(
+                self.app, db.get_db_connection, admin_required, get_client_ip, rate_hit_db=_rate_hit_db,
+                send_email=send_email_notification, asn_for=_asn_fn,
+                base_url=FRONTEND_URL, logger=logger,
+            )
+        except Exception as e:
+            logger.error(f"Investor intelligence NOT loaded: {e}", exc_info=True)
+
+        # Guest / demo / free-evaluation access (side tables; fail-closed guard for evaluation accounts).
+        try:
+            from net365_access import init_access
+            global _access_enrich_user
+            _acc = init_access(
+                self.app, get_conn=db.get_db_connection, get_authenticated_user=get_authenticated_user,
+                create_user=db.create_user, create_session=db.create_session, set_auth_cookie=set_auth_cookie,
+                get_user_by_email=db.get_user_by_email, create_otp=db.create_verification_otp,
+                verify_otp=db.verify_otp, send_email=send_email_notification, admin_required=admin_required,
+                get_client_ip=get_client_ip, rate_hit_db=lambda k, w: _rate_hit_db(k, w),
+                frontend_url=FRONTEND_URL, notify_email=os.getenv("EVAL_NOTIFY_EMAIL") or None, logger=logger,
+            )
+            _access_enrich_user = _acc["enrich_user"]
+        except Exception as e:
+            logger.error(f"Access/evaluation module NOT loaded: {e}", exc_info=True)
+
+        # Visitor analytics + sales/profit reports (consent-based; failures never affect the site).
+        try:
+            from net365_insights import init_insights
+            init_insights(
+                self.app, db, admin_required, rate_limit=rate_limit,
+                get_user_id=lambda: (get_authenticated_user() or {}).get("id"),
+            )
+        except Exception as e:
+            logger.error(f"Insights module NOT loaded (Reports tab will be empty): {e}", exc_info=True)
+
+        # NET365 SENTINEL: threat detection + automated defence. Starts in OBSERVATION mode (detects and logs,
+        # never auto-blocks) until you switch it in the Security tab. Fails open: an error here never blocks traffic.
+        try:
+            from net365_sentinel import init_sentinel
+            init_sentinel(self.app, db, admin_required, get_client_ip, admin_secret=lambda: ADMIN_SECRET)
+        except Exception as e:
+            logger.error(f"SENTINEL NOT loaded (site is running without it): {e}", exc_info=True)
+
+        # International Intelligence (admin "International" tab): serves /api/admin/sentinel/intelligence and /admin_intl.js.
+        # Needs visitor_logs (written by Sentinel/visitor tracking). Read-only; never blocks anyone.
+        try:
+            from net365_intl_intel import register_intl_intel
+            register_intl_intel(self.app, db, admin_required)
+        except Exception as e:
+            logger.error(f"International intelligence NOT loaded (admin International tab will show 404): {e}", exc_info=True)
 
         rate_interval = int(os.getenv("EXCHANGE_RATE_INTERVAL", 300))
         ExchangeRateService.start_auto_refresh(rate_interval)
@@ -7315,6 +8415,12 @@ class ReloadlyWebApp:
             logger.info(
                 f"SMS campaign auto-runner ENABLED (polling every {poll_seconds}s)"
             )
+            try:
+                import net365_money_intelligence as _mi_runner
+                from net365_whatsapp import send_chat_report as _scr
+                _mi_runner.MoneyReportRunner.start(db, send_email_notification, _scr)
+            except Exception:
+                logger.exception("Money Intelligence report runner could not start")
         else:
             logger.info(
                 "Schedule auto-runner DISABLED in this process (NET365_SCHEDULER_ENABLED is not 'true'). "
@@ -7446,7 +8552,9 @@ class ReloadlyWebApp:
             # we page through recent sessions and match client-side. Keep the scan
             # short — a session older than ~100 entries is almost certainly stale.
             sessions = stripe.checkout.Session.list(limit=100)
-            for s in sessions.auto_paging_iter():
+            for _i, s in enumerate(sessions.auto_paging_iter()):
+                if _i >= 100:  # auto_paging_iter is unbounded; cap the scan
+                    break
                 meta = getattr(s, "metadata", None) or {}
                 try:
                     meta_ref = meta.get("reference")
@@ -7561,8 +8669,18 @@ class ReloadlyWebApp:
                             )
 
                 try:
-                    verify_result = self.platform.verify_payment(verify_reference, tx.get("provider"))
-                    logger.info(f"Payment verification result: {verify_result}")
+                    if tx.get("provider") == "cart":
+                        verify_result = self._verify_cart_child(tx, payload)
+                    else:
+                        verify_result = self.platform.verify_payment(verify_reference, tx.get("provider"))
+                    logger.info("Payment verification result: " + str({k: v for k, v in verify_result.items() if k != "authorization"}))
+                    if verify_result.get("success") and payload.get("save_card") and verify_result.get("authorization") \
+                            and tx.get("user_id"):
+                        try:
+                            from net365_saved import save_card_from_auth
+                            save_card_from_auth(tx["user_id"], payload.get("email"), verify_result["authorization"])
+                        except Exception:
+                            logger.exception("saving opted-in card failed")
                 except Exception as e:
                     logger.error(f"Payment verification error: {e}")
                     db.mark_fulfillment_failed(reference, f"Verification error: {str(e)}")
@@ -7594,6 +8712,24 @@ class ReloadlyWebApp:
                                 logger.error(f"Stripe retry verification error: {e}")
 
                     if not verify_result.get("success"):
+                        if verify_result.get("pending"):
+                            # Customer hasn't finished paying yet: put it back so a later
+                            # webhook/verify can complete it; don't fail it.
+                            try:
+                                _c = db.get_db_connection()
+                                _c.execute(
+                                    "UPDATE transactions SET status='pending', updated_at=CURRENT_TIMESTAMP "
+                                    "WHERE reference=? AND status='processing'",
+                                    (reference,),
+                                )
+                                _c.close()
+                            except Exception as _e:
+                                logger.error(f"Could not revert {reference} to pending: {_e}")
+                            return {
+                                "success": False,
+                                "pending": True,
+                                "error": "Payment not completed yet",
+                            }
                         db.mark_fulfillment_failed(
                             reference,
                             f'Payment not confirmed: {verify_result.get("error")}',
@@ -7603,6 +8739,34 @@ class ReloadlyWebApp:
                             "error": "Payment not confirmed",
                             "detail": verify_result,
                         }
+
+                # ── Binding checks: the verified payment must be OUR payment ──
+                if tx.get("provider") == "stripe":
+                    _meta = verify_result.get("metadata")
+                    try:
+                        _meta_ref = _meta.get("reference") if _meta else None
+                    except Exception:
+                        _meta_ref = None
+                    if _meta_ref and _meta_ref != reference:
+                        logger.error(
+                            f"Stripe metadata.reference {_meta_ref} != {reference}; refusing"
+                        )
+                        db.mark_fulfillment_failed(reference, "Stripe session does not belong to this transaction")
+                        return {"success": False, "error": "Payment does not match this transaction"}
+                try:
+                    _paid = float(verify_result.get("amount") or 0)
+                    _due = float(tx.get("amount") or 0)
+                    _pc = str(verify_result.get("currency") or "").upper()
+                    _tc = str(tx.get("currency") or "").upper()
+                    if _pc and _tc and _pc == _tc and _due > 0:
+                        if _paid + 0.02 < _due:  # gateways return the exact amount; allow only rounding
+                            logger.error(f"Underpayment on {reference}: paid {_paid} {_pc}, due {_due}")
+                            db.mark_fulfillment_failed(
+                                reference, f"Underpaid: received {_paid} {_pc}, expected {_due}"
+                            )
+                            return {"success": False, "error": "Amount paid is less than amount due"}
+                except (TypeError, ValueError):
+                    pass
 
                 tx_type = tx.get("tx_type", "topup")
                 result = {}
@@ -7686,7 +8850,7 @@ class ReloadlyWebApp:
                             try:
                                 bonus_config = db.get_referral_bonus_config()
 
-                                if not bonus_config.get("enabled", True):
+                                if not is_referral_bonus_enabled() or not bonus_config.get("enabled", False):
                                     logger.info(
                                         f"⏸️ Referral bonus skipped for referrer {referrer_id} — "
                                         f"bonuses disabled by admin"
@@ -7841,7 +9005,13 @@ class ReloadlyWebApp:
                     operator_id = payload.get("operator_id")
                     phone = payload.get("phone")
                     country_code = payload.get("country_code", "NG")
-                    email = payload.get("email") or (g.current_user.get("email") if hasattr(g, 'current_user') else None)
+                    email = payload.get("email")
+                    if not email and tx.get("user_id"):
+                        try:
+                            _u = db.get_user(tx["user_id"])
+                            email = (_u or {}).get("email")
+                        except Exception:
+                            email = None
 
                     if not operator_id or not phone:
                         raise Exception("Missing operator_id or phone in transaction payload")
@@ -7858,25 +9028,89 @@ class ReloadlyWebApp:
                     # use it directly rather than round-tripping through
                     # convert_to_usd again. Domestic NG (NGN) still goes
                     # through the FX helper exactly as before.
-                    amount = float(tx.get("amount", 0))
+                    amount = float(tx.get("amount", 0))  # what the customer paid (airtime + fee)
                     currency = tx.get("currency", "NGN")
-                    if currency == "USD":
-                        usd_amount = amount
-                    else:
-                        usd_amount = self.platform.convert_to_usd(amount, currency)
-                    if usd_amount <= 0:
-                        raise Exception(f"Unable to convert {amount} {currency} to USD")
+                    # Deliver only the airtime part. Older transactions created before the split was
+                    # stored have no service_amount and keep the previous behaviour (full amount).
+                    try:
+                        service_amount = float(payload.get("service_amount") or amount)
+                    except (TypeError, ValueError):
+                        service_amount = amount
+                    if service_amount <= 0 or service_amount > amount + 1e-9:
+                        service_amount = amount
+                    # Nigerian airtime: ask the provider router first (VTpass / Flutterwave ...), in naira, no FX.
+                    # Reloadly below stays the fallback, and is used ONLY when the router is certain nothing was accepted.
+                    # Airtime policy: Reloadly first by default (the admin can flip it to VTpass, and Net365 moves to the other
+                    # processor by itself when one looks down). The second processor is only tried when the first one has
+                    # DEFINITELY not accepted the order, so a customer can never be served twice.
+                    import net365_routing as _rt
+                    _ng_naira = str(country_code).upper() == "NG" and currency == "NGN"
+                    reloadly_first = _ng_naira and _rt.order("airtime")[0] == "reloadly"
+                    routed = None
 
-                    # Execute Reloadly top‑up
-                    topup_result = self.platform.make_topup(
-                        operator_id=str(operator_id),
-                        amount=str(round(usd_amount, 2)),
-                        recipient_phone={"countryCode": country_code, "number": formatted_phone},
-                        use_local_amount=False,
-                        custom_identifier=f"topup-{reference}",
-                        recipient_email=email,
-                        is_async=True,
-                    )
+                    def _route_airtime_via_router():
+                        _routed = None
+                        try:
+                            import net365_providers as _np
+                            if _np.enabled():
+                                _routed = _np.route_purchase(
+                                    reference=reference, service="airtime",
+                                    network=_np.network_for(payload.get("operator_name"), phone),
+                                    phone=phone, amount=service_amount)
+                                if _routed.get("status") in ("success", "pending"):
+                                    logger.info(f"Airtime {reference} routed via {_routed.get('provider')} ({_routed.get('status')})")
+                                    _rt.record("vtpass", "airtime", True, reference)
+                                elif not _routed.get("fallback_ok"):
+                                    raise Exception("Provider router could not confirm the order; not retrying elsewhere: "
+                                                    + str(_routed.get("message") or ""))
+                                else:
+                                    _rt.record("vtpass", "airtime", False, reference)
+                        except Exception as _re:
+                            if "not retrying elsewhere" in str(_re):
+                                raise
+                            logger.exception(f"Provider router error for {reference}: {_re}")
+                            _routed = None
+                        return _routed
+
+                    if _ng_naira and not reloadly_first:
+                        routed = _route_airtime_via_router()
+                    use_routed = bool(routed and routed.get("status") in ("success", "pending"))
+
+                    if use_routed:
+                        usd_amount = service_amount
+                        topup_result = {"status": "SUCCESSFUL" if routed["status"] == "success" else "PENDING",
+                                        "transactionId": routed.get("provider_ref") or f"{routed.get('provider')}-{reference}",
+                                        "provider": routed.get("provider"), "routed": True}
+                    else:
+                        if currency == "USD":
+                            usd_amount = service_amount
+                        else:
+                            usd_amount = self.platform.convert_to_usd(service_amount, currency)
+                        if usd_amount <= 0:
+                            raise Exception(f"Unable to convert {service_amount} {currency} to USD")
+
+                        # Execute Reloadly top‑up
+                        topup_result = self.platform.make_topup(
+                            operator_id=str(operator_id),
+                            amount=str(round(usd_amount, 2)),
+                            recipient_phone={"countryCode": country_code, "number": formatted_phone},
+                            use_local_amount=False,
+                            custom_identifier=f"topup-{reference}",
+                            recipient_email=email,
+                            is_async=True,
+                        )
+                        if _ng_naira:
+                            _rl_ok = topup_result.get("status") != "FAILED" and bool(topup_result.get("transactionId"))
+                            _rt.record("reloadly", "airtime", _rl_ok, reference)
+                            if not _rl_ok and reloadly_first:
+                                # Reloadly definitely did not take it: use the standby processor.
+                                routed = _route_airtime_via_router()
+                                if routed and routed.get("status") in ("success", "pending"):
+                                    use_routed = True
+                                    usd_amount = service_amount
+                                    topup_result = {"status": "SUCCESSFUL" if routed["status"] == "success" else "PENDING",
+                                                    "transactionId": routed.get("provider_ref") or f"{routed.get('provider')}-{reference}",
+                                                    "provider": routed.get("provider"), "routed": True}
 
                     # Check failure
                     if topup_result.get("status") == "FAILED" or not topup_result.get("transactionId"):
@@ -7887,34 +9121,53 @@ class ReloadlyWebApp:
                     result = {
                         "status": "success",
                         "transactionId": topup_result.get("transactionId"),
-                        "amount": usd_amount,
-                        "currency": "USD",
+                        "amount": service_amount if use_routed else usd_amount,
+                        "currency": currency if use_routed else "USD",
                         "original_amount": amount,
+                        "service_amount": service_amount,
+                        "fee_amount": round(amount - service_amount, 2),
                         "original_currency": currency,
-                        "provider": "reloadly",
+                        "provider": topup_result.get("provider", "reloadly") if use_routed else "reloadly",
                         "full_result": topup_result,
                     }
 
-                    # Log success in reloadly_transactions
-                    db.create_reloadly_transaction(
-                        reference=reference,
-                        user_id=user_id,
-                        transaction_type="airtime",
-                        amount=amount,
-                        status="completed",
-                        provider_transaction_id=topup_result.get("transactionId"),
-                        result=topup_result,
-                        currency=currency,
-                    )
+                    # The airtime is already delivered at this point. Bookkeeping failures below must
+                    # never turn a delivered top-up into "fulfillment_failed" (a retry could re-deliver).
+                    try:
+                        db.create_reloadly_transaction(
+                            reference=reference,
+                            user_id=user_id,
+                            transaction_type="airtime",
+                            amount=amount,
+                            status="processing" if (use_routed and routed.get("status") == "pending") else "completed",
+                            provider_transaction_id=topup_result.get("transactionId"),
+                            result=topup_result,
+                            currency=currency,
+                        )
+                    except Exception as e:
+                        logger.critical(
+                            f"Airtime DELIVERED for {reference} (provider id {topup_result.get('transactionId')}) "
+                            f"but reloadly_transactions insert failed: {e}"
+                        )
+
+                    # Remember which operator this number was delivered on (a hint for next time; never blocks delivery)
+                    try:
+                        import net365_network_memory as _nm
+                        _nm.record_success(tx.get("user_id"), phone, country_code, operator_id, payload.get("operator_name"))
+                    except Exception as e:
+                        logger.warning(f"Network memory not updated for {reference}: {e}")
 
                     # Notify user
                     if user_id:
-                        db.create_notification(
-                            user_id,
-                            "Airtime Recharge Successful ✅",
-                            f"{currency} {amount:,.2f} recharge completed for {formatted_phone}.",
-                            "success"
-                        )
+                        try:
+                            db.create_notification(
+                                user_id,
+                                "Airtime Recharge Successful ✅",
+                                f"{currency} {service_amount:,.2f} recharge completed for {formatted_phone}.",
+                                "success"
+                            )
+                        except Exception as e:
+                            logger.warning(f"Success notification failed for {reference}: {e}")
 
                     user = db.get_user(user_id) if user_id else None
                     if user and user.get("email"):
@@ -7922,7 +9175,7 @@ class ReloadlyWebApp:
                             send_email_notification(
                                 user["email"],
                                 f"Net365 Airtime Recharge Receipt — {reference}",
-                                f"Your airtime recharge was completed successfully.\n\nAmount: {currency} {amount:,.2f}\nPhone: {formatted_phone}\nReference: {reference}",
+                                f"Your airtime recharge was completed successfully.\n\nAirtime: {currency} {service_amount:,.2f}\nFee: {currency} {amount - service_amount:,.2f}\nTotal paid: {currency} {amount:,.2f}\nPhone: {formatted_phone}\nReference: {reference}",
                                 include_promo=True,
                                 promo_context={
                                     "user_id": user_id,
@@ -7933,6 +9186,153 @@ class ReloadlyWebApp:
                             )
                         except Exception as e:
                             logger.error(f"Failed to send recharge email: {e}")
+
+                # -----------------------------------------------------------------
+                # 2b. ELECTRICITY FROM THE BILLS HUB. The customer may have chosen VTpass or Reloadly; otherwise the router picks.
+                #     A chosen provider is never silently swapped: if it cannot take the order the payment goes to the refund path.
+                # -----------------------------------------------------------------
+                elif tx_type == "electricity":
+                    import net365_providers as _np
+                    pref = str(payload.get("provider_pref") or "auto")
+                    disco = str(payload.get("disco") or "")
+                    meter = str(payload.get("subscriber_account") or "")
+                    biller_id = payload.get("biller_id")
+                    paid_amount = float(tx.get("amount", 0))
+                    try:
+                        local_amount = float(payload.get("service_amount") or paid_amount)
+                    except (TypeError, ValueError):
+                        local_amount = paid_amount
+                    if tx.get("currency", "NGN") != "NGN" or local_amount <= 0 or not meter:
+                        raise Exception("Electricity order is incomplete")
+                    # Provider order comes from Net365's routing policy (VTpass first by default, Reloadly on standby; the admin
+                    # can override and Net365 senses an unhealthy provider). Customers never choose or see the provider.
+                    # An old in-flight order that still carries an explicit choice keeps it (never silently swapped).
+                    import net365_routing as _rt
+                    order_e = [pref] if pref in ("vtpass", "reloadly") else _rt.order("electricity")
+                    e_result, last_err = None, ""
+                    for prov_e in order_e:
+                        if prov_e == "vtpass":
+                            if not (disco and _np.enabled()):
+                                continue
+                            routed_e = _np.route_purchase(
+                                reference=reference, service="electricity", disco=disco, account=meter,
+                                phone=str(payload.get("phone") or ""), amount=local_amount,
+                                meter_type=str(payload.get("meter_type") or "prepaid"), only="vtpass")
+                            if routed_e.get("status") in ("success", "pending"):
+                                _rt.record("vtpass", "electricity", True, reference)
+                                e_result = {"status": "SUCCESSFUL" if routed_e["status"] == "success" else "PENDING",
+                                            "transactionId": routed_e.get("provider_ref") or f"{routed_e.get('provider')}-{reference}",
+                                            "provider": routed_e.get("provider"), "token": routed_e.get("token") or ""}
+                                break
+                            if not routed_e.get("fallback_ok"):
+                                raise Exception("Provider router could not confirm the order; not retrying elsewhere: " + str(routed_e.get("message") or ""))
+                            _rt.record("vtpass", "electricity", False, reference)
+                            last_err = str(routed_e.get("message") or "Electricity payment failed")
+                        elif prov_e == "reloadly":
+                            if not biller_id:
+                                continue
+                            try:
+                                r_res = self.platform.pay_utility_bill(biller_id=int(biller_id), subscriber_account=meter, amount=local_amount,
+                                                                       reference_id=f"util-{reference}"[:36], use_local_amount=True)
+                            except Exception as rl_e:
+                                # pay_utility_bill already cross-checks Reloadly's own records before raising, so this is a real failure.
+                                _rt.record("reloadly", "electricity", False, reference)
+                                last_err = str(rl_e) or "Electricity payment failed"
+                                logger.warning(f"electricity {reference}: Reloadly failed ({last_err}); trying next provider if any")
+                                continue
+                            r_res = r_res if isinstance(r_res, dict) else {}
+                            if (r_res.get("transactionId") or r_res.get("id")) and str(r_res.get("status", "")).upper() not in ("FAILED", "ERROR"):
+                                _rt.record("reloadly", "electricity", True, reference)
+                                r_res["provider"] = "reloadly"
+                                e_result = r_res
+                                break
+                            _rt.record("reloadly", "electricity", False, reference)
+                            last_err = str(r_res.get("message") or r_res.get("error") or "Electricity payment failed")
+                    if not e_result:
+                        raise Exception(last_err or "No provider could take this electricity order")
+                    e_txid = e_result.get("transactionId") or e_result.get("id")
+                    if not e_txid or str(e_result.get("status", "")).upper() in ("FAILED", "ERROR"):
+                        raise Exception(e_result.get("message") or e_result.get("error") or "Electricity payment failed")
+                    e_token = str(e_result.get("token") or "")
+                    result = {"status": "success", "transactionId": e_txid, "amount": local_amount, "currency": "NGN",
+                              "provider": e_result.get("provider"), "token": e_token, "full_result": e_result}
+                    try:
+                        db.create_reloadly_transaction(reference=reference, user_id=user_id, transaction_type="utility", amount=local_amount,
+                                                       status="processing" if str(e_result.get("status")).upper() == "PENDING" else "completed",
+                                                       provider_transaction_id=e_txid, result=e_result, currency="NGN")
+                    except Exception as e:
+                        logger.critical(f"electricity DELIVERED for {reference} but reloadly_transactions insert failed: {e}")
+                    if user_id:
+                        try:
+                            db.create_notification(user_id, "Electricity Payment Successful ✅",
+                                                   f"₦{local_amount:,.2f} for meter {meter[-4:].rjust(len(meter), '*')}." + (f" Token: {e_token}" if e_token else ""), "success")
+                        except Exception as e:
+                            logger.warning(f"electricity notification failed for {reference}: {e}")
+                        send_service_receipt(
+                            user_id, payload, f"✅ Electricity Payment Receipt — {reference}",
+                            f"Your electricity payment was successful.\n\nCompany: {payload.get('biller_name') or disco}\n"
+                            f"Meter: {meter}\n"
+                            + (f"Customer: {payload.get('customer_name')}\n" if payload.get("customer_name") else "")
+                            + f"Amount: ₦{local_amount:,.2f}\n"
+                            + (f"Token: {e_token}\n" if e_token else "Your token will follow shortly.\n") + f"Reference: {reference}",
+                            "electricity", reference, paid_amount)
+
+                # -----------------------------------------------------------------
+                # 2c. INSURANCE (motor third-party). Premium comes from the provider catalogue and is re-checked here.
+                #     The policy details travel encrypted in the payload; the certificate link is the delivery.
+                # -----------------------------------------------------------------
+                elif tx_type == "insurance":
+                    import net365_providers as _np
+                    product = str(payload.get("product") or "").lower()
+                    plan_code = str(payload.get("variation_code") or "")
+                    plan = _np.find_service_plan(product, plan_code) if (_np.enabled() and product and plan_code) else None
+                    if not plan:
+                        raise Exception("This cover is not available right now")
+                    paid_amount = float(tx.get("amount", 0))
+                    try:
+                        service_amount = float(payload.get("service_amount") or paid_amount)
+                    except (TypeError, ValueError):
+                        service_amount = paid_amount
+                    if tx.get("currency", "NGN") != "NGN" or abs(service_amount - plan["price"]) > 0.01 or plan["price"] <= 0:
+                        raise Exception(f"Cover price mismatch (expected {plan['price']}, order {service_amount})")
+                    try:
+                        ins_details = json.loads(str(payload.get("subscriber_account") or "{}"))
+                    except ValueError:
+                        raise Exception("Policy details could not be read")
+                    routed_i = _np.route_purchase(reference=reference, service="insurance", network=product, phone=str(payload.get("phone") or ""),
+                                                  amount=plan["price"], variation_code=plan_code, extra=ins_details)
+                    if routed_i.get("status") not in ("success", "pending"):
+                        raise Exception(routed_i.get("message") or "Policy could not be issued")
+                    pending_i = routed_i["status"] == "pending"
+                    cert = str(routed_i.get("token") or "")
+                    result = {"status": "success", "transactionId": routed_i.get("provider_ref") or f"{routed_i.get('provider')}-{reference}",
+                              "amount": plan["price"], "currency": "NGN", "provider": routed_i.get("provider"), "plan": plan["name"],
+                              "token": cert, "full_result": {k: v for k, v in routed_i.items() if k != "raw"}}
+                    try:
+                        db.create_reloadly_transaction(reference=reference, user_id=user_id, transaction_type="insurance", amount=paid_amount,
+                                                       status="processing" if pending_i else "completed",
+                                                       provider_transaction_id=result["transactionId"], result=result["full_result"], currency="NGN")
+                    except Exception as e:
+                        logger.critical(f"insurance ISSUED for {reference} but reloadly_transactions insert failed: {e}")
+                    if user_id:
+                        try:
+                            db.create_notification(user_id, "Insurance Policy Issued ✅" if not pending_i else "Insurance Order Received ⏳",
+                                                   (f"Your certificate: {cert}" if cert else "Your certificate will be sent to you shortly."), "success")
+                        except Exception as e:
+                            logger.warning(f"insurance notification failed for {reference}: {e}")
+                        u_i = db.get_user(user_id) or {}
+                        em_i = (payload.get("email") or u_i.get("email"))
+                        if em_i:
+                            try:
+                                send_email_notification(
+                                    em_i, f"Your Net365 insurance — {reference}",
+                                    f"Thank you. Your {payload.get('biller_name') or 'motor insurance'} order was received.\n\nVehicle plate: {ins_details.get('Plate_Number', '')}\n"
+                                    f"Premium: ₦{plan['price']:,.2f}\n" + (f"Certificate: {cert}\n" if cert else "Your certificate will follow by email once the insurer issues it.\n") + f"Reference: {reference}\n\n"
+                                    "Keep this email. If anything looks wrong, reply or contact support@net365co.com quoting the reference.",
+                                    include_promo=True,
+                                    promo_context={"user_id": user_id, "reference": reference, "tx_type": "insurance", "amount": paid_amount})
+                            except Exception as e:
+                                logger.warning(f"insurance receipt email failed for {reference}: {e}")
 
                 # -----------------------------------------------------------------
                 # 3. UTILITY PAYMENT (manual / gateway)
@@ -7947,18 +9347,46 @@ class ReloadlyWebApp:
                     amount = float(tx.get("amount", 0))
                     currency = tx.get("currency", "NGN")
 
-                    # Use the amount as is (Reloadly utility expects local amount)
-                    local_amount = amount
+                    # Use the amount as is (Reloadly utility expects local amount). When a chat
+                    # service fee was added, the biller only receives the bill amount.
+                    local_amount = float(payload.get("service_amount") or amount)
 
-                    # Execute Reloadly utility payment
-                    unique_ref = f"util-{reference}"[:36]  # Reloadly max 36 chars
-                    utility_result = self.platform.pay_utility_bill(
-                        biller_id=int(biller_id),
-                        subscriber_account=subscriber_account,
-                        amount=local_amount,
-                        reference_id=unique_ref,
-                        use_local_amount=True,
-                    )
+                    # Nigerian electricity: provider router first, Reloadly only if the router is certain nothing was accepted.
+                    routed_u = None
+                    if currency == "NGN":
+                        try:
+                            import net365_providers as _np
+                            _disco = _np.disco_for(payload.get("biller_name"))
+                            if _np.enabled() and _disco:
+                                routed_u = _np.route_purchase(
+                                    reference=reference, service="electricity", disco=_disco,
+                                    account=str(subscriber_account), phone=str(payload.get("phone") or ""),
+                                    amount=local_amount, meter_type=str(payload.get("meter_type") or "prepaid"))
+                                if routed_u.get("status") not in ("success", "pending") and not routed_u.get("fallback_ok"):
+                                    raise Exception("Provider router could not confirm the order; not retrying elsewhere: "
+                                                    + str(routed_u.get("message") or ""))
+                        except Exception as _ue:
+                            if "not retrying elsewhere" in str(_ue):
+                                raise
+                            logger.exception(f"Provider router error for {reference}: {_ue}")
+                            routed_u = None
+
+                    if routed_u and routed_u.get("status") in ("success", "pending"):
+                        utility_result = {"status": "SUCCESSFUL" if routed_u["status"] == "success" else "PENDING",
+                                          "transactionId": routed_u.get("provider_ref") or f"{routed_u.get('provider')}-{reference}",
+                                          "provider": routed_u.get("provider"), "routed": True}
+                        if routed_u.get("token"):
+                            utility_result["token"] = routed_u["token"]
+                    else:
+                        # Execute Reloadly utility payment
+                        unique_ref = f"util-{reference}"[:36]  # Reloadly max 36 chars
+                        utility_result = self.platform.pay_utility_bill(
+                            biller_id=int(biller_id),
+                            subscriber_account=subscriber_account,
+                            amount=local_amount,
+                            reference_id=unique_ref,
+                            use_local_amount=True,
+                        )
 
                     # Check success
                     transaction_id = utility_result.get("transactionId") or utility_result.get("id")
@@ -7973,7 +9401,7 @@ class ReloadlyWebApp:
                         "transactionId": transaction_id,
                         "amount": local_amount,
                         "currency": currency,
-                        "provider": "reloadly",
+                        "provider": utility_result.get("provider", "reloadly"),
                         "full_result": utility_result,
                     }
 
@@ -7983,7 +9411,7 @@ class ReloadlyWebApp:
                         user_id=user_id,
                         transaction_type="utility",
                         amount=local_amount,
-                        status="completed",
+                        status="processing" if utility_result.get("status") == "PENDING" else "completed",
                         provider_transaction_id=transaction_id,
                         result=utility_result,
                         currency=currency,
@@ -8016,6 +9444,126 @@ class ReloadlyWebApp:
                             logger.error(f"Failed to send utility email: {e}")
 
                 # -----------------------------------------------------------------
+                # 3a. DATA BUNDLE (Nigeria, via the provider router). The price is taken from the provider's own plan
+                #     list, never from the request, so an edited request cannot buy a dearer plan for a cheaper price.
+                # -----------------------------------------------------------------
+                elif tx_type == "data":
+                    import net365_providers as _np
+                    network = str(payload.get("network") or "").lower()
+                    plan_code = str(payload.get("variation_code") or "")
+                    data_phone = str(payload.get("phone") or "")
+                    plan = _np.find_plan(network, plan_code) if (_np.enabled() and network and plan_code) else None
+                    if not plan:
+                        raise Exception("Data plan not available right now")
+                    paid_amount = float(tx.get("amount", 0))
+                    currency = tx.get("currency", "NGN")
+                    try:
+                        service_amount = float(payload.get("service_amount") or paid_amount)
+                    except (TypeError, ValueError):
+                        service_amount = paid_amount
+                    if currency != "NGN" or abs(service_amount - plan["price"]) > 0.01:
+                        raise Exception(f"Data plan price mismatch (plan {plan['price']}, order {service_amount})")
+                    routed_d = _np.route_purchase(reference=reference, service="data", network=network, phone=data_phone,
+                                                  amount=plan["price"], variation_code=plan_code)
+                    if routed_d.get("status") not in ("success", "pending"):
+                        raise Exception(routed_d.get("message") or "Data purchase failed at provider")
+                    pending_d = routed_d["status"] == "pending"
+                    result = {"status": "success", "transactionId": routed_d.get("provider_ref") or f"{routed_d.get('provider')}-{reference}",
+                              "amount": plan["price"], "currency": "NGN", "provider": routed_d.get("provider"),
+                              "plan": plan["name"], "full_result": routed_d}
+                    try:
+                        db.create_reloadly_transaction(
+                            reference=reference, user_id=user_id, transaction_type="data", amount=paid_amount,
+                            status="processing" if pending_d else "completed",
+                            provider_transaction_id=result["transactionId"], result=routed_d, currency="NGN")
+                    except Exception as e:
+                        logger.critical(f"Data DELIVERED for {reference} but reloadly_transactions insert failed: {e}")
+                    if user_id:
+                        try:
+                            db.create_notification(user_id, "Data Purchase Successful ✅",
+                                                   f"{plan['name']} sent to {data_phone}.", "success")
+                        except Exception as e:
+                            logger.warning(f"Data notification failed for {reference}: {e}")
+                        send_service_receipt(
+                            user_id, payload, f"✅ Data Purchase Receipt — {reference}",
+                            f"Your data purchase was successful.\n\nPlan: {plan['name']}\nNumber: {data_phone}\n"
+                            f"Amount: ₦{service_amount:,.2f}\n" + ("Status: processing, it will reflect shortly.\n" if pending_d else "")
+                            + f"Reference: {reference}",
+                            "data", reference, paid_amount)
+
+                # -----------------------------------------------------------------
+                # 3a-2. TV SUBSCRIPTION / EDUCATION PIN (via the provider router). Price comes from the provider catalogue.
+                #       JAMB is sold at exactly the official price (service fee 0), enforced at checkout and re-checked here.
+                # -----------------------------------------------------------------
+                elif tx_type in ("tv", "education"):
+                    import net365_providers as _np
+                    product = str(payload.get("product") or "").lower()
+                    plan_code = str(payload.get("variation_code") or "")
+                    quantity = max(1, min(int(payload.get("quantity") or 1), 5))
+                    sub_type = str(payload.get("subscription_type") or "")
+                    plan = _np.find_service_plan(product, plan_code) if (_np.enabled() and product and plan_code) else None
+                    if not plan:
+                        raise Exception("This plan is not available right now")
+                    paid_amount = float(tx.get("amount", 0))
+                    try:
+                        service_amount = float(payload.get("service_amount") or paid_amount)
+                    except (TypeError, ValueError):
+                        service_amount = paid_amount
+                    # renewal of a DStv/GOtv decoder may carry a provider "promo" price that differs from the catalogue
+                    expected = float(payload.get("renewal_amount") or 0) if sub_type == "renew" else plan["price"] * quantity
+                    if tx.get("currency", "NGN") != "NGN" or abs(service_amount - expected) > 0.01 or expected <= 0:
+                        raise Exception(f"Plan price mismatch (expected {expected}, order {service_amount})")
+                    routed_t = _np.route_purchase(reference=reference, service=tx_type, network=product,
+                                                  phone=str(payload.get("phone") or ""), amount=expected,
+                                                  account=str(payload.get("subscriber_account") or ""),
+                                                  variation_code=plan_code, quantity=quantity, subscription_type=sub_type)
+                    if routed_t.get("status") not in ("success", "pending"):
+                        raise Exception(routed_t.get("message") or "Purchase failed at provider")
+                    pending_t = routed_t["status"] == "pending"
+                    result = {"status": "success", "transactionId": routed_t.get("provider_ref") or f"{routed_t.get('provider')}-{reference}",
+                              "amount": expected, "currency": "NGN", "provider": routed_t.get("provider"),
+                              "plan": plan["name"], "token": routed_t.get("token") or "", "full_result": routed_t}
+                    try:
+                        db.create_reloadly_transaction(
+                            reference=reference, user_id=user_id, transaction_type=tx_type, amount=paid_amount,
+                            status="processing" if pending_t else "completed",
+                            provider_transaction_id=result["transactionId"], result=routed_t, currency="NGN")
+                    except Exception as e:
+                        logger.critical(f"{tx_type} DELIVERED for {reference} but reloadly_transactions insert failed: {e}")
+                    if user_id:
+                        try:
+                            db.create_notification(user_id, "Purchase Successful ✅", f"{plan['name']} ({payload.get('biller_name') or product}).", "success")
+                        except Exception as e:
+                            logger.warning(f"{tx_type} notification failed for {reference}: {e}")
+                        _tv_token = str(routed_t.get("token") or "")
+                        _tv_label = "Cable TV Subscription" if tx_type == "tv" else "Education PIN"
+                        send_service_receipt(
+                            user_id, payload, f"✅ {_tv_label} Receipt — {reference}",
+                            f"Your {_tv_label.lower()} purchase was successful.\n\n{payload.get('biller_name') or product}\n"
+                            + (f"Plan: {plan['name']}\n" if plan.get("name") else "")
+                            + (f"Smartcard / account: {payload.get('subscriber_account')}\n" if tx_type == "tv" and payload.get("subscriber_account") else "")
+                            + (f"Customer: {payload.get('customer_name')}\n" if payload.get("customer_name") else "")
+                            + f"Amount: ₦{expected:,.2f}\n"
+                            + (f"PIN / token: {_tv_token}\n" if _tv_token else "")
+                            + ("Status: processing, it will reflect shortly.\n" if pending_t else "") + f"Reference: {reference}",
+                            tx_type, reference, paid_amount)
+
+                # -----------------------------------------------------------------
+                # 3b. GIFT CARD (gateway-paid). Codes are fetched at delivery, never stored.
+                # -----------------------------------------------------------------
+                elif tx_type == "giftcard":
+                    from net365_giftcards import fulfil_giftcard
+                    result = fulfil_giftcard(reference, payload, tx)
+
+                # -----------------------------------------------------------------
+                # 3c. BUSINESS PAYMENT (user-to-business). Paystack already settles the merchant
+                #     directly through the split; nothing for Net365 to deliver or hold.
+                # -----------------------------------------------------------------
+                elif tx_type == "merchant":
+                    from net365_merchants import fulfil_merchant
+                    result = fulfil_merchant(reference, payload, tx)
+
+                # -----------------------------------------------------------------
                 # 4. BULK RECHARGE (gateway-paid)
                 # -----------------------------------------------------------------
                 elif tx_type == "bulk_recharge":
@@ -8043,6 +9591,13 @@ class ReloadlyWebApp:
                                 "UPDATE bulk_jobs SET status = 'pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                                 (job_id,),
                             )
+                            try:
+                                job_cur.execute(
+                                    "UPDATE bulk_job_payments SET status = 'paid', reconciled_at = CURRENT_TIMESTAMP WHERE job_id = ?",
+                                    (job_id,),
+                                )
+                            except Exception as _e:
+                                logger.warning(f"bulk_job_payments status update skipped: {_e}")
                             job_conn.commit()
 
                             if records:
@@ -8073,12 +9628,59 @@ class ReloadlyWebApp:
                         "success"
                     )
 
+                # -----------------------------------------------------------------
+                # 5. CART (OnePay): one verified gateway payment funds several deliveries.
+                #    Children are created ONLY here, after the parent payment is verified.
+                # -----------------------------------------------------------------
+                elif tx_type == "cart":
+                    items = payload.get("items") or []
+                    if not items:
+                        raise Exception("Cart has no items")
+                    if abs(sum(float(i.get("amount") or 0) for i in items) - float(tx.get("amount") or 0)) > 0.02:
+                        raise Exception("Cart items do not add up to the amount paid")
+                    child_refs = []
+                    for idx, it in enumerate(items, 1):
+                        child_ref = f"{reference}-{idx}"
+                        if not db.get_transaction(child_ref):  # idempotent on re-run
+                            db.create_pending(
+                                reference=child_ref,
+                                tx_type=it["type"],
+                                provider="cart",
+                                amount=float(it["amount"]),
+                                currency="NGN",
+                                payload=dict(it["payload"], parent_reference=reference),
+                                user_id=user_id,
+                            )
+                        child_refs.append(child_ref)
+                    threading.Thread(
+                        target=self._run_cart_children,
+                        args=(reference, user_id, child_refs),
+                        daemon=True,
+                    ).start()
+                    result = {
+                        "status": "success",
+                        "children": child_refs,
+                        "message": f"Payment confirmed: {len(child_refs)} deliveries started",
+                    }
+
                 else:
                     raise ValueError(f"Unknown transaction type: {tx_type}")
 
                 # Mark the transaction as fulfilled in the main transactions table
                 db.mark_fulfilled(reference, result)
                 logger.info(f"Fulfilled {tx_type} for reference {reference}")
+                if tx_type == "merchant":
+                    try:
+                        from net365_merchants import notify_merchant_paid
+                        threading.Thread(target=notify_merchant_paid, args=(reference,), daemon=True).start()
+                    except Exception:
+                        pass
+                if tx_type in ("topup", "utility", "giftcard", "merchant", "data", "tv", "education", "electricity", "insurance"):
+                    try:
+                        from net365_whatsapp import notify_after_fulfillment
+                        threading.Thread(target=notify_after_fulfillment, args=(reference,), daemon=True).start()
+                    except Exception as _ne:
+                        logger.warning(f"chat notify not started: {_ne}")
 
                 return {
                     "success": True,
@@ -8094,13 +9696,261 @@ class ReloadlyWebApp:
                     db.mark_fulfillment_failed(reference, str(e))
                 except:
                     pass
+                if tx_type == "topup":
+                    # A wrong-operator/invalid-number failure must not stay remembered as "the right network"
+                    try:
+                        import net365_network_memory as _nm
+                        _nm.record_failure(tx.get("user_id"), locals().get("phone"), locals().get("country_code", "NG"),
+                                           locals().get("operator_id"), str(e))
+                    except Exception:
+                        pass
+                if tx_type == "utility":
+                    _utility_trip(str(e))
+                try:
+                    if tx_type in ("topup", "utility", "giftcard", "data", "tv", "education", "electricity", "insurance"):
+                        from net365_whatsapp import notify_delay
+                        threading.Thread(target=notify_delay, args=(reference,), daemon=True).start()
+                except Exception:
+                    pass
                 return {"success": False, "error": str(e)}
                 
                 
+    # ------------------------------------------------------------------
+    # CART (OnePay) helpers
+    # ------------------------------------------------------------------
+    _CART_TRANSIENT = ("server error", "balance", "timed out", "timeout", " 502", " 503", " 504",
+                       "service unavailable", "temporarily", "connection")
+
+    def _verify_cart_child(self, tx, payload):
+        """A cart child has no gateway reference of its own. It is payable only if its parent cart
+        payment was verified and fulfilled (children are only ever created after that)."""
+        parent_ref = (payload or {}).get("parent_reference")
+        parent = db.get_transaction(parent_ref) if parent_ref else None
+        if not parent or parent.get("tx_type") != "cart" or parent.get("status") != "fulfilled":
+            return {"success": False, "error": "Parent cart payment is not confirmed"}
+        return {"success": True, "amount": float(tx.get("amount") or 0),
+                "currency": tx.get("currency") or "NGN"}
+
+    def _record_cart_refund_due(self, parent_ref, child_ref, user_id, amount, note):
+        """Gateway-paid cart item that could not be delivered: wallets are off, so record a refund
+        owed through the payment gateway (same approach as bulk_refunds_due)."""
+        try:
+            c = db.get_db_connection()
+            try:
+                c.execute("""CREATE TABLE IF NOT EXISTS cart_refunds_due (
+                    reference TEXT PRIMARY KEY, parent_reference TEXT, user_id INTEGER, amount REAL,
+                    currency TEXT DEFAULT 'NGN', status TEXT DEFAULT 'due', note TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+                c.execute("INSERT OR IGNORE INTO cart_refunds_due (reference, parent_reference, user_id, amount, note) "
+                          "VALUES (?,?,?,?,?)", (child_ref, parent_ref, user_id, amount, str(note or "")[:300]))
+                c.commit()
+            finally:
+                c.close()
+            logger.critical(f"CART REFUND DUE: {child_ref} NGN {amount} user {user_id} - refund through the gateway "
+                            f"(table cart_refunds_due)")
+            return True
+        except Exception as e:
+            logger.critical(f"Could not record cart refund due for {child_ref}: {e}")
+            return False
+
+    def _run_cart_children(self, parent_ref, user_id, child_refs):
+        """Background worker: deliver each cart item independently, retry transient provider errors,
+        refund-record what cannot be delivered, then send ONE summary to the customer."""
+        for _ in range(120):  # the parent is marked fulfilled just after this thread starts
+            p = db.get_transaction(parent_ref)
+            if p and p.get("status") == "fulfilled":
+                break
+            time.sleep(0.5)
+
+        outcomes = []
+        for ref in child_refs:
+            res = {"success": False, "error": "not run"}
+            for attempt in range(3):
+                try:
+                    res = self._finalize_transaction(ref) or {}
+                except Exception as e:
+                    logger.exception(f"cart child {ref} crashed")
+                    res = {"success": False, "error": str(e)}
+                if res.get("success"):
+                    break
+                err = str(res.get("error") or "").lower()
+                if attempt < 2 and any(h in err for h in self._CART_TRANSIENT):
+                    time.sleep(15 * (attempt + 1))
+                    try:  # fulfillment_failed -> pending so the lock can be taken again (provider id is deterministic)
+                        c = db.get_db_connection()
+                        c.execute("UPDATE transactions SET status='pending' WHERE reference=? "
+                                  "AND status='fulfillment_failed'", (ref,))
+                        c.commit()
+                        c.close()
+                    except Exception:
+                        pass
+                    continue
+                break
+            child = db.get_transaction(ref) or {}
+            ok = bool(res.get("success")) or child.get("status") == "fulfilled"
+            if not ok:
+                self._record_cart_refund_due(parent_ref, ref, user_id, float(child.get("amount") or 0),
+                                             res.get("error"))
+            outcomes.append((ref, float(child.get("amount") or 0), ok))
+
+        done = sum(1 for _, _, ok in outcomes if ok)
+        failed = [(r, a) for r, a, ok in outcomes if not ok]
+        try:
+            title = "OnePay: all items delivered" if not failed else (
+                "OnePay: some items need attention" if done else "OnePay: items could not be delivered")
+            body = f"{done} of {len(outcomes)} items delivered."
+            if failed:
+                body += (f" NGN {sum(a for _, a in failed):,.2f} for the rest will be refunded to your "
+                         f"original payment method.")
+            db.create_notification(user_id, title, body, "success" if not failed else "warning")
+            user = db.get_user(user_id) if user_id else None
+            if user and user.get("email"):
+                send_email_notification(user["email"], f"Net365 OnePay summary - {parent_ref}",
+                                        f"{body}\n\nOrder reference: {parent_ref}")
+        except Exception as e:
+            logger.warning(f"cart summary notification failed for {parent_ref}: {e}")
+
+    def _start_pending_sweeper(self):
+        _SWEEP_ATTEMPTS = {}
+        """Chat-bot payments are often completed on a phone, where the gateway's browser redirect to
+        this server (or its webhook) cannot reach a local/dev machine. Every minute, re-verify recent
+        pending chat purchases with the gateway and fulfil the ones that were actually paid.
+        _finalize_transaction is idempotent and leaves unpaid ones pending."""
+        if os.getenv("PENDING_SWEEPER_ENABLED", "true").strip().lower() not in ("1", "true", "yes", "on"):
+            return
+
+        def loop():
+            import time as _t
+            _t.sleep(20)
+            while True:
+                try:
+                    conn = db.get_db_connection()
+                    rows = conn.execute(
+                        "SELECT reference FROM transactions WHERE status = 'pending' "
+                        "AND tx_type = 'topup' AND payload LIKE '%\"source\"%' "
+                        "AND created_at >= datetime('now','-3 hours') "
+                        "AND created_at <= datetime('now','-40 seconds') "
+                        "ORDER BY created_at DESC LIMIT 15"
+                    ).fetchall()
+                    # Paid but not delivered because the provider (Reloadly) had a hiccup: put the
+                    # transaction back to 'pending' and try again, up to 20 times. A paid customer must never
+                    # be left stranded by a transient 5xx / balance / timeout error.
+                    stuck = conn.execute(
+                        "SELECT reference FROM transactions WHERE status = 'fulfillment_failed' "
+                        "AND (tx_type IN ('utility','giftcard') OR (tx_type = 'topup' AND provider = 'cart')) "
+                        "AND created_at >= datetime('now','-6 hours') "
+                        "AND (fulfillment_error LIKE '%Server Error%' OR fulfillment_error LIKE '%balance%' "
+                        "OR fulfillment_error LIKE '%timed out%' OR fulfillment_error LIKE '%timeout%' "
+                        "OR fulfillment_error LIKE '% 502%' OR fulfillment_error LIKE '% 503%' "
+                        "OR fulfillment_error LIKE '% 504%') "
+                        "ORDER BY created_at DESC LIMIT 10"
+                    ).fetchall()
+                    retry_refs = []
+                    for r in stuck:
+                        if _utility_provider_down():
+                            break
+                        n = _SWEEP_ATTEMPTS.get(r[0], 0)
+                        if n >= 20:
+                            if n == 20:
+                                logger.critical(f"PAID BUT UNDELIVERED after 20 retries: {r[0]} - refund or deliver manually")
+                                _SWEEP_ATTEMPTS[r[0]] = 21
+                            continue
+                        _SWEEP_ATTEMPTS[r[0]] = n + 1
+                        conn.execute("UPDATE transactions SET status='pending' WHERE reference=? "
+                                     "AND status='fulfillment_failed'", (r[0],))
+                        retry_refs.append((r[0],))
+                    try:    # recovery engine: paid-but-failed electricity/data/TV/education/insurance orders (admin-controlled)
+                        import net365_recovery as _rc
+                        for _rref in _rc.sweep():
+                            conn.execute("UPDATE transactions SET status='pending' WHERE reference=? "
+                                         "AND status='fulfillment_failed'", (_rref,))
+                            retry_refs.append((_rref,))
+                    except ImportError:
+                        pass
+                    except Exception as _rce:
+                        logger.warning(f"Recovery sweep error: {_rce}")
+                    if retry_refs:
+                        conn.commit()
+                    rows = list(rows) + retry_refs
+                    for r in rows:
+                        ref = r[0]
+                        try:
+                            res = self._finalize_transaction(ref)
+                            if res.get("success") and not res.get("already_fulfilled"):
+                                logger.info(f"Sweeper fulfilled chat purchase {ref}")
+                        except Exception as e:
+                            logger.warning(f"Sweeper could not finalize {ref}: {e}")
+                except Exception as e:
+                    logger.warning(f"Pending sweeper error: {e}")
+                _t.sleep(60)
+
+        threading.Thread(target=loop, daemon=True, name="pending-sweeper").start()
+        logger.info("Pending-payment sweeper started (chat purchases, every 60s)")
+
+    def _refund_bulk_record(self, job_id, user_id, amount, currency, reference, paid_by_wallet, extra=None):
+        """Refund one failed bulk record to wherever the money came from.
+        Wallet-paid job -> back to the wallet. Gateway-paid job -> the customer paid by card, so the
+        wallet was never debited: crediting it would hand out unfunded wallet money. Record a refund
+        owed (shown in admin / logs) so it is returned through the gateway."""
+        if paid_by_wallet:
+            try:
+                res = db.credit_wallet(
+                    user_id=user_id, amount=amount, currency=currency,
+                    description=f"Refund for failed bulk recharge {reference}",
+                    reference=f"REFUND-{reference}",
+                    metadata=dict({"original_reference": reference}, **(extra or {})),
+                )
+                if res and res.get("success"):
+                    return res
+                err = (res or {}).get("error") or "credit failed"
+            except Exception as e:
+                err = str(e)
+            # The wallet was debited but could not be refunded: never lose track of it. Record the
+            # debt so it appears in bulk_refunds_due, and shout in the log.
+            logger.critical(f"BULK WALLET REFUND FAILED {reference} {currency} {amount} user {user_id}: {err}")
+            extra = dict(extra or {}, error=f"wallet refund failed: {err}")
+        try:
+            _c = db.get_db_connection()
+            try:
+                _c.execute("""CREATE TABLE IF NOT EXISTS bulk_refunds_due (
+                    reference TEXT PRIMARY KEY, job_id TEXT, user_id INTEGER, amount REAL,
+                    currency TEXT, status TEXT DEFAULT 'due', note TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+                _c.execute(
+                    "INSERT OR IGNORE INTO bulk_refunds_due (reference, job_id, user_id, amount, currency, note) VALUES (?,?,?,?,?,?)",
+                    (reference, job_id, user_id, amount, currency, str((extra or {}).get("error") or "provider rejected")[:300]),
+                )
+            finally:
+                _c.close()
+            logger.critical(
+                f"BULK REFUND DUE (gateway-paid): job {job_id} record {reference} {currency} {amount} "
+                f"user {user_id} — refund through the payment gateway (table bulk_refunds_due)"
+            )
+        except Exception as e:
+            logger.critical(f"Could not record bulk refund due for {reference}: {e}")
+            return {"success": False, "error": str(e)}
+        try:
+            db.create_notification(
+                user_id, "Bulk recharge: refund pending",
+                f"One recharge in your bulk job could not be delivered. {currency} {amount:,.2f} will be refunded to your original payment method.",
+                "warning",
+            )
+        except Exception as e:
+            logger.warning(f"Refund-due notification failed for {reference}: {e}")
+        return {"success": True, "gateway_refund_due": True}
+
     def _process_bulk_job(self, job_id: str, user_id: int, records: List[Dict]):
         """Background worker that fulfills each record in a bulk recharge job."""
         conn = db.get_db_connection()
         c = conn.cursor()
+        try:
+            _pm = c.execute("SELECT payment_method FROM bulk_jobs WHERE id = ?", (job_id,)).fetchone()
+            # Only a job explicitly tagged "wallet" refunds to the wallet; untagged/unknown never does.
+            paid_by_wallet = str((_pm["payment_method"] if _pm else None) or "").strip().lower() == "wallet"
+        except Exception:
+            # Unknown: never default to the wallet (that would credit unfunded money to a card-paid job)
+            logger.warning(f"Bulk job {job_id}: could not read payment_method; defaulting to gateway refund")
+            paid_by_wallet = False
 
         processed = 0
         successful = 0
@@ -8237,14 +10087,7 @@ class ReloadlyWebApp:
 
                         if provider_status == "FAILED" or not tx_id:
                             # Refund
-                            db.credit_wallet(
-                                user_id=user_id,
-                                amount=amount,
-                                currency=currency,
-                                description=f"Refund for failed bulk recharge {reference}",
-                                reference=f"REFUND-{reference}",
-                                metadata={"original_reference": reference},
-                            )
+                            self._refund_bulk_record(job_id, user_id, amount, currency, reference, paid_by_wallet)
                             db.mark_failed(reference, result.get("message") or "Provider rejected")
                             failed += 1
                         else:
@@ -8263,14 +10106,7 @@ class ReloadlyWebApp:
 
                     except Exception as e:
                         logger.error(f"Bulk record failure for {reference}: {e}")
-                        db.credit_wallet(
-                            user_id=user_id,
-                            amount=amount,
-                            currency=currency,
-                            description=f"Refund for failed bulk recharge {reference}",
-                            reference=f"REFUND-{reference}",
-                            metadata={"original_reference": reference, "error": str(e)},
-                        )
+                        self._refund_bulk_record(job_id, user_id, amount, currency, reference, paid_by_wallet, {"error": str(e)})
                         db.mark_failed(reference, str(e))
                         failed += 1
 
@@ -8453,7 +10289,7 @@ class ReloadlyWebApp:
             return False, str(e)
 
 
-    def _start_wallet_bulk_job(self, user_id, job_id, records, needed):
+    def _start_wallet_bulk_job(self, user_id, job_id, records, charge):
         """
         Debit the wallet for a bulk job total, tag the job with payment info,
         then kick off the background worker.
@@ -8462,7 +10298,7 @@ class ReloadlyWebApp:
         """
         # 1. Debit the wallet for the full job total
         ok, err = self._debit_wallet(
-            user_id, "NGN", needed, reference=f"bulk:{job_id}"
+            user_id, "NGN", charge, reference=f"bulk:{job_id}"
         )
         if not ok:
             conn = db.get_db_connection()
@@ -8506,7 +10342,7 @@ class ReloadlyWebApp:
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
-                (needed, job_id),
+                (charge, job_id),
             )
             conn.commit()
         finally:
@@ -8778,9 +10614,18 @@ class ReloadlyWebApp:
 
         @self.app.route("/api/chat/messages", methods=["GET"])
         def chat_messages():
-            visitor_id = (request.args.get("visitor_id") or request.cookies.get("net365_chat_visitor") or "").strip()
+            # A conversation ID is not an authorization credential. Require the
+            # HttpOnly visitor cookie or the authenticated account that owns it.
+            cookie_visitor = (request.cookies.get("net365_chat_visitor") or "").strip()
+            supplied_visitor = (request.args.get("visitor_id") or "").strip()
+            if supplied_visitor and cookie_visitor and not secrets.compare_digest(supplied_visitor, cookie_visitor):
+                return jsonify({"success": False, "error": "Chat session mismatch"}), 403
+            visitor_id = cookie_visitor
             conversation_id = request.args.get("conversation_id", type=int)
-            if not visitor_id and not conversation_id:
+            user = get_authenticated_user()
+            if not visitor_id and not user:
+                return jsonify({"success": False, "error": "Chat session required"}), 401
+            if not conversation_id and not visitor_id:
                 return jsonify({"success": False, "error": "Chat session required"}), 400
             conn = db.get_db_connection()
             if conversation_id:
@@ -8791,13 +10636,25 @@ class ReloadlyWebApp:
                 conn.close()
                 return jsonify({"success": True, "conversation": None, "messages": []})
             cid = conv["id"] if isinstance(conv, sqlite3.Row) else conv[0]
-            rows = conn.execute("SELECT id,sender_type,sender_id,message,created_at,read_at FROM chat_messages WHERE conversation_id=? ORDER BY id ASC", (cid,)).fetchall()
-            messages = [dict(r) for r in rows]
+            owner_visitor = conv["visitor_id"] if isinstance(conv, sqlite3.Row) else conv[1]
+            owner_user = conv["user_id"] if isinstance(conv, sqlite3.Row) and "user_id" in conv.keys() else None
+            owns = bool(visitor_id and secrets.compare_digest(str(owner_visitor or ""), visitor_id))
+            owns = owns or bool(user and owner_user and str(owner_user) == str(user.get("id")))
+            if not owns:
+                conn.close()
+                return jsonify({"success": False, "error": "Chat session mismatch"}), 403
+            rows = conn.execute("SELECT id,sender_type,sender_id,message,created_at,read_at FROM chat_messages WHERE conversation_id=? ORDER BY id ASC LIMIT 500", (cid,)).fetchall()
+            messages = [
+                {k: r[k] for k in ("id", "sender_type", "message", "created_at", "read_at")}
+                for r in rows
+            ]
             # Customer reading admin messages marks them read.
             conn.execute("UPDATE chat_messages SET read_at=CURRENT_TIMESTAMP WHERE conversation_id=? AND sender_type='admin' AND read_at IS NULL", (cid,))
             conn.commit()
             conn.close()
-            return jsonify({"success": True, "conversation": dict(conv), "messages": messages})
+            # Do not return visitor IDs or customer contact details to the browser.
+            safe_conversation = {"id": cid, "status": conv["status"] if isinstance(conv, sqlite3.Row) else None}
+            return jsonify({"success": True, "conversation": safe_conversation, "messages": messages})
 
         @self.app.route("/api/chat/messages", methods=["POST"])
         @rate_limit(max_requests=30, window_seconds=60)
@@ -8809,7 +10666,11 @@ class ReloadlyWebApp:
             if len(text) > 4000:
                 return jsonify({"success": False, "error": "Message is too long"}), 400
 
-            visitor_id = (data.get("visitor_id") or request.cookies.get("net365_chat_visitor") or "").strip()
+            cookie_visitor = (request.cookies.get("net365_chat_visitor") or "").strip()
+            supplied_visitor = str(data.get("visitor_id") or "").strip()
+            if supplied_visitor and cookie_visitor and not secrets.compare_digest(supplied_visitor, cookie_visitor):
+                return jsonify({"success": False, "error": "Chat session mismatch"}), 403
+            visitor_id = cookie_visitor
             conversation_id = data.get("conversation_id")
             if not visitor_id and not conversation_id:
                 return jsonify({"success": False, "error": "Start a chat session first"}), 400
@@ -8824,11 +10685,14 @@ class ReloadlyWebApp:
                 return jsonify({"success": False, "error": "Chat session not found"}), 404
             cid = conv["id"] if isinstance(conv, sqlite3.Row) else conv[0]
             conv_visitor = conv["visitor_id"] if isinstance(conv, sqlite3.Row) else conv[1]
-            if visitor_id and conv_visitor != visitor_id:
+            user = get_authenticated_user()
+            conv_user = conv["user_id"] if isinstance(conv, sqlite3.Row) and "user_id" in conv.keys() else None
+            owns_visitor = bool(visitor_id and secrets.compare_digest(str(conv_visitor or ""), visitor_id))
+            owns_user = bool(user and conv_user and str(conv_user) == str(user.get("id")))
+            if not (owns_visitor or owns_user):
                 conn.close()
                 return jsonify({"success": False, "error": "Chat session mismatch"}), 403
 
-            user = get_authenticated_user()
             cur = conn.execute("INSERT INTO chat_messages(conversation_id,sender_type,sender_id,message) VALUES (?,?,?,?)",
                                (cid, "customer", str(user.get("id")) if user else visitor_id, text))
             conn.execute("UPDATE chat_conversations SET status='open', updated_at=CURRENT_TIMESTAMP, last_message_at=CURRENT_TIMESTAMP WHERE id=?", (cid,))
@@ -8908,7 +10772,17 @@ class ReloadlyWebApp:
         @self.app.after_request
         def add_security_headers(response):
             response.headers["X-Content-Type-Options"] = "nosniff"
-            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+            response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=(self)"
+            response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+            if request.is_secure:
+                # Avoid includeSubDomains until every Net365 subdomain is confirmed HTTPS-only.
+                response.headers["Strict-Transport-Security"] = "max-age=15552000"
+            if request.path == "/app":
+                # Telegram Mini App page: Telegram Web shows it in a frame, so allow Telegram (and only Telegram) to frame it
+                response.headers["Content-Security-Policy"] = "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org"
+            else:
+                response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
             # Ask Chrome/Edge for the real device model. Critical-CH makes the
             # browser retry the FIRST page load with the hint (HTTPS/localhost only);
@@ -8919,6 +10793,7 @@ class ReloadlyWebApp:
             return response
 
         @self.app.route("/")
+        @self.app.route("/index.html")
         def index():
             device_type = parse_user_agent(request.headers.get("User-Agent", ""))["device_type"]
             # ?full=1 lets phone users open the full desktop platform on purpose
@@ -8954,11 +10829,27 @@ class ReloadlyWebApp:
                     404,
                 )
 
+        # Scheduler assets are served ONLY from a dedicated folder (scheduler_static/) and only
+        # for an allow-list of file types. The old route served the whole application directory,
+        # which exposed source code, the database and environment files to anyone.
+        _SCHEDULER_ASSET_EXT = {".js", ".css", ".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp", ".woff", ".woff2"}
+
         @self.app.route("/scheduler/<path:filename>")
         def scheduler_static(filename):
-            return send_from_directory(
-                os.path.dirname(os.path.abspath(__file__)), filename
+            ext = os.path.splitext(filename)[1].lower()
+            parts = [p for p in filename.replace("\\", "/").split("/") if p]
+            if (
+                ext not in _SCHEDULER_ASSET_EXT
+                or not parts
+                or any(p.startswith(".") or p == ".." for p in parts)
+            ):
+                return jsonify({"success": False, "error": "Not found"}), 404
+            static_dir = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "scheduler_static"
             )
+            if not os.path.isdir(static_dir):
+                return jsonify({"success": False, "error": "Not found"}), 404
+            return send_from_directory(static_dir, filename)
 
         @self.app.route("/analytics")
         def analytics_page():
@@ -8974,7 +10865,9 @@ class ReloadlyWebApp:
                     "Analytics page not found. Please create analytics.html in the root directory.",
                     404,
                 )
-
+        @self.app.route("/bots")
+        def bots_page():
+            return send_from_directory(os.path.dirname(os.path.abspath(__file__)), "bots.html")
         # ============ PWA (installable app) ============
         _pwa_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pwa")
 
@@ -8996,6 +10889,13 @@ class ReloadlyWebApp:
         @self.app.route("/pwa.js")
         def pwa_loader():
             resp = send_from_directory(_pwa_dir, "pwa.js", mimetype="application/javascript")
+            resp.headers["Cache-Control"] = "no-cache"
+            return resp
+
+        @self.app.route("/onepay.js")
+        def onepay_loader():
+            resp = send_from_directory(os.path.dirname(os.path.abspath(__file__)), "onepay.js",
+                                       mimetype="application/javascript")
             resp.headers["Cache-Control"] = "no-cache"
             return resp
 
@@ -9427,16 +11327,25 @@ class ReloadlyWebApp:
                 )
 
                 # Notify the referred user
+                try:
+                    _bonus_live = is_referral_bonus_enabled() and bool(
+                        (db.get_referral_bonus_config() or {}).get("enabled")
+                    )
+                except Exception:
+                    _bonus_live = False
                 db.create_notification(
                     user_id,
-                    "🎉 Referral Code Applied!",
-                    f"You've been referred by {referrer['full_name']}. Complete your first transaction to earn rewards!",
+                    "🎉 Referral Code Applied!" if _bonus_live else "Referral code saved",
+                    (f"You've been referred by {referrer['full_name']}. Complete your first transaction to earn rewards!"
+                     if _bonus_live else
+                     f"You've been referred by {referrer['full_name']}. Referral rewards are not active yet."),
                     "success",
                 )
 
                 return jsonify({
                     "success": True,
-                    "message": "Referral code applied successfully!",
+                    "message": ("Referral code applied successfully!" if _bonus_live
+                                else "Referral code saved. Referral rewards are not active yet."),
                     "referrer": {
                         "id": referrer["id"],
                         "name": referrer["full_name"],
@@ -9473,7 +11382,7 @@ class ReloadlyWebApp:
             """Short-circuits the request when the referral program is paused."""
             @wraps(func)
             def wrapper(*args, **kwargs):
-                if not REFERRAL_BONUS_ENABLED:
+                if not is_referral_bonus_enabled():
                     return jsonify({
                         "success": False,
                         "valid": False,
@@ -9882,8 +11791,45 @@ class ReloadlyWebApp:
                     except Exception:
                         pass
 
+                # ---- display mode: "pro" (adults, default) or "play" (kids) --------------------
+                mode = request.args.get("mode") or request.cookies.get("n365_mode") or "pro"
+                mode = mode if mode in ("pro", "play") else "pro"
+
+                # ---- what was recharged: decrypt the payload and find the recipient number -------
+                recipient_masked = None
+                airtime_value = None
+                try:
+                    _p = tx.get("payload")
+                    if isinstance(_p, str):
+                        _p = json.loads(_p) if _p else {}
+                    _p = decrypt_payload(dict(_p or {}))
+                    _num = None
+                    for _k in ("phone", "recipient_phone", "recipient", "phone_number", "msisdn", "number"):
+                        if _p.get(_k):
+                            _num = str(_p[_k])
+                            break
+                    if not _num:
+                        _rr = tx.get("reloadly_result")
+                        if isinstance(_rr, str):
+                            _rr = json.loads(_rr) if _rr else {}
+                        _rr = _rr or {}
+                        _rp = _rr.get("recipientPhone") or (_rr.get("result") or {}).get("recipientPhone") or {}
+                        _num = _rp.get("number") if isinstance(_rp, dict) else _rp
+                    if _num:
+                        _digits = "".join(ch for ch in str(_num) if ch.isdigit())
+                        if _digits.startswith("234") and len(_digits) == 13:
+                            _digits = "0" + _digits[3:]
+                        if len(_digits) >= 8:
+                            recipient_masked = _digits[:4] + "•" * max(3, len(_digits) - 8) + _digits[-4:]
+                    if _p.get("service_amount"):
+                        airtime_value = float(_p["service_amount"])
+                except Exception as e:
+                    logger.warning(f"Success page: could not read recipient: {e}")
+
                 # Pick the best success-page ad for this transaction
                 ad = None
+                ads = {}
+                device_type = None
                 try:
                     device_type = parse_user_agent(request.headers.get("User-Agent", ""))["device_type"]
                     ads = db.get_receipt_ads(
@@ -9892,6 +11838,10 @@ class ReloadlyWebApp:
                         amount=float(tx.get("amount") or 0) or None,
                         device_type=device_type,
                     )
+                    if mode == "play":
+                        # Play mode shows house content only: no paid/third-party ads in front of
+                        # children, and no impressions are billed for ads that are not shown.
+                        ads = {k: (v if v and not v.get("sponsored") else None) for k, v in (ads or {}).items()}
 
                     # Track an impression for whichever slots actually resolved
                     for _slot_name in ("primary", "secondary", "tertiary"):
@@ -9905,6 +11855,14 @@ class ReloadlyWebApp:
                                     device_type=device_type,
                                     country=get_request_country(request),
                                 )
+                                try:
+                                    from net365_adengine import record_event as _ae_rec
+                                    _ae_rec("success", "success", _ad["id"], "impression", reference=reference,
+                                            user_id=tx.get("user_id"), tx_type=tx.get("tx_type"),
+                                            amount=tx.get("amount"), country=get_request_country(request),
+                                            device=device_type)
+                                except Exception:
+                                    pass
                             except Exception as e:
                                 logger.warning(f"Impression tracking failed for {_slot_name}: {e}")
                     if ad:
@@ -9918,19 +11876,47 @@ class ReloadlyWebApp:
                 except Exception as e:
                     logger.warning(f"Success-page ad lookup failed: {e}")
 
-                return render_template(
+                # Paid campaigns (if admin allows) and Boost ads fill the slots that are still free.
+                try:
+                    if mode != "play":
+                        from net365_adcredits import fill_success_slots, viewer_city
+                        _uid = tx.get("user_id")
+                        ads = fill_success_slots(ads, {
+                            "reference": reference, "user_id": _uid, "tx_type": tx.get("tx_type"),
+                            "amount": tx.get("amount"), "city": viewer_city(_uid, get_client_ip())})
+                except Exception as e:
+                    logger.warning(f"Boost/paid slot fill failed: {e}")
+
+                # ---- rewards (server-side only; never from the browser) --------------------------
+                rewards = None
+                headlines = []
+                try:
+                    import net365_rewards as _rw
+                    award = _rw.award_for_transaction(tx)
+                    if tx.get("user_id"):
+                        rewards = _rw.summary(int(tx["user_id"]))
+                        rewards["award"] = award
+                    headlines = _rw.get_headlines("kids" if mode == "play" else "pro", 5)
+                except Exception as e:
+                    logger.warning(f"Rewards lookup failed: {e}")
+
+                resp = make_response(render_template(
                     "payment_success.html",
                     reference=reference,
                     tx=tx,
-                    ads=db.get_receipt_ads(
-                        tx_type=tx.get("tx_type"),
-                        country=get_request_country(request),
-                        amount=float(tx.get("amount") or 0) or None,
-                        device_type=device_type,
-                    ),
+                    ads=ads,
                     frontend_url=frontend_url,
                     result=result,
-                )
+                    mode=mode,
+                    rewards=rewards,
+                    headlines=headlines,
+                    recipient_masked=recipient_masked,
+                    airtime_value=airtime_value,
+                ))
+                if request.args.get("mode") in ("pro", "play"):
+                    resp.set_cookie("n365_mode", mode, max_age=60 * 60 * 24 * 365, samesite="Lax",
+                                    secure=request.is_secure, httponly=True)
+                return resp
 
             except Exception as e:
                 logger.error(f"payment_success crashed for reference={reference}: {e}")
@@ -9947,10 +11933,18 @@ class ReloadlyWebApp:
                 db.record_success_page_ad_event(
                     ad_id, data.get("event") or "click",
                     reference=data.get("reference"),
-                    user_id=data.get("user_id"),
+                    user_id=session.get("user_id"),
                     device_type=parse_user_agent(request.headers.get("User-Agent", ""))["device_type"],
                     country=get_request_country(request),
                 )
+                try:
+                    if (data.get("event") or "click") == "click":
+                        from net365_adengine import record_event as _ae_rec
+                        _ae_rec("success", "success", ad_id, "click", reference=data.get("reference"),
+                                user_id=session.get("user_id"), country=get_request_country(request),
+                                device=parse_user_agent(request.headers.get("User-Agent", ""))["device_type"])
+                except Exception:
+                    pass
                 return jsonify({"success": True})
             except Exception as e:
                 return jsonify({"success": False, "error": str(e)}), 500
@@ -10062,7 +12056,7 @@ class ReloadlyWebApp:
         @self.app.route("/webhooks/flutterwave", methods=["POST"])
         def flutterwave_webhook():
             signature = request.headers.get("verif-hash", "")
-            if not verify_flutterwave_signature(signature):
+            if not verify_flutterwave_signature(request.get_data(), signature):
                 return jsonify({"error": "invalid signature"}), 401
 
             data = request.get_json(silent=True) or {}
@@ -10087,35 +12081,48 @@ class ReloadlyWebApp:
                 logger.error("Stripe library not available, cannot process webhook")
                 return jsonify({"error": "Stripe not configured"}), 500
 
-            payload = request.get_data(as_text=True)
-            sig_header = request.headers.get("Stripe-Signature")
+            # Fail closed: an unsigned webhook is never processed. Without the signing secret we
+            # cannot tell Stripe from anyone else on the internet.
             webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
-
             if not webhook_secret:
-                logger.warning(
-                    "STRIPE_WEBHOOK_SECRET not set, skipping webhook verification"
-                )
-                try:
-                    event = json.loads(payload)
-                except:
-                    return jsonify({"status": "webhook secret not configured"}), 200
-            else:
-                try:
-                    event = stripe.Webhook.construct_event(
-                        payload, sig_header, webhook_secret
-                    )
-                except ValueError as e:
-                    logger.error(f"Invalid Stripe webhook payload: {e}")
-                    return jsonify({"error": "Invalid payload"}), 400
-                except stripe.error.SignatureVerificationError as e:
-                    logger.error(f"Invalid Stripe signature: {e}")
-                    return jsonify({"error": "Invalid signature"}), 400
+                logger.error("Stripe webhook secret is not configured; rejecting webhook")
+                return jsonify({"error": "Webhook not configured"}), 503
+
+            payload = request.get_data()  # raw bytes — the signature is computed over the exact body
+            sig_header = request.headers.get("Stripe-Signature")
+            if not sig_header:
+                return jsonify({"error": "Missing signature"}), 400
+
+            _sig_error = getattr(stripe, "SignatureVerificationError", None) or getattr(
+                getattr(stripe, "error", None), "SignatureVerificationError", Exception
+            )
+            try:
+                stripe.Webhook.construct_event(payload, sig_header, webhook_secret)  # verifies signature + timestamp
+                # Use the verified raw body as a plain dict. Newer stripe-python versions return an
+                # Event object without dict.get(), which this handler relies on.
+                event = json.loads(payload)
+            except ValueError as e:
+                logger.error(f"Invalid Stripe webhook payload: {e}")
+                return jsonify({"error": "Invalid payload"}), 400
+            except _sig_error as e:
+                logger.error(f"Invalid Stripe signature: {e}")
+                return jsonify({"error": "Invalid signature"}), 400
 
             logger.info(f"Stripe webhook received: type={event.get('type')}")
 
-            if event.get("type") == "checkout.session.completed":
+            _etype = event.get("type")
+            if _etype == "checkout.session.async_payment_failed":
+                logger.warning("Stripe async payment failed: %s" % (event.get("data", {}).get("object", {}).get("id")))
+                return jsonify({"status": "noted"}), 200
+            if _etype in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
                 session_obj = event.get("data", {}).get("object", {})
                 session_id = session_obj.get("id")
+                if session_obj.get("payment_status") not in ("paid", "no_payment_required"):
+                    # Delayed payment method (bank debit etc.): the session completed but money has not
+                    # arrived. Do nothing now; Stripe sends async_payment_succeeded when it does.
+                    logger.info(f"Stripe session {session_id} completed but payment_status="
+                                f"{session_obj.get('payment_status')}; waiting for async_payment_succeeded")
+                    return jsonify({"status": "awaiting payment"}), 200
                 metadata = session_obj.get("metadata", {})
                 reference = metadata.get("reference")
 
@@ -10137,6 +12144,13 @@ class ReloadlyWebApp:
                                 if isinstance(tx["payload"], str)
                                 else tx["payload"]
                             )
+                            # Never overwrite a session id we already stored when the payment was created.
+                            if payload_dict.get("stripe_session_id") and payload_dict.get("stripe_session_id") != session_id:
+                                logger.error(
+                                    f"Stripe webhook session mismatch for {reference}: stored="
+                                    f"{payload_dict.get('stripe_session_id')} event={session_id}; ignoring event"
+                                )
+                                return jsonify({"status": "ignored"}), 200
                             payload_dict["stripe_session_id"] = session_id
                             conn = db.get_db_connection()
                             c = conn.cursor()
@@ -10567,6 +12581,7 @@ class ReloadlyWebApp:
                 "success": result.get("success", False),
                 "status": "success" if result.get("success") else "pending",
                 "already_fulfilled": result.get("already_fulfilled", False),
+                "pending": bool(result.get("pending")),
             }
 
             if result.get("success"):
@@ -10583,6 +12598,166 @@ class ReloadlyWebApp:
 
             return jsonify(response_data)
 
+        # ============ ONEPAY: ONE PAYMENT, MANY DELIVERIES ============
+        CART_MAX_ITEMS = int(os.getenv("CART_MAX_ITEMS", "10") or 10)
+
+        @self.app.route("/api/cart/checkout", methods=["POST"])
+        @login_required
+        @email_verified_required
+        @rate_limit(max_requests=10, window_seconds=60)
+        def cart_checkout():
+            data = request.get_json(silent=True) or {}
+            user_id = g.current_user_id
+            raw_items = data.get("items")
+            if not isinstance(raw_items, list) or not raw_items:
+                return jsonify({"success": False, "error": "Your cart is empty"}), 400
+            if len(raw_items) > CART_MAX_ITEMS:
+                return jsonify({"success": False, "error": f"A cart can hold up to {CART_MAX_ITEMS} items"}), 400
+            if str(data.get("provider") or "paystack").lower() != "paystack" or str(data.get("currency") or "NGN").upper() != "NGN":
+                return jsonify({"success": False, "error": "OnePay currently supports Nigerian Naira by card or bank transfer (Paystack)."}), 400
+            try:
+                from net365_whatsapp import is_guest_user
+                if is_guest_user(user_id):
+                    return jsonify({"success": False, "error": "Create a free Net365 account to use OnePay."}), 403
+            except Exception:
+                pass
+
+            payer_email = data.get("email") or g.current_user.get("email")
+            min_amount = SUPPORTED_CURRENCIES["NGN"]["min_amount"]
+            items, summary, has_utility = [], [], False
+
+            for n_, raw in enumerate(raw_items, 1):
+                if not isinstance(raw, dict):
+                    return jsonify({"success": False, "error": f"Item {n_} is invalid"}), 400
+                kind = str(raw.get("type") or "topup").lower()
+                try:
+                    service = round(float(raw.get("amount")), 2)  # what the recipient/biller receives
+                except (TypeError, ValueError):
+                    return jsonify({"success": False, "error": f"Item {n_}: invalid amount"}), 400
+                if service <= 0:
+                    return jsonify({"success": False, "error": f"Item {n_}: invalid amount"}), 400
+
+                if kind == "topup":
+                    operator_id, phone = raw.get("operator_id"), str(raw.get("phone") or "").strip()
+                    if not operator_id or not phone:
+                        return jsonify({"success": False, "error": f"Item {n_}: missing network or phone number"}), 400
+                    if not self.platform._format_phone_for_topup(phone, "NG"):
+                        return jsonify({"success": False, "error": f"Item {n_}: invalid Nigerian phone number"}), 400
+                    fee = server_fee_for(service, "NGN")  # the SERVER owns the fee; any client total is ignored
+                    total = round(service + fee, 2)
+                    if total < min_amount:
+                        return jsonify({"success": False, "error": f"Item {n_}: minimum is NGN {min_amount}"}), 400
+                    label = f"{str(raw.get('operator_name') or 'Airtime')[:30]} airtime - {phone[-4:].rjust(len(phone), '*')}"
+                    item_payload = {
+                        "operator_id": str(operator_id), "phone": encrypt_pii(phone), "country_code": "NG",
+                        "email": payer_email, "service_amount": service, "fee_amount": fee,
+                        "operator_name": str(raw.get("operator_name") or "")[:40],
+                    }
+                elif kind == "utility":
+                    has_utility = True
+                    account = str(raw.get("subscriber_account") or "").strip()
+                    try:
+                        biller_id = int(raw.get("biller_id"))
+                    except (TypeError, ValueError):
+                        return jsonify({"success": False, "error": f"Item {n_}: invalid biller"}), 400
+                    if not account:
+                        return jsonify({"success": False, "error": f"Item {n_}: missing account/meter number"}), 400
+                    check = UtilityBillerValidator.validate_amount(biller_id, service)
+                    if not check.get("valid", True):  # never silently change what the customer is paying
+                        return jsonify({"success": False, "error": f"Item {n_}: {check.get('message')}"}), 400
+                    fee, total = 0.0, service
+                    label = f"{str(raw.get('biller_name') or 'Bill payment')[:40]}"
+                    item_payload = {
+                        "biller_id": biller_id, "subscriber_account": encrypt_pii(account), "amount": service,
+                        "currency": "NGN", "email": payer_email, "payment_method": "cart",
+                        "service_amount": service, "fee_amount": 0.0,
+                        "biller_name": str(raw.get("biller_name") or "")[:60],
+                    }
+                else:
+                    return jsonify({"success": False, "error": f"Item {n_}: unsupported type '{kind}'"}), 400
+
+                items.append({"type": kind, "label": label, "amount": total, "payload": item_payload})
+                summary.append({"type": kind, "label": label, "service_amount": service, "fee": fee, "total": total})
+
+            cart_total = round(sum(i["amount"] for i in items), 2)
+
+            try:  # frozen account / PIN step-up above the configured amount (same check as single payments)
+                from net365_whatsapp import chat_purchase_error
+                _ce = chat_purchase_error(user_id, cart_total, "NGN")
+                if _ce:
+                    return jsonify(_ce[0]), _ce[1]
+            except ImportError:
+                pass
+
+            # Per-transaction cap applies to each delivery; the daily cap applies to the whole cart.
+            _limit_err = _purchase_limit_error(user_id, cart_total, "NGN", per_tx_amount=max(i["amount"] for i in items))
+            if _limit_err:
+                return jsonify({"success": False, "code": "LIMIT_EXCEEDED", "error": _limit_err}), 400
+            if has_utility and _utility_provider_down():
+                return jsonify({"success": False, "code": "PROVIDER_UNAVAILABLE",
+                                "error": "Bill payments are temporarily unavailable. You have not been charged. "
+                                         "Remove the bill items or try again in a few minutes."}), 503
+
+            result = self.platform.create_payment(
+                amount=cart_total, currency="NGN", email=payer_email,
+                return_url=_safe_payment_return_url(data.get("return_url")), provider="paystack",
+            )
+            if not (result.get("success") and result.get("reference")):
+                return jsonify(result if isinstance(result, dict) else {"success": False, "error": "Could not start payment"}), 502
+
+            db.create_pending(
+                reference=result["reference"], tx_type="cart", provider="paystack", amount=cart_total,
+                currency="NGN", payload={"items": items, "email": payer_email, "item_count": len(items)},
+                user_id=user_id,
+            )
+            log_event(user_id=user_id, event_type="cart_checkout_initiated",
+                      details={"reference": result["reference"], "items": len(items), "amount": cart_total},
+                      status="pending")
+            return jsonify({
+                "success": True, "reference": result["reference"], "amount": cart_total, "currency": "NGN",
+                "authorization_url": result.get("authorization_url") or result.get("checkout_url"),
+                "items": summary,
+            })
+
+        @self.app.route("/api/cart/<reference>", methods=["GET"])
+        @login_required
+        def cart_status(reference):
+            parent = db.get_transaction(reference)
+            if not parent or parent.get("tx_type") != "cart" or parent.get("user_id") != g.current_user_id:
+                return jsonify({"success": False, "error": "Cart not found"}), 404
+            payload = parent.get("payload") or {}
+            if isinstance(payload, str):
+                try:
+                    payload = json.loads(payload)
+                except Exception:
+                    payload = {}
+            rows = []
+            for idx, it in enumerate(payload.get("items") or [], 1):
+                ref = f"{reference}-{idx}"
+                child = db.get_transaction(ref)
+                st = (child or {}).get("status")
+                state = ("delivered" if st == "fulfilled"
+                         else "failed" if st in ("fulfillment_failed", "failed")
+                         else "processing" if child else "awaiting_payment")
+                rows.append({"reference": ref, "type": it.get("type"), "label": it.get("label"),
+                             "amount": it.get("amount"), "state": state})
+            pstatus = parent.get("status")
+            if pstatus != "fulfilled":
+                overall = "failed" if pstatus in ("fulfillment_failed", "failed") else "awaiting_payment"
+            else:
+                states = {r["state"] for r in rows}
+                overall = ("completed" if states == {"delivered"} else
+                           "failed" if states <= {"failed"} else
+                           "partially_completed" if "failed" in states and "delivered" in states else
+                           "processing")
+                if overall == "processing" and "failed" in states and not ({"processing"} & states):
+                    overall = "partially_completed"
+            return jsonify({"success": True, "reference": reference, "status": overall,
+                            "amount": parent.get("amount"), "currency": parent.get("currency") or "NGN",
+                            "items": rows,
+                            "delivered": sum(1 for r in rows if r["state"] == "delivered"),
+                            "failed": sum(1 for r in rows if r["state"] == "failed")})
+
         # ============ FIX: /api/payment/init ENDPOINT ============
         @self.app.route("/api/payment/init", methods=["POST"])
         @login_required
@@ -10597,6 +12772,37 @@ class ReloadlyWebApp:
             if not amount or float(amount) <= 0:
                 return jsonify({"success": False, "error": "Invalid amount"}), 400
 
+            try:  # chat purchases: frozen account, or PIN needed above the step-up amount
+                from net365_whatsapp import chat_purchase_error
+                _ce = chat_purchase_error(user_id, amount, currency)
+                if _ce:
+                    return jsonify(_ce[0]), _ce[1]
+            except ImportError:
+                pass
+
+            # Chat guests (no account): airtime top-ups by gateway only, with their own lower caps.
+            _guest_email = None
+            _is_guest = False
+            try:
+                from net365_whatsapp import is_guest_user, guest_limit_error, guest_receipt_email
+                _is_guest = is_guest_user(user_id)
+            except Exception:
+                pass
+            if _is_guest:
+                if data.get("type", "topup") != "topup" or str(provider or "").lower() in ("wallet", "stripe", "flutterwave") or str(currency).upper() != "NGN":
+                    return jsonify({"success": False, "error": "Guests can buy Nigerian airtime by card or bank transfer. Create a free Net365 account for more."}), 403
+                _gerr = guest_limit_error(user_id, amount)
+                if _gerr:
+                    return jsonify({"success": False, "code": "LIMIT_EXCEEDED", "error": _gerr}), 400
+                _guest_email = guest_receipt_email(user_id)
+                if not _guest_email:
+                    return jsonify({"success": False, "code": "EMAIL_NEEDED", "error": "An email address is needed for your receipt."}), 400
+            _payer_email = _guest_email or g.current_user.get("email")
+
+            _limit_err = _purchase_limit_error(user_id, amount, currency)
+            if _limit_err:
+                return jsonify({"success": False, "code": "LIMIT_EXCEEDED", "error": _limit_err}), 400
+
             if data.get("type") != "wallet_funding":
                 if not data.get("operator_id") or not data.get("phone"):
                     return (
@@ -10608,6 +12814,17 @@ class ReloadlyWebApp:
                         ),
                         400,
                     )
+                if str(data.get("country_code") or "NG").upper() == "NG":
+                    try:
+                        import net365_recovery as _rc
+                        _mb = _rc.maintenance_block("airtime")
+                        if _mb:
+                            return _mb
+                    except ImportError:
+                        pass
+                    _mm = network_mismatch_error(data.get("phone"), data.get("operator_id"), data.get("operator_name"), bool(data.get("confirm_network")))
+                    if _mm:
+                        return jsonify(_mm), 409
 
             if currency not in SUPPORTED_CURRENCIES:
                 return (
@@ -10652,6 +12869,9 @@ class ReloadlyWebApp:
                         400,
                     )
 
+            _rb = _live_rates_block(currency)
+            if _rb:
+                return jsonify({"success": False, "code": "RATES_UNAVAILABLE", "error": _rb}), 503
             if float(amount) < SUPPORTED_CURRENCIES[currency]["min_amount"]:
                 return (
                     jsonify(
@@ -10714,8 +12934,8 @@ class ReloadlyWebApp:
 
                 try:
                     total_amount = round(float(amount), 2)
-                    service_amount = round(
-                        float(data.get("service_amount") or total_amount), 2
+                    service_amount, _wfee = split_topup_amounts(
+                        dict(data, currency=currency), total_amount, user_id=g.current_user_id
                     )
                 except (TypeError, ValueError):
                     return (
@@ -10822,29 +13042,53 @@ class ReloadlyWebApp:
                     )
                     if not formatted_phone:
                         raise ValueError("Invalid phone number format")
-                    usd_amount = self.platform.convert_to_usd(service_amount, currency)
-                    if usd_amount <= 0:
-                        raise ValueError(
-                            "Unable to convert recharge amount to provider currency"
-                        )
+                    # Nigerian naira recharge follows the admin's routing policy (Admin > Provider Routing > Airtime), exactly like
+                    # card-paid recharge: VTpass first with Reloadly on standby, or the reverse. The second processor is only used when the
+                    # first one DEFINITELY did not accept the order.
+                    import net365_routing as _rt
+                    _ng_naira = country_code == "NG" and currency == "NGN"
+                    _reloadly_first = _ng_naira and _rt.order("airtime")[0] == "reloadly"
+                    result = None
+                    if _ng_naira and not _reloadly_first:
+                        try:
+                            result = _wallet_airtime_via_router(reference, data, phone, service_amount, _rt)
+                        except Exception:
+                            provider_called = True      # outcome unknown: keep the debit for review, never refund or retry elsewhere
+                            raise
+                        if result is not None:
+                            provider_called = True
+                    if result is None:
+                        usd_amount = self.platform.convert_to_usd(service_amount, currency)
+                        if usd_amount <= 0:
+                            raise ValueError(
+                                "Unable to convert recharge amount to provider currency"
+                            )
 
-                    provider_called = True
-                    result = (
-                        self.platform.make_topup(
-                            operator_id=str(data.get("operator_id")),
-                            amount=str(round(usd_amount, 2)),
-                            recipient_phone={
-                                "countryCode": country_code,
-                                "number": formatted_phone,
-                            },
-                            use_local_amount=False,
-                            custom_identifier=f"wallet-topup-{reference}",
-                            recipient_email=data.get("email")
-                            or g.current_user.get("email"),
-                            is_async=True,
+                        provider_called = True
+                        result = (
+                            self.platform.make_topup(
+                                operator_id=str(data.get("operator_id")),
+                                amount=str(round(usd_amount, 2)),
+                                recipient_phone={
+                                    "countryCode": country_code,
+                                    "number": formatted_phone,
+                                },
+                                use_local_amount=False,
+                                custom_identifier=f"wallet-topup-{reference}",
+                                recipient_email=data.get("email")
+                                or g.current_user.get("email"),
+                                is_async=True,
+                            )
+                            or {}
                         )
-                        or {}
-                    )
+                        if _ng_naira:
+                            _rl_ok = str(result.get("status") or "").upper() != "FAILED" and bool(result.get("transactionId") or result.get("id"))
+                            _rt.record("reloadly", "airtime", _rl_ok, reference)
+                            if not _rl_ok and _reloadly_first:
+                                # Reloadly definitely did not take it: try the standby processor before refunding.
+                                _standby = _wallet_airtime_via_router(reference, data, phone, service_amount, _rt)
+                                if _standby is not None:
+                                    result = _standby
 
                     provider_status = str(result.get("status") or "").upper()
                     transaction_id = result.get("transactionId") or result.get("id")
@@ -11057,7 +13301,7 @@ class ReloadlyWebApp:
                     operator_id=data.get("operator_id"),
                     phone=data.get("phone"),
                     country_code=data.get("country_code", "NG"),
-                    email=g.current_user.get("email"),
+                    email=_payer_email,
                     return_url=data.get("return_url"),
                     provider=provider,
                 )
@@ -11076,8 +13320,20 @@ class ReloadlyWebApp:
                         "operator_id": data.get("operator_id"),
                         "phone": data.get("phone"),
                         "country_code": data.get("country_code", "NG"),
-                        "email": g.current_user.get("email"),
+                        "email": _payer_email,
                     }
+                    if str(data.get("source") or "") in ("telegram", "whatsapp"):
+                        payload["source"] = data["source"]
+                        payload["operator_name"] = str(data.get("operator_name") or "")[:40]
+                    if data.get("save_card") and not _is_guest:
+                        payload["save_card"] = True
+                    if tx_type == "topup":
+                        try:
+                            _svc, _fee = split_topup_amounts(data, amount, user_id=g.current_user_id)
+                        except (TypeError, ValueError):
+                            return jsonify({"success": False, "error": "Price changed or invalid. Please refresh the page and try again."}), 400
+                        payload["service_amount"] = _svc
+                        payload["fee_amount"] = _fee
 
                     if payload.get("phone"):
                         payload["phone"] = encrypt_pii(payload["phone"])
@@ -11129,6 +13385,7 @@ class ReloadlyWebApp:
         # transaction is still recorded and verified server-side; fulfillment
         # is tied to the verified payment reference, not browser state.
         @self.app.route("/api/public/payment/init", methods=["POST"])
+        @self.app.route("/api/public/topup/init", methods=["POST"])  # path index.html calls for guests
         @rate_limit(max_requests=20, window_seconds=60)
         def public_init_payment():
             data = request.get_json(silent=True) or {}
@@ -11145,6 +13402,17 @@ class ReloadlyWebApp:
 
             if amount <= 0 or not phone or not operator_id:
                 return jsonify({"success": False, "error": "Phone, network and amount are required"}), 400
+            if country_code == "NG":
+                try:
+                    import net365_recovery as _rc
+                    _mb = _rc.maintenance_block("airtime")
+                    if _mb:
+                        return _mb
+                except ImportError:
+                    pass
+                _mm = network_mismatch_error(phone, operator_id, data.get("operator_name"), bool(data.get("confirm_network")))
+                if _mm:
+                    return jsonify(_mm), 409
             if currency not in SUPPORTED_CURRENCIES:
                 return jsonify({"success": False, "error": "Unsupported currency"}), 400
             expected_currency = COUNTRY_CURRENCY_MAP.get(country_code)
@@ -11157,8 +13425,19 @@ class ReloadlyWebApp:
                     return jsonify({"success": False, "error": f"No supported payment gateway for {currency}"}), 400
             if amount < SUPPORTED_CURRENCIES[currency]["min_amount"]:
                 return jsonify({"success": False, "error": f"Minimum amount is {SUPPORTED_CURRENCIES[currency]['min_amount']} {currency}"}), 400
+            _rb = _live_rates_block(currency)
+            if _rb:
+                return jsonify({"success": False, "code": "RATES_UNAVAILABLE", "error": _rb}), 503
             if not email or "@" not in email:
                 email = "customer@net365co.com"
+
+            _limit_err = _purchase_limit_error(None, amount, currency)
+            if _limit_err:
+                return jsonify({"success": False, "code": "LIMIT_EXCEEDED", "error": _limit_err}), 400
+            try:
+                _svc, _fee = split_topup_amounts(data, amount)
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "error": "Price changed or invalid. Please refresh the page and try again."}), 400
 
             try:
                 result = self.platform.create_payment(
@@ -11178,6 +13457,8 @@ class ReloadlyWebApp:
                         "country_code": country_code,
                         "email": email,
                         "guest_recharge": True,
+                        "service_amount": _svc,
+                        "fee_amount": _fee,
                     }
                     if result.get("provider") == "stripe" and result.get("stripe_session_id"):
                         payload["stripe_session_id"] = result["stripe_session_id"]
@@ -11196,22 +13477,14 @@ class ReloadlyWebApp:
                     }, status="pending")
                 return jsonify(result)
             except Exception as e:
-                # Was: a generic message that hid the real cause from both the
-                # browser AND whoever's reading the response, meaning the only
-                # way to debug a guest-checkout failure was to already have
-                # server log access. Now: still logs the full traceback
-                # server-side (unchanged), but also returns the actual
-                # exception type + message in the response so a failure is
-                # diagnosable from the browser network tab / toast alone.
-                # Safe to expose: these are "payment gateway rejected this
-                # request" messages (bad currency, unreachable API, etc.),
-                # not secrets — API keys themselves are never in str(e) for
-                # the requests/stripe exceptions raised here.
-                logger.exception(f"Guest payment initialization failed: {e}")
+                # Full details (type, message, traceback) go to the server log only. Returning exception
+                # text to an anonymous caller can leak gateway, URL or configuration details.
+                _ref = generate_reference("ERR")
+                logger.exception(f"Guest payment initialization failed [{_ref}]: {e}")
                 return jsonify({
                     "success": False,
-                    "error": f"Payment initialization failed: {type(e).__name__}: {e}",
-                    "debug_hint": "Check server logs for the full traceback above this line.",
+                    "error": "We could not start your payment. Please try again, or contact support with the reference below.",
+                    "reference": _ref,
                 }), 502
 
                 # ============ WALLET FUNDING ============
@@ -11296,6 +13569,9 @@ class ReloadlyWebApp:
         @self.app.route("/api/wallet/transfer", methods=["POST"])
         @login_required
         def wallet_transfer():
+            if not WALLET_TRANSFERS_ENABLED:
+                return jsonify({"success": False, "code": "TRANSFERS_DISABLED",
+                                "error": "Wallet transfers are not available."}), 403
             data = request.json or {}
             user_id = g.current_user_id
             to_user_id = data.get("to_user_id")
@@ -11469,7 +13745,13 @@ class ReloadlyWebApp:
         # ============ PAYMENT PREFERENCES ============
         @self.app.route("/api/payment/preferences", methods=["GET"])
         def payment_preferences():
-            cfg = recommended_payment(get_request_country(request))
+            # The page tells us which country the customer is paying FOR (phone prefix / dropdown).
+            # That must win over the visitor's IP country (CF-IPCountry), otherwise a Nigerian
+            # visitor recharging a UK number is always told "NGN". It is only a display
+            # preference: /api/payment/init still validates country vs currency.
+            _asked = (request.headers.get("X-Country-Code") or request.args.get("country") or "").strip().upper()
+            _country = _asked if len(_asked) == 2 and _asked.isalpha() else get_request_country(request)
+            cfg = recommended_payment(_country)
             return jsonify(
                 {
                     "success": True,
@@ -11747,6 +14029,9 @@ class ReloadlyWebApp:
             payment_method = (request.form.get("payment_method") or "wallet").lower().strip()
             if payment_method not in ("wallet", "paystack", "stripe", "flutterwave"):
                 return jsonify({"success": False, "error": "Unsupported payment method"}), 400
+            if payment_method == "stripe":
+                # Bulk totals are NGN amounts; sending them to Stripe as USD would overcharge ~1000x.
+                return jsonify({"success": False, "error": "Bulk recharge by Stripe is not available. Please use Paystack or Flutterwave."}), 400
 
             return_url = request.form.get("return_url") or url_for("payment_success", _external=True)
 
@@ -11825,21 +14110,23 @@ class ReloadlyWebApp:
                 return jsonify({"success": False, "error": "Maximum 1000 records per upload"}), 400
 
             needed = sum(r["amount"] for r in records)
+            bulk_fee = server_fee_for(needed, "NGN")
+            charge = round(needed + bulk_fee, 2)   # what the customer pays; records are delivered at face value
 
             # ── Wallet pre-flight check (only when wallet was chosen) ─────
             if payment_method == "wallet":
                 wallet = db.get_wallet(user_id, "NGN") or {}
                 balance = float(wallet.get("balance") or 0)
-                if balance + 1e-9 < needed:
+                if balance + 1e-9 < charge:
                     return jsonify({
                         "success": False,
                         "error": (
                             f"Insufficient NGN wallet balance. "
-                            f"Need ~NGN {needed:,.2f}, have NGN {balance:,.2f}. "
+                            f"Need ~NGN {charge:,.2f}, have NGN {balance:,.2f}. "
                             f"Choose Paystack, Stripe or Flutterwave to pay by card."
                         ),
                         "wallet_balance": balance,
-                        "required": needed,
+                        "required": charge,
                     }), 400
 
             # ── Create the job record ─────────────────────────────────────
@@ -11893,22 +14180,11 @@ class ReloadlyWebApp:
 
             # ── Wallet: debit + run now ────────────────────────────────────
             if payment_method == "wallet":
-                ok, err = self._debit_wallet(user_id, "NGN", needed, reference=f"bulk:{job_id}")
+                # Debits the wallet, tags the job as wallet-paid, then starts the worker.
+                ok, err = self._start_wallet_bulk_job(user_id, job_id, records, charge)
                 if not ok:
-                    conn = db.get_db_connection()
-                    c = conn.cursor()
-                    c.execute("UPDATE bulk_jobs SET status = 'failed', error = ? WHERE id = ?",
-                              (err or "Wallet debit failed", job_id))
-                    conn.commit()
-                    conn.close()
                     return jsonify({"success": False, "error": err or "Wallet debit failed",
                                     "job_id": job_id}), 402
-
-                threading.Thread(
-                    target=self._process_bulk_job,
-                    args=(job_id, user_id, records),
-                    daemon=True,
-                ).start()
 
                 return jsonify({
                     "success": True,
@@ -11916,7 +14192,7 @@ class ReloadlyWebApp:
                     "job_id": job_id,
                     "total": len(records),
                     "skipped_lines": len(errors),
-                    "amount": needed,
+                    "amount": charge, "fee": bulk_fee,
                     "currency": "NGN",
                     "message": f"Bulk job started for {len(records)} records",
                 })
@@ -11930,7 +14206,7 @@ class ReloadlyWebApp:
                 init = self._init_bulk_gateway_checkout(
                     provider=payment_method,
                     user_id=user_id,
-                    amount=needed,
+                    amount=charge,
                     currency=gateway_currency,
                     job_id=job_id,
                     return_url=return_url,
@@ -11969,7 +14245,7 @@ class ReloadlyWebApp:
                     "(job_id, provider, reference, currency, amount) VALUES (?, ?, ?, ?, ?)",
                     (job_id, payment_method,
                      init.get("reference") or init.get("tx_ref") or init.get("id") or job_id,
-                     gateway_currency, needed),
+                     gateway_currency, charge),
                 )
                 conn.commit()
             finally:
@@ -11981,20 +14257,20 @@ class ReloadlyWebApp:
                 "authorization_url": init["authorization_url"],
                 "reference": init.get("reference") or init.get("tx_ref") or init.get("id"),
                 "job_id": job_id,
-                "amount": needed,
+                "amount": charge, "fee": bulk_fee,
                 "currency": gateway_currency,
                 "total": len(records),
                 "provider": payment_method,
             })
 
 
-        def _start_wallet_bulk_job(self, user_id, job_id, records, needed):
+        def _start_wallet_bulk_job(self, user_id, job_id, records, charge):
             """
             Debit the wallet for a bulk job total, then kick off the background worker.
             Returns (success, error_message).
             """
             # 1. Debit the wallet
-            ok, err = self._debit_wallet(user_id, "NGN", needed, reference=f"bulk:{job_id}")
+            ok, err = self._debit_wallet(user_id, "NGN", charge, reference=f"bulk:{job_id}")
             if not ok:
                 conn = db.get_db_connection()
                 c = conn.cursor()
@@ -12011,7 +14287,7 @@ class ReloadlyWebApp:
             c = conn.cursor()
             c.execute(
                 "UPDATE bulk_jobs SET payment_method = 'wallet', total_amount = ?, currency = 'NGN' WHERE id = ?",
-                (needed, job_id),
+                (charge, job_id),
             )
             conn.commit()
             conn.close()
@@ -12061,6 +14337,9 @@ class ReloadlyWebApp:
             payment_method = (data.get("payment_method") or "wallet").lower().strip()
             if payment_method not in ("wallet", "paystack", "stripe", "flutterwave"):
                 return jsonify({"success": False, "error": "Unsupported payment method"}), 400
+            if payment_method == "stripe":
+                # Bulk totals are NGN amounts; sending them to Stripe as USD would overcharge ~1000x.
+                return jsonify({"success": False, "error": "Bulk recharge by Stripe is not available. Please use Paystack or Flutterwave."}), 400
 
             return_url = data.get("return_url") or url_for("payment_success", _external=True)
 
@@ -12114,21 +14393,23 @@ class ReloadlyWebApp:
                 }), 400
 
             needed = sum(r["amount"] for r in records)
+            bulk_fee = server_fee_for(needed, "NGN")
+            charge = round(needed + bulk_fee, 2)   # what the customer pays; records are delivered at face value
 
             # ── Wallet pre-flight check ──────────────────────────────────────
             if payment_method == "wallet":
                 wallet = db.get_wallet(user_id, "NGN") or {}
                 balance = float(wallet.get("balance") or 0)
-                if balance + 1e-9 < needed:
+                if balance + 1e-9 < charge:
                     return jsonify({
                         "success": False,
                         "error": (
                             f"Insufficient NGN wallet balance. "
-                            f"Need ~NGN {needed:,.2f}, have NGN {balance:,.2f}. "
+                            f"Need ~NGN {charge:,.2f}, have NGN {balance:,.2f}. "
                             f"Choose Paystack, Stripe or Flutterwave to pay by card."
                         ),
                         "wallet_balance": balance,
-                        "required": needed,
+                        "required": charge,
                     }), 400
 
             # ── Create the job + records atomically ──────────────────────────
@@ -12222,7 +14503,7 @@ class ReloadlyWebApp:
 
             # ── Wallet path: debit + run immediately ─────────────────────────
             if payment_method == "wallet":
-                ok, err = self._start_wallet_bulk_job(user_id, job_id, records, needed)
+                ok, err = self._start_wallet_bulk_job(user_id, job_id, records, charge)
                 if not ok:
                     return jsonify({
                         "success": False,
@@ -12236,7 +14517,7 @@ class ReloadlyWebApp:
                     "job_id": job_id,
                     "total": len(records),
                     "skipped_lines": len(errors),
-                    "amount": needed,
+                    "amount": charge, "fee": bulk_fee,
                     "currency": "NGN",
                     "message": f"Bulk job started for {len(records)} contacts",
                 })
@@ -12250,7 +14531,7 @@ class ReloadlyWebApp:
                 init = self._init_bulk_gateway_checkout(
                     provider=payment_method,
                     user_id=user_id,
-                    amount=needed,
+                    amount=charge,
                     currency=gateway_currency,
                     job_id=job_id,
                     return_url=return_url,
@@ -12304,7 +14585,7 @@ class ReloadlyWebApp:
                     "INSERT OR REPLACE INTO bulk_job_payments "
                     "(job_id, provider, reference, currency, amount) "
                     "VALUES (?, ?, ?, ?, ?)",
-                    (job_id, payment_method, reference, gateway_currency, needed),
+                    (job_id, payment_method, reference, gateway_currency, charge),
                 )
                 c.execute(
                     """
@@ -12316,7 +14597,7 @@ class ReloadlyWebApp:
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                     """,
-                    (payment_method, reference, needed, gateway_currency, job_id),
+                    (payment_method, reference, charge, gateway_currency, job_id),
                 )
                 conn.commit()
             finally:
@@ -12328,7 +14609,7 @@ class ReloadlyWebApp:
                 "authorization_url": init["authorization_url"],
                 "reference": reference,
                 "job_id": job_id,
-                "amount": needed,
+                "amount": charge, "fee": bulk_fee,
                 "currency": gateway_currency,
                 "total": len(records),
                 "provider": payment_method,
@@ -12423,6 +14704,11 @@ class ReloadlyWebApp:
                 end_date=end_date,
                 country=country,                           # ← NEW
             )
+            if offset == 0 and _enrich_visit_rows(logs):
+                logs = db.get_visitor_logs(
+                    limit=limit, offset=offset, device_type=device_type,
+                    start_date=start_date, end_date=end_date, country=country,
+                )
             return jsonify({"success": True, "visitors": logs, "count": len(logs)})
 
         # ============ ADMIN: RECEIPT PROMOS ============
@@ -13081,12 +15367,21 @@ class ReloadlyWebApp:
         @self.app.route("/api/auth/register", methods=["POST"])
         @rate_limit(max_requests=5, window_seconds=300)
         def register_user():
-            data = request.json
+            data = request.get_json(silent=True) or {}
             email = data.get("email")
             password = data.get("password")
             full_name = data.get("full_name")
             phone = data.get("phone")
             referral_code = data.get("referral_code", "").strip().upper()
+
+            # Terms of Service: the sign-up must carry the customer's acceptance (net365_legal.py).
+            try:
+                from net365_legal import signup_terms_error
+                _terms_err = signup_terms_error(data)
+            except ImportError:
+                _terms_err = None
+            if _terms_err:
+                return jsonify(_terms_err[0]), _terms_err[1]
 
             # DEFAULT REFERRAL CODE - allowed for all users
             DEFAULT_REFERRAL_CODE = "00000"
@@ -13096,6 +15391,10 @@ class ReloadlyWebApp:
                     jsonify({"success": False, "error": "Email and password required"}),
                     400,
                 )
+
+            _pw_err = validate_password_strength(password)
+            if _pw_err:
+                return jsonify({"success": False, "error": _pw_err}), 400
 
             existing = db.get_user_by_email(email)
             if existing:
@@ -13199,6 +15498,11 @@ class ReloadlyWebApp:
             )
 
             if user_id:
+                try:
+                    from net365_legal import record_signup_acceptance
+                    record_signup_acceptance(user_id, data, get_client_ip(), request.headers.get("User-Agent", ""))
+                except ImportError:
+                    pass
                 # ============================================================
                 # If it's a REAL referral code (not default), create the referral relationship
                 # ============================================================
@@ -13304,7 +15608,7 @@ class ReloadlyWebApp:
                     )
                 # Send welcome email from the CEO (fire-and-forget; never blocks signup)
                 try:
-                    send_welcome_email(email, full_name or "")
+                    send_welcome_once(user_id, email, full_name or "", "web")
                 except Exception as e:
                     logger.error(f"Welcome email dispatch error for {email}: {e}")
 
@@ -13581,7 +15885,12 @@ class ReloadlyWebApp:
                 info = token.get("userinfo") or self.google_oauth.userinfo()
             except Exception as e:
                 logger.error(f"Google OAuth callback failed: {e}")
-                return _google_fail("Google sign-in failed. Please try again.")
+                _msg = ("Google sign-in could not finish. If you started from Telegram or WhatsApp, open the link from your chat "
+                        "in Chrome or Safari (not inside the chat app), then try again.")
+                if session.get("chat_link_token"):
+                    from net365_whatsapp import _google_page
+                    return _google_page(False, _msg)
+                return _google_fail(_msg)
 
             email = (info.get("email") or "").strip().lower()
             if not email or not info.get("email_verified", False):
@@ -13600,26 +15909,59 @@ class ReloadlyWebApp:
                     if not user_id:
                         return _google_fail("Could not create your account")
                     user = db.get_user_by_email(email)
+                    try:
+                        send_welcome_once(user_id, email, (user or {}).get("full_name") or info.get("name") or "", "google")
+                    except Exception as _we:
+                        logger.error(f"Welcome email dispatch error for {email}: {_we}")
                 session.pop("google_ref", None)
 
                 status = user.get("account_status") or "active"
                 if status in ("suspended", "blocked", "deleted"):
                     return _google_fail(f"This account has been {status}")
 
-                # Google has verified the address
+                # Google has verified the address. If this Net365 account already existed but was never
+                # email-verified, someone else may have registered it with the victim's address and a
+                # password they chose ("pre-hijacking"). Signing the real owner in through Google must
+                # not hand them that account: clear the old password (they can set a new one by
+                # email) and end every existing session before marking it verified.
                 if not user.get("email_verified"):
-                    conn = db.get_db()
+                    conn = db.get_db_connection()
                     try:
                         conn.execute(
-                            "UPDATE users SET email_verified = 1, verified_at = CURRENT_TIMESTAMP WHERE id = ?",
+                            "UPDATE users SET password_hash = NULL, email_verified = 1, "
+                            "verified_at = CURRENT_TIMESTAMP WHERE id = ?",
                             (user["id"],),
                         )
-                        conn.commit()
                     finally:
                         conn.close()
+                    try:
+                        db.kill_user_sessions(user["id"])
+                    except Exception as e:
+                        logger.error(f"Could not end old sessions for user {user['id']}: {e}")
+                    logger.warning(
+                        f"Google sign-in verified a previously unverified account (user {user['id']}); "
+                        f"password cleared and sessions revoked"
+                    )
 
+                # Started from a chat (WhatsApp/Telegram)? Then this sign-in only proves the Google identity to that
+                # one chat link. It must NOT open a website session in this browser.
+                _chat_tok = session.pop("chat_link_token", None)
+                logger.info("google callback on host %s: chat link token %s", request.host, "present" if _chat_tok else "MISSING (treated as a website sign-in)")
+                if _chat_tok:
+                    from net365_whatsapp import google_link_finish
+                    return google_link_finish(_chat_tok, user, info)
+
+                _go = "/"
+                try:
+                    from net365_identity import record_identity, profile_status, mode as _id_mode
+                    record_identity(user["id"], "google", info.get("sub"))
+                    # Verification is optional by default: never redirect unless the business chose to enforce it.
+                    if _id_mode() == "enforce" and not profile_status(user["id"])["complete"]:
+                        _go = "/complete-profile"
+                except Exception as _ie:
+                    logger.warning(f"identity check after Google sign-in failed: {_ie}")
                 session_token = db.create_session(user["id"])
-                response = make_response(redirect(f"{FRONTEND_URL}/"))
+                response = make_response(redirect(f"{FRONTEND_URL}{_go}"))
                 return set_auth_cookie(response, session_token)
             except Exception as e:
                 logger.error(f"Google login error: {e}", exc_info=True)
@@ -13833,6 +16175,7 @@ class ReloadlyWebApp:
             return jsonify(self.platform.get_operator_by_id(operator_id))
 
         @self.app.route("/api/balance", methods=["GET"])
+        @admin_required
         def get_balance():
             try:
                 return jsonify(self.platform.get_balance())
@@ -13841,13 +16184,92 @@ class ReloadlyWebApp:
                     jsonify(
                         {
                             "success": False,
-                            "error": str(e),
+                            "error": "Unable to retrieve platform balance",
                             "balance": 0,
                             "currency": "USD",
                         }
                     ),
                     500,
                 )
+
+        @self.app.route("/api/admin/email-test", methods=["GET", "POST"])
+        @admin_required
+        def admin_email_test():
+            """Sends one real test email and reports the provider's exact answer.
+            Usage: GET /api/admin/email-test?to=you@example.com with header X-Admin-Secret."""
+            to = (request.values.get("to") or "").strip()
+            info = {
+                "resend_key_set": bool(os.getenv("RESEND_API_KEY")),
+                "mailgun_api_key_set": bool(os.getenv("MAILGUN_API_KEY")),
+                "mailgun_domain": os.getenv("MAILGUN_DOMAIN") or None,
+                "mailgun_api_base": os.getenv("MAILGUN_API_BASE", "https://api.mailgun.net"),
+                "smtp_user_set": bool(os.getenv("SMTP_USER")),
+                "from_email": os.getenv("FROM_EMAIL") or None,
+            }
+            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", to):
+                return jsonify({"success": False, "error": "Add ?to=<your email address>", **info}), 400
+            if not _https_email_configured():
+                return jsonify({"success": False, "provider": None, **info,
+                                "error": "No HTTPS email provider configured. Render free services block SMTP, so set "
+                                         "RESEND_API_KEY or MAILGUN_API_KEY + MAILGUN_DOMAIN on THIS service and redeploy."}), 200
+            from_name = os.getenv("FROM_NAME", "Net365 Support")
+            from_email = os.getenv("FROM_EMAIL") or f"support@{os.getenv('MAILGUN_DOMAIN') or 'net365co.com'}"
+            _r = {}
+            _send_via_https_provider(f"{from_name} <{from_email}>", to, "Net365 email test",
+                                     "<p>If you can read this, Net365 email works.</p>", None, None, _r,
+                                     "If you can read this, Net365 email works.", from_email)
+            _dom = os.getenv("MAILGUN_DOMAIN") or ""
+            hints = []
+            if "sandbox" in _dom:
+                hints.append("MAILGUN_DOMAIN is a sandbox domain: Mailgun delivers ONLY to recipients you authorise under Sending > Domain settings > Authorized Recipients, "
+                             "and each person must click the confirmation email. This is the usual reason one Gmail address works and another does not.")
+            if from_email.split("@")[-1].lower() in ("gmail.com", "googlemail.com", "yahoo.com", "outlook.com"):
+                hints.append("FROM_EMAIL is a free-mail address. Gmail rejects or spams mail sent 'from Gmail' by another server (DMARC). Use an address on your own verified domain.")
+            hints.append("'accepted' means the provider took the message, not that the inbox did. Check the Mailgun/Resend Logs for delivered/failed, then Gmail Spam, "
+                         "and add SPF + DKIM DNS records for the sending domain.")
+            return jsonify({"success": bool(_r.get("success")), "provider": "resend" if os.getenv("RESEND_API_KEY") else "mailgun_api",
+                            "provider_answer": _r.get("error") or "accepted", "message_id": _r.get("id"), "hints": hints, **info})
+
+        @self.app.route("/api/admin/chat-notify-test", methods=["GET", "POST"])
+        @admin_required
+        def admin_chat_notify_test():
+            """Checks the Flask -> bot link that delivers success messages into the chat.
+            GET /api/admin/chat-notify-test?wa=<chat id, optional> with header X-Admin-Secret."""
+            import requests as _rq
+            url = os.getenv("CHAT_BOT_NOTIFY_URL", "http://127.0.0.1:3001/internal/notify")
+            out = {"notify_url": url, "secret_set": bool(os.getenv("WHATSAPP_BOT_SECRET")),
+                   "is_default_localhost": "127.0.0.1" in url or "localhost" in url}
+            if out["is_default_localhost"]:
+                out["problem"] = "CHAT_BOT_NOTIFY_URL still points at localhost. On Render set it to https://<your-bot>.onrender.com/internal/notify on THIS (Flask) service."
+            try:
+                r = _rq.get(url.rsplit("/internal/notify", 1)[0] + "/health", timeout=75)
+                out["bot_health"] = r.status_code
+            except Exception as e:
+                out["bot_health"] = f"unreachable: {e}"
+            wa = (request.values.get("wa") or "").strip()
+            if wa:
+                try:
+                    r = _rq.post(url, json={"wa": wa, "kind": "engage", "title": "Net365 test", "body": "Chat delivery test from the server."},
+                                 headers={"X-Bot-Secret": os.getenv("WHATSAPP_BOT_SECRET", "")}, timeout=75)
+                    out["notify_status"] = r.status_code
+                    if r.status_code in (401, 403):
+                        out["problem"] = "The bot refused the secret: WHATSAPP_BOT_SECRET must be identical on both services."
+                except Exception as e:
+                    out["notify_status"] = f"failed: {e}"
+            return jsonify({"success": True, **out})
+
+        @self.app.route("/api/admin/link-debug", methods=["GET"])
+        @admin_required
+        def admin_link_debug():
+            """Which chats are linked to an email (masked ids). GET ?email=you@example.com"""
+            email = (request.values.get("email") or "").strip().lower()
+            u = db.get_user_by_email(email) if email else None
+            if not u:
+                return jsonify({"success": True, "account": False, "note": "No live account for this email: the chat 'link' step sends no code, by design."})
+            rows = db.get_db_connection().execute("SELECT wa_number, is_guest, active FROM whatsapp_links WHERE user_id = ?", (u["id"],)).fetchall()
+            return jsonify({"success": True, "account": True, "email_verified": bool(u.get("email_verified")),
+                            "links": [{"chat": ("telegram" if str(r[0]).startswith("999") else "whatsapp"), "ending": str(r[0])[-4:],
+                                       "guest": bool(r[1]), "active": bool(r[2])} for r in rows]})
 
         @self.app.route("/api/health", methods=["GET"])
         def health():
@@ -13862,6 +16284,7 @@ class ReloadlyWebApp:
             )
 
         @self.app.route("/api/health/dependencies", methods=["GET"])
+        @admin_required
         def health_dependencies():
             status = {
                 "database": db.check_database(),
@@ -14766,6 +17189,549 @@ class ReloadlyWebApp:
                     }
                 )
 
+        # ============ VTPASS SERVICES: data, TV, education (via the provider router) ============
+        _SVC_TV = {"dstv", "gotv", "startimes", "showmax"}
+        _SVC_EDU = {"waec", "waec-registration", "jamb"}
+        _SVC_NET = {"mtn", "airtel", "glo", "9mobile"}
+        _SVC_LABEL = {"dstv": "DStv", "gotv": "GOtv", "startimes": "StarTimes", "showmax": "Showmax", "waec": "WAEC result checker",
+                      "waec-registration": "WAEC registration", "jamb": "JAMB"}
+
+        @self.app.route("/api/services/catalog", methods=["GET"])
+        @safe_api_response
+        def services_catalog():
+            import net365_providers as _np
+            product = str(request.args.get("product") or "").lower()
+            if not _np.enabled() or product not in (_SVC_TV | _SVC_EDU):
+                return jsonify({"success": False, "error": "Service not available"}), 404
+            plans = _np.service_catalog(product)
+            if not plans:
+                return jsonify({"success": False, "error": "Plans are unavailable right now. Please try again shortly."}), 503
+            return jsonify({"success": True, "product": product, "label": _SVC_LABEL.get(product, product), "plans": plans})
+
+        @self.app.route("/api/services/verify", methods=["POST"])
+        @login_required
+        @safe_api_response
+        def services_verify():
+            import net365_providers as _np
+            d = request.json or {}
+            product = str(d.get("product") or "").lower()
+            code = re.sub(r"\s", "", str(d.get("billers_code") or ""))
+            if not _np.enabled() or product not in ("dstv", "gotv", "startimes", "jamb") or not re.fullmatch(r"\d{6,16}", code):
+                return jsonify({"success": False, "error": "Enter a valid smartcard / profile number"}), 400
+            v = _np.verify_account(product, code, str(d.get("variation_code") or ""))
+            status = 200 if v.get("ok") else (503 if v.get("unavailable") else 422)
+            return jsonify({"success": bool(v.get("ok")), **v}), status
+
+        @self.app.route("/api/services/checkout", methods=["POST"])
+        @login_required
+        @email_verified_required
+        @safe_api_response
+        def services_checkout():
+            """Start a gateway payment for a data bundle, a TV subscription or an education PIN. The price is taken from
+            the provider's catalogue (or the verified renewal amount), never from the request."""
+            import net365_providers as _np
+            d = request.json or {}
+            user_id = g.current_user_id
+            service = str(d.get("service") or "").lower()
+            product = str(d.get("product") or d.get("network") or "").lower()
+            code = str(d.get("variation_code") or "")
+            src = str(d.get("source") or "")
+            if not _np.enabled():
+                return jsonify({"success": False, "error": "This service is not available yet"}), 503
+            try:
+                import net365_recovery as _rc
+                _mb = _rc.maintenance_block(service)
+                if _mb:
+                    return _mb
+            except ImportError:
+                pass
+            if (service == "data" and product not in _SVC_NET) or (service == "tv" and product not in _SVC_TV) \
+                    or (service == "education" and product not in _SVC_EDU) or service not in ("data", "tv", "education") or not code:
+                return jsonify({"success": False, "error": "Invalid request"}), 400
+            phone = re.sub(r"[^\d+]", "", str(d.get("phone") or ""))
+            if not _np.local_number(phone):
+                phone = re.sub(r"[^\d+]", "", str((db.get_user(user_id) or {}).get("phone") or ""))
+            account = re.sub(r"\s", "", str(d.get("billers_code") or ""))
+            if service == "data":
+                plan = _np.find_plan(product, code)
+                account = phone
+            else:
+                plan = _np.find_service_plan(product, code)
+            if not plan:
+                return jsonify({"success": False, "error": "That plan is no longer available. Please pick again."}), 409
+            if not _np.local_number(phone):
+                return jsonify({"success": False, "error": "Enter a valid Nigerian phone number"}), 400
+            if service == "data":
+                _mm = network_mismatch_error(phone, None, product, bool(d.get("confirm_network")))
+                if _mm:
+                    return jsonify(_mm), 409
+            quantity, sub_type, renewal = 1, "", 0.0
+            amount = float(plan["price"])
+            verified_name = ""
+            if service == "tv" and product in ("dstv", "gotv", "startimes"):
+                if not re.fullmatch(r"\d{6,16}", account):
+                    return jsonify({"success": False, "error": "Enter a valid smartcard number"}), 400
+                v = _np.verify_account(product, account)
+                if not v.get("ok"):
+                    return jsonify({"success": False, "error": v.get("message") or "Smartcard could not be verified"}), 422
+                verified_name = v.get("name", "")
+                if product in ("dstv", "gotv"):
+                    sub_type = "renew" if str(d.get("subscription_type")) == "renew" else "change"
+                    if sub_type == "renew":
+                        renewal = float(v.get("renewal_amount") or 0)
+                        if renewal <= 0:
+                            return jsonify({"success": False, "error": "Renewal amount unavailable. Choose a bouquet instead."}), 409
+                        amount = renewal
+            elif service == "tv" and product == "showmax":
+                account = _np.local_number(phone)
+            elif service == "education":
+                if product == "jamb":
+                    if not re.fullmatch(r"\d{6,16}", account):
+                        return jsonify({"success": False, "error": "Enter a valid JAMB profile number"}), 400
+                    v = _np.verify_account("jamb", account, code)
+                    if not v.get("ok"):
+                        return jsonify({"success": False, "error": v.get("message") or "Profile could not be verified"}), 422
+                    verified_name = v.get("name", "")
+                else:
+                    try:
+                        quantity = max(1, min(int(d.get("quantity") or 1), 5))
+                    except (TypeError, ValueError):
+                        quantity = 1
+                    amount = round(amount * quantity, 2)
+                    account = _np.local_number(phone)
+            fee = 0.0 if product == "jamb" else (server_fee_for(amount, "NGN") if src in ("telegram", "whatsapp") else 0.0)
+            charge = round(amount + fee, 2)
+            try:
+                from net365_whatsapp import chat_purchase_error
+                _ce = chat_purchase_error(user_id, charge, "NGN")
+                if _ce:
+                    return jsonify(_ce[0]), _ce[1]
+            except ImportError:
+                _le = _purchase_limit_error(user_id, charge, "NGN")
+                if _le:
+                    return jsonify({"success": False, "error": _le}), 400
+            user = db.get_user(user_id) or {}
+            email = str(d.get("email") or "").strip() or user.get("email") or os.getenv("DEFAULT_PAYMENT_EMAIL", f"user_{user_id}@net365.com")
+            result = self.platform.create_payment(amount=charge, currency="NGN", email=email,
+                                                  return_url=_safe_payment_return_url(d.get("return_url")), provider="paystack")
+            if not (result.get("success") and result.get("reference")):
+                return jsonify(result), 502
+            label = _SVC_LABEL.get(product, product.upper())
+            biller = f"{label} {plan['name']}"[:60] if service != "data" else plan["name"][:60]
+            payload = {"product": product, "network": product if service == "data" else "", "variation_code": code,
+                       "phone": encrypt_pii(phone),
+                       "subscriber_account": encrypt_pii(account),
+                       "quantity": quantity, "subscription_type": sub_type, "renewal_amount": renewal,
+                       "service_amount": amount, "fee_amount": fee, "biller_name": biller, "customer_name": verified_name,
+                       "currency": "NGN", "email": email, "user_id": user_id, "payment_method": "paystack"}
+            if src in ("telegram", "whatsapp"):
+                payload["source"] = src
+            db.create_pending(reference=result["reference"], tx_type=service, provider=result.get("provider", "paystack"),
+                              amount=charge, currency="NGN", payload=payload, user_id=user_id)
+            return jsonify({"success": True, "authorization_url": result.get("authorization_url") or result.get("checkout_url"),
+                            "reference": result["reference"], "amount": charge, "service_amount": amount, "fee_amount": fee,
+                            "customer_name": verified_name, "plan": plan["name"]})
+
+        # ============ BILLS & SERVICES HUB: electricity (VTpass + Reloadly, customer can choose) and insurance ============
+        # HUB_<SERVICE>=off|soon|live. Electricity is live by default; insurance stays off until you switch it on after sandbox testing.
+        _HUB_DEFAULTS = {"ELECTRICITY": "live", "TV": "live", "DATA": "live", "EDUCATION": "live", "INSURANCE": "off"}
+
+        def _hub_state(key):
+            v = str(os.getenv("HUB_" + key, _HUB_DEFAULTS.get(key, "off"))).strip().lower()
+            return v if v in ("off", "soon", "live") else "soon"
+
+        _ELEC_CACHE = {}
+
+        def _electricity_options(country="NG"):
+            """Each distribution company once, with every provider that can pay it: [{key, name, options:[{provider, biller_id?, min, max}]}]."""
+            import net365_providers as _np
+            country = (country or "NG").upper()
+            hit = _ELEC_CACHE.get(country)
+            if hit and time.time() - hit[0] < 600:
+                return hit[1]
+            rows = {}
+            try:
+                billers = self.platform.get_utility_billers(biller_type="ELECTRICITY_BILL_PAYMENT", country_iso_code=country, page=1, size=100) or []
+                if isinstance(billers, dict):
+                    billers = billers.get("content") or []
+            except Exception as e:
+                logger.warning(f"electricity billers (Reloadly) unavailable: {e}")
+                billers = []
+            for b in billers:
+                if not isinstance(b, dict):
+                    continue
+                bid = b.get("billerId") or b.get("id") or b.get("biller_id")
+                name = str(b.get("name") or b.get("billerName") or "").strip()
+                btype = str(b.get("type") or b.get("billerType") or b.get("serviceType") or "").upper()
+                if not bid or not name or (btype and "ELECTRIC" not in btype):
+                    continue
+                key = (_np.disco_for(name) if country == "NG" else "") or f"rl-{bid}"
+                e = rows.setdefault(key, {"key": key, "name": re.sub(r"^[^\w(]+", "", name).strip(), "options": []})
+                e["options"].append({"provider": "reloadly", "biller_id": int(bid), "min": b.get("minAmount") or b.get("min"), "max": b.get("maxAmount") or b.get("max")})
+            if country == "NG" and _np.enabled() and _np.provider_ready("vtpass"):
+                for d in _np.list_discos():
+                    e = rows.setdefault(d["key"], {"key": d["key"], "name": d["label"], "options": []})
+                    e["name"] = d["label"]
+                    e["options"].append({"provider": "vtpass", "min": 500, "max": None})
+            out = sorted(rows.values(), key=lambda r: r["name"].lower())
+            if out:
+                _ELEC_CACHE[country] = (time.time(), out)
+            return out
+
+        def _elec_amount_bounds(opts):
+            lo = max([float(o["min"]) for o in opts if o.get("min")] or [500.0]) if len(opts) > 1 else float((opts[0].get("min") or 500))
+            hi = float(os.getenv("ELECTRICITY_MAX_NGN", "200000"))
+            return lo, hi
+
+        @self.app.route("/api/hub/config", methods=["GET"])
+        def hub_config():
+            import net365_providers as _np
+            ready = _np.enabled() and _np.provider_ready("vtpass")
+            st = {k.lower(): _hub_state(k) for k in _HUB_DEFAULTS}
+            if not ready:                       # these four are sold through VTpass only
+                for k in ("tv", "data", "education", "insurance"):
+                    if st[k] == "live":
+                        st[k] = "soon"
+            try:                                # a service in maintenance is not offered
+                import net365_recovery as _rc
+                for k in list(st):
+                    if st[k] == "live" and _rc.maintenance(k)[0]:
+                        st[k] = "soon"
+            except Exception:
+                pass
+            return jsonify({"success": True, "services": st, "countries": [{"code": "NG", "name": "Nigeria", "live": True}]})
+
+        @self.app.route("/api/hub/contact", methods=["GET"])
+        @login_required
+        @safe_api_response
+        def hub_contact():
+            """The customer's own registered phone and email, so checkout can pre-fill them and only ask for confirmation."""
+            import net365_providers as _np
+            user = db.get_user(g.current_user_id) or {}
+            raw_phone = str(user.get("phone") or "")
+            try:
+                from net365_identity import effective_phone as _ep
+                _e = _ep(g.current_user_id)
+                if _e:
+                    raw_phone = _e["e164"]
+            except Exception:
+                pass
+            try:
+                phone = _np.local_number(raw_phone) or ""
+            except Exception:
+                phone = ""
+            email = str(user.get("email") or "")
+            return jsonify({"success": True, "phone": phone, "email": email})
+
+        @self.app.route("/api/electricity/providers", methods=["GET"])
+        @safe_api_response
+        def electricity_providers():
+            if _hub_state("ELECTRICITY") == "off":
+                return jsonify({"success": False, "error": "Not available"}), 404
+            country = str(request.args.get("country") or "NG").upper()[:2]
+            discos = _electricity_options(country)
+            # Customers only ever see the company name. Which processor pays it is Net365's business (admin routing tab).
+            public = [{"key": d["key"], "name": d["name"]} for d in discos]
+            if not public:
+                try:
+                    import net365_providers as _npd
+                    logger.warning(f"electricity providers EMPTY: providers enabled={_npd.enabled()}, vtpass ready={_npd.provider_ready('vtpass')} (and the Reloadly biller list returned nothing)")
+                except Exception as _de:
+                    logger.warning(f"electricity providers EMPTY and the provider module failed: {_de}")
+            return jsonify({"success": True, "country": country, "discos": public, "bills_open": _hub_state("ELECTRICITY") == "live"})
+
+        def _elec_pick(country, key, pref):
+            """The disco and the provider options the customer's choice allows."""
+            disco = next((d for d in _electricity_options(country) if d["key"] == key), None)
+            if not disco:
+                return None, []
+            opts = list(disco["options"])           # the customer never chooses a processor
+            return disco, opts
+
+        def _elec_detect(meter, meter_type, exclude_key=""):
+            """Which distribution company does this meter belong to? Ask each company's meter check in parallel.
+            Meter numbers carry no reliable company prefix, so the companies' own lookups are the only trustworthy answer."""
+            import net365_providers as _np
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            if not (_np.enabled() and _np.provider_ready("vtpass")):
+                return []
+            discos = [d for d in _np.list_discos() if d["key"] != exclude_key]
+            found = []
+
+            def probe(dd):
+                try:
+                    v = _np.verify_meter(dd["key"], meter, meter_type)
+                    if v.get("ok"):
+                        return {"key": dd["key"], "name": dd["label"], "customer": v.get("name", "")}
+                except Exception:
+                    pass
+                return None
+            with ThreadPoolExecutor(max_workers=6) as ex:
+                futs = [ex.submit(probe, dd) for dd in discos]
+                try:
+                    for f in as_completed(futs, timeout=25):
+                        r = f.result()
+                        if r:
+                            found.append(r)
+                except Exception:
+                    pass
+            return found
+
+        def _wrong_disco(meter, meter_type, key, disco_name):
+            """If the meter belongs to a different company than the one chosen, say which."""
+            m = _elec_detect(meter, meter_type, exclude_key=key)
+            if len(m) == 1:
+                return {"success": False, "code": "WRONG_DISCO", "suggested": {"key": m[0]["key"], "name": m[0]["name"]},
+                        "error": f"This meter number belongs to {m[0]['name']}, not {disco_name}. Please switch to {m[0]['name']} so your payment goes to the right company."}
+            return None
+
+        @self.app.route("/api/electricity/detect", methods=["POST"])
+        @login_required
+        @rate_limit(max_requests=10, window_seconds=60)
+        @safe_api_response
+        def electricity_detect():
+            d = request.json or {}
+            meter = re.sub(r"[\s-]", "", str(d.get("meter") or ""))
+            mtype = "postpaid" if str(d.get("meter_type") or "").lower().startswith("post") else "prepaid"
+            if not re.fullmatch(r"[A-Za-z0-9]{6,20}", meter):
+                return jsonify({"success": False, "error": "Enter a valid meter number"}), 400
+            m = _elec_detect(meter, mtype)
+            if not m:
+                return jsonify({"success": False, "error": "We could not match that meter to an electricity company. Check the number and meter type, or pick your company from the list."}), 404
+            return jsonify({"success": True, "matches": [{"key": x["key"], "name": x["name"], "customer": x["customer"]} for x in m]})
+
+        def _elec_verify(opts, key, meter, meter_type):
+            """Check the meter with whichever allowed provider can; VTpass first because it returns the customer name reliably."""
+            import net365_providers as _np
+            import net365_routing as _rt
+            last = {"ok": False, "message": "Could not verify this meter right now."}
+            _rank = {p: i for i, p in enumerate(_rt.order("electricity"))}
+            for o in sorted(opts, key=lambda x: _rank.get(x["provider"], 9)):
+                if o["provider"] == "vtpass":
+                    v = _np.verify_meter(key, meter, meter_type)
+                else:
+                    try:
+                        r = self.platform.validate_utility_account(o.get("biller_id"), meter) or {}
+                        okv = r.get("valid") is not False and bool(r.get("customerName") or r.get("name") or r.get("valid"))
+                        v = {"ok": bool(okv), "name": str(r.get("customerName") or r.get("name") or "").strip(), "address": "",
+                             "message": "" if okv else "Meter number not recognised."}
+                    except Exception:
+                        v = {"ok": False, "unavailable": True, "message": "Could not reach the verification service. Please try again."}
+                if v.get("ok"):
+                    return {**v, "checked_by": o["provider"]}   # internal only; stripped before it reaches the customer
+                last = v
+            return last
+
+        @self.app.route("/api/electricity/verify", methods=["POST"])
+        @login_required
+        @safe_api_response
+        def electricity_verify():
+            d = request.json or {}
+            meter = re.sub(r"[\s-]", "", str(d.get("meter") or ""))
+            mtype = "postpaid" if str(d.get("meter_type") or "").lower().startswith("post") else "prepaid"
+            if not re.fullmatch(r"[A-Za-z0-9]{6,20}", meter):
+                return jsonify({"success": False, "error": "Enter a valid meter number"}), 400
+            disco, opts = _elec_pick(str(d.get("country") or "NG").upper(), str(d.get("key") or ""), str(d.get("provider") or "auto"))
+            if not disco or not opts:
+                return jsonify({"success": False, "error": "That electricity company or provider is not available"}), 404
+            v = _elec_verify(opts, disco["key"], meter, mtype)
+            if not v.get("ok") and not v.get("unavailable"):
+                _wd = _wrong_disco(meter, mtype, disco["key"], disco["name"])
+                if _wd:
+                    return jsonify(_wd), 422
+            lo, hi = _elec_amount_bounds(opts)
+            status = 200 if v.get("ok") else (503 if v.get("unavailable") else 422)
+            return jsonify({"success": bool(v.get("ok")), "name": v.get("name", ""), "address": v.get("address", ""), "message": v.get("message", ""),
+                            "min_amount": max(lo, float(v.get("min_amount") or 0)), "max_amount": hi}), status
+
+        @self.app.route("/api/electricity/checkout", methods=["POST"])
+        @login_required
+        @email_verified_required
+        @safe_api_response
+        def electricity_checkout():
+            """Start a gateway payment for electricity. The customer may choose VTpass or Reloadly; 'auto' lets the router pick."""
+            import net365_providers as _np
+            d = request.json or {}
+            user_id = g.current_user_id
+            if _hub_state("ELECTRICITY") != "live":
+                return jsonify({"success": False, "error": "Electricity payments are not open yet"}), 503
+            try:
+                import net365_recovery as _rc
+                _mb = _rc.maintenance_block("electricity")
+                if _mb:
+                    return _mb
+            except ImportError:
+                pass
+            country = str(d.get("country") or "NG").upper()
+            if country != "NG":
+                return jsonify({"success": False, "error": "Only Nigeria is open for now"}), 400
+            pref = "auto"                                   # processor choice is Net365's, never the customer's
+            disco, opts = _elec_pick(country, str(d.get("key") or ""), pref)
+            if not disco or not opts:
+                return jsonify({"success": False, "error": "That electricity company or provider is not available"}), 404
+            meter = re.sub(r"[\s-]", "", str(d.get("meter") or ""))
+            mtype = "postpaid" if str(d.get("meter_type") or "").lower().startswith("post") else "prepaid"
+            if not re.fullmatch(r"[A-Za-z0-9]{6,20}", meter):
+                return jsonify({"success": False, "error": "Enter a valid meter number"}), 400
+            user = db.get_user(user_id) or {}
+            # Use the number typed/confirmed at checkout; if it is missing or not Nigerian (e.g. a chat id), use the registered one.
+            phone = re.sub(r"[^\d+]", "", str(d.get("phone") or ""))
+            if not _np.local_number(phone):
+                phone = re.sub(r"[^\d+]", "", str(user.get("phone") or ""))
+            if not _np.local_number(phone):
+                return jsonify({"success": False, "error": "Enter a valid Nigerian phone number"}), 400
+            try:
+                amount = round(float(d.get("amount")), 2)
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "error": "Enter an amount"}), 400
+            lo, hi = _elec_amount_bounds(opts)
+            if amount < lo or amount > hi:
+                return jsonify({"success": False, "error": f"Amount must be between ₦{lo:,.0f} and ₦{hi:,.0f}"}), 400
+            v = _elec_verify(opts, disco["key"], meter, mtype)          # never take money for an unchecked meter
+            if not v.get("ok"):
+                if not v.get("unavailable"):
+                    _wd = _wrong_disco(meter, mtype, disco["key"], disco["name"])
+                    if _wd:
+                        return jsonify(_wd), 422
+                return jsonify({"success": False, "error": v.get("message") or "Meter could not be verified"}), (503 if v.get("unavailable") else 422)
+            if v.get("min_amount") and amount < float(v["min_amount"]):
+                return jsonify({"success": False, "error": f"The minimum for this meter is ₦{float(v['min_amount']):,.0f}"}), 400
+            src = str(d.get("source") or "")
+            fee = server_fee_for(amount, "NGN") if src in ("telegram", "whatsapp") else 0.0
+            charge = round(amount + fee, 2)
+            try:
+                from net365_whatsapp import chat_purchase_error
+                _ce = chat_purchase_error(user_id, charge, "NGN")
+                if _ce:
+                    return jsonify(_ce[0]), _ce[1]
+            except ImportError:
+                _le = _purchase_limit_error(user_id, charge, "NGN")
+                if _le:
+                    return jsonify({"success": False, "error": _le}), 400
+            email = str(d.get("email") or "").strip() or user.get("email") or os.getenv("DEFAULT_PAYMENT_EMAIL", f"user_{user_id}@net365.com")
+            result = self.platform.create_payment(amount=charge, currency="NGN", email=email,
+                                                  return_url=_safe_payment_return_url(d.get("return_url")), provider="paystack")
+            if not (result.get("success") and result.get("reference")):
+                return jsonify(result), 502
+            rl = next((o for o in disco["options"] if o["provider"] == "reloadly"), None)
+            payload = {"hub": True, "disco": disco["key"], "provider_pref": "auto",
+                       "biller_id": (rl or {}).get("biller_id"), "meter_type": mtype, "subscriber_account": encrypt_pii(meter), "phone": encrypt_pii(phone),
+                       "service_amount": amount, "fee_amount": fee, "biller_name": disco["name"][:60], "customer_name": v.get("name", ""),
+                       "currency": "NGN", "email": email, "user_id": user_id, "payment_method": "paystack"}
+            if src in ("telegram", "whatsapp"):
+                payload["source"] = src
+            db.create_pending(reference=result["reference"], tx_type="electricity", provider=result.get("provider", "paystack"),
+                              amount=charge, currency="NGN", payload=payload, user_id=user_id)
+            return jsonify({"success": True, "authorization_url": result.get("authorization_url") or result.get("checkout_url"),
+                            "reference": result["reference"], "amount": charge, "service_amount": amount, "fee_amount": fee,
+                            "customer_name": v.get("name", ""), "disco": disco["name"]})
+
+        # ---- insurance (motor third-party first). Off until HUB_INSURANCE=live and VTpass is configured.
+        _INS_PRODUCTS = {"ui-insure": "Third-party motor insurance"}
+
+        def _insurance_details(d):
+            """Validate and normalise the policy details. Returns (details, error)."""
+            rules = {"Insured_Name": (r"[A-Za-z][A-Za-z .'\-]{2,59}", "Enter the owner's full name"),
+                     "Plate_Number": (r"[A-Za-z0-9][A-Za-z0-9\- ]{3,11}", "Enter a valid plate number"),
+                     "Chasis_Number": (r"[A-Za-z0-9]{5,25}", "Enter a valid chassis number (letters and digits only)"),
+                     "vehicle_Make": (r"[A-Za-z0-9][A-Za-z0-9 .\-]{1,29}", "Enter the vehicle make"),
+                     "vehicle_Model": (r"[A-Za-z0-9][A-Za-z0-9 .\-]{0,29}", "Enter the vehicle model"),
+                     "vehicle_Color": (r"[A-Za-z][A-Za-z /\-]{1,29}", "Enter the vehicle colour"),
+                     "engine_capacity": (r"\d{3,5}", "Enter the engine size in cc, for example 1600"),
+                     "state": (r"[A-Za-z][A-Za-z .\-]{1,39}", "Enter the state"),
+                     "lga": (r"[A-Za-z][A-Za-z .\-/]{1,39}", "Enter the local government area"),
+                     "email": (r"[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}", "Enter a valid email address")}
+            out = {}
+            for f, (rx, msg) in rules.items():
+                val = re.sub(r"\s+", " ", str(d.get(f) or "")).strip()
+                if not re.fullmatch(rx, val):
+                    return None, msg
+                out[f] = val.upper() if f in ("Plate_Number", "Chasis_Number") else val
+            yr = re.sub(r"\D", "", str(d.get("YearofMake") or ""))
+            if not (len(yr) == 4 and 1980 <= int(yr) <= datetime.now().year + 1):
+                return None, "Enter the year the vehicle was made, for example 2018"
+            out["YearofMake"] = yr
+            return out, None
+
+        @self.app.route("/api/insurance/products", methods=["GET"])
+        @safe_api_response
+        def insurance_products():
+            import net365_providers as _np
+            if _hub_state("INSURANCE") != "live" or not (_np.enabled() and _np.provider_ready("vtpass")):
+                return jsonify({"success": False, "error": "Insurance is not available yet"}), 404
+            out = []
+            for pid, label in _INS_PRODUCTS.items():
+                plans = _np.service_catalog(pid)
+                if plans:
+                    out.append({"product": pid, "label": label, "plans": plans})
+            if not out:
+                return jsonify({"success": False, "error": "Cover options are unavailable right now. Please try again shortly."}), 503
+            return jsonify({"success": True, "products": out})
+
+        @self.app.route("/api/insurance/checkout", methods=["POST"])
+        @login_required
+        @email_verified_required
+        @safe_api_response
+        def insurance_checkout():
+            """Start a gateway payment for a motor policy. The premium comes from the provider's catalogue, never the request."""
+            import net365_providers as _np
+            d = request.json or {}
+            user_id = g.current_user_id
+            if _hub_state("INSURANCE") != "live" or not (_np.enabled() and _np.provider_ready("vtpass")):
+                return jsonify({"success": False, "error": "Insurance is not available yet"}), 503
+            try:
+                import net365_recovery as _rc
+                _mb = _rc.maintenance_block("insurance")
+                if _mb:
+                    return _mb
+            except ImportError:
+                pass
+            product = str(d.get("product") or "").lower()
+            code = str(d.get("variation_code") or "")
+            if product not in _INS_PRODUCTS or not code:
+                return jsonify({"success": False, "error": "Invalid request"}), 400
+            if d.get("accept") is not True:
+                return jsonify({"success": False, "error": "Please confirm the policy details and accept the insurance terms"}), 400
+            plan = _np.find_service_plan(product, code)
+            if not plan:
+                return jsonify({"success": False, "error": "That cover is no longer available. Please pick again."}), 409
+            details, err = _insurance_details(d.get("details") or {})
+            if err:
+                return jsonify({"success": False, "error": err}), 400
+            phone = re.sub(r"[^\d+]", "", str(d.get("phone") or ""))
+            if not _np.local_number(phone):
+                return jsonify({"success": False, "error": "Enter a valid Nigerian phone number"}), 400
+            amount = float(plan["price"])
+            src = str(d.get("source") or "")
+            fee = server_fee_for(amount, "NGN") if src in ("telegram", "whatsapp") else 0.0
+            charge = round(amount + fee, 2)
+            try:
+                from net365_whatsapp import chat_purchase_error
+                _ce = chat_purchase_error(user_id, charge, "NGN")
+                if _ce:
+                    return jsonify(_ce[0]), _ce[1]
+            except ImportError:
+                _le = _purchase_limit_error(user_id, charge, "NGN")
+                if _le:
+                    return jsonify({"success": False, "error": _le}), 400
+            user = db.get_user(user_id) or {}
+            email = details["email"] or user.get("email") or os.getenv("DEFAULT_PAYMENT_EMAIL", f"user_{user_id}@net365.com")
+            result = self.platform.create_payment(amount=charge, currency="NGN", email=email,
+                                                  return_url=_safe_payment_return_url(d.get("return_url")), provider="paystack")
+            if not (result.get("success") and result.get("reference")):
+                return jsonify(result), 502
+            payload = {"product": product, "variation_code": code, "phone": encrypt_pii(phone), "email": email,
+                       "subscriber_account": encrypt_pii(json.dumps(details)),        # policy details are personal data: encrypted like the other PII
+                       "service_amount": amount, "fee_amount": fee, "biller_name": f"{_INS_PRODUCTS[product]} {plan['name']}"[:60],
+                       "customer_name": details["Insured_Name"], "currency": "NGN", "user_id": user_id, "payment_method": "paystack",
+                       "terms_accepted": True}
+            if src in ("telegram", "whatsapp"):
+                payload["source"] = src
+            db.create_pending(reference=result["reference"], tx_type="insurance", provider=result.get("provider", "paystack"),
+                              amount=charge, currency="NGN", payload=payload, user_id=user_id)
+            return jsonify({"success": True, "authorization_url": result.get("authorization_url") or result.get("checkout_url"),
+                            "reference": result["reference"], "amount": charge, "service_amount": amount, "fee_amount": fee, "plan": plan["name"]})
+
         # ============ FIX: /api/utilities/pay ENDPOINT WITH WALLET SUPPORT ============
         @self.app.route("/api/utilities/pay", methods=["POST"])
         @login_required
@@ -14794,6 +17760,14 @@ class ReloadlyWebApp:
             logger.info(
                 f"Utility payment: user={user_id}, email={email}, biller={biller_id}, amount={amount}, currency={currency}, provider={provider}"
             )
+
+            try:
+                from net365_whatsapp import chat_purchase_error
+                _ce = chat_purchase_error(user_id, amount, currency) if amount else None
+                if _ce:
+                    return jsonify(_ce[0]), _ce[1]
+            except ImportError:
+                pass
 
             if not biller_id or not subscriber_account or not amount:
                 return (
@@ -15080,8 +18054,22 @@ class ReloadlyWebApp:
 
             logger.info(f"Using provider: {provider} for currency: {currency}")
 
+            # Chat-channel bill payments carry the same server-owned service fee as airtime.
+            # The biller receives `amount`; the customer pays `amount + fee`.
+            if _utility_provider_down():
+                return jsonify({
+                    "success": False, "code": "PROVIDER_UNAVAILABLE",
+                    "error": "Bill payments are temporarily unavailable because our bill provider is having a problem. "
+                             "You have not been charged. Please try again in a few minutes.",
+                }), 503
+            _chat_src = str(data.get("source") or "")
+            _svc_fee = 0.0
+            if _chat_src in ("telegram", "whatsapp") and str(currency).upper() == "NGN":
+                _svc_fee = server_fee_for(amount, "NGN")
+            _charge = round(amount + _svc_fee, 2)
+
             result = self.platform.create_payment(
-                amount=amount,
+                amount=_charge,
                 currency=currency,
                 email=email,
                 return_url=return_url,
@@ -15100,12 +18088,19 @@ class ReloadlyWebApp:
                     "user_id": user_id,
                     "payment_method": provider,
                 }
+                if data.get("save_card"):
+                    payload["save_card"] = True
+                if _chat_src in ("telegram", "whatsapp"):
+                    payload["source"] = _chat_src
+                    payload["biller_name"] = str(data.get("biller_name") or "")[:60]
+                    payload["service_amount"] = amount
+                    payload["fee_amount"] = _svc_fee
 
                 db.create_pending(
                     reference=result["reference"],
                     tx_type="utility",
                     provider=result.get("provider", provider or "paystack"),
-                    amount=amount,
+                    amount=_charge,
                     currency=result.get("currency", currency),
                     payload=payload,
                     user_id=user_id,
@@ -15136,6 +18131,9 @@ class ReloadlyWebApp:
                         "reference": result["reference"],
                         "provider": result.get("provider", provider),
                         "payment_method": provider,
+                        "amount": _charge,
+                        "service_amount": amount,
+                        "fee_amount": _svc_fee,
                     }
                 )
 
@@ -15523,6 +18521,92 @@ class ReloadlyWebApp:
 
 
 
+        # ---- moved here from dead code inside get_authenticated_user(): these routes were never registered ----
+        # ============ ADMIN: ALL RECEIPT ADS ============
+        @self.app.route("/api/admin/receipt-ads/all", methods=["GET"])
+        @admin_required
+        def admin_list_all_receipt_ads():
+            """Get all receipt ads for admin."""
+            limit = min(request.args.get("limit", 50, type=int), 100)
+            offset = max(request.args.get("offset", 0, type=int), 0)
+            campaigns = db.get_all_sponsored_campaigns(limit, offset)
+            return jsonify(
+                {"success": True, "campaigns": campaigns, "count": len(campaigns)}
+            )
+
+        # ============ PROMOTIONS MANAGEMENT API ============
+        @self.app.route("/api/admin/promotions", methods=["GET"])
+        @admin_required
+        def admin_get_promotions():
+            """Get all promotions with pagination."""
+            limit = min(request.args.get("limit", 50, type=int), 100)
+            offset = max(request.args.get("offset", 0, type=int), 0)
+            promotions = db.get_all_promotions(limit, offset)
+            return jsonify({"success": True, "promotions": promotions})
+
+        @self.app.route("/api/admin/promotions", methods=["POST"])
+        @admin_required
+        def admin_create_promotion():
+            """Create a new promotion."""
+            data = request.json or {}
+
+            required = ["name", "title", "body"]
+            missing = [f for f in required if not data.get(f)]
+            if missing:
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": f"Missing required fields: {', '.join(missing)}",
+                        }
+                    ),
+                    400,
+                )
+
+            promo_id = db.create_promotion(
+                name=data.get("name"),
+                title=data.get("title"),
+                body=data.get("body"),
+                cta_text=data.get("cta_text"),
+                cta_url=data.get("cta_url"),
+                promo_type=data.get("promo_type", "standard"),
+                category=data.get("category", "general"),
+                icon=data.get("icon", "🎁"),
+                brand_color=data.get("brand_color", "#4f46e5"),
+                background_color=data.get("background_color", "#f5f3ff"),
+                text_color=data.get("text_color", "#1e293b"),
+                active=data.get("active", True),
+                priority=data.get("priority", 0),
+                start_date=data.get("start_date"),
+                end_date=data.get("end_date"),
+                target_tx_type=data.get("target_tx_type"),
+                target_min_amount=data.get("target_min_amount"),
+                target_max_amount=data.get("target_max_amount"),
+                target_customer_type=data.get("target_customer_type"),
+                target_hour_start=data.get("target_hour_start"),
+                target_hour_end=data.get("target_hour_end"),
+                target_days=data.get("target_days"),
+                max_impressions=data.get("max_impressions"),
+                max_clicks=data.get("max_clicks"),
+                metadata=data.get("metadata"),
+                created_by=(
+                    g.current_user.get("id") if hasattr(g, "current_user") else None
+                ),
+            )
+
+            if promo_id:
+                return jsonify(
+                    {
+                        "success": True,
+                        "promotion_id": promo_id,
+                        "message": "Promotion created successfully",
+                    }
+                )
+            return (
+                jsonify({"success": False, "error": "Failed to create promotion"}),
+                500,
+            )
+
         @self.app.route("/api/admin/promotions/<int:promo_id>", methods=["GET"])
         @admin_required
         def admin_get_promotion(promo_id):
@@ -15769,6 +18853,91 @@ class ReloadlyWebApp:
             result = self._finalize_transaction(reference)
             return jsonify(result)
 
+        # ============ ADMIN: BULK REFUNDS DUE ============
+        @self.app.route("/api/admin/bulk-refunds-due", methods=["GET"])
+        @admin_required
+        def admin_bulk_refunds_due():
+            status = (request.args.get("status") or "due").strip()
+            conn = db.get_db_connection()
+            try:
+                rows = conn.execute(
+                    "SELECT * FROM bulk_refunds_due WHERE status = ? ORDER BY created_at DESC LIMIT 500",
+                    (status,),
+                ).fetchall()
+            finally:
+                conn.close()
+            return jsonify({"success": True, "refunds": [dict(r) for r in rows]})
+
+        @self.app.route("/api/admin/bulk-refunds-due/<reference>/resolve", methods=["POST"])
+        @admin_required
+        def admin_bulk_refund_resolve(reference):
+            """Mark a gateway refund as done (after you refunded in the Paystack/Flutterwave dashboard)."""
+            note = str((request.get_json(silent=True) or {}).get("note") or "")[:300]
+            conn = db.get_db_connection()
+            try:
+                cur = conn.execute(
+                    "UPDATE bulk_refunds_due SET status='refunded', note=? WHERE reference=? AND status='due'",
+                    (note or "refunded via gateway", reference),
+                )
+                changed = cur.rowcount
+            finally:
+                conn.close()
+            if not changed:
+                return jsonify({"success": False, "error": "No open refund with that reference"}), 404
+            return jsonify({"success": True})
+
+        # ============ ADMIN: RESOLVE needs_review SCHEDULE ============
+        @self.app.route("/api/admin/schedules/<schedule_id>/resolve", methods=["POST"])
+        @admin_required
+        def admin_resolve_schedule(schedule_id):
+            """Close a needs_review schedule. action = "refund" (credit the wallet `amount`, once) or
+            "mark_fulfilled" (provider delivered; just close it)."""
+            data = request.get_json(silent=True) or {}
+            action = str(data.get("action") or "").strip().lower()
+            note = str(data.get("note") or "")[:300]
+            conn = db.get_db_connection()
+            try:
+                row = conn.execute(
+                    "SELECT id, user_id, currency, status FROM scheduler_schedules WHERE id = ?",
+                    (schedule_id,),
+                ).fetchone()
+            finally:
+                conn.close()
+            if not row:
+                return jsonify({"success": False, "error": "Schedule not found"}), 404
+            if row["status"] != "needs_review":
+                return jsonify({"success": False, "error": "Schedule is not in needs_review"}), 409
+            if action == "refund":
+                try:
+                    amount = round(float(data.get("amount")), 2)
+                except (TypeError, ValueError):
+                    return jsonify({"success": False, "error": "amount is required for a refund"}), 400
+                if amount <= 0:
+                    return jsonify({"success": False, "error": "amount must be positive"}), 400
+                res = db.credit_wallet(
+                    user_id=row["user_id"], amount=amount, currency=row["currency"] or "NGN",
+                    description=f"Admin refund for schedule {schedule_id}",
+                    reference=f"ADMINREFUND-{schedule_id}",
+                    metadata={"note": note},
+                )
+                if not res or not res.get("success"):
+                    return jsonify({"success": False, "error": (res or {}).get("error") or "Refund failed"}), 500
+                new_status = "failed"
+            elif action == "mark_fulfilled":
+                new_status = "completed"
+            else:
+                return jsonify({"success": False, "error": 'action must be "refund" or "mark_fulfilled"'}), 400
+            conn = db.get_db_connection()
+            try:
+                conn.execute(
+                    "UPDATE scheduler_schedules SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'needs_review'",
+                    (new_status, schedule_id),
+                )
+            finally:
+                conn.close()
+            logger.warning(f"Admin resolved schedule {schedule_id}: {action} {note}")
+            return jsonify({"success": True, "status": new_status})
+
         @self.app.route("/api/admin/users", methods=["GET"])
         @admin_required
         def admin_search_users():
@@ -15880,10 +19049,10 @@ class ReloadlyWebApp:
             )
 
         def _admin_identity() -> str:
+            # Last X-Forwarded-For entry is the one Railway's edge appended; earlier ones are forgeable.
             return (
-                request.headers.get("X-Forwarded-For", request.remote_addr or "unknown")
-                .split(",")[0]
-                .strip()
+                request.headers.get("CF-Connecting-IP")
+                or request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[-1].strip()
             )
 
         @self.app.route(
@@ -16341,6 +19510,13 @@ class ReloadlyWebApp:
                     )
 
             contacts = data.get("contacts") or []
+            MAX_SMS_RECIPIENTS = int(os.getenv("MAX_SMS_RECIPIENTS", "2000"))
+            if not isinstance(contacts, list) or len(contacts) > MAX_SMS_RECIPIENTS:
+                return (
+                    jsonify({"success": False,
+                             "error": f"A campaign can have at most {MAX_SMS_RECIPIENTS} recipients"}),
+                    400,
+                )
 
             if not name or not message or not contact_list:
                 return (
@@ -16461,6 +19637,7 @@ class ReloadlyWebApp:
             return jsonify({"success": result})
 
         @self.app.route("/api/utilities/transactions", methods=["GET"])
+        @admin_required
         @safe_api_response
         def get_utility_transactions():
             try:
@@ -16483,6 +19660,7 @@ class ReloadlyWebApp:
             return jsonify([])
 
         @self.app.route("/api/utilities/transactions/<transaction_id>", methods=["GET"])
+        @admin_required
         @safe_api_response
         def get_utility_transaction(transaction_id):
             try:
@@ -16761,6 +19939,74 @@ if not _credentials.client_id or not _credentials.client_secret:
     )
 
 web_app = ReloadlyWebApp(_credentials)
+
+
+def _log_storage_paths():
+    """Show exactly which files hold your data. A database inside the app folder is wiped on every
+    Railway redeploy unless that folder is a mounted volume."""
+    try:
+        main_db = os.path.abspath(getattr(db, "DATABASE", "") or "")
+        logger.info(f"STORAGE: main database file = {main_db}")
+        logger.info(f"STORAGE: Smart Media database = {os.path.abspath(os.getenv('NET365_DB_PATH', 'net365.db'))}")
+        on_railway = bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"))
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        if on_railway and main_db.startswith(app_dir) and not os.getenv("DATABASE_URL"):
+            logger.warning(
+                "LAUNCH CHECK: the main database is inside the app folder and DATABASE_URL is not set — "
+                "it will be lost on redeploy unless that folder is a mounted volume. "
+                "Set DATABASE_URL=/your/volume/path/reloadly.db."
+            )
+        # The path must exist, be writable, and (on Railway) sit on a mounted volume,
+        # otherwise it is the container's throwaway disk even when DATABASE_URL is set.
+        db_dir = os.path.dirname(main_db) or "."
+        if not os.path.isdir(db_dir):
+            logger.warning(f"LAUNCH CHECK: database folder {db_dir} does not exist — create/mount it.")
+        elif not os.access(db_dir, os.W_OK):
+            logger.warning(f"LAUNCH CHECK: database folder {db_dir} is not writable.")
+        elif on_railway:
+            p, mounted = db_dir, False
+            while True:
+                if os.path.ismount(p) and p not in ("/", ""):
+                    mounted = True
+                    break
+                parent = os.path.dirname(p)
+                if parent == p:
+                    break
+                p = parent
+            if not mounted:
+                logger.warning(
+                    f"LAUNCH CHECK: {db_dir} is not on a mounted volume — data will be lost on "
+                    "redeploy. Attach a Railway volume and point DATABASE_URL into it."
+                )
+    except Exception as e:
+        logger.warning(f"could not report storage paths: {e}")
+
+
+def _launch_readiness_warnings():
+    """Log loud warnings at startup for settings that must be right before real customers use the app."""
+    checks = [
+        (os.getenv("ENCRYPTION_KEY"), "ENCRYPTION_KEY is not set: personal data is stored in plaintext."),
+        (bool(os.getenv("STRIPE_WEBHOOK_SECRET")) if os.getenv("STRIPE_SECRET_KEY") else True,
+         "STRIPE_WEBHOOK_SECRET is not set: Stripe webhooks are rejected (503) until it is."),
+        (bool(os.getenv("STRIPE_SECRET_KEY")) or not os.getenv("STRIPE_PUBLISHABLE_KEY"),
+         "STRIPE_PUBLISHABLE_KEY is set but STRIPE_SECRET_KEY is missing."),
+        (ADMIN_SECRET and len(ADMIN_SECRET) >= 24, "ADMIN_SECRET is missing or shorter than 24 characters."),
+        (SESSION_COOKIE_SECURE, "SESSION_COOKIE_SECURE is off: session cookies can travel over plain HTTP."),
+        (EMAIL_VERIFICATION_REQUIRED, "EMAIL_VERIFICATION_REQUIRED is off: unverified emails can move money."),
+        (os.getenv("RELOADLY_ENVIRONMENT", "sandbox").lower() != "sandbox",
+         "RELOADLY_ENVIRONMENT is sandbox: no real airtime will be delivered."),
+        (os.getenv("RESEND_API_KEY") or os.getenv("MAILGUN_API_KEY") or os.getenv("SMTP_PASSWORD"), "No email provider configured."),
+    ]
+    for ok, msg in checks:
+        if not ok:
+            logger.warning(f"LAUNCH CHECK: {msg}")
+    logger.info(f"LAUNCH CHECK: wallet={'ON' if WALLET_ENABLED else 'OFF'}, "
+                f"transfers={'ON' if WALLET_TRANSFERS_ENABLED else 'OFF'}, "
+                f"limits per-tx={LIMIT_PER_TX_NGN:,.0f} daily={LIMIT_DAILY_NGN:,.0f} NGN")
+
+
+_log_storage_paths()
+_launch_readiness_warnings()
 app = web_app.app  # <-- this is what `gunicorn main:app` binds to
 # ============================================================
 
@@ -16864,6 +20110,7 @@ def _admin_geo_status():
             "success": True,
             "missing_ips": GeoResolver.missing_count(),
             "resolver": GeoResolver.status(),
+            "org_resolver": IPIntel.status(),
         })
     except Exception as _e:
         return _flask_jsonify({"success": False, "error": str(_e)}), 500
@@ -16885,41 +20132,6 @@ def _admin_backfill_geo():
     except Exception as _e:
         logger.error(f"Geo backfill failed: {_e}")
         return _flask_jsonify({"success": False, "error": str(_e)}), 500
-
-
-@app.route("/api/visitor/signals", methods=["POST"])
-def visitor_signals():
-    data = request.get_json(silent=True) or {}
-    tz = data.get("timezone")
-    local_hour = local_dow = None
-    if tz:
-        try:
-            from zoneinfo import ZoneInfo
-            now = datetime.now(ZoneInfo(tz))
-            local_hour = now.hour
-            local_dow = now.weekday()
-        except Exception:
-            pass
-    conn = db.get_db_connection()
-    conn.execute("""
-        INSERT INTO visitor_signals
-        (session_id, user_id, screen_w, screen_h, viewport_w, viewport_h,
-         timezone, language, languages, touch, connection,
-         battery_level, battery_charging, referrer_class, local_hour, local_dow, raw_json)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    """, (
-        data.get("session_id"), getattr(g, "current_user_id", None),
-        data.get("screen_w"), data.get("screen_h"),
-        data.get("viewport_w"), data.get("viewport_h"),
-        tz, data.get("language"), data.get("languages"),
-        data.get("touch"), data.get("connection"),
-        data.get("battery_level"), data.get("battery_charging"),
-        classify_referrer(data.get("referrer_class")),
-        local_hour, local_dow, json.dumps(data),
-    ))
-    conn.commit()
-    conn.close()
-    return ("", 204)
 
 
 def main():

@@ -19,24 +19,72 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Use absolute path for database
+# ============ SQLITE DATABASE LOCATION ============
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE = os.getenv("DATABASE_URL", os.path.join(BASE_DIR, "reloadly.db"))
 
-# Database lock timeout (in seconds)
+
+def _resolve_database_path():
+    """Resolve a local SQLite file path without treating remote DB URLs as filenames.
+
+    Explicit local-path variables take precedence. DATABASE_URL is retained for
+    backward compatibility only when it contains a filesystem path (not a
+    PostgreSQL, MySQL, Turso/libSQL, or other remote URL).
+    """
+    configured = (
+        os.getenv("NET365_DATABASE_PATH")
+        or os.getenv("DATABASE_PATH")
+        or os.getenv("SQLITE_DATABASE_PATH")
+        or os.getenv("DATABASE_URL")
+    )
+    if configured:
+        value = configured.strip()
+        lowered = value.lower()
+        if lowered.startswith(("postgres://", "postgresql://", "mysql://", "mariadb://", "libsql://", "https://", "http://")):
+            raise RuntimeError(
+                "This database.py build uses SQLite. DATABASE_URL contains a remote database URL. "
+                "Set NET365_DATABASE_PATH or DATABASE_PATH to a local SQLite file path, "
+                "or deploy the matching remote-database adapter."
+            )
+        return os.path.abspath(os.path.expanduser(value))
+
+    # Prefer the conventional persistent mount when it is present; otherwise
+    # retain the historical project-local development database location.
+    for mount in ("/mnt/data", "/data"):
+        if os.path.isdir(mount) and os.access(mount, os.W_OK):
+            return os.path.join(mount, "net365.db")
+    return os.path.join(BASE_DIR, "reloadly.db")
+
+
+DATABASE = _resolve_database_path()
 DB_TIMEOUT = 30
 
 
+def _ensure_database_directory():
+    """Create only the parent directory; never create, replace, or delete a DB file."""
+    db_path = os.path.abspath(os.path.expanduser(os.fspath(DATABASE)))
+    parent = os.path.dirname(db_path)
+    if parent:
+        os.makedirs(parent, mode=0o750, exist_ok=True)
+        if not os.path.isdir(parent):
+            raise OSError(f"SQLite database directory is not a directory: {parent}")
+        if not os.access(parent, os.W_OK | os.X_OK):
+            raise PermissionError(f"SQLite database directory is not writable: {parent}")
+    return db_path
+
+
 def get_db():
-    """Get database connection with timeout"""
+    """Open the configured SQLite database, preserving existing database contents."""
     try:
-        conn = sqlite3.connect(DATABASE, timeout=DB_TIMEOUT)
+        db_path = _ensure_database_directory()
+        conn = sqlite3.connect(db_path, timeout=DB_TIMEOUT)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA busy_timeout=30000")
         return conn
     except Exception as e:
-        print(f"ERROR: {e}")
+        logger.exception("Unable to open Net365 SQLite database at %s: %s", DATABASE, e)
         raise
 
 
@@ -44,27 +92,6 @@ def get_db():
 # _db_local = threading.local()
 
 
-def get_db_connection():
-    """
-    Return a fresh SQLite connection.
-
-    A new connection is created for each database operation.
-    This prevents reuse of connections that may have already
-    been closed by another function or request.
-    """
-    conn = sqlite3.connect(
-        DATABASE,
-        timeout=DB_TIMEOUT,
-        check_same_thread=False,
-    )
-
-    conn.row_factory = sqlite3.Row
-
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA synchronous = NORMAL")
-
-    return conn
 
 
 def close_db_connection():
@@ -75,6 +102,90 @@ def close_db_connection():
     functions that create them.
     """
     return None
+
+
+def ensure_sponsored_campaigns_targeting_columns():
+    """Create sponsored_campaigns if absent; add targeting columns if missing.
+
+    Idempotent. Runs against whichever DB get_db_connection() opens:
+      - Railway: net365.db on the mounted volume
+      - Laptop:  reloadly.db in the project folder
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        existing = {row[1] for row in c.execute("PRAGMA table_info(sponsored_campaigns)")}
+
+        # Table doesn't exist yet → create it with the full shape.
+        if not existing:
+            c.execute("""
+                CREATE TABLE sponsored_campaigns (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    advertiser_user_id INTEGER,
+                    title TEXT NOT NULL,
+                    body TEXT NOT NULL,
+                    cta_text TEXT,
+                    cta_url TEXT,
+                    impressions INTEGER,
+                    impressions_delivered INTEGER DEFAULT 0,
+                    clicks INTEGER,
+                    clicks_delivered INTEGER DEFAULT 0,
+                    price_paid REAL,
+                    currency TEXT DEFAULT 'NGN',
+                    campaign_tier TEXT DEFAULT 'basic',
+                    budget REAL,
+                    status TEXT DEFAULT 'pending_review',
+                    moderation_status TEXT DEFAULT 'pending',
+                    reviewer TEXT,
+                    rejection_reason TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    target_tx_type TEXT,
+                    target_min_amount REAL,
+                    target_max_amount REAL,
+                    target_customer_type TEXT,
+                    target_hour_start INTEGER,
+                    target_hour_end INTEGER,
+                    target_languages TEXT,
+                    target_connection TEXT,
+                    target_hours TEXT,
+                    target_days TEXT,
+                    target_rfm TEXT,
+                    target_networks TEXT,
+                    target_avg_amount_min REAL,
+                    target_avg_amount_max REAL,
+                    exclude_service TEXT
+                )
+            """)
+            logger.info("sponsored_campaigns: created with all targeting columns")
+        else:
+            # Table exists → add any missing columns.
+            added = []
+            for col, typ in [
+                ("target_languages",      "TEXT"),
+                ("target_connection",     "TEXT"),
+                ("target_hours",          "TEXT"),
+                ("target_days",           "TEXT"),
+                ("target_rfm",            "TEXT"),
+                ("target_networks",       "TEXT"),
+                ("target_avg_amount_min", "REAL"),
+                ("target_avg_amount_max", "REAL"),
+                ("exclude_service",       "TEXT"),
+            ]:
+                if col not in existing:
+                    try:
+                        c.execute(f"ALTER TABLE sponsored_campaigns ADD COLUMN {col} {typ}")
+                        added.append(col)
+                    except sqlite3.OperationalError as e:
+                        logger.warning(f"Could not add {col}: {e}")
+            if added:
+                logger.info(f"sponsored_campaigns: added columns {added}")
+            else:
+                logger.info("sponsored_campaigns: all targeting columns present")
+
+        conn.commit()
+    finally:
+        conn.close()
 
 
 from functools import wraps
@@ -180,183 +291,15 @@ def get_user_by_id(user_id):
     return get_user(user_id)
 
 
-def get_user_by_email(email):
-    """Get user by email"""
-    try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, email, phone, full_name, referred_by, referral_code FROM users WHERE email = ?", (email,))
-        user = cursor.fetchone()
-        conn.close()
-        
-        if user:
-            return {
-                'id': user[0],
-                'email': user[1],
-                'phone': user[2],
-                'full_name': user[3],
-                'referred_by': user[4],
-                'referral_code': user[5]
-            }
-        return None
-    except Exception as e:
-        logger.error(f"Error getting user by email: {e}")
-        return None
-
-def get_referral_code_by_user_id(user_id):
-    """Get referral code created by user"""
-    try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT referral_code FROM users WHERE id = ?", (user_id,))
-        result = cursor.fetchone()
-        conn.close()
-        return result[0] if result else None
-    except Exception as e:
-        logger.error(f"Error getting referral code: {e}")
-        return None
-
-def get_referral_code_owner(referral_code):
-    """Get user who owns a referral code"""
-    try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, email, full_name FROM users WHERE referral_code = ?", (referral_code,))
-        user = cursor.fetchone()
-        conn.close()
-        
-        if user:
-            return {
-                'id': user[0],
-                'email': user[1],
-                'full_name': user[2]
-            }
-        return None
-    except Exception as e:
-        logger.error(f"Error getting referral code owner: {e}")
-        return None
 
 
 
-@retry_on_lock
-def sync_contacts(user_id: int, contacts: List[Dict]) -> Dict:
-    """
-    Sync contacts - updates existing ones, adds new ones.
-    Uses phone number as unique identifier per user.
-    """
-    added = 0
-    updated = 0
-    skipped = 0
-    
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    try:
-        for contact in contacts:
-            name = contact.get("name", "").strip()
-            phone = contact.get("phone", "").strip()
-            network = contact.get("network", "")
-            
-            if not phone:
-                skipped += 1
-                continue
-            
-            # Check if contact exists for this user
-            existing = c.execute(
-                "SELECT id FROM contacts WHERE user_id = ? AND phone = ?",
-                (user_id, phone),
-            ).fetchone()
-            
-            if existing:
-                # Update existing contact
-                c.execute(
-                    """
-                    UPDATE contacts 
-                    SET name = ?, network = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                    """,
-                    (name or "Unknown", network, existing["id"]),
-                )
-                updated += 1
-            else:
-                # Insert new contact
-                c.execute(
-                    """
-                    INSERT INTO contacts (user_id, name, phone, network)
-                    VALUES (?, ?, ?, ?)
-                    """,
-                    (user_id, name or "Unknown", phone, network),
-                )
-                added += 1
-        
-        conn.commit()
-        return {"success": True, "added": added, "updated": updated, "skipped": skipped}
-        
-    except Exception as e:
-        logger.error(f"Error syncing contacts: {e}")
-        conn.rollback()
-        return {"success": False, "error": str(e)}
-    finally:
-        conn.close()
-        
-        
-@retry_on_lock
-def remove_duplicate_contacts(user_id: int) -> Dict:
-    """
-    Remove duplicate contacts for a user.
-    Keeps the first (oldest) contact for each phone number.
-    """
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    try:
-        # Find duplicate phone numbers
-        duplicates = c.execute("""
-            SELECT phone, COUNT(*) as count, MIN(id) as keep_id
-            FROM contacts 
-            WHERE user_id = ?
-            GROUP BY phone 
-            HAVING COUNT(*) > 1
-        """, (user_id,)).fetchall()
-        
-        if not duplicates:
-            return {"success": True, "removed": 0, "message": "No duplicates found"}
-        
-        removed_count = 0
-        for dup in duplicates:
-            # Delete all but the oldest (keep_id)
-            deleted = c.execute("""
-                DELETE FROM contacts 
-                WHERE user_id = ? AND phone = ? AND id != ?
-            """, (user_id, dup["phone"], dup["keep_id"]))
-            removed_count += deleted.rowcount
-        
-        conn.commit()
-        
-        return {
-            "success": True, 
-            "removed": removed_count,
-            "message": f"Removed {removed_count} duplicate contacts"
-        }
-        
-    except Exception as e:
-        logger.error(f"Error removing duplicate contacts: {e}")
-        conn.rollback()
-        return {"success": False, "error": str(e)}
-    finally:
-        conn.close()
 
 
-@retry_on_lock
-def get_contact_count(user_id: int) -> int:
-    """Get total contact count for a user."""
-    conn = get_db_connection()
-    c = conn.cursor()
-    count = c.execute(
-        "SELECT COUNT(*) FROM contacts WHERE user_id = ?", (user_id,)
-    ).fetchone()[0]
-    conn.close()
-    return count
+        
+        
+
+
 
 # ============ CONTACT FUNCTIONS - COMPLETE FIX ============
 # ============ CONTACT IMPORT FUNCTIONS - WITH DEDUPLICATION ============
@@ -392,7 +335,8 @@ def import_contacts_unique(
         if col not in columns:
             try:
                 if col == "updated_at":
-                    c.execute(f"ALTER TABLE contacts ADD COLUMN {col} TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+                    c.execute(f"ALTER TABLE contacts ADD COLUMN {col} TIMESTAMP")
+                    c.execute(f"UPDATE contacts SET {col} = CURRENT_TIMESTAMP WHERE {col} IS NULL")
                 else:
                     c.execute(f"ALTER TABLE contacts ADD COLUMN {col} TEXT")
                 conn.commit()
@@ -491,114 +435,8 @@ def import_contacts_unique(
     finally:
         conn.close()
   
-def process_bulk_recharge(user_id, records):
-    """Create a bulk job and process records. Returns job info."""
-    import uuid as _uuid
-    job_id = str(_uuid.uuid4())
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    try:
-        # Ensure bulk_jobs table exists
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS bulk_jobs (
-                id TEXT PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                total INTEGER DEFAULT 0,
-                processed INTEGER DEFAULT 0,
-                successful INTEGER DEFAULT 0,
-                failed INTEGER DEFAULT 0,
-                status TEXT DEFAULT 'pending',
-                error TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        c.execute("""
-            INSERT INTO bulk_jobs (id, user_id, total, status)
-            VALUES (?, ?, ?, 'processing')
-        """, (job_id, user_id, len(records)))
-        conn.commit()
-        
-        return jsonify({
-            "success": True,
-            "job_id": job_id,
-            "total": len(records),
-            "message": f"Bulk job created with {len(records)} records"
-        })
-    except Exception as e:
-        logger.error(f"Failed to create bulk job: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-    finally:
-        conn.close()  
         
         
-@retry_on_lock
-def upsert_contact_from_transaction(
-    user_id: int, phone: str, name: str = None, network: str = None
-) -> bool:
-    """
-    Ensure a contact exists for a phone used in a transaction, and bump usage.
-    Safe to call repeatedly — it will not create duplicates.
-    """
-    if not phone:
-        return False
-
-    normalized = re.sub(r"[^\d+]", "", phone)
-    if not normalized or len(normalized) < 7:
-        return False
-
-    conn = get_db_connection()
-    c = conn.cursor()
-    try:
-        existing = c.execute(
-            """
-            SELECT id FROM contacts
-            WHERE user_id = ? AND (phone = ? OR phone_normalized = ?)
-            LIMIT 1
-            """,
-            (user_id, phone, normalized),
-        ).fetchone()
-
-        if existing:
-            c.execute(
-                """
-                UPDATE contacts
-                SET last_used_at = CURRENT_TIMESTAMP,
-                    use_count = COALESCE(use_count, 0) + 1,
-                    network = COALESCE(NULLIF(?, ''), network),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-                """,
-                (network or "", existing["id"]),
-            )
-        else:
-            c.execute(
-                """
-                INSERT INTO contacts
-                    (user_id, name, phone, phone_normalized, network,
-                     use_count, last_used_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP,
-                        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                """,
-                (
-                    user_id,
-                    name or "Unknown",
-                    phone,
-                    normalized,
-                    network,
-                ),
-            )
-
-        conn.commit()
-        return True
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"upsert_contact_from_transaction failed: {e}")
-        return False
-    finally:
-        conn.close()
 
         
 # ============================================================
@@ -838,56 +676,6 @@ def sync_contacts(user_id: int, contacts: List[Dict]) -> Dict:
     return import_contacts_unique(user_id, contacts)
 
 
-@retry_on_lock
-def add_contact(user_id: int, name: str, phone: str, network: str = None) -> Dict:
-    """
-    Add a single contact with duplicate checking.
-    Returns: {success, id, updated, message}
-    """
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    try:
-        # Check if contact already exists
-        existing = c.execute(
-            "SELECT id FROM contacts WHERE user_id = ? AND phone = ?",
-            (user_id, phone),
-        ).fetchone()
-        
-        if existing:
-            # Update existing contact instead of creating duplicate
-            c.execute(
-                """
-                UPDATE contacts 
-                SET name = ?, network = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-                """,
-                (name, network, existing["id"]),
-            )
-            conn.commit()
-            return {"success": True, "id": existing["id"], "updated": True, "message": "Contact updated"}
-        
-        # Insert new contact
-        c.execute(
-            """
-            INSERT INTO contacts (user_id, name, phone, network)
-            VALUES (?, ?, ?, ?)
-        """,
-            (user_id, name, phone, network),
-        )
-        conn.commit()
-        contact_id = c.lastrowid
-        return {"success": True, "id": contact_id, "updated": False, "message": "Contact added"}
-        
-    except sqlite3.IntegrityError:
-        conn.rollback()
-        return {"success": False, "error": "Contact already exists", "updated": False}
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Error adding contact: {e}")
-        return {"success": False, "error": str(e)}
-    finally:
-        conn.close()
 
 
 @retry_on_lock
@@ -953,190 +741,7 @@ def get_contact_count(user_id: int) -> int:
 
 
 
-def create_notification(user_id, title, message, notification_type):
-    """Create a notification for a user"""
-    try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO notifications (user_id, title, message, type, is_read, created_at)
-            VALUES (?, ?, ?, ?, ?, datetime('now'))
-        """, (user_id, title, message, notification_type, 0))
-        conn.commit()
-        conn.close()
-        return {'success': True}
-    except Exception as e:
-        logger.error(f"Error creating notification: {e}")
-        return {'success': False, 'message': str(e)}
-    
-    # ============================================
-    # ✅ CREDIT THE REFERRER'S BONUS
-    # ============================================
-    
-    if referrer_id:
-        try:
-            # Calculate bonus (5% of the transaction amount)
-            bonus_amount = amount * 0.05
-            bonus_currency = "NGN"
-            
-            logger.info(f"💰 Crediting referral bonus: {bonus_currency} {bonus_amount:,.2f} to referrer {referrer_id}")
-            
-            # ✅ Credit the referrer's wallet
-            if hasattr(db, 'credit_wallet'):
-                credit_result = db.credit_wallet(
-                    referrer_id, 
-                    bonus_amount, 
-                    "referral_bonus", 
-                    f"Referral bonus from user {user_id}'s transaction"
-                )
-                
-                if credit_result.get('success'):
-                    logger.info(f"✅ Referral bonus of {bonus_currency} {bonus_amount:,.2f} credited to referrer {referrer_id}")
-                    
-                    # Create notification for referrer
-                    if hasattr(db, 'create_notification'):
-                        db.create_notification(
-                            referrer_id,
-                            "🎉 Referral Bonus Earned!",
-                            f"You earned {bonus_currency} {bonus_amount:,.2f} (5% of your referral's transaction)!",
-                            "success"
-                        )
-                        logger.info(f"✅ Notification sent to referrer {referrer_id}")
-                else:
-                    logger.error(f"❌ Failed to credit referral bonus: {credit_result}")
-            else:
-                logger.warning("credit_wallet function not found in database module")
-                
-        except Exception as e:
-            logger.error(f"❌ Error giving referral bonus: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            # Don't fail the payment
-    
-    # ============================================
-    # NOTIFY THE USER WHO FUNDED THEIR WALLET
-    # ============================================
-    
-    if hasattr(db, 'create_notification'):
-        db.create_notification(
-            user_id,
-            "💰 Wallet Funded Successfully!",
-            f"Your wallet has been credited with NGN {amount:,.2f}",
-            "success"
-        )
-    
-    logger.info(f"Transaction {reference} completed successfully")
 
-def process_pending_referrals() -> Dict:
-    """
-    Process all pending referrals where the referred user has made a transaction.
-    This can be called manually or via a scheduled job.
-    """
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    # Get all pending referrals where the referred user has made at least one transaction
-    pending = c.execute("""
-        SELECT 
-            r.id,
-            r.referrer_id,
-            r.referred_id,
-            u.full_name as referred_name,
-            u.email as referred_email,
-            COUNT(t.id) as tx_count
-        FROM referrals r
-        JOIN users u ON u.id = r.referred_id
-        LEFT JOIN transactions t ON t.user_id = r.referred_id AND t.status = 'fulfilled' AND t.tx_type != 'wallet_funding'
-        WHERE r.status = 'pending'
-        GROUP BY r.id
-        HAVING COUNT(t.id) > 0
-    """).fetchall()
-
-    processed = 0
-    errors = []
-    results = []
-
-    for referral in pending:
-        try:
-            # Check if this is a valid referral (not the default code)
-            if referral["referrer_id"] == referral["referred_id"]:
-                continue
-
-            bonus_amount = 50.00
-            bonus_currency = "NGN"
-
-            # Credit the referrer
-            credit_result = credit_wallet(
-                user_id=referral["referrer_id"],
-                amount=bonus_amount,
-                currency=bonus_currency,
-                description=f"🎉 Referral bonus for {referral['referred_name']} completing first transaction!",
-                reference=f"REFBONUS-{referral['id']}",
-                metadata={
-                    "referral_id": referral["id"],
-                    "referred_user_id": referral["referred_id"],
-                    "type": "referral_bonus",
-                },
-            )
-
-            if credit_result.get("success"):
-                # Update referral status
-                c.execute(
-                    """
-                    UPDATE referrals 
-                    SET status = 'completed', completed_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                """,
-                    (referral["id"],),
-                )
-                conn.commit()
-                processed += 1
-
-                # Create notifications
-                create_notification(
-                    referral["referrer_id"],
-                    "🎉 Referral Bonus Earned!",
-                    f"You earned {bonus_currency} {bonus_amount:,.2f} for referring {referral['referred_name']}!",
-                    "success",
-                )
-
-                create_notification(
-                    referral["referred_id"],
-                    "🎉 Welcome Bonus!",
-                    f"You received a welcome bonus for your first transaction!",
-                    "success",
-                )
-
-                results.append(
-                    {
-                        "referral_id": referral["id"],
-                        "referrer_id": referral["referrer_id"],
-                        "referred_id": referral["referred_id"],
-                        "bonus_amount": bonus_amount,
-                        "status": "success",
-                    }
-                )
-
-                logger.info(
-                    f"✅ Processed referral {referral['id']}: referrer={referral['referrer_id']}, referred={referral['referred_id']}"
-                )
-            else:
-                errors.append(
-                    f"Failed to credit referral {referral['id']}: {credit_result.get('error')}"
-                )
-
-        except Exception as e:
-            errors.append(f"Error processing referral {referral['id']}: {str(e)}")
-            logger.error(f"Error processing referral {referral['id']}: {e}")
-
-    conn.close()
-
-    return {
-        "processed": processed,
-        "errors": errors,
-        "results": results,
-        "message": f"Processed {processed} referral rewards",
-    }
 
 
 def init_db():
@@ -1271,6 +876,11 @@ def init_db():
             INSERT INTO referral_bonus_config (bonus_percentage, min_bonus, max_bonus)
             VALUES (10.0, 50.0, 5000.0)
         """)
+        # Fresh database: referral bonuses start switched OFF until an admin enables them.
+        _rb_cols = {r[1] for r in c.execute("PRAGMA table_info(referral_bonus_config)").fetchall()}
+        if "enabled" not in _rb_cols:
+            c.execute("ALTER TABLE referral_bonus_config ADD COLUMN enabled BOOLEAN DEFAULT 0")
+        c.execute("UPDATE referral_bonus_config SET enabled = 0")
         conn.commit()
     # Migrate the original one-wallet-per-user schema to true multi-currency wallets.
     wallet_columns = {
@@ -1365,11 +975,16 @@ def init_db():
         ("currency", "TEXT", "'NGN'"),
         ("balance_before", "REAL", "NULL"),
         ("balance_after", "REAL", "NULL"),
+        ("base_reference", "TEXT", "NULL"),
     ]:
         if col not in wallet_tx_columns:
             c.execute(
                 f"ALTER TABLE wallet_transactions ADD COLUMN {col} {typ} DEFAULT {default}"
             )
+    c.execute(
+        "CREATE INDEX IF NOT EXISTS idx_wallet_transactions_base_reference "
+        "ON wallet_transactions(user_id, type, base_reference)"
+    )
 
     # ============ REWARDS TABLE ============
     c.execute("""
@@ -1796,12 +1411,35 @@ def init_db():
         ("fulfillment_amount", "REAL"),
         ("fulfillment_currency", "TEXT"),
         ("exchange_rate", "REAL"),
+        # mark_fulfillment_failed() writes these; they were never created, so every
+        # failed fulfilment raised "no such column" and left the row stuck in 'processing'.
+        ("fulfillment_error", "TEXT"),
+        ("fulfillment_locked", "INTEGER DEFAULT 0"),
+        ("fulfillment_locked_at", "TIMESTAMP"),
     ]:
         if col not in existing_columns:
             c.execute(f"ALTER TABLE transactions ADD COLUMN {col} {typ}")
 
 
+    c.execute("""CREATE TABLE IF NOT EXISTS bulk_jobs (
+        id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, total INTEGER DEFAULT 0,
+        processed INTEGER DEFAULT 0, successful INTEGER DEFAULT 0, failed INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'pending', error TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+    _bj = {r[1] for r in c.execute("PRAGMA table_info(bulk_jobs)").fetchall()}
+    for _col, _typ in (("payment_method", "TEXT"), ("payment_reference", "TEXT"),
+                       ("total_amount", "REAL"), ("currency", "TEXT DEFAULT 'NGN'")):
+        if _col not in _bj:
+            c.execute(f"ALTER TABLE bulk_jobs ADD COLUMN {_col} {_typ}")
+    c.execute("""CREATE TABLE IF NOT EXISTS bulk_refunds_due (
+        reference TEXT PRIMARY KEY, job_id TEXT, user_id INTEGER, amount REAL,
+        currency TEXT, status TEXT DEFAULT 'due', note TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     conn.commit()
+    try:
+        _ensure_nullable_user_id(conn)
+    except Exception as e:
+        logger.error(f"nullable user_id check failed: {e}")
     conn.close()
 
     # Keep the promotions table's extra discount/referral columns in sync too —
@@ -1810,13 +1448,34 @@ def init_db():
     # given name), so on a fresh database NO tables were ever created. Merged here.
     migrate_promotions_table()
 
+    # Referral columns / referral_rewards table. This used to be defined but never called, so a
+    # fresh database had no referral_rewards table and no referrals.reward_amount column.
+    try:
+        migrate_referral_tables()
+    except Exception as e:
+        logger.error(f"migrate_referral_tables failed: {e}")
+
 def _ensure_nullable_user_id(conn):
     """Guest checkouts produce reloadly_transactions and user_events rows with
-    user_id = NULL. If those columns are NOT NULL, every guest topup crashes
-    the fulfillment path with an IntegrityError that leaves the SQLite write
-    lock held — which then hangs the whole worker."""
+    user_id = NULL. If those columns are NOT NULL, every guest top-up fails with an
+    IntegrityError. This migrates such tables to a nullable user_id, inside one
+    transaction (all or nothing), preserving rows and indexes. It does nothing when the
+    schema is already correct."""
+    # Work in autocommit mode with an explicit BEGIN/COMMIT, whatever kind of
+    # connection we were handed (get_db() uses implicit transactions).
+    if conn.in_transaction:
+        conn.commit()
+    _old_isolation = conn.isolation_level
+    conn.isolation_level = None
+    try:
+        _ensure_nullable_user_id_inner(conn)
+    finally:
+        conn.isolation_level = _old_isolation
+
+
+def _ensure_nullable_user_id_inner(conn):
     c = conn.cursor()
-    for table, ddl in [
+    specs = [
         ("reloadly_transactions", """
             CREATE TABLE IF NOT EXISTS reloadly_transactions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1844,15 +1503,24 @@ def _ensure_nullable_user_id(conn):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """),
-    ]:
-        # Detect a NOT NULL user_id and migrate to the nullable schema
+    ]
+    for table, ddl in specs:
         cols = c.execute(f"PRAGMA table_info({table})").fetchall()
         if not cols:
             c.execute(ddl)
             continue
         user_id_col = next((col for col in cols if col[1] == "user_id"), None)
-        if user_id_col and user_id_col[3] == 1:  # notnull flag == 1
-            logger.info(f"Migrating {table}.user_id to nullable...")
+        if not (user_id_col and user_id_col[3] == 1):  # notnull flag
+            continue
+        logger.warning(f"Migrating {table}.user_id to nullable (one-time schema fix)...")
+        index_sql = [
+            r[0] for r in c.execute(
+                "SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name=? AND sql IS NOT NULL",
+                (table,),
+            ).fetchall()
+        ]
+        try:
+            c.execute("BEGIN IMMEDIATE")
             c.execute(f"ALTER TABLE {table} RENAME TO {table}_old")
             c.execute(ddl)
             new_cols = [col[1] for col in c.execute(f"PRAGMA table_info({table})").fetchall()]
@@ -1863,7 +1531,16 @@ def _ensure_nullable_user_id(conn):
                 f"SELECT {','.join(shared)} FROM {table}_old"
             )
             c.execute(f"DROP TABLE {table}_old")
-    conn.commit()
+            for sql in index_sql:
+                c.execute(sql)
+            c.execute("COMMIT")
+            logger.warning(f"{table}.user_id is now nullable")
+        except Exception as e:
+            try:
+                c.execute("ROLLBACK")
+            except Exception:
+                pass
+            logger.error(f"Could not migrate {table}.user_id: {e}")
 
 # ============ BRAND COLORS TABLE ============
 def init_brand_colors_table():
@@ -2022,64 +1699,6 @@ def init_seasonal_promos_table():
 
 
 # ============ PROMOTIONS TABLE ============
-def init_promotions_table():
-    """Initialize the promotions table for admin-configurable promotions."""
-    conn = get_db()  # Use get_db() not get_db_connection()
-    c = conn.cursor()
-
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS promotions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            title TEXT NOT NULL,
-            body TEXT NOT NULL,
-            cta_text TEXT,
-            cta_url TEXT,
-            promo_type TEXT DEFAULT 'standard',
-            category TEXT DEFAULT 'general',
-            icon TEXT DEFAULT '🎁',
-            brand_color TEXT DEFAULT '#4f46e5',
-            background_color TEXT DEFAULT '#f5f3ff',
-            text_color TEXT DEFAULT '#1e293b',
-            active BOOLEAN DEFAULT 1,
-            priority INTEGER DEFAULT 0,
-            start_date TIMESTAMP,
-            end_date TIMESTAMP,
-            target_tx_type TEXT,
-            target_min_amount REAL,
-            target_max_amount REAL,
-            target_customer_type TEXT,
-            target_hour_start INTEGER,
-            target_hour_end INTEGER,
-            target_days TEXT,
-            max_impressions INTEGER,
-            impressions_used INTEGER DEFAULT 0,
-            max_clicks INTEGER,
-            clicks_used INTEGER DEFAULT 0,
-            conversions INTEGER DEFAULT 0,
-            metadata TEXT,
-            created_by INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (created_by) REFERENCES users(id)
-        )
-    """)
-
-    # Create indexes
-    c.execute("CREATE INDEX IF NOT EXISTS idx_promotions_active ON promotions(active)")
-    c.execute(
-        "CREATE INDEX IF NOT EXISTS idx_promotions_target_tx_type ON promotions(target_tx_type)"
-    )
-    c.execute(
-        "CREATE INDEX IF NOT EXISTS idx_promotions_start_end ON promotions(start_date, end_date)"
-    )
-    c.execute(
-        "CREATE INDEX IF NOT EXISTS idx_promotions_priority ON promotions(priority)"
-    )
-
-    conn.commit()
-    conn.close()
-    logger.info("promotions table initialized")
 
 
 # ============ ADD TO database.py - REFERRAL SYSTEM ENHANCEMENT ============
@@ -2753,337 +2372,101 @@ def _apply_referral_bonus(
 
 @retry_on_lock
 def process_pending_referrals() -> Dict:
+    """Pay referral bonuses for referred users who completed a first purchase.
+
+    Honours BOTH kill-switches (the REFERRAL_BONUS_ENABLED environment variable and the admin
+    toggle in referral_bonus_config) and uses the admin-configured percentage / min / max instead
+    of hardcoded numbers. credit_wallet() is idempotent per reference, so running this twice
+    can never pay the same referral twice.
+    """
+    env_on = os.getenv("REFERRAL_BONUS_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+    config = get_referral_bonus_config()
+    if not env_on or not config.get("enabled"):
+        logger.info("process_pending_referrals skipped: referral bonuses are disabled")
+        return {"processed": 0, "errors": [], "skipped": "Referral bonuses are currently disabled"}
+
+    pct = float(config.get("bonus_percentage") or 0)
+    min_bonus = float(config.get("min_bonus") or 0)
+    max_bonus = float(config.get("max_bonus") or 0)
+    if pct <= 0:
+        return {"processed": 0, "errors": [], "skipped": "No referral bonus percentage configured"}
+
     conn = get_db_connection()
-    c = conn.cursor()
-
-    pending = c.execute("""
-        SELECT 
-            r.id,
-            r.referrer_id,
-            r.referred_id,
-            u.full_name as referred_name,
-            MIN(t.amount) as first_tx_amount,
-            MIN(t.currency) as first_tx_currency
-        FROM referrals r
-        JOIN users u ON u.id = r.referred_id
-        LEFT JOIN transactions t ON t.user_id = r.referred_id 
-            AND t.status = 'fulfilled' 
-            AND t.tx_type != 'wallet_funding'
-        WHERE r.status = 'pending'
-        GROUP BY r.id
-        HAVING COUNT(t.id) > 0
-    """).fetchall()
-
-    processed = 0
-    errors = []
-
-    for referral in pending:
-        try:
-            first_amount = float(referral["first_tx_amount"] or 0)
-            bonus_amount = max(round((first_amount * 10) / 100, 2), 50.00)
-            bonus_currency = referral["first_tx_currency"] or "NGN"
-
-            credit_result = credit_wallet(
-                user_id=referral["referrer_id"],
-                amount=bonus_amount,
-                currency=bonus_currency,
-                description=f"🎉 10% Referral bonus for {referral['referred_name']}!",
-                reference=f"REFBONUS-{referral['id']}",
-                metadata={
-                    "referral_id": referral["id"],
-                    "referred_user_id": referral["referred_id"],
-                    "bonus_percentage": 10,
-                    "transaction_amount": first_amount,
-                    "type": "referral_bonus",
-                },
-            )
-
-            if credit_result.get("success"):
-                c.execute(
-                    """
-                    UPDATE referrals 
-                    SET status = 'completed', completed_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                """,
-                    (referral["id"],),
-                )
-                conn.commit()
-                processed += 1
-
-                create_notification(
-                    referral["referrer_id"],
-                    "🎉 Referral Bonus Earned!",
-                    f"You earned {bonus_currency} {bonus_amount:,.2f} (10%) for referring {referral['referred_name']}!",
-                    "success",
-                )
-
-        except Exception as e:
-            errors.append(str(e))
-
-    conn.close()
-    return {"processed": processed, "errors": errors}
-
-
-def apply_referral_promo(user_id: int, transaction_amount: float = None) -> Dict:
-    """Apply referral promotion when a user completes their first transaction."""
-    conn = get_db_connection()
-
     try:
         c = conn.cursor()
-
-        # 1. Fetch pending referral
-        c.execute(
-            """
-            SELECT r.id, r.referrer_id, r.status, u.full_name as referrer_name
+        pending = c.execute(f"""
+            SELECT
+                r.id,
+                r.referrer_id,
+                r.referred_id,
+                u.full_name as referred_name,
+                MIN(t.amount) as first_tx_amount,
+                MIN(t.currency) as first_tx_currency
             FROM referrals r
-            JOIN users u ON u.id = r.referrer_id
-            WHERE r.referred_id = ? AND r.status = 'pending'
-            ORDER BY r.created_at DESC
-            LIMIT 1
-        """,
-            (user_id,),
-        )
-        referral = c.fetchone()
+            JOIN users u ON u.id = r.referred_id
+            LEFT JOIN transactions t ON t.user_id = r.referred_id
+                AND t.status IN {_SUCCESS_STATUS_SQL}
+                AND t.tx_type != 'wallet_funding'
+            WHERE r.status = 'pending'
+            GROUP BY r.id
+            HAVING COUNT(t.id) > 0
+        """).fetchall()
 
-        if not referral:
-            conn.close()
-            return {"success": False, "error": "No pending referral found"}
+        processed = 0
+        errors = []
 
-        ref_id = referral["id"]
-        referrer_id = referral["referrer_id"]
-        referrer_name = referral.get("referrer_name", "a referrer")
+        for referral in pending:
+            try:
+                first_amount = float(referral["first_tx_amount"] or 0)
+                bonus_amount = round(first_amount * pct / 100, 2)
+                if min_bonus > 0:
+                    bonus_amount = max(bonus_amount, min_bonus)
+                if max_bonus > 0:
+                    bonus_amount = min(bonus_amount, max_bonus)
+                if bonus_amount <= 0:
+                    continue
+                bonus_currency = referral["first_tx_currency"] or "NGN"
 
-        # 2. Get first transaction amount (excluding wallet funding)
-        c.execute(
-            """
-            SELECT amount, currency 
-            FROM transactions 
-            WHERE user_id = ? 
-            AND status = 'fulfilled' 
-            AND tx_type != 'wallet_funding'
-            ORDER BY created_at ASC
-            LIMIT 1
-        """,
-            (user_id,),
-        )
-        first_tx = c.fetchone()
+                credit_result = credit_wallet(
+                    user_id=referral["referrer_id"],
+                    amount=bonus_amount,
+                    currency=bonus_currency,
+                    description=f"🎉 {pct:g}% Referral bonus for {referral['referred_name']}!",
+                    reference=f"REFBONUS-{referral['id']}",
+                    metadata={
+                        "referral_id": referral["id"],
+                        "referred_user_id": referral["referred_id"],
+                        "bonus_percentage": pct,
+                        "transaction_amount": first_amount,
+                        "type": "referral_bonus",
+                    },
+                )
 
-        # ✅ FIX: Use passed transaction_amount if provided, otherwise use first_tx
-        if transaction_amount and transaction_amount > 0:
-            tx_amount = float(transaction_amount)
-            bonus_currency = "NGN"  # Default if not available
-        elif first_tx and first_tx["amount"] and float(first_tx["amount"]) > 0:
-            tx_amount = float(first_tx["amount"])
-            bonus_currency = first_tx["currency"] or "NGN"
-        else:
-            tx_amount = 0
-            bonus_currency = "NGN"
+                if credit_result.get("success"):
+                    c.execute(
+                        """
+                        UPDATE referrals
+                        SET status = 'completed', completed_at = CURRENT_TIMESTAMP
+                        WHERE id = ? AND status = 'pending'
+                    """,
+                        (referral["id"],),
+                    )
+                    conn.commit()
+                    if not credit_result.get("already_credited"):
+                        processed += 1
+                        create_notification(
+                            referral["referrer_id"],
+                            "🎉 Referral Bonus Earned!",
+                            f"You earned {bonus_currency} {bonus_amount:,.2f} for referring {referral['referred_name']}!",
+                            "success",
+                        )
 
-        # 3. Get referral bonus config
-        c.execute(
-            """
-            SELECT bonus_percentage, min_bonus, max_bonus 
-            FROM referral_bonus_config 
-            ORDER BY id DESC 
-            LIMIT 1
-        """
-        )
-        config = c.fetchone()
+            except Exception as e:
+                errors.append(str(e))
 
-        if config:
-            bonus_percentage = float(config["bonus_percentage"] if config["bonus_percentage"] is not None else 10.0)
-            min_bonus = float(config["min_bonus"] if config["min_bonus"] is not None else 50.0)
-            max_bonus = float(config["max_bonus"] if config["max_bonus"] is not None else 5000.0)
-        else:
-            bonus_percentage, min_bonus, max_bonus = 10.0, 50.0, 5000.0
-
-        # 4. Calculate Bonus Amount
-        if tx_amount > 0:
-            bonus_amount = (tx_amount * bonus_percentage) / 100
-            bonus_amount = max(bonus_amount, min_bonus)
-            bonus_amount = min(bonus_amount, max_bonus)
-            bonus_amount = round(bonus_amount, 2)
-        else:
-            bonus_amount = min_bonus
-            bonus_currency = "NGN"
-
-        logger.info(f"💰 Calculated bonus: {bonus_percentage}% of {tx_amount} = {bonus_amount} {bonus_currency}")
-
-        # 5. Credit Referrer Wallet
-        credit_result = credit_wallet(
-            user_id=referrer_id,
-            amount=bonus_amount,
-            currency=bonus_currency,
-            description=f"🎉 {bonus_percentage}% Referral bonus for referring a new user!",
-            reference=f"REFBONUS-{ref_id}",
-            metadata={
-                "referral_id": ref_id,
-                "referred_user_id": user_id,
-                "bonus_percentage": bonus_percentage,
-                "transaction_amount": tx_amount,
-                "type": "referral_bonus",
-            },
-        )
-
-        if not credit_result.get("success"):
-            conn.close()
-            return {
-                "success": False,
-                "error": f"Failed to credit bonus: {credit_result.get('error')}",
-            }
-
-        # 6. Update Referral Status
-        c.execute(
-            """
-            UPDATE referrals 
-            SET status = 'completed', 
-                completed_at = CURRENT_TIMESTAMP,
-                reward_amount = ?,
-                reward_currency = ?,
-                bonus_percentage = ?
-            WHERE id = ? AND status = 'pending'
-        """,
-            (bonus_amount, bonus_currency, bonus_percentage, ref_id),
-        )
-
-        if c.rowcount == 0:
-            conn.close()
-            logger.warning(f"Referral {ref_id} was already updated by another process.")
-            return {
-                "success": False,
-                "error": "Referral already processed",
-            }
-
-        conn.commit()
-
-        # 7. Notifications
-        create_notification(
-            referrer_id,
-            "🎉 Referral Bonus Earned!",
-            f"You earned {bonus_currency} {bonus_amount:,.2f} ({bonus_percentage}% of their first transaction) for your referral!",
-            "success",
-        )
-
-        create_notification(
-            user_id,
-            "🎉 Welcome Bonus!",
-            f"You received {bonus_currency} {bonus_amount:,.2f} as a welcome bonus!",
-            "success",
-        )
-
+        return {"processed": processed, "errors": errors}
+    finally:
         conn.close()
-
-        return {
-            "success": True,
-            "bonus_amount": bonus_amount,
-            "bonus_currency": bonus_currency,
-            "referrer_id": referrer_id,
-            "referrer_name": referrer_name,
-            "referral_id": ref_id,
-            "bonus_percentage": bonus_percentage,
-        }
-
-    except Exception as e:
-        logger.error(f"Error applying referral promo for user {user_id}: {e}", exc_info=True)
-        conn.close()
-        return {"success": False, "error": str(e)}
-
-
-@retry_on_lock
-def get_referral_stats(user_id: int) -> Dict:
-    """Get detailed referral statistics for a user."""
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    # Get total referrals
-    total = (
-        c.execute(
-            "SELECT COUNT(*) FROM referrals WHERE referrer_id = ?", (user_id,)
-        ).fetchone()[0]
-        or 0
-    )
-
-    # Get completed referrals
-    completed = (
-        c.execute(
-            "SELECT COUNT(*) FROM referrals WHERE referrer_id = ? AND status = 'completed'",
-            (user_id,),
-        ).fetchone()[0]
-        or 0
-    )
-
-    # Get pending referrals
-    pending = (
-        c.execute(
-            "SELECT COUNT(*) FROM referrals WHERE referrer_id = ? AND status = 'pending'",
-            (user_id,),
-        ).fetchone()[0]
-        or 0
-    )
-
-    # Get expired referrals
-    expired = (
-        c.execute(
-            """
-        SELECT COUNT(*) FROM referrals 
-        WHERE referrer_id = ? 
-        AND status = 'pending' 
-        AND referral_expiry < datetime('now')
-    """,
-            (user_id,),
-        ).fetchone()[0]
-        or 0
-    )
-
-    # Get total earnings
-    total_earnings = (
-        c.execute(
-            """
-        SELECT COALESCE(SUM(reward_amount), 0) FROM referral_rewards 
-        WHERE referrer_id = ? AND status = 'completed'
-    """,
-            (user_id,),
-        ).fetchone()[0]
-        or 0
-    )
-
-    # Get total transactions from referrals
-    total_transactions = (
-        c.execute(
-            """
-        SELECT COUNT(DISTINCT transaction_reference) FROM referral_rewards 
-        WHERE referrer_id = ?
-    """,
-            (user_id,),
-        ).fetchone()[0]
-        or 0
-    )
-
-    # Get active referrals (still within 3-month window)
-    active = (
-        c.execute(
-            """
-        SELECT COUNT(*) FROM referrals 
-        WHERE referrer_id = ? 
-        AND status = 'pending'
-        AND (referral_expiry IS NULL OR referral_expiry > datetime('now'))
-    """,
-            (user_id,),
-        ).fetchone()[0]
-        or 0
-    )
-
-    conn.close()
-
-    return {
-        "total": total,
-        "completed": completed,
-        "pending": pending,
-        "expired": expired,
-        "active": active,
-        "total_earnings": total_earnings,
-        "total_transactions": total_transactions,
-    }
 
 
 @retry_on_lock
@@ -3143,23 +2526,6 @@ def get_referral_code_by_user_id(user_id: int) -> Optional[str]:
     return row["referral_code"] if row else None
 
 
-@retry_on_lock
-def get_referrals_count_by_code(code: str) -> int:
-    """Get count of referrals using a specific referral code."""
-    if not code:
-        return 0
-
-    conn = get_db_connection()
-    c = conn.cursor()
-    try:
-        c.execute(
-            "SELECT COUNT(*) FROM users WHERE UPPER(referral_code) = UPPER(?)",
-            (code.strip(),),
-        )
-        result = c.fetchone()
-        return result[0] if result else 0
-    finally:
-        conn.close()
 
 
 @retry_on_lock
@@ -3211,11 +2577,12 @@ def get_active_promotions(context: Dict = None) -> List[Dict]:
     context = context or {}
     tx_type = context.get("tx_type", "").lower()
     amount = context.get("amount")
-    hour = context.get("hour", datetime.now().hour)
+    hour = context.get("hour", datetime.now().hour)  # local hour-of-day targeting
     day_of_week = context.get("day_of_week", datetime.now().weekday())
     is_new = context.get("is_new_customer", False)
     user_id = context.get("user_id")
-    now = datetime.now().isoformat()
+    # Start/end dates are compared in UTC (the DB stores UTC); hour targeting stays local.
+    now = datetime.utcnow().isoformat()
 
     # Build query with all targeting filters
     query = """
@@ -3493,9 +2860,43 @@ def get_all_promotions(limit: int = 50, offset: int = 0) -> List[Dict]:
 # ============ USER FUNCTIONS ============
 
 
+_PBKDF2_ITERATIONS = int(os.getenv("PASSWORD_PBKDF2_ITERATIONS", "260000"))
+_PW_PREFIX = "pbkdf2_sha256"
+
+
 def hash_password(password: str) -> str:
-    """Hash a password using SHA-256"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Salted PBKDF2-HMAC-SHA256 hash:  pbkdf2_sha256$<iterations>$<salt>$<hash>.
+
+    The previous scheme was a bare, unsalted SHA-256, which is trivially reversed with
+    precomputed tables if the database ever leaks. Old hashes are still accepted by
+    verify_password() and are upgraded automatically the next time that user logs in.
+    """
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256", password.encode(), bytes.fromhex(salt), _PBKDF2_ITERATIONS
+    ).hex()
+    return f"{_PW_PREFIX}${_PBKDF2_ITERATIONS}${salt}${digest}"
+
+
+def verify_password(password: str, stored: Optional[str]) -> bool:
+    """Constant-time check against either the new PBKDF2 format or the legacy SHA-256 hex."""
+    if not stored or not isinstance(password, str):
+        return False
+    try:
+        if stored.startswith(_PW_PREFIX + "$"):
+            _, iterations, salt, digest = stored.split("$", 3)
+            candidate = hashlib.pbkdf2_hmac(
+                "sha256", password.encode(), bytes.fromhex(salt), int(iterations)
+            ).hex()
+            return secrets.compare_digest(candidate, digest)
+        legacy = hashlib.sha256(password.encode()).hexdigest()
+        return secrets.compare_digest(legacy, stored)
+    except Exception:
+        return False
+
+
+def password_needs_rehash(stored: Optional[str]) -> bool:
+    return bool(stored) and not str(stored).startswith(_PW_PREFIX + "$")
 
 
 @retry_on_lock
@@ -3931,6 +3332,16 @@ def get_db_connection():
             "reloadly.db",
         )
 
+    # Resolve/validate the parent directory for every connection path. This
+    # prevents startup failures when a configured persistent-volume directory
+    # has not yet been created, while leaving any existing DB file untouched.
+    db_file = os.path.abspath(os.path.expanduser(os.fspath(db_file)))
+    db_parent = os.path.dirname(db_file)
+    if db_parent:
+        os.makedirs(db_parent, mode=0o750, exist_ok=True)
+        if not os.access(db_parent, os.W_OK | os.X_OK):
+            raise PermissionError(f"SQLite database directory is not writable: {db_parent}")
+
     conn = sqlite3.connect(
         db_file,
         timeout=30.0,
@@ -3954,179 +3365,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def apply_referral_promo(user_id: int, transaction_amount: float = None) -> Dict:
-    """Apply referral promotion when a user completes their first transaction."""
-    conn = get_db_connection()
-    
-    try:
-        c = conn.cursor()
-
-        # 1. Fetch pending referral
-        c.execute(
-            """
-            SELECT r.id, r.referrer_id, r.status, u.full_name as referrer_name
-            FROM referrals r
-            JOIN users u ON u.id = r.referrer_id
-            WHERE r.referred_id = ? AND r.status = 'pending'
-            ORDER BY r.created_at DESC
-            LIMIT 1
-        """,
-            (user_id,),
-        )
-        referral_row = c.fetchone()
-        
-        # ✅ FIX: Convert to dict first
-        if referral_row:
-            referral = dict(referral_row)
-        else:
-            conn.close()
-            return {"success": False, "error": "No pending referral found"}
-
-        ref_id = referral["id"]
-        referrer_id = referral["referrer_id"]
-        referrer_name = referral.get("referrer_name", "a referrer")
-
-        # 2. Get first transaction amount (excluding wallet funding)
-        c.execute(
-            """
-            SELECT amount, currency 
-            FROM transactions 
-            WHERE user_id = ? 
-            AND status = 'fulfilled' 
-            AND tx_type != 'wallet_funding'
-            ORDER BY created_at ASC
-            LIMIT 1
-        """,
-            (user_id,),
-        )
-        first_tx_row = c.fetchone()
-        
-        # ✅ FIX: Convert to dict if exists
-        first_tx = dict(first_tx_row) if first_tx_row else None
-
-        # Use passed transaction_amount if provided
-        if transaction_amount and transaction_amount > 0:
-            tx_amount = float(transaction_amount)
-            bonus_currency = "NGN"
-        elif first_tx and first_tx.get("amount") and float(first_tx.get("amount", 0)) > 0:
-            tx_amount = float(first_tx.get("amount", 0))
-            bonus_currency = first_tx.get("currency", "NGN")
-        else:
-            tx_amount = 0
-            bonus_currency = "NGN"
-
-        # 3. Get referral bonus config
-        c.execute(
-            """
-            SELECT bonus_percentage, min_bonus, max_bonus 
-            FROM referral_bonus_config 
-            ORDER BY id DESC 
-            LIMIT 1
-        """
-        )
-        config_row = c.fetchone()
-        
-        # ✅ FIX: Convert to dict if exists
-        config = dict(config_row) if config_row else None
-
-        if config:
-            bonus_percentage = float(config.get("bonus_percentage", 10.0))
-            min_bonus = float(config.get("min_bonus", 50.0))
-            max_bonus = float(config.get("max_bonus", 5000.0))
-        else:
-            bonus_percentage, min_bonus, max_bonus = 10.0, 50.0, 5000.0
-
-        # 4. Calculate Bonus Amount
-        if tx_amount > 0:
-            bonus_amount = (tx_amount * bonus_percentage) / 100
-            bonus_amount = max(bonus_amount, min_bonus)
-            bonus_amount = min(bonus_amount, max_bonus)
-            bonus_amount = round(bonus_amount, 2)
-        else:
-            bonus_amount = min_bonus
-            bonus_currency = "NGN"
-
-        logger.info(f"💰 Calculated bonus: {bonus_percentage}% of {tx_amount} = {bonus_amount} {bonus_currency}")
-
-        # 5. Credit Referrer Wallet
-        credit_result = credit_wallet(
-            user_id=referrer_id,
-            amount=bonus_amount,
-            currency=bonus_currency,
-            description=f"🎉 {bonus_percentage}% Referral bonus for referring a new user!",
-            reference=f"REFBONUS-{ref_id}",
-            metadata={
-                "referral_id": ref_id,
-                "referred_user_id": user_id,
-                "bonus_percentage": bonus_percentage,
-                "transaction_amount": tx_amount,
-                "type": "referral_bonus",
-            },
-        )
-
-        if not credit_result.get("success"):
-            conn.close()
-            return {
-                "success": False,
-                "error": f"Failed to credit bonus: {credit_result.get('error')}",
-            }
-
-        # 6. Update Referral Status
-        c.execute(
-            """
-            UPDATE referrals 
-            SET status = 'completed', 
-                completed_at = CURRENT_TIMESTAMP,
-                reward_amount = ?,
-                reward_currency = ?,
-                bonus_percentage = ?
-            WHERE id = ? AND status = 'pending'
-        """,
-            (bonus_amount, bonus_currency, bonus_percentage, ref_id),
-        )
-
-        if c.rowcount == 0:
-            conn.close()
-            logger.warning(f"Referral {ref_id} was already updated by another process.")
-            return {
-                "success": False,
-                "error": "Referral already processed",
-            }
-
-        conn.commit()
-
-        # 7. Notifications
-        create_notification(
-            referrer_id,
-            "🎉 Referral Bonus Earned!",
-            f"You earned {bonus_currency} {bonus_amount:,.2f} ({bonus_percentage}% of their first transaction) for your referral!",
-            "success",
-        )
-
-        create_notification(
-            user_id,
-            "🎉 Welcome Bonus!",
-            f"You received {bonus_currency} {bonus_amount:,.2f} as a welcome bonus!",
-            "success",
-        )
-
-        conn.close()
-
-        return {
-            "success": True,
-            "bonus_amount": bonus_amount,
-            "bonus_currency": bonus_currency,
-            "referrer_id": referrer_id,
-            "referrer_name": referrer_name,
-            "referral_id": ref_id,
-            "bonus_percentage": bonus_percentage,
-        }
-
-    except Exception as e:
-        logger.error(f"Error applying referral promo for user {user_id}: {e}", exc_info=True)
-        if conn:
-            conn.close()
-        return {"success": False, "error": str(e)}
 
 def calculate_referral_bonus(transaction_amount: float) -> Dict:
     """Calculate referral bonus based on config."""
@@ -4184,11 +3422,23 @@ def authenticate_user(email: str, password: str) -> Optional[Dict]:
     if not user:
         return None
 
-    password_hash = hash_password(password)
-    if user.get("password_hash") == password_hash:
+    stored = user.get("password_hash")
+    if verify_password(password, stored):
         status = user.get("account_status", "active")
         if status in ("blocked", "deleted"):
             return None
+        if password_needs_rehash(stored):
+            try:
+                conn = get_db_connection()
+                try:
+                    conn.execute(
+                        "UPDATE users SET password_hash = ? WHERE id = ?",
+                        (hash_password(password), user["id"]),
+                    )
+                finally:
+                    conn.close()
+            except Exception as e:
+                logger.warning(f"Could not upgrade password hash for user {user.get('id')}: {e}")
         return user
 
     return None
@@ -4285,6 +3535,16 @@ def create_pending(
     payload: Dict,
     user_id: int = None,
 ) -> bool:
+    # Analytics: remember which visitor started this payment (only set when they accepted the cookie notice).
+    try:
+        import net365_insights as _ins
+
+        _vid = _ins.visitor_id()
+        if _vid and isinstance(payload, dict) and not payload.get("visitor_id"):
+            payload = {**payload, "visitor_id": _vid}
+    except Exception:
+        pass
+
     conn = get_db_connection()
     c = conn.cursor()
 
@@ -4306,9 +3566,47 @@ def create_pending(
             ),
         )
         conn.commit()
+        if tx_type != "wallet_funding":
+            _insights_emit(
+                {"status": None, "payload": json.dumps(payload), "user_id": user_id,
+                 "tx_type": tx_type, "provider": provider, "amount": amount},
+                "payment_started",
+            )
         return True
     except sqlite3.IntegrityError:
         return False
+
+
+def _insights_prev(c, reference):
+    """Row as it is BEFORE a status change, so an event is logged only on a real transition."""
+    try:
+        return c.execute(
+            "SELECT status, payload, user_id, tx_type, provider, amount FROM transactions WHERE reference = ?",
+            (reference,),
+        ).fetchone()
+    except Exception:
+        return None
+
+
+def _insights_emit(prev, event, target_status=None):
+    """Record a funnel event for the visitor stored in the transaction payload. Never raises."""
+    try:
+        if not prev or prev["tx_type"] == "wallet_funding":
+            return
+        if target_status and prev["status"] == target_status:
+            return
+        import net365_insights as _ins
+
+        p = prev["payload"]
+        p = json.loads(p) if isinstance(p, str) and p else (p or {})
+        _ins.log_event(
+            event,
+            {"type": prev["tx_type"], "provider": prev["provider"], "amount": prev["amount"]},
+            visitor_id_=p.get("visitor_id") if isinstance(p, dict) else None,
+            user_id=prev["user_id"],
+        )
+    except Exception:
+        pass
 
 
 @retry_on_lock
@@ -4415,6 +3713,7 @@ def mark_paid(reference: str) -> bool:
 def mark_fulfilled(reference: str, result: Dict) -> bool:
     conn = get_db_connection()
     c = conn.cursor()
+    _prev = _insights_prev(c, reference)
     c.execute(
         """
         UPDATE transactions 
@@ -4424,6 +3723,7 @@ def mark_fulfilled(reference: str, result: Dict) -> bool:
         (json.dumps(result), reference),
     )
     conn.commit()
+    _insights_emit(_prev, "fulfilled", "fulfilled")
     return True
 
 
@@ -4449,6 +3749,7 @@ def mark_failed(reference: str, error: str) -> bool:
 def mark_fulfillment_failed(reference, error_message):
     conn = get_db_connection()
     c = conn.cursor()
+    _prev = _insights_prev(c, reference)
     c.execute(
         """
         UPDATE transactions
@@ -4461,7 +3762,10 @@ def mark_fulfillment_failed(reference, error_message):
         """,
         (error_message, reference),
     )
+    if c.rowcount == 0:
+        logger.warning(f"mark_fulfillment_failed: no transaction with reference {reference}")
     conn.commit()
+    _insights_emit(_prev, "fulfillment_failed", "fulfillment_failed")
     conn.close()
 
 
@@ -4711,6 +4015,14 @@ def credit_wallet(
     metadata: Dict = None,
     currency: str = "NGN",
 ) -> Dict:
+    """Credit a wallet atomically.
+
+    The connection runs in autocommit mode (isolation_level=None), so without an explicit
+    BEGIN IMMEDIATE every statement committed on its own and the read-modify-write below
+    was not protected: two concurrent credits could read the same balance and one would be
+    lost. BEGIN IMMEDIATE takes SQLite's write lock before the balance is read, and the
+    UPDATE is relative (balance = balance + ?) as a second line of defence.
+    """
     currency = (currency or "NGN").upper()
     amount = round(float(amount), 2)
 
@@ -4719,61 +4031,82 @@ def credit_wallet(
 
     conn = get_db_connection()
     c = conn.cursor()
+    in_txn = False
 
     try:
-        # Generate unique reference if not provided
-        if not reference:
-            reference = f"wallet_credit_{datetime.now().timestamp()}_{uuid.uuid4().hex[:8]}"
+        base_reference = reference or None
+        c.execute("BEGIN IMMEDIATE")
+        in_txn = True
+
+        if base_reference:
+            # Idempotent by reference: replaying the same credit (webhook retry, retried refund or
+            # referral bonus) must not pay twice. Older rows stored a timestamp-suffixed reference
+            # and no base_reference, so match those by prefix too.
+            prior = c.execute(
+                """
+                SELECT id, balance_after FROM wallet_transactions
+                WHERE user_id = ? AND type = 'credit' AND currency = ?
+                  AND (base_reference = ? OR reference = ? OR reference LIKE ? ESCAPE '\\')
+                LIMIT 1
+                """,
+                (user_id, currency, base_reference, base_reference,
+                 base_reference.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "\\_%"),
+            ).fetchone()
+            if prior:
+                c.execute("COMMIT")
+                in_txn = False
+                return {
+                    "success": True,
+                    "already_credited": True,
+                    "transaction_id": prior["id"],
+                    "new_balance": float(prior["balance_after"] or 0),
+                    "currency": currency,
+                    "amount": amount,
+                }
+            reference = base_reference
         else:
-            # Make reference unique by adding timestamp and random suffix
+            reference = f"wallet_credit_{datetime.now().timestamp()}_{uuid.uuid4().hex[:8]}"
+
+        # `reference` is UNIQUE across debits and credits; if a debit already used this exact
+        # reference, keep the credit distinct (its base_reference still identifies it).
+        clash = c.execute(
+            "SELECT id FROM wallet_transactions WHERE reference = ?", (reference,)
+        ).fetchone()
+        if clash:
             reference = f"{reference}_{datetime.now().timestamp()}_{uuid.uuid4().hex[:4]}"
 
-        # Check if reference already exists
-        existing = c.execute(
-            "SELECT id FROM wallet_transactions WHERE reference = ?",
-            (reference,),
-        ).fetchone()
-
-        if existing:
-            # If reference exists, generate a completely new one
-            reference = f"wallet_credit_{datetime.now().timestamp()}_{uuid.uuid4().hex[:8]}"
-
+        c.execute(
+            """
+            INSERT OR IGNORE INTO wallets (user_id, currency, balance, available_balance, reserved_balance)
+            VALUES (?, ?, 0, 0, 0)
+            """,
+            (user_id, currency),
+        )
         wallet = c.execute(
             "SELECT * FROM wallets WHERE user_id = ? AND currency = ?",
             (user_id, currency),
         ).fetchone()
-
-        if not wallet:
-            c.execute(
-                """
-                INSERT INTO wallets (user_id, currency, balance, available_balance, reserved_balance)
-                VALUES (?, ?, 0, 0, 0)
-            """,
-                (user_id, currency),
-            )
-            wallet = c.execute(
-                "SELECT * FROM wallets WHERE user_id = ? AND currency = ?",
-                (user_id, currency),
-            ).fetchone()
 
         before = float(wallet["balance"] or 0)
         after = round(before + amount, 2)
 
         c.execute(
             """
-            UPDATE wallets 
-            SET balance = ?, available_balance = ?, updated_at = CURRENT_TIMESTAMP 
+            UPDATE wallets
+            SET balance = ROUND(balance + ?, 2),
+                available_balance = ROUND(COALESCE(available_balance, balance) + ?, 2),
+                updated_at = CURRENT_TIMESTAMP
             WHERE user_id = ? AND currency = ?
-        """,
-            (after, after - float(wallet["reserved_balance"] or 0), user_id, currency),
+            """,
+            (amount, amount, user_id, currency),
         )
 
         c.execute(
             """
-            INSERT INTO wallet_transactions 
-            (user_id, amount, currency, type, description, reference, balance_before, balance_after, metadata)
-            VALUES (?, ?, ?, 'credit', ?, ?, ?, ?, ?)
-        """,
+            INSERT INTO wallet_transactions
+            (user_id, amount, currency, type, description, reference, balance_before, balance_after, metadata, base_reference)
+            VALUES (?, ?, ?, 'credit', ?, ?, ?, ?, ?, ?)
+            """,
             (
                 user_id,
                 amount,
@@ -4783,11 +4116,12 @@ def credit_wallet(
                 before,
                 after,
                 json.dumps(metadata or {}),
+                base_reference,
             ),
         )
-
         tx_id = c.lastrowid
-        conn.commit()
+        c.execute("COMMIT")
+        in_txn = False
 
         return {
             "success": True,
@@ -4797,49 +4131,26 @@ def credit_wallet(
             "amount": amount,
         }
 
+    except sqlite3.OperationalError:
+        # lock timeouts must reach @retry_on_lock; make sure nothing stays half-open
+        if in_txn:
+            try:
+                c.execute("ROLLBACK")
+            except Exception:
+                pass
+        raise
     except Exception as e:
-        conn.rollback()
+        if in_txn:
+            try:
+                c.execute("ROLLBACK")
+            except Exception:
+                pass
         logger.error(f"❌ Credit wallet error: {e}")
         return {"success": False, "error": str(e)}
     finally:
         conn.close()
 
 
-@retry_on_lock
-def update_referral_bonus_config(
-    bonus_percentage: float,
-    min_bonus: float = 50.0,
-    max_bonus: float = 5000.0,
-    enabled: bool = True,  # ← Add enabled parameter
-    updated_by: int = None,
-) -> bool:
-    """Update referral bonus configuration."""
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    try:
-        c.execute(
-            """
-            INSERT INTO referral_bonus_config 
-            (bonus_percentage, min_bonus, max_bonus, enabled, updated_by, updated_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """,
-            (
-                bonus_percentage,
-                min_bonus,
-                max_bonus,
-                1 if enabled else 0,  # ← Store as 1 or 0
-                updated_by,
-            ),
-        )
-
-        conn.commit()
-        return True
-    except Exception as e:
-        logger.error(f"Failed to update referral bonus config: {e}")
-        return False
-    finally:
-        conn.close()
 
 
 @retry_on_lock
@@ -4851,6 +4162,13 @@ def debit_wallet(
     metadata: Dict = None,
     currency: str = "NGN",
 ) -> Dict:
+    """Debit a wallet atomically, never allowing the balance to go negative.
+
+    Previously the balance was read, checked in Python and then overwritten with an absolute
+    value outside any transaction, so two simultaneous debits could both pass the check
+    (double spend) or overwrite each other. Now the whole operation runs inside BEGIN
+    IMMEDIATE and the UPDATE itself refuses to run unless enough funds are available.
+    """
     currency = (currency or "NGN").upper()
     amount = round(float(amount), 2)
     if amount <= 0:
@@ -4858,8 +4176,12 @@ def debit_wallet(
 
     conn = get_db_connection()
     c = conn.cursor()
+    in_txn = False
 
     try:
+        c.execute("BEGIN IMMEDIATE")
+        in_txn = True
+
         if reference:
             existing = c.execute(
                 "SELECT id FROM wallet_transactions WHERE reference=? AND type='debit'",
@@ -4870,6 +4192,8 @@ def debit_wallet(
                     "SELECT balance FROM wallets WHERE user_id=? AND currency=?",
                     (user_id, currency),
                 ).fetchone()
+                c.execute("COMMIT")
+                in_txn = False
                 return {
                     "success": True,
                     "already_debited": True,
@@ -4883,26 +4207,31 @@ def debit_wallet(
             "SELECT * FROM wallets WHERE user_id=? AND currency=?", (user_id, currency)
         ).fetchone()
         if not wallet:
+            c.execute("ROLLBACK")
+            in_txn = False
             return {"success": False, "error": f"{currency} wallet not found"}
 
-        available = float(
-            wallet["available_balance"]
-            if wallet["available_balance"] is not None
-            else wallet["balance"]
+        before = float(wallet["balance"] or 0)
+
+        cur = c.execute(
+            """
+            UPDATE wallets
+            SET balance = ROUND(balance - ?, 2),
+                available_balance = ROUND(COALESCE(available_balance, balance) - ?, 2),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND currency = ?
+              AND COALESCE(available_balance, balance) >= ?
+              AND balance >= ?
+            """,
+            (amount, amount, user_id, currency, amount, amount),
         )
-        if available < amount:
+        if cur.rowcount != 1:
+            c.execute("ROLLBACK")
+            in_txn = False
             return {"success": False, "error": f"Insufficient {currency} balance"}
 
-        before = float(wallet["balance"] or 0)
         after = round(before - amount, 2)
-        reserved = float(wallet["reserved_balance"] or 0)
-
-        c.execute(
-            "UPDATE wallets SET balance=?, available_balance=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND currency=?",
-            (after, after - reserved, user_id, currency),
-        )
-
-        ref = reference or f"wallet_debit_{datetime.now().timestamp()}"
+        ref = reference or f"wallet_debit_{datetime.now().timestamp()}_{uuid.uuid4().hex[:6]}"
         c.execute(
             """INSERT INTO wallet_transactions
             (user_id,amount,currency,type,description,reference,balance_before,balance_after,metadata)
@@ -4919,9 +4248,9 @@ def debit_wallet(
                 json.dumps(metadata or {}),
             ),
         )
-
         tx_id = c.lastrowid
-        conn.commit()
+        c.execute("COMMIT")
+        in_txn = False
 
         return {
             "success": True,
@@ -4931,9 +4260,22 @@ def debit_wallet(
             "currency": currency,
             "amount": amount,
         }
+    except sqlite3.OperationalError:
+        if in_txn:
+            try:
+                c.execute("ROLLBACK")
+            except Exception:
+                pass
+        raise
     except Exception as e:
-        conn.rollback()
+        if in_txn:
+            try:
+                c.execute("ROLLBACK")
+            except Exception:
+                pass
         return {"success": False, "error": str(e)}
+    finally:
+        conn.close()
 
 
 # ============ NOTIFICATION FUNCTIONS ============
@@ -5117,54 +4459,6 @@ def calculate_promotion_discount(
         "promo_name": promo.get("name"),
     }
 
-@retry_on_lock
-def migrate_contacts_usage_tracking():
-    """Add last_used_at / use_count / phone_normalized columns for recency."""
-    import re as _re
-    conn = get_db_connection()
-    c = conn.cursor()
-    try:
-        columns = {row[1] for row in c.execute("PRAGMA table_info(contacts)").fetchall()}
-
-        if "last_used_at" not in columns:
-            c.execute("ALTER TABLE contacts ADD COLUMN last_used_at TIMESTAMP")
-            logger.info("Added last_used_at to contacts")
-
-        if "use_count" not in columns:
-            c.execute("ALTER TABLE contacts ADD COLUMN use_count INTEGER DEFAULT 0")
-            logger.info("Added use_count to contacts")
-
-        if "phone_normalized" not in columns:
-            c.execute("ALTER TABLE contacts ADD COLUMN phone_normalized TEXT")
-            logger.info("Added phone_normalized to contacts")
-
-        # Backfill phone_normalized for existing rows
-        for row in c.execute(
-            "SELECT id, phone FROM contacts WHERE phone IS NOT NULL AND (phone_normalized IS NULL OR phone_normalized = '')"
-        ).fetchall():
-            norm = _re.sub(r"[^\d+]", "", row["phone"] or "")
-            if norm:
-                c.execute(
-                    "UPDATE contacts SET phone_normalized = ? WHERE id = ?",
-                    (norm, row["id"]),
-                )
-
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS idx_contacts_last_used ON contacts(user_id, last_used_at DESC)"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS idx_contacts_phone_normalized ON contacts(phone_normalized)"
-        )
-
-        conn.commit()
-        logger.info("Contacts usage tracking migration complete")
-        return {"success": True}
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Contacts usage migration failed: {e}")
-        return {"success": False, "error": str(e)}
-    finally:
-        conn.close()
 
 @retry_on_lock
 def track_promotion_usage(promo_id: int, user_id: int) -> bool:
@@ -5319,53 +4613,8 @@ def apply_referral_promo(user_id: int, promo_context: Dict = None) -> Dict:
     }
 
 # ============ REWARDS FUNCTIONS ============
-@retry_on_lock
-def get_referral_bonus_config() -> Dict:
-    """Get current referral bonus configuration."""
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    config = c.execute("""
-        SELECT bonus_percentage, min_bonus, max_bonus, updated_at
-        FROM referral_bonus_config
-        ORDER BY id DESC LIMIT 1
-    """).fetchone()
-
-    conn.close()
-
-    if config:
-        return dict(config)
-    return {"bonus_percentage": 10.0, "min_bonus": 50.0, "max_bonus": 5000.0}
 
 
-@retry_on_lock
-def update_referral_bonus_config(
-    bonus_percentage: float,
-    min_bonus: float = 50.0,
-    max_bonus: float = 5000.0,
-    updated_by: int = None,
-) -> bool:
-    """Update referral bonus configuration."""
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    try:
-        c.execute(
-            """
-            INSERT INTO referral_bonus_config 
-            (bonus_percentage, min_bonus, max_bonus, updated_by, updated_at)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """,
-            (bonus_percentage, min_bonus, max_bonus, updated_by),
-        )
-
-        conn.commit()
-        return True
-    except Exception as e:
-        logger.error(f"Failed to update referral bonus config: {e}")
-        return False
-    finally:
-        conn.close()
 
 
 @retry_on_lock
@@ -5522,96 +4771,6 @@ def convert_rewards_to_cash(user_id: int, points: int) -> Dict:
         return {"success": False, "error": "Failed to credit wallet"}
 
 
-@retry_on_lock
-def get_all_referrals_admin(limit=20, offset=0, status=None, tier=None, date=None):
-    """Get all referrals for admin with filters."""
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    query = """
-        SELECT 
-            r.id,
-            r.referrer_id,
-            r.referred_id,
-            r.status,
-            r.created_at,
-            r.completed_at,
-            r.referral_expiry,
-            r.reward_amount,
-            r.reward_currency,
-            r.bonus_percentage,
-            u1.full_name as referrer_name,
-            u2.full_name as referred_name,
-            u2.email as referred_email,
-            rr.transaction_amount,
-            rr.transaction_reference,
-            rr.reward_type
-        FROM referrals r
-        LEFT JOIN users u1 ON u1.id = r.referrer_id
-        LEFT JOIN users u2 ON u2.id = r.referred_id
-        LEFT JOIN referral_rewards rr ON rr.referral_id = r.id
-        WHERE 1=1
-    """
-    params = []
-
-    if status:
-        query += " AND r.status = ?"
-        params.append(status)
-
-    if date:
-        query += " AND DATE(r.created_at) = ?"
-        params.append(date)
-
-    # Get total count
-    count_query = query.replace(
-        "SELECT r.id, r.referrer_id, r.referred_id, r.status, r.created_at, r.completed_at, r.referral_expiry, r.reward_amount, r.reward_currency, r.bonus_percentage, u1.full_name as referrer_name, u2.full_name as referred_name, u2.email as referred_email, rr.transaction_amount, rr.transaction_reference, rr.reward_type",
-        "SELECT COUNT(DISTINCT r.id)",
-    )
-    total = c.execute(count_query, params).fetchone()[0] or 0
-
-    # Get completed and pending counts
-    completed = (
-        c.execute(
-            "SELECT COUNT(*) FROM referrals WHERE status = 'completed'"
-        ).fetchone()[0]
-        or 0
-    )
-    pending = (
-        c.execute("SELECT COUNT(*) FROM referrals WHERE status = 'pending'").fetchone()[
-            0
-        ]
-        or 0
-    )
-    expired = (
-        c.execute("SELECT COUNT(*) FROM referrals WHERE status = 'expired'").fetchone()[
-            0
-        ]
-        or 0
-    )
-
-    # Get total bonus paid
-    total_bonus = (
-        c.execute(
-            "SELECT COALESCE(SUM(reward_amount), 0) FROM referrals WHERE status = 'completed'"
-        ).fetchone()[0]
-        or 0
-    )
-
-    query += " ORDER BY r.created_at DESC LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-
-    rows = c.execute(query, params).fetchall()
-    conn.close()
-
-    return {
-        "success": True,
-        "total": total,
-        "completed": completed,
-        "pending": pending,
-        "expired": expired,
-        "total_bonus": total_bonus,
-        "referrals": [dict(row) for row in rows],
-    }
 
 
 # ============================================================
@@ -5661,8 +4820,8 @@ def get_referral_bonus_config() -> Dict:
     if c.fetchone()[0] == 0:
         c.execute("""
             INSERT INTO referral_bonus_config (bonus_percentage, min_bonus, max_bonus, enabled, tier, commission_mode)
-            VALUES (10.0, 50.0, 5000.0, 1, 'all', 'flat')
-        """)
+            VALUES (10.0, 50.0, 5000.0, ?, 'all', 'flat')
+        """, (1 if os.getenv("REFERRAL_BONUS_DEFAULT_ENABLED", "false").lower() == "true" else 0,))
         conn.commit()
 
     config = c.execute("""
@@ -5679,7 +4838,7 @@ def get_referral_bonus_config() -> Dict:
         "bonus_percentage": 10.0,
         "min_bonus": 50.0,
         "max_bonus": 5000.0,
-        "enabled": True,  # ← Default to enabled
+        "enabled": False,  # off until an admin turns it on
         "tier": "all",
         "commission_mode": "flat",
     }
@@ -6118,8 +5277,6 @@ def get_bonus_history_admin(limit: int = 50, offset: int = 0) -> List[Dict]:
         (limit, offset),
     ).fetchall()
 
-    conn.close()
-
     result = []
     for row in rows:
         r = dict(row)
@@ -6145,13 +5302,14 @@ def get_bonus_history_admin(limit: int = 50, offset: int = 0) -> List[Dict]:
                     "SELECT full_name FROM users WHERE id = ?",
                     (meta["referred_id"],),
                 ).fetchone()
-                # note: c is already closed here in this version — see
-                # below for the corrected version.
+                if referred:
+                    r["referred_name"] = referred["full_name"]
             except Exception:
                 pass
 
         result.append(r)
 
+    conn.close()
     return result
 
 
@@ -6207,7 +5365,12 @@ def get_contacts(user_id: int, limit: int = None) -> List[Dict]:
     ]:
         if col not in columns:
             try:
-                c.execute(f"ALTER TABLE contacts ADD COLUMN {col} {typ} DEFAULT {default}")
+                # SQLite refuses ALTER ADD COLUMN with a non-constant default (CURRENT_TIMESTAMP);
+                # that made get_contacts crash on "no such column: updated_at". Add it with NULL.
+                _d = "NULL" if default.upper().startswith("CURRENT_") else default
+                c.execute(f"ALTER TABLE contacts ADD COLUMN {col} {typ} DEFAULT {_d}")
+                if _d != default:
+                    c.execute(f"UPDATE contacts SET {col} = {default} WHERE {col} IS NULL")
                 logger.info(f"get_contacts: added column {col} to contacts")
             except sqlite3.OperationalError as e:
                 logger.warning(f"get_contacts: could not add column {col}: {e}")
@@ -6233,49 +5396,6 @@ def get_contacts(user_id: int, limit: int = None) -> List[Dict]:
     conn.close()
     return [dict(r) for r in rows]
     
-@retry_on_lock
-def migrate_contacts_usage_tracking():
-    """Add last_used_at / use_count / phone_normalized columns for recency."""
-    import re as _re
-    conn = get_db_connection()
-    c = conn.cursor()
-    try:
-        columns = {row[1] for row in c.execute("PRAGMA table_info(contacts)").fetchall()}
-
-        if "last_used_at" not in columns:
-            c.execute("ALTER TABLE contacts ADD COLUMN last_used_at TIMESTAMP")
-        if "use_count" not in columns:
-            c.execute("ALTER TABLE contacts ADD COLUMN use_count INTEGER DEFAULT 0")
-        if "phone_normalized" not in columns:
-            c.execute("ALTER TABLE contacts ADD COLUMN phone_normalized TEXT")
-
-        # Backfill phone_normalized for existing rows
-        for row in c.execute(
-            "SELECT id, phone FROM contacts WHERE phone IS NOT NULL AND (phone_normalized IS NULL OR phone_normalized = '')"
-        ).fetchall():
-            norm = _re.sub(r"[^\d+]", "", row["phone"] or "")
-            if norm:
-                c.execute(
-                    "UPDATE contacts SET phone_normalized = ? WHERE id = ?",
-                    (norm, row["id"]),
-                )
-
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS idx_contacts_last_used ON contacts(user_id, last_used_at DESC)"
-        )
-        c.execute(
-            "CREATE INDEX IF NOT EXISTS idx_contacts_phone_normalized ON contacts(phone_normalized)"
-        )
-
-        conn.commit()
-        logger.info("Contacts usage tracking migration complete")
-        return {"success": True}
-    except Exception as e:
-        conn.rollback()
-        logger.error(f"Contacts usage migration failed: {e}")
-        return {"success": False, "error": str(e)}
-    finally:
-        conn.close()
 
 
 @retry_on_lock
@@ -6760,121 +5880,8 @@ def select_success_page_ad(tx_type=None, country=None, amount=None, device_type=
 # layout on the payment success page.
 # ============================================================
 
-def _query_ad_by_slot(slot, tx_type=None, country=None, amount=None,
-                      device_type=None, exclude_ids=None) -> Optional[Dict]:
-    """Return the highest-priority active ad for a given slot that matches
-    the transaction targeting, or None if nothing matches.
-
-    This is the internal workhorse behind get_receipt_ads(). It does not
-    touch the slot column's schema — ensure_success_page_ads_schema() is
-    responsible for making sure the column exists.
-    """
-    conn = get_db_connection()
-    c = conn.cursor()
-    now = datetime.utcnow().isoformat()
-
-    wheres = [
-        "slot = ?",
-        "active = 1",
-        "(start_date IS NULL OR start_date <= ?)",
-        "(end_date IS NULL OR end_date >= ?)",
-        "(max_impressions IS NULL OR impressions_used < max_impressions)",
-        "(max_clicks IS NULL OR clicks_used < max_clicks)",
-    ]
-    params = [slot, now, now]
-
-    if tx_type:
-        wheres.append(
-            "(target_tx_type IS NULL OR target_tx_type = '' OR target_tx_type = ?)"
-        )
-        params.append(tx_type)
-    if country:
-        wheres.append(
-            "(target_country IS NULL OR target_country = '' OR target_country = ?)"
-        )
-        params.append(country)
-    if device_type:
-        wheres.append(
-            "(target_device IS NULL OR target_device = '' "
-            "OR target_device = 'all' OR target_device = ?)"
-        )
-        params.append(device_type)
-    if amount is not None:
-        wheres.append("(target_min_amount IS NULL OR target_min_amount <= ?)")
-        params.append(amount)
-        wheres.append("(target_max_amount IS NULL OR target_max_amount >= ?)")
-        params.append(amount)
-
-    if exclude_ids:
-        placeholders = ",".join("?" for _ in exclude_ids)
-        wheres.append(f"id NOT IN ({placeholders})")
-        params.extend(exclude_ids)
-
-    sql = (
-        "SELECT * FROM success_page_ads WHERE "
-        + " AND ".join(wheres)
-        + " ORDER BY priority DESC, id DESC LIMIT 1"
-    )
-    try:
-        row = c.execute(sql, params).fetchone()
-        return dict(row) if row else None
-    except Exception as e:
-        logger.error(f"_query_ad_by_slot({slot}) failed: {e}")
-        return None
-    finally:
-        conn.close()
 
 
-@retry_on_lock
-def get_receipt_ads(tx_type=None, country=None, amount=None,
-                    device_type=None) -> Dict:
-    """Return the three ads to render on a single receipt.
-
-    Layout:
-      primary   -> exactly one full hero card
-      secondary -> up to one compact card
-      tertiary  -> up to one small text chip
-
-    Each slot falls back to "no ad" gracefully — if secondary or tertiary
-    has no match, the template simply skips that section. The primary slot
-    reuses the pre-existing select_success_page_ad() so its behaviour is
-    unchanged for anyone relying on the older single-slot API.
-    """
-    # Belt-and-braces: make sure the schema is up to date before querying.
-    # Idempotent, cheap, and prevents "no such column: slot" on a database
-    # that predates the migration.
-    ensure_success_page_ads_schema()
-
-    primary = select_success_page_ad(
-        tx_type=tx_type,
-        country=country,
-        amount=amount,
-        device_type=device_type,
-    )
-
-    used_ids = [primary["id"]] if primary else []
-
-    secondary = _query_ad_by_slot(
-        "secondary",
-        tx_type=tx_type, country=country,
-        amount=amount, device_type=device_type,
-        exclude_ids=used_ids,
-    )
-    if secondary:
-        used_ids.append(secondary["id"])
-
-    tertiary = _query_ad_by_slot(
-        "tertiary",
-        tx_type=tx_type, country=country,
-        amount=amount, device_type=device_type,
-        exclude_ids=used_ids,
-    )
-
-    return {
-        "primary": primary,
-        "secondary": secondary,
-        "tertiary": tertiary,
-    }
 
 @retry_on_lock
 def record_success_page_ad_event(ad_id: int, event: str, reference: str = None,
@@ -7863,8 +6870,7 @@ def change_password(user_id: int, current_password: str, new_password: str) -> D
     if not user:
         return {"success": False, "error": "User not found"}
 
-    current_hash = hash_password(current_password)
-    if user.get("password_hash") != current_hash:
+    if not verify_password(current_password, user.get("password_hash")):
         return {"success": False, "error": "Current password is incorrect"}
 
     if set_password(user_id, new_password):
@@ -7940,164 +6946,12 @@ def verify_otp(identifier: str, code: str, otp_type: str = "email") -> bool:
 # ============ SPONSORED CAMPAIGN FUNCTIONS ============
 
 
-@retry_on_lock
-def get_active_sponsored_campaign_for_tx(
-    user_id: int, tx_type: str = None, amount: float = None, tx_reference: str = None
-) -> Optional[Dict]:
-    """Get an active sponsored campaign that should show on this receipt."""
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    # Get all active sponsored campaigns
-    now = datetime.now().isoformat()
-    campaigns = c.execute("""
-        SELECT id, title, body, cta_text, cta_url, advertiser_user_id, 
-               impressions_purchased, impressions_delivered,
-               campaign_tier, target_tx_type, target_min_amount, target_max_amount,
-               target_customer_type, target_hour_start, target_hour_end,
-               clicks_purchased, clicks_delivered, click_token
-        FROM receipt_promos
-        WHERE source = 'sponsored' AND status = 'approved'
-        AND (campaign_tier != 'performance' OR clicks_delivered < clicks_purchased)
-        AND (campaign_tier != 'basic' OR impressions_delivered < impressions_purchased)
-        AND (campaign_tier != 'dominant' OR impressions_delivered < impressions_purchased)
-        ORDER BY 
-            CASE campaign_tier 
-                WHEN 'dominant' THEN 1 
-                WHEN 'performance' THEN 2 
-                WHEN 'basic' THEN 3 
-                ELSE 4 
-            END ASC,
-            impressions_delivered ASC,
-            id ASC
-    """).fetchall()
-
-    if not campaigns:
-        return None
-
-    # Get user's transaction history to determine if they're new or returning
-    is_new = False
-    try:
-        tx_count = c.execute(
-            f"SELECT COUNT(*) FROM transactions WHERE user_id = ? AND status IN {_SUCCESS_STATUS_SQL} AND reference != ?",
-            (user_id, tx_reference or ""),
-        ).fetchone()[0]
-        is_new = tx_count == 0
-    except:
-        pass
-
-    # Get hour of day
-    current_hour = datetime.now().hour
-
-    for campaign in campaigns:
-        campaign = dict(campaign)
-
-        # Check target tx_type
-        if campaign.get("target_tx_type"):
-            if campaign["target_tx_type"] != tx_type:
-                continue
-
-        # Check target amount range
-        if campaign.get("target_min_amount") is not None:
-            if not amount or amount < campaign["target_min_amount"]:
-                continue
-        if campaign.get("target_max_amount") is not None:
-            if not amount or amount > campaign["target_max_amount"]:
-                continue
-
-        # Check target customer type
-        if campaign.get("target_customer_type") == "new" and not is_new:
-            continue
-        if campaign.get("target_customer_type") == "returning" and is_new:
-            continue
-
-        # Check target hour range
-        if campaign.get("target_hour_start") is not None:
-            if current_hour < campaign["target_hour_start"]:
-                continue
-        if campaign.get("target_hour_end") is not None:
-            if current_hour > campaign["target_hour_end"]:
-                continue
-
-        # This campaign matches the targeting criteria
-        return campaign
-
-    return None
 
 
-@retry_on_lock
-def track_sponsored_impression(campaign_id: int, tx_reference: str):
-    """Track an impression for a sponsored campaign."""
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    # Log the impression
-    c.execute(
-        """
-        INSERT INTO receipt_ad_clicks (promo_id, transaction_reference, clicked_at)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-    """,
-        (campaign_id, tx_reference),
-    )
-
-    # Decrement impressions remaining (increment impressions delivered)
-    c.execute(
-        """
-        UPDATE receipt_promos 
-        SET impressions_delivered = impressions_delivered + 1
-        WHERE id = ? 
-    """,
-        (campaign_id,),
-    )
-
-    # If impressions_delivered >= impressions_purchased, mark as completed
-    c.execute(
-        """
-        UPDATE receipt_promos 
-        SET status = 'completed' 
-        WHERE id = ? AND campaign_tier != 'performance' 
-        AND impressions_delivered >= impressions_purchased
-    """,
-        (campaign_id,),
-    )
-
-    conn.commit()
-    return True
 
 
-@retry_on_lock
-def get_campaigns_for_advertiser(user_id: int) -> List[Dict]:
-    """Get all campaigns for an advertiser (including old ones)."""
-    conn = get_db_connection()
-    c = conn.cursor()
-    rows = c.execute(
-        """
-        SELECT * FROM receipt_promos 
-        WHERE source = 'sponsored' AND advertiser_user_id = ?
-        ORDER BY created_at DESC
-    """,
-        (user_id,),
-    ).fetchall()
-    return [dict(r) for r in rows]
 
 
-@retry_on_lock
-def get_all_sponsored_campaigns(limit: int = 50, offset: int = 0) -> List[Dict]:
-    """Get all sponsored campaigns for admin (including old ones)."""
-    conn = get_db_connection()
-    c = conn.cursor()
-    rows = c.execute(
-        """
-        SELECT rp.*, u.email as advertiser_email, u.full_name as advertiser_name
-        FROM receipt_promos rp 
-        LEFT JOIN users u ON u.id = rp.advertiser_user_id
-        WHERE rp.source = 'sponsored'
-        ORDER BY rp.created_at DESC
-        LIMIT ? OFFSET ?
-    """,
-        (limit, offset),
-    ).fetchall()
-    return [dict(r) for r in rows]
 
 
 # ============ RECEIPT AD CONSTANTS - COMPLETE LIST ============
