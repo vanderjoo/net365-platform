@@ -231,62 +231,89 @@ def classify_local(ip: str) -> Optional[Dict[str, str]]:
 # ---------------------------------------------------------------------------
 # Tier 2 — HTTP lookup with failover
 # ---------------------------------------------------------------------------
+_HOSTING_WORDS = ("amazon", "aws", "microsoft", "azure", "google", "cloud", "digitalocean", "linode", "ovh", "hetzner",
+                  "oracle", "vultr", "contabo", "hosting", "datacenter", "data center", "server", "colo", "leaseweb",
+                  "choopa", "m247", "scaleway", "alibaba", "tencent", "rackspace", "heroku", "railway", "vercel", "netlify")
+_VPN_WORDS = ("vpn", "proxy", "tor exit", "mullvad", "nord", "expressvpn", "surfshark", "privateinternet", "proton")
+_CDN_WORDS = ("cloudflare", "akamai", "fastly", "cloudfront", "edgecast", "incapsula", "imperva", "stackpath")
+_ISP_WORDS = ("telecom", "mobile", "communications", "broadband", "cable", "wireless", "networks", "network", "internet",
+              "isp", "mtn", "airtel", "globacom", "glo ", "9mobile", "etisalat", "spectranet", "smile", "vodafone",
+              "orange", "safaricom", "comcast", "verizon", "at&t", "spectrum", "virgin", "telkom", "telstra", "bt ")
+
+
+def _asn(value) -> Optional[str]:
+    v = str(value or "").strip().upper()
+    if not v:
+        return None
+    return v if v.startswith("AS") else f"AS{v}"
+
+
+def _norm(text: str) -> str:
+    return "".join(ch for ch in (text or "").lower() if ch.isalnum())
+
+
+def _classify_kind(org: str, isp: str = "", hosting: bool = False, proxy: bool = False) -> str:
+    """cloud | hosting | cdn | vpn | isp | business. 'business' = the organisation differs from the ISP that
+    carries it, which usually means a company or institution rather than a home or mobile subscriber."""
+    text = f"{org or ''} {isp or ''}".lower()
+    if proxy or any(k in text for k in _VPN_WORDS):
+        return "vpn"
+    if any(k in text for k in _CDN_WORDS):
+        return "cdn"
+    if hosting or any(k in text for k in _HOSTING_WORDS):
+        return "hosting"
+    if org and isp and _norm(org) != _norm(isp) and _norm(isp) not in _norm(org) and _norm(org) not in _norm(isp):
+        return "business"
+    if any(k in text for k in _ISP_WORDS):
+        return "isp"
+    return "isp"
+
+
+def _parse_ipwhois_app(d):
+    if d.get("success") is False:
+        return None
+    org = d.get("org") or d.get("isp")
+    return {"org_name": org, "asn": _asn(d.get("asn")), "ip_kind": _classify_kind(org, d.get("isp") or ""),
+            "country": d.get("country_code"), "city": d.get("city"), "region": d.get("region")}
+
+
+def _parse_ipinfo(d):
+    raw = d.get("org") or ""
+    if not raw:
+        return None
+    asn = raw.split(" ", 1)[0] if raw.upper().startswith("AS") else None
+    name = raw.split(" ", 1)[1] if asn and " " in raw else raw
+    return {"org_name": name or None, "asn": _asn(asn), "ip_kind": _classify_kind(name),
+            "country": d.get("country"), "city": d.get("city"), "region": d.get("region")}
+
+
+def _parse_ip_api(d):
+    if d.get("status") != "success":
+        return None
+    org, isp = d.get("org") or "", d.get("isp") or ""
+    return {"org_name": org or isp, "asn": _asn((d.get("as") or "").split(" ", 1)[0]),
+            "ip_kind": _classify_kind(org, isp, hosting=bool(d.get("hosting")), proxy=bool(d.get("proxy"))),
+            "country": d.get("countryCode"), "city": d.get("city"), "region": d.get("regionName")}
+
+
 _HTTP_SOURCES = [
-    {
-        "name": "ipwhois.app",
-        "url": "https://ipwhois.app/json/{ip}",
-        "parse": lambda d: {
-            "org_name": d.get("org") or d.get("isp") or d.get("connection", {}).get("org"),
-            "asn": f"AS{d['asn']}" if d.get("asn") else None,
-            "ip_kind": _kind_from_usage(d.get("type") or ""),
-            "country": d.get("country_code"),
-            "city": d.get("city"),
-        },
-    },
-    {
-        "name": "ipinfo.io",
-        "url": "https://ipinfo.io/{ip}/json",
-        "parse": lambda d: {
-            "org_name": (d.get("org") or "").split(" ", 1)[-1] or None,
-            "asn": (d.get("org") or "").split(" ", 1)[0] if d.get("org", "").startswith("AS") else None,
-            "ip_kind": _kind_from_org(d.get("org") or ""),
-            "country": d.get("country"),
-            "city": d.get("city"),
-        },
-    },
-    {
-        "name": "ip-api.com",
-        "url": "http://ip-api.com/json/{ip}?fields=status,country,countryCode,city,isp,org,as,hosting,proxy",
-        "parse": lambda d: (
-            {
-                "org_name": d.get("org") or d.get("isp"),
-                "asn": (d.get("as") or "").split(" ", 1)[0] or None,
-                "ip_kind": "vpn" if d.get("proxy") else ("hosting" if d.get("hosting") else "isp"),
-                "country": d.get("countryCode"),
-                "city": d.get("city"),
-            }
-            if d.get("status") == "success" else None
-        ),
-    },
+    {"name": "ipwhois.app", "url": "https://ipwhois.app/json/{ip}", "parse": _parse_ipwhois_app},
+    {"name": "ipinfo.io", "url": "https://ipinfo.io/{ip}/json", "parse": _parse_ipinfo},
+    {"name": "ip-api.com",
+     "url": "http://ip-api.com/json/{ip}?fields=status,country,countryCode,regionName,city,isp,org,as,hosting,proxy",
+     "parse": _parse_ip_api},
 ]
+
+# Visible in /api/admin/visitors/geo-status so a failing lookup source is easy to spot.
+REMOTE = {"ok": 0, "fail": 0, "last_error": "", "last_ok_source": ""}
 
 
 def _kind_from_usage(usage: str) -> str:
-    u = (usage or "").lower()
-    if "hosting" in u or "data" in u: return "hosting"
-    if "vpn" in u or "proxy" in u:   return "vpn"
-    if "search" in u or "crawler" in u: return "bot"
-    return "isp"
+    return _classify_kind(usage or "")
 
 
 def _kind_from_org(org: str) -> str:
-    o = (org or "").lower()
-    if any(k in o for k in ("amazon", "microsoft", "google", "cloud", "azure", "aws", "digitalocean", "linode", "ovh", "hetzner", "oracle")):
-        return "cloud"
-    if any(k in o for k in ("vpn", "proxy", "tor")): return "vpn"
-    if any(k in o for k in ("cloudflare", "akamai", "fastly")): return "cdn"
-    if any(k in o for k in ("bot", "crawler", "spider")): return "bot"
-    return "isp"
+    return _classify_kind(org or "")
 
 
 def lookup_remote(ip: str) -> Optional[Dict[str, str]]:
@@ -298,13 +325,20 @@ def lookup_remote(ip: str) -> Optional[Dict[str, str]]:
                 headers={"User-Agent": "Net365-Admin/1.0 (+https://net365co.com)"},
             )
             if r.status_code != 200:
+                REMOTE["fail"] += 1
+                REMOTE["last_error"] = f"{src['name']}: HTTP {r.status_code}"
                 continue
-            data = r.json()
-            parsed = src["parse"](data)
+            parsed = src["parse"](r.json())
             if parsed and parsed.get("org_name"):
                 parsed["source"] = src["name"]
+                REMOTE["ok"] += 1
+                REMOTE["last_ok_source"] = src["name"]
                 return parsed
+            REMOTE["fail"] += 1
+            REMOTE["last_error"] = f"{src['name']}: no organisation in answer"
         except Exception as e:
+            REMOTE["fail"] += 1
+            REMOTE["last_error"] = f"{src['name']}: {type(e).__name__}: {e}"[:200]
             logger.debug(f"ip_intel: {src['name']} failed for {ip}: {e}")
             continue
     return None
@@ -321,6 +355,11 @@ class IPIntel:
     _running = False
     _db_factory = None            # callable returning a sqlite connection
     _CACHE_TTL_DAYS = 90
+    _MISS_SECONDS = 600           # do not re-query a source that just failed for this IP
+    _start_lock = threading.Lock()
+    _miss: dict = {}
+    _vcols = None
+    stats = {"resolved": 0, "failed": 0, "rows_updated": 0, "last_error": ""}
 
     # ---------- schema ----------
     @classmethod
@@ -448,29 +487,69 @@ class IPIntel:
                 info.get("source"),
             ))
 
-            # Fan the answer out to every visitor row from this IP.
-            # NOTE: visitor_logs (matches db.log_visitor), not visitors.
-            c.execute("""
-                UPDATE visitor_logs
-                   SET org_name = ?, asn = ?, ip_kind = ?
-                 WHERE ip_address = ?
-            """, (info.get("org_name"), info.get("asn"), info.get("ip_kind"), ip))
             conn.commit()
             conn.close()
         except Exception as e:
-            logger.debug(f"ip_intel: cache write failed for {ip}: {e}")
+            cls.stats["last_error"] = f"cache write: {type(e).__name__}: {e}"[:200]
+            logger.warning(f"ip_intel: cache write failed for {ip}: {e}")
+        # Fan the answer out to every visitor row from this IP (org/ASN/kind and, when missing, country/city/region).
+        cls._apply_rows(ip, info, overwrite_org=True)
+
+    @classmethod
+    def _apply_rows(cls, ip: str, info: Dict[str, str], overwrite_org: bool = False) -> int:
+        """Write what we know about this IP onto every visitor_logs row that still lacks it.
+        Cloudflare-supplied location is never overwritten."""
+        if not cls._db_factory or not info:
+            return 0
+        try:
+            conn = cls._db_factory()
+            try:
+                if cls._vcols is None:
+                    cls._vcols = {row[1] for row in conn.execute("PRAGMA table_info(visitor_logs)").fetchall()}
+                sets, params = [], []
+
+                def fill(col, val, overwrite=False):
+                    if col in cls._vcols and val:
+                        if overwrite:
+                            sets.append(f"{col} = ?")
+                        else:
+                            sets.append(f"{col} = CASE WHEN {col} IS NULL OR {col} = '' THEN ? ELSE {col} END")
+                        params.append(val)
+
+                fill("org_name", info.get("org_name"), overwrite_org)
+                fill("asn", info.get("asn"), overwrite_org)
+                fill("ip_kind", info.get("ip_kind"), overwrite_org)
+                fill("country", info.get("country"))
+                fill("city", info.get("city"))
+                fill("region", info.get("region"))
+                if not sets:
+                    return 0
+                missing = " OR ".join(f"{c} IS NULL OR {c} = ''" for c in ("org_name", "ip_kind", "country", "city")
+                                      if c in cls._vcols)
+                where = "ip_address = ?" if overwrite_org else f"ip_address = ? AND ({missing})"
+                cur = conn.execute(f"UPDATE visitor_logs SET {', '.join(sets)} WHERE {where}", (*params, ip))
+                conn.commit()
+                cls.stats["rows_updated"] += max(cur.rowcount, 0)
+                return cur.rowcount
+            finally:
+                conn.close()
+        except Exception as e:
+            cls.stats["last_error"] = f"row update: {type(e).__name__}: {e}"[:200]
+            logger.warning(f"ip_intel: row update failed for {ip}: {e}")
+            return 0
 
     # ---------- worker ----------
     @classmethod
     def start_worker(cls):
-        if cls._running:
-            return
-        cls._running = True
-        cls._worker_thread = threading.Thread(
-            target=cls._loop, name="ip-intel-worker", daemon=True
-        )
-        cls._worker_thread.start()
-        logger.info("ip_intel: worker started")
+        """Start (or restart) the background thread. Safe to call repeatedly: a thread that is gone, for example
+        because the server process forked after start-up, is replaced."""
+        with cls._start_lock:
+            if cls._worker_thread and cls._worker_thread.is_alive():
+                return
+            cls._running = True
+            cls._worker_thread = threading.Thread(target=cls._loop, name="ip-intel-worker", daemon=True)
+            cls._worker_thread.start()
+            logger.info("ip_intel: worker started")
 
     @classmethod
     def stop_worker(cls):
@@ -483,20 +562,22 @@ class IPIntel:
                 ip = cls._queue.get(timeout=2)
             except queue.Empty:
                 continue
+            with cls._pending_lock:
+                cls._pending.discard(ip)     # first, so a visit that arrives mid-lookup is queued again
             try:
                 cls._resolve_now(ip)
             except Exception as e:
-                logger.debug(f"ip_intel: resolve failed for {ip}: {e}")
-            finally:
-                with cls._pending_lock:
-                    cls._pending.discard(ip)
+                cls.stats["last_error"] = f"{type(e).__name__}: {e}"[:200]
+                logger.warning(f"ip_intel: resolve failed for {ip}: {e}")
 
     @classmethod
     def enqueue(cls, ip: str) -> None:
-        """Non-blocking. Safe to call from a request handler."""
-        if not ip or ip in ("unknown",):
+        """Non-blocking. Safe to call from a request handler. Every visit is queued (even from a cached IP)
+        because the new visit's row still needs its organisation filled in."""
+        if not ip or ip in ("unknown",) or str(ip).startswith("h:"):
             return
-        if cls._read_cache(ip):
+        t = cls._miss.get(ip)
+        if t and time.time() - t < cls._MISS_SECONDS:
             return
         with cls._pending_lock:
             if ip in cls._pending:
@@ -507,26 +588,57 @@ class IPIntel:
         except queue.Full:
             with cls._pending_lock:
                 cls._pending.discard(ip)
+            return
+        cls.start_worker()                   # self-heal: the thread may have died after a process fork
 
     @classmethod
-    def _resolve_now(cls, ip: str) -> None:
-        info = classify_local(ip)
-        if not info:
-            info = lookup_remote(ip)
+    def _resolve_now(cls, ip: str) -> Optional[Dict[str, str]]:
+        cached = cls._read_cache(ip)
+        if cached:
+            cls._apply_rows(ip, cached)      # known IP, new visit: just copy the answer onto the new row
+            return cached
+        local = classify_local(ip)
+        if local and local.get("ip_kind") == "private":
+            info = local
+        else:
+            # Remote answer first (ASN data is authoritative); the coarse local table is only a fallback
+            info = lookup_remote(ip) or local
         if info:
+            cls.stats["resolved"] += 1
             cls._write_cache(ip, info)
+            cls._miss.pop(ip, None)
+        else:
+            cls.stats["failed"] += 1
+            cls._miss[ip] = time.time()
+            if len(cls._miss) > 5000:
+                cls._miss.clear()
+        return info
 
-    # ---------- synchronous helper (for admin "resolve now" buttons) ----------
+    # ---------- synchronous helper (admin views, "resolve now" buttons) ----------
     @classmethod
     def lookup(cls, ip: str, force: bool = False) -> Optional[Dict[str, str]]:
         if not force:
+            t = cls._miss.get(ip)
+            if t and time.time() - t < cls._MISS_SECONDS:
+                return None
             cached = cls._read_cache(ip)
             if cached:
+                cls._apply_rows(ip, cached)
                 return cached
-        info = classify_local(ip) or lookup_remote(ip)
+        local = classify_local(ip)
+        info = local if (local and local.get("ip_kind") == "private") else (lookup_remote(ip) or local)
         if info:
             cls._write_cache(ip, info)
+            cls._miss.pop(ip, None)
+        else:
+            cls._miss[ip] = time.time()
         return info
+
+    @classmethod
+    def status(cls) -> Dict[str, object]:
+        t = cls._worker_thread
+        return {"worker_alive": bool(t and t.is_alive()), "queue": cls._queue.qsize(), "pending": len(cls._pending),
+                **cls.stats, "remote": dict(REMOTE)}
 
 
 # ---------------------------------------------------------------------------

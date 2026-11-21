@@ -145,6 +145,27 @@ class GeoResolver:
         return _normalise(d.get("country"), d.get("city"), d.get("region"), d.get("timezone"))
 
     @classmethod
+    def _lookup_ipapi_co(cls, ip):
+        cls._throttle()
+        r = requests.get(f"https://ipapi.co/{ip}/json/", timeout=4, headers={"User-Agent": "Net365/1.0"})
+        r.raise_for_status()
+        d = r.json()
+        if d.get("error"):
+            raise ValueError(d.get("reason") or "lookup refused")
+        return _normalise(d.get("country_code"), d.get("city"), d.get("region"), d.get("timezone"))
+
+    @classmethod
+    def _lookup_ip_api_com(cls, ip):
+        cls._throttle()
+        r = requests.get(f"http://ip-api.com/json/{ip}", timeout=4,
+                         params={"fields": "status,message,countryCode,regionName,city,timezone"})
+        r.raise_for_status()
+        d = r.json()
+        if d.get("status") != "success":
+            raise ValueError(d.get("message") or "lookup refused")
+        return _normalise(d.get("countryCode"), d.get("city"), d.get("regionName"), d.get("timezone"))
+
+    @classmethod
     def lookup(cls, ip):
         """Resolve one IP (cached). Returns a dict or None. Blocks on the network: call from a worker."""
         ip = str(ip or "").strip()
@@ -156,19 +177,20 @@ class GeoResolver:
             hit = cls._cache.get(ip)
             if hit and hit[0] > now:
                 return hit[1]
-        try:
-            fn = {"maxmind": cls._lookup_maxmind, "ipwhois": cls._lookup_ipwhois,
-                  "ipinfo": cls._lookup_ipinfo}[provider]
-            result = fn(ip)
-            if result:
-                cls.stats["resolved"] += 1
-            else:
-                cls.stats["failed"] += 1
-        except Exception as exc:
-            result = None
-            cls.stats["failed"] += 1
-            cls.stats["last_error"] = f"{type(exc).__name__}: {exc}"[:200]
-            log.debug("Geo lookup failed for %s: %s", ip, exc)
+        # Free lookup services rate-limit shared cloud IPs often, so try several before giving up.
+        chain = {"maxmind": [cls._lookup_maxmind],
+                 "ipwhois": [cls._lookup_ipwhois, cls._lookup_ipapi_co, cls._lookup_ip_api_com],
+                 "ipinfo": [cls._lookup_ipinfo, cls._lookup_ipwhois, cls._lookup_ipapi_co]}[provider]
+        result = None
+        for fn in chain:
+            try:
+                result = fn(ip)
+                if result:
+                    break
+            except Exception as exc:
+                cls.stats["last_error"] = f"{fn.__name__[8:]}: {type(exc).__name__}: {exc}"[:200]
+                log.debug("Geo lookup %s failed for %s: %s", fn.__name__, ip, exc)
+        cls.stats["resolved" if result else "failed"] += 1
         with cls._lock:
             if len(cls._cache) >= CACHE_MAX:
                 for key in [k for k, v in cls._cache.items() if v[0] <= now][:CACHE_MAX // 4] or \

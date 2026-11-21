@@ -1907,5 +1907,65 @@
     const apiStatus = document.getElementById('nxApiStatus');
     if (apiStatus) apiStatus.textContent = 'UNVERIFIED';
   </script>
+<script src="/pwa.js" defer></script>
+<script id="net365-sidebar">
+/* Net365 sidebar: the same navigation as the home page, on every page that loads this script. */
+(function(){
+  if (window.__nxSide) return; window.__nxSide = 1;
+  var path = location.pathname.replace(/\/+$/, '') || '/';
+  var ITEMS = [
+    ['/', 'fa-home', 'Home'], ['/?go=transactions', 'fa-exchange-alt', 'Transactions'], ['/?go=wallet', 'fa-wallet', 'Wallet'], ['/scheduler', 'fa-calendar-check', 'Scheduled Payments'],
+    ['/?go=rewards', 'fa-star', 'Rewards'], ['/?go=contacts', 'fa-address-book', 'Contacts'], ['/utilities', 'fa-bolt', 'Utilities'], ['/business', 'fa-briefcase', 'Business'],
+    ['/?go=bulk', 'fa-upload', 'Bulk Recharge'], ['/?go=referrals', 'fa-users', 'Referrals'], ['/?go=settings', 'fa-cog', 'Settings'], ['/?go=help', 'fa-question-circle', 'Help Center'],
+    ['/services', 'fa-toolbox', 'Services'], ['/bots?src=sidebar', 'fa-comments', 'Chat Bots', 'New']
+  ];
+  function active(h){ var b = h.split('?')[0]; if (b === '/') return false; if (b === '/business') return path === '/business' || path === '/marketplace'; return b === path; }
+  var css = document.createElement('style');
+  css.textContent = [
+    'body.nx-side-on{padding-left:236px}',
+    '.nx-side{position:fixed;left:0;top:0;bottom:0;width:236px;z-index:90;padding:20px 12px;overflow-y:auto;border-right:1px solid rgba(140,160,210,.14);background:#090e1b;color:#c6d0e3;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px}',
+    'body:not(.dark-mode) .nx-side{background:#ffffff;border-right-color:rgba(15,23,42,.09);color:#2f3b52;box-shadow:6px 0 30px rgba(15,23,42,.04)}',
+    '.nx-side *{box-sizing:border-box}',
+    '.nx-logo{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;text-decoration:none;color:inherit;font-weight:800;font-size:19px;letter-spacing:-.03em}',
+    '.nx-logo img{height:38px;width:auto;display:block;object-fit:contain}',
+    '.nx-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);display:none;place-items:center;color:#fff;font-size:15px}',
+    '.nx-item{display:flex;align-items:center;gap:12px;padding:10px 12px;margin:1px 0;border-radius:12px;text-decoration:none;color:#8f9cb6;font-weight:500;transition:background .2s,color .2s}',
+    'body:not(.dark-mode) .nx-item{color:#5f6c84}',
+    '.nx-item i{width:18px;text-align:center;font-size:14px}',
+    '.nx-item:hover{background:rgba(143,156,182,.12);color:#f3f6fc}body:not(.dark-mode) .nx-item:hover{background:rgba(15,23,42,.05);color:#0b1020}',
+    '.nx-item.on{color:#f3f6fc;background:linear-gradient(90deg,rgba(255,106,26,.2),transparent);box-shadow:inset 2px 0 0 #ff6a1a}body:not(.dark-mode) .nx-item.on{color:#0b1020}',
+    '.nx-item.on i{color:#ff6a1a}',
+    '.nx-item em{margin-left:auto;font-style:normal;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:linear-gradient(135deg,#ff3b30,#ff6a1a);color:#fff}',
+    '.nx-invite{margin:18px 2px 0;padding:14px;border-radius:16px;border:1px solid rgba(140,160,210,.14);background:rgba(24,32,56,.5);cursor:pointer;position:relative;overflow:hidden}',
+    'body:not(.dark-mode) .nx-invite{background:#f3f5f9;border-color:rgba(15,23,42,.09)}',
+    '.nx-invite h4{font-size:14px;margin:0 0 4px;color:inherit}.nx-invite p{font-size:12px;margin:0 0 10px;opacity:.75}',
+    '.nx-invite button{border:0;border-radius:9px;padding:7px 12px;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);color:#fff;font-weight:600;font-size:12px;cursor:pointer}',
+    '.nx-invite .g{position:absolute;right:8px;bottom:2px;font-size:32px;opacity:.5}',
+    '.nx-fab{display:none;position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:91;width:48px;height:48px;border-radius:50%;border:0;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);color:#fff;font-size:18px;box-shadow:0 10px 28px rgba(255,106,26,.45);cursor:pointer}',
+    '.nx-back{display:none}',
+    '@media (max-width:900px){body.nx-side-on{padding-left:0}.nx-side{transform:translateX(-104%);transition:transform .3s ease;width:274px;box-shadow:24px 0 60px rgba(0,0,0,.45)}.nx-side.open{transform:none}.nx-fab{display:block}.nx-back.on{display:block;position:fixed;inset:0;z-index:89;background:rgba(3,5,12,.6)}}',
+    '@media (prefers-reduced-motion:reduce){.nx-side{transition:none}}'
+  ].join('\n');
+  document.head.appendChild(css);
+  function build(){
+    var s = document.createElement('aside'); s.className = 'nx-side'; s.id = 'nxSide'; s.setAttribute('aria-label', 'Main navigation');
+    var h = '<a href="/" class="nx-logo" aria-label="Net365 home"><img src="/static/logo.png" alt="Net365" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="nx-mark"><i class="fas fa-bolt"></i></span></a>';
+    ITEMS.forEach(function(it){ h += '<a href="' + it[0] + '" class="nx-item' + (active(it[0]) ? ' on' : '') + '"' + (active(it[0]) ? ' aria-current="page"' : '') + '><i class="fas ' + it[1] + '"></i><span>' + it[2] + '</span>' + (it[3] ? '<em>' + it[3] + '</em>' : '') + '</a>'; });
+    h += '<div class="nx-invite" onclick="location.href=\'/?go=referrals\'"><h4>Invite &amp; Earn</h4><p>Invite friends and earn rewards as they recharge.</p><button type="button" onclick="event.stopPropagation();location.href=\'/?go=referrals\'">Invite now</button><div class="g">🎁</div></div>';
+    s.innerHTML = h;
+    var back = document.createElement('div'); back.className = 'nx-back'; back.id = 'nxBack';
+    var fab = document.createElement('button'); fab.className = 'nx-fab'; fab.type = 'button'; fab.setAttribute('aria-label', 'Open menu'); fab.innerHTML = '<i class="fas fa-bars"></i>';
+    function tog(){ var o = !s.classList.contains('open'); s.classList.toggle('open', o); back.classList.toggle('on', o); }
+    fab.addEventListener('click', tog); back.addEventListener('click', tog);
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && s.classList.contains('open')) tog(); });
+    document.body.appendChild(s); document.body.appendChild(back); document.body.appendChild(fab); document.body.classList.add('nx-side-on');
+  }
+  if (document.body) build(); else document.addEventListener('DOMContentLoaded', build);
+
+/* remember which page the customer started from, so the payment success page can send them back there */
+(function(){ function mark(){ try { var p = location.pathname.replace(/\/+$/, '') || '/'; localStorage.setItem('n365_return', JSON.stringify({ to: p, t: Date.now() })); } catch (e) {} }
+  window.addEventListener('beforeunload', mark); window.addEventListener('pagehide', mark); })();
+})();
+</script>
 </body>
 </html>

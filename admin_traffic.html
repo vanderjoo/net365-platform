@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Net365 Admin · Traffic</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#fff; --ink:#14181f; --muted:#667085; --line:#e4e7ec;
+  --human:#2563eb; --bot:#e0701a; --sus:#c0262d; --ok:#14804a; --accent:#0f172a;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0d1117; --panel:#151b23; --ink:#e6edf3; --muted:#8b97a7; --line:#262e3a;
+         --human:#5b9bff; --bot:#f0903f; --sus:#ff6b72; --ok:#3fb27f; --accent:#e6edf3; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+h1{font-size:16px;margin:0;font-weight:700}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select,input,button{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+button{cursor:pointer}
+button.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+nav{display:flex;gap:4px;padding:10px 20px 0;overflow-x:auto}
+nav button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--muted);padding:8px 12px;white-space:nowrap}
+nav button.on{color:var(--ink);border-color:var(--ink);font-weight:600}
+main{padding:16px 20px 40px;max-width:1280px;margin:0 auto}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.two{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.card h2{font-size:12px;margin:0 0 10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.kpi b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted);font-size:12px}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid currentColor}
+.human{color:var(--human)} .bot{color:var(--bot)} .suspicious{color:var(--sus)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top;max-width:340px;overflow:hidden;text-overflow:ellipsis}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.s2{color:var(--ok)} .s4{color:var(--bot)} .s5{color:var(--sus)}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.muted{color:var(--muted)}
+#gate{max-width:360px;margin:12vh auto;padding:20px}
+#gate input{width:100%;margin:10px 0}
+.hide{display:none}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+svg text{fill:var(--muted);font-size:10px}
+.err{color:var(--sus);margin:8px 0}
+</style>
+</head>
+<body>
+
+<div id="gate" class="card">
+  <h1>Net365 traffic</h1>
+  <p class="muted">Enter the admin secret. It is sent only as a request header and kept for this tab only.</p>
+  <input id="secret" type="password" placeholder="Admin secret" autocomplete="current-password">
+  <button class="primary" id="enter">Open dashboard</button>
+  <div id="gateErr" class="err"></div>
+</div>
+
+<div id="app" class="hide">
+<header>
+  <h1>Traffic &amp; security</h1>
+  <div class="controls">
+    <label class="muted">Window
+      <select id="hours">
+        <option value="1">1 hour</option><option value="6">6 hours</option>
+        <option value="24" selected>24 hours</option><option value="72">3 days</option>
+        <option value="168">7 days</option><option value="720">30 days</option>
+      </select></label>
+    <label class="muted"><input type="checkbox" id="auto" checked> auto-refresh</label>
+    <button id="refresh">Refresh</button>
+  </div>
+</header>
+<nav id="tabs">
+  <button data-t="overview" class="on">Overview</button>
+  <button data-t="human">Human visitors</button>
+  <button data-t="auto">Automated traffic</button>
+  <button data-t="errors">404 / 403 monitor</button>
+  <button data-t="sensitive">Sensitive POSTs</button>
+  <button data-t="live">Live requests</button>
+</nav>
+<main>
+  <div id="msg" class="err"></div>
+  <section id="overview"></section>
+  <section id="human" class="hide"></section>
+  <section id="auto" class="hide"></section>
+  <section id="errors" class="hide"></section>
+  <section id="sensitive" class="hide"></section>
+  <section id="live" class="hide"></section>
+</main>
+</div>
+
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+let SECRET = ''; try{ SECRET = sessionStorage.getItem('n365_admin') || ''; }catch(e){}
+let tab = 'overview', timer = null;
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const n = v => Number(v || 0).toLocaleString();
+const pct = (a,b) => b ? (100*a/b).toFixed(1) + '%' : '0%';
+
+async function api(path, opts){
+  const r = await fetch(path, Object.assign({headers:{'X-Admin-Secret':SECRET,'Content-Type':'application/json'}}, opts||{}));
+  if (r.status === 401) { const e = new Error('Unauthorized'); e.auth = true; throw e; }
+  const j = await r.json().catch(()=>({}));
+  if (!r.ok || j.success === false) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+const H = () => $('#hours').value;
+
+function statusCls(s){ return s >= 500 ? 's5' : s >= 400 ? 's4' : 's2'; }
+function tag(c){ return `<span class="tag ${esc(c)}">${esc(c)}</span>`; }
+
+function table(cols, rows){
+  if (!rows.length) return '<p class="muted">Nothing in this window.</p>';
+  return `<div class="scroll"><table><thead><tr>${cols.map(c=>`<th class="${c.num?'num':''}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>` +
+    rows.map(r => `<tr>${cols.map(c=>`<td class="${c.num?'num ':''}${c.mono?'mono':''}" title="${esc(c.title?c.title(r):'')}">${c.html ? c.html(r) : esc(c.f(r))}</td>`).join('')}</tr>`).join('') +
+    '</tbody></table></div>';
+}
+
+function chart(series){
+  if (!series.length) return '<p class="muted">No data yet.</p>';
+  const W = 640, Ht = 170, p = {l:36,r:8,t:8,b:20};
+  const max = Math.max(1, ...series.map(s => (s.human||0) + (s.automated||0)));
+  const bw = (W - p.l - p.r) / series.length;
+  let g = '';
+  [0, .5, 1].forEach(f => {
+    const y = p.t + (Ht - p.t - p.b) * (1 - f);
+    g += `<line x1="${p.l}" x2="${W-p.r}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${p.l-4}" y="${y+3}" text-anchor="end">${Math.round(max*f)}</text>`;
+  });
+  series.forEach((s,i) => {
+    const hh = (Ht-p.t-p.b) * (s.human||0) / max, ah = (Ht-p.t-p.b) * (s.automated||0) / max;
+    const x = p.l + i*bw + bw*0.12, w = Math.max(1, bw*0.76), base = Ht - p.b;
+    g += `<rect x="${x}" y="${base-hh}" width="${w}" height="${hh}" fill="var(--human)"><title>${esc(s.t)} · human ${s.human||0}</title></rect>`;
+    g += `<rect x="${x}" y="${base-hh-ah}" width="${w}" height="${ah}" fill="var(--bot)"><title>${esc(s.t)} · automated ${s.automated||0}</title></rect>`;
+  });
+  const step = Math.ceil(series.length / 6);
+  series.forEach((s,i) => { if (i % step === 0) g += `<text x="${p.l + i*bw}" y="${Ht-5}">${esc(String(s.t).slice(5,16))}</text>`; });
+  return `<div class="legend"><span><i style="background:var(--human)"></i>Human</span><span><i style="background:var(--bot)"></i>Automated</span></div>` +
+         `<svg viewBox="0 0 ${W} ${Ht}" width="100%" role="img" aria-label="Requests over time, human versus automated">${g}</svg>`;
+}
+
+function kpi(label, value, sub){ return `<div class="card kpi"><span>${esc(label)}</span><b>${value}</b><span>${sub||''}</span></div>`; }
+
+async function overview(){
+  const d = await api('/api/admin/traffic/summary?hours=' + H());
+  const t = d.totals, c = d.by_class;
+  const auto = (t.bot||0) + (t.suspicious||0);
+  $('#overview').innerHTML = `
+  <div class="grid kpis">
+    ${kpi('Requests', n(t.total), n(t.sessions) + ' sessions · ' + n(t.ips) + ' IPs')}
+    ${kpi('Human', n(t.human), pct(t.human, t.total))}
+    ${kpi('Automated', n(auto), pct(auto, t.total) + ' (' + n(t.suspicious) + ' suspicious)')}
+    ${kpi('Errors 4xx / 5xx', n(t.s4xx) + ' / ' + n(t.s5xx), n(t.s404) + ' × 404 · ' + n(t.s403) + ' × 403 · ' + n(t.s429) + ' × 429')}
+    ${kpi('Response time', (t.avg_ms||0) + ' ms', 'p95 ' + (t.p95_ms ?? '–') + ' ms · max ' + n(t.max_ms) + ' ms')}
+    ${kpi('Sensitive writes', n(t.sensitive), 'POST/PUT/DELETE to auth, payment, admin')}
+  </div>
+  <div class="grid two" style="margin-top:12px">
+    <div class="card"><h2>Requests over time</h2>${chart(d.series)}</div>
+    <div class="card"><h2>Traffic mix</h2>
+      <div class="bar" style="margin:6px 0 10px">
+        <i style="width:${pct(t.human,t.total)};background:var(--human)"></i>
+        <i style="width:${pct(t.bot,t.total)};background:var(--bot)"></i>
+        <i style="width:${pct(t.suspicious,t.total)};background:var(--sus)"></i></div>
+      ${table([{h:'Class',html:r=>tag(r.k)},{h:'Requests',num:1,f:r=>n(r.v.requests)},{h:'Sessions',num:1,f:r=>n(r.v.sessions)},{h:'IPs',num:1,f:r=>n(r.v.ips)},{h:'Avg ms',num:1,f:r=>r.v.avg_ms??'–'},{h:'Errors',num:1,f:r=>n(r.v.errors)}],
+        ['human','bot','suspicious'].map(k=>({k,v:c[k]})))}
+    </div>
+  </div>
+  <div class="grid two" style="margin-top:12px">
+    <div class="card"><h2>Top requested URLs</h2>${table([{h:'URL',mono:1,f:r=>r.url,title:r=>r.url},{h:'Hits',num:1,f:r=>n(r.hits)},{h:'Errors',num:1,f:r=>n(r.errors)}], d.top_urls)}</div>
+    <div class="card"><h2>Top networks (ASN)</h2>${table([{h:'ASN',mono:1,f:r=>r.asn},{h:'Operator',f:r=>r.org,title:r=>r.org},{h:'Hits',num:1,f:r=>n(r.hits)},{h:'Automated',num:1,f:r=>n(r.automated)}], d.top_asns)}</div>
+    <div class="card"><h2>Traffic sources (human referrers)</h2>${table([{h:'Referrer',f:r=>r.referrer,title:r=>r.referrer},{h:'Hits',num:1,f:r=>n(r.hits)}], d.top_referrers)}</div>
+    <div class="card"><h2>Slowest endpoints</h2>${table([{h:'URL',mono:1,f:r=>r.url},{h:'Avg ms',num:1,f:r=>n(r.avg_ms)},{h:'Max ms',num:1,f:r=>n(r.max_ms)},{h:'Hits',num:1,f:r=>n(r.hits)}], d.slowest)}</div>
+  </div>`;
+  window.__sum = d;
+}
+
+function reqTable(rows){
+  return table([
+    {h:'Time (UTC)',mono:1,f:r=>r.ts},
+    {h:'IP',mono:1,f:r=>r.ip},
+    {h:'ASN',f:r=>r.asn||'–',title:r=>r.asn_org},
+    {h:'Class',html:r=>tag(r.bot_class)+(r.bot_name?' <span class="muted">'+esc(r.bot_name)+'</span>':'')},
+    {h:'Method',f:r=>r.method},
+    {h:'Status',html:r=>`<b class="${statusCls(r.status)}">${r.status}</b>`},
+    {h:'URL',mono:1,f:r=>r.url,title:r=>r.url},
+    {h:'ms',num:1,f:r=>r.response_ms},
+    {h:'Session',mono:1,f:r=>(r.session_id||'').slice(0,8)},
+    {h:'Referrer',f:r=>r.referrer||'',title:r=>r.referrer},
+    {h:'User-Agent',f:r=>r.user_agent,title:r=>r.user_agent}
+  ], rows);
+}
+
+async function byClass(el, cls, label){
+  const [s, r] = await Promise.all([
+    window.__sum ? Promise.resolve(window.__sum) : api('/api/admin/traffic/summary?hours=' + H()),
+    api(`/api/admin/traffic/recent?hours=${H()}&limit=150&class=${cls}` + (cls==='bot' ? '' : ''))
+  ]);
+  let rows = r.requests;
+  let extra = '';
+  if (cls === 'bot') {
+    const sus = await api(`/api/admin/traffic/recent?hours=${H()}&limit=100&class=suspicious`);
+    rows = rows.concat(sus.requests).sort((a,b)=>b.ts.localeCompare(a.ts)).slice(0,200);
+    extra = `<div class="card" style="margin-bottom:12px"><h2>Bots and scanners seen</h2>${table([{h:'Name',f:r=>r.name},{h:'Class',html:r=>tag(r.bot_class)},{h:'Requests',num:1,f:r=>n(r.hits)}], s.top_bots)}</div>`;
+  }
+  el.innerHTML = extra + `<div class="card"><h2>${label}</h2>${reqTable(rows)}</div>`;
+}
+
+async function errors(){
+  const d = await api('/api/admin/traffic/errors?hours=' + H() + '&min=3');
+  const flag = d.threshold;
+  $('#errors').innerHTML = `<div class="card"><h2>IPs with repeated 404 / 403 responses</h2>
+   <p class="muted">Flagged at ${flag}+ errors in the window. Auto-block: ${d.autoblock_minutes ? d.autoblock_minutes + ' min' : 'off (monitor only)'}. Blocks held here last only until the app restarts; use Cloudflare for permanent blocks.</p>
+   ${table([
+    {h:'IP',mono:1,f:r=>r.ip},{h:'ASN',f:r=>r.asn||'–',title:r=>r.asn_org},{h:'Class',html:r=>tag(r.bot_class)},
+    {h:'404',num:1,f:r=>n(r.n404)},{h:'403',num:1,f:r=>n(r.n403)},{h:'Distinct URLs',num:1,f:r=>n(r.distinct_urls)},
+    {h:'First',mono:1,f:r=>r.first_seen},{h:'Last',mono:1,f:r=>r.last_seen},
+    {h:'Probed',mono:1,f:r=>(r.sample_urls||[]).join('  '),title:r=>(r.sample_urls||[]).join('\n')},
+    {h:'',html:r=>`<button data-ip="${esc(r.ip)}" data-blocked="${r.blocked?1:0}">${r.blocked?'Unblock':'Block 24h'}</button>`}
+   ], d.ips)}</div>`;
+  document.querySelectorAll('#errors button[data-ip]').forEach(b => b.onclick = async () => {
+    try{
+      await api('/api/admin/traffic/block', {method:'POST', body:JSON.stringify({ip:b.dataset.ip, minutes:1440, unblock:b.dataset.blocked==='1'})});
+      load();
+    }catch(e){ $('#msg').textContent = e.message; }
+  });
+}
+
+async function sensitive(){
+  const d = await api('/api/admin/traffic/sensitive?hours=' + H() + '&limit=200');
+  $('#sensitive').innerHTML = `<div class="card"><h2>POST / PUT / DELETE to sensitive endpoints</h2>
+  <p class="muted">Metadata only: request bodies, passwords and tokens are never stored.</p>
+  ${table([{h:'Time (UTC)',mono:1,f:r=>r.ts},{h:'IP',mono:1,f:r=>r.ip},{h:'ASN',f:r=>r.asn||'–'},{h:'User',f:r=>r.user_id??'–'},
+    {h:'Class',html:r=>tag(r.bot_class)},{h:'Method',f:r=>r.method},{h:'URL',mono:1,f:r=>r.url},
+    {h:'Status',html:r=>`<b class="${statusCls(r.status)}">${r.status}</b>`},{h:'ms',num:1,f:r=>r.response_ms},{h:'Session',mono:1,f:r=>(r.session_id||'').slice(0,8)}], d.requests)}</div>`;
+}
+
+async function live(){
+  const d = await api('/api/admin/traffic/recent?hours=' + H() + '&limit=200');
+  $('#live').innerHTML = `<div class="card"><h2>Latest requests</h2>${reqTable(d.requests)}</div>`;
+}
+
+async function load(){
+  $('#msg').textContent = '';
+  try{
+    if (tab === 'overview') await overview();
+    else if (tab === 'human') await byClass($('#human'), 'human', 'Human requests');
+    else if (tab === 'auto') await byClass($('#auto'), 'bot', 'Automated and suspicious requests');
+    else if (tab === 'errors') await errors();
+    else if (tab === 'sensitive') await sensitive();
+    else if (tab === 'live') await live();
+  }catch(e){
+    if (e.auth){ show(false, 'That secret was not accepted.'); return; }
+    $('#msg').textContent = 'Could not load: ' + e.message;
+  }
+}
+
+function show(ok, err){
+  $('#gate').classList.toggle('hide', ok);
+  $('#app').classList.toggle('hide', !ok);
+  $('#gateErr').textContent = err || '';
+  if (!ok){ try{ sessionStorage.removeItem('n365_admin'); }catch(e){} SECRET=''; }
+}
+
+function startTimer(){
+  clearInterval(timer);
+  if ($('#auto').checked) timer = setInterval(() => { if (!document.hidden) { window.__sum = null; load(); } }, 30000);
+}
+
+$('#enter').onclick = () => {
+  SECRET = $('#secret').value;
+  try{ sessionStorage.setItem('n365_admin', SECRET); }catch(e){}
+  show(true); window.__sum = null; load(); startTimer();
+};
+$('#secret').addEventListener('keydown', e => { if (e.key === 'Enter') $('#enter').click(); });
+$('#refresh').onclick = () => { window.__sum = null; load(); };
+$('#hours').onchange = () => { window.__sum = null; load(); };
+$('#auto').onchange = startTimer;
+$('#tabs').onclick = e => {
+  const b = e.target.closest('button[data-t]'); if (!b) return;
+  tab = b.dataset.t;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('main section').forEach(s => s.classList.toggle('hide', s.id !== tab));
+  load();
+};
+if (SECRET){ show(true); load(); startTimer(); }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Net365 Voice</title><style>
+:root{--bg:#121214;--card:#1c1c20;--line:#33333a;--tx:#fff;--mu:#b8b8c0;--red:#E53935;--or:#FF6D00}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:16px}
+.w{max-width:1000px;margin:0 auto}.bar{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--red),var(--or));margin-bottom:16px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:22px 0 8px}p.s{color:var(--mu);margin:0 0 14px;font-size:14px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.k{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.k b{display:block;font-size:24px}.k span{color:var(--mu);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mu);font-weight:600}
+input,select,button,textarea{font:inherit;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:8px}
+button{cursor:pointer;background:linear-gradient(90deg,var(--red),var(--or));border:0;font-weight:600}.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;background:#2a2a30;font-size:12px}.sc{overflow-x:auto}
+</style></head><body><div class="w"><div class="bar"></div><h1>NET365 VOICE</h1><p class="s">What customers say, what breaks, what they want next.</p>
+<div class="row"><input id="sec" type="password" placeholder="Admin secret" style="flex:1;min-width:200px"><select id="days"><option>7</option><option selected>30</option><option>90</option></select><button id="go">Load</button></div>
+<div id="msg" class="s"></div><div id="out" style="display:none">
+<div class="g" id="kp"></div>
+<h2>Tickets</h2><div class="row"><select id="st"><option value="">All</option><option>OPEN</option><option>UNDER_REVIEW</option><option>IN_PROGRESS</option><option>RESOLVED</option><option>REOPENED</option><option>CONFIRMED</option></select></div>
+<div class="sc"><table id="tk"></table></div>
+<h2>Problems by category</h2><div class="sc"><table id="cat"></table></div>
+<h2>Feature votes</h2><div class="sc"><table id="ft"></table></div>
+<h2>Ideas customers typed</h2><div class="sc"><table id="id"></table></div>
+</div></div><script>
+var $=function(i){return document.getElementById(i)},S="";
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function api(p,o){o=o||{};o.headers=Object.assign({"Content-Type":"application/json","X-Admin-Secret":S},o.headers||{});return fetch(p,o).then(function(r){return r.json()})}
+function kpi(l,v){return '<div class="k"><b>'+esc(v)+'</b><span>'+esc(l)+'</span></div>'}
+function load(){S=$("sec").value;$("msg").textContent="Loading...";
+api("/api/admin/voice/summary?days="+$("days").value).then(function(d){
+ if(!d.success){$("msg").textContent=d.error||"Wrong secret";return}
+ $("msg").textContent="";$("out").style.display="block";var t=d.tickets,f=d.feedback,n=d.nps;
+ $("kp").innerHTML=kpi("Open tickets",t.open)+kpi("Waiting for customer",t.waiting_confirmation)+kpi("Avg fix time (h)",t.avg_resolution_hours==null?"-":t.avg_resolution_hours)+
+  kpi("NPS",n?n.score+" ("+n.responses+")":"-")+kpi("App rating /4",d.app_rating.average_out_of_4||"-")+kpi("Order rating /3",d.order_rating.average_out_of_3||"-")+
+  kpi("Feedback",f.total)+kpi("Negative",f.negative);
+ $("cat").innerHTML="<tr><th>Category</th><th>Count</th></tr>"+t.by_category.map(function(c){return"<tr><td>"+esc(c.label)+"</td><td>"+c.count+"</td></tr>"}).join("");
+ $("ft").innerHTML="<tr><th>Feature</th><th>Status</th><th>Votes</th></tr>"+d.features.map(function(x){return"<tr><td>"+esc(x.title)+"</td><td><span class=pill>"+esc(x.status)+"</span></td><td>"+x.votes+"</td></tr>"}).join("");
+ $("id").innerHTML="<tr><th>Idea</th><th>Channel</th><th>When</th></tr>"+d.recent_ideas.map(function(x){return"<tr><td>"+esc(x.text)+"</td><td>"+esc(x.channel)+"</td><td>"+esc(x.created_at)+"</td></tr>"}).join("");
+ tickets()})}
+function tickets(){api("/api/admin/voice/tickets?status="+$("st").value).then(function(d){
+ $("tk").innerHTML="<tr><th>No.</th><th>Status</th><th>Problem</th><th>Order</th><th>Update</th></tr>"+(d.tickets||[]).map(function(x){
+  return"<tr><td>"+esc(x.ticket_no)+"<br><small>"+esc(x.created_at)+"</small></td><td><span class=pill>"+esc(x.status)+"</span></td><td>"+esc(x.message)+"</td><td>"+esc(x.reference||"")+"</td><td>"+
+  '<select id="s_'+esc(x.ticket_no)+'"><option>UNDER_REVIEW</option><option>IN_PROGRESS</option><option>RESOLVED</option></select> <input id="n_'+esc(x.ticket_no)+'" placeholder="Note to customer" maxlength="300"> <button data-t="'+esc(x.ticket_no)+'">Send</button></td></tr>'}).join("")})}
+$("tk").onclick=function(e){var t=e.target.getAttribute&&e.target.getAttribute("data-t");if(!t)return;
+ api("/api/admin/voice/tickets/"+t+"/status",{method:"POST",body:JSON.stringify({status:$("s_"+t).value,note:$("n_"+t).value})}).then(function(d){$("msg").textContent=d.success?"Updated "+t+". The customer was told.":(d.error||"Failed");tickets()})};
+$("st").onchange=tickets;$("go").onclick=load;
+</script></body></html>

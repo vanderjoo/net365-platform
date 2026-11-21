@@ -450,7 +450,16 @@
                 </button>
                 <button class="admin-tab" data-tab="success-ads" onclick="switchTab('success-ads')">
                     <i class="fas fa-image"></i> Success Page Ads
+                </button>
+                <button class="admin-tab" data-tab="adengine" onclick="switchTab('adengine')">
+                    <i class="fas fa-chart-line"></i> Ad Engine
+                </button>
+                <button class="admin-tab" data-tab="adcredits" onclick="switchTab('adcredits')">
+                    <i class="fas fa-coins"></i> Ad Credits <span class="badge" id="boostPendingBadge">0</span>
                 </button>                
+                <button class="admin-tab" data-tab="adserve" onclick="switchTab('adserve')">
+                    <i class="fas fa-layer-group"></i> Ad Serving
+                </button>
                 <button class="admin-tab" data-tab="brands" onclick="switchTab('brands')">
                     <i class="fas fa-palette"></i> Brand Colors
                 </button>
@@ -463,16 +472,293 @@
                 <button class="admin-tab" data-tab="health" onclick="switchTab('health')">
                     <i class="fas fa-heartbeat"></i> System Health
                 </button>
+                <button class="admin-tab" data-tab="insights" onclick="switchTab('insights')">
+                    <i class="fas fa-chart-line"></i> Reports
+                </button>
+                <button class="admin-tab" data-tab="intel" onclick="switchTab('intel')">
+                    <i class="fas fa-user-secret"></i> Visitor Intel
+                </button>
+                <button class="admin-tab" data-tab="security" onclick="switchTab('security')">
+                    <i class="fas fa-shield-halved"></i> Security
+                </button>
+                <button class="admin-tab" data-tab="intl" onclick="switchTab('intl')">
+                    <i class="fas fa-earth-africa"></i> International
+                </button>
                 <button class="admin-tab" data-tab="transactions" onclick="switchTab('transactions')">
                     <i class="fas fa-exchange-alt"></i> Transactions
                 </button>
                 <button class="admin-tab" data-tab="promos" onclick="switchTab('promos')">
                     <i class="fas fa-ticket"></i> Receipt Promos
                 </button>
+                <button class="admin-tab" data-tab="routing" onclick="switchTab('routing')">
+                    <i class="fas fa-route"></i> Provider Routing
+                </button>
+                <button class="admin-tab" data-tab="homeads" onclick="switchTab('homeads')">
+                    <i class="fas fa-rectangle-ad"></i> Home Adverts
+                </button>
+                <button class="admin-tab" data-tab="askq" onclick="switchTab('askq')">
+                    <i class="fas fa-circle-question"></i> Ask Net365 <span class="badge" id="askOpenBadge" style="display:none">0</span>
+                </button>
+                <button class="admin-tab" data-tab="membership" onclick="switchTab('membership')">
+                    <i class="fas fa-medal"></i> Membership
+                </button>
+                <button class="admin-tab" data-tab="recovery" onclick="switchTab('recovery')">
+                    <i class="fas fa-life-ring"></i> Refunds &amp; Recovery
+                </button>
                 <button class="admin-tab" data-tab="chat" onclick="switchTab('chat')">
                     <i class="fas fa-comments"></i> Live Support <span class="badge" id="chatUnreadBadge">0</span>
                 </button>
             </div>
+
+            <!-- TAB: REFUNDS & RECOVERY (admin only) -->
+            <!-- TAB: AD SERVING (Phase 3) -->
+            <div class="tab-panel" id="tab-adserve">
+                <div class="panel">
+                    <h3><i class="fas fa-layer-group"></i> Serving rules</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">
+                        One selector decides which ads run after a payment: priority first, then fairness to each campaign's budget, then caps per person. <b>Off = the Phase 2 behaviour</b>. Applies to the next payment.
+                    </p>
+                    <div id="asSwitches" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;"></div>
+                    <div style="margin-top:12px;"><button class="btn btn-primary" onclick="saveAdServe()"><i class="fas fa-save"></i> Save</button> <span id="asMsg" style="font-size:13px;margin-left:8px;"></span></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-sliders"></i> Per-ad rules</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:10px;">Pause an ad, give it a priority bonus (-100 to 100), or limit it by dates, hours (Lagos time), transaction types and amount.</p>
+                    <div id="asRuleForm" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;align-items:end;"></div>
+                    <div style="margin:10px 0;"><button class="btn btn-primary" onclick="saveAsRule()">Save rule</button> <span id="asRuleMsg" style="font-size:13px;margin-left:8px;"></span></div>
+                    <div id="asRules" style="overflow-x:auto;"></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-flask"></i> Preview</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:10px;">Pretend a customer pays, see which ads would run and why the others are left out. Uses no views.</p>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
+                        <select id="asPvSurface"><option value="success">Success page</option><option value="email">Receipt email</option></select>
+                        <input id="asPvCity" placeholder="City (blank = unknown)">
+                        <input id="asPvType" placeholder="Type: topup, data, tv...">
+                        <input id="asPvAmount" type="number" placeholder="Amount">
+                        <input id="asPvHour" type="number" min="0" max="23" placeholder="Hour 0-23 (blank = now)">
+                        <button class="btn btn-primary" onclick="runAsPreview()">Preview</button>
+                    </div>
+                    <div id="asPreview" style="margin-top:12px;font-size:13px;"></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-brain"></i> Learning (Phase 4)</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">
+                        <b>Manual</b> = your rules only. <b>Assisted</b> = the engine suggests, you press Apply. <b>Auto</b> = small priority shifts are applied for you and logged (undo any time). Learning only reorders ads <i>within</i> the same kind, and can never lift a Boost over a paid ad. Needs real click data, so start in Manual or Assisted.
+                    </p>
+                    <div id="alSettings" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;"></div>
+                    <div style="margin-top:12px;"><button class="btn btn-primary" onclick="saveAdLearn()"><i class="fas fa-save"></i> Save</button>
+                        <button class="btn" onclick="runAdLearn()"><i class="fas fa-play"></i> Run analysis now</button> <span id="alMsg" style="font-size:13px;margin-left:8px;"></span></div>
+                    <h4 style="margin:18px 0 6px;">Suggestions waiting for you</h4><div id="alPending" style="overflow-x:auto;"></div>
+                    <h4 style="margin:18px 0 6px;">How each ad is doing</h4><div id="alStats" style="overflow-x:auto;"></div>
+                    <h4 style="margin:18px 0 6px;">Change log</h4><div id="alLog" style="overflow-x:auto;"></div>
+                </div>
+                <div class="panel"><h3>Views served today</h3><div id="asToday" style="font-size:13px;"></div></div>
+            </div>
+
+            <div class="tab-panel" id="tab-adcredits">
+                <div class="panel">
+                    <h3><i class="fas fa-power-off"></i> Switches</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">
+                        Ad views are earned by customers when their payments are fulfilled, and spent on Boost ads. Everything is <b>off until you switch it on</b>. Changes apply to the next payment, no restart needed.
+                    </p>
+                    <div id="acSwitches" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;"></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-gauge-high"></i> Inventory meter</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:10px;">Credits can only promise views Net365 can actually show. When promised views near the pool, new payments earn less automatically.</p>
+                    <div id="acMeter" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;"></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-sliders"></i> Earning and limits</h3>
+                    <div id="acNumbers" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;"></div>
+                    <h4 style="margin:18px 0 8px;font-size:14px;">Earning % of the customer fee, per service (a ceiling; the meter can lower it)</h4>
+                    <div id="acEarn" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;"></div>
+                    <div style="margin-top:16px;display:flex;gap:10px;align-items:center;">
+                        <button class="btn btn-primary" onclick="saveAdCredits()"><i class="fas fa-save"></i> Save settings</button>
+                        <span id="acSaveMsg" style="font-size:13px;"></span>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-clipboard-check"></i> Boost ads <select id="acBoostFilter" onchange="loadAdCreditBoosts()" style="margin-left:10px;font-size:13px;"><option value="pending">Waiting for review</option><option value="approved">Live</option><option value="paused">Paused</option><option value="completed">Completed</option><option value="rejected">Rejected</option><option value="all">All</option></select></h3>
+                    <div id="acBoosts"></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-chart-pie"></i> Totals (in views)</h3>
+                    <div id="acTotals" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;"></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-magnifying-glass"></i> Look up a customer</h3>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                        <input id="acUserQ" type="text" placeholder="User id or email" style="flex:1;min-width:220px;" onkeydown="if(event.key==='Enter')lookupAdCreditsUser()">
+                        <button class="btn btn-primary" onclick="lookupAdCreditsUser()">Look up</button>
+                    </div>
+                    <div id="acUser"></div>
+                    <h4 style="margin:18px 0 8px;font-size:14px;">Reverse the credit from one transaction</h4>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <input id="acRevRef" type="text" placeholder="Transaction reference" style="flex:1;min-width:220px;">
+                        <button class="btn btn-danger" onclick="reverseAdCredit()">Reverse</button>
+                    </div>
+                    <div id="acRevMsg" style="font-size:13px;margin-top:8px;"></div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="tab-adengine">
+                <div class="panel">
+                    <h3><i class="fas fa-chart-line"></i> Ad Engine: views and clicks by surface</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">
+                        Every ad view and click on email, receipts, the success page and mobile. A view is counted once per ad per transaction. Email clicks are counted through a tracked link. Tracking started when this module was installed, so earlier history is not included.
+                    </p>
+                    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+                        <label for="aeDays" style="font-size:13px;">Period</label>
+                        <select id="aeDays" onchange="loadAdEngine()">
+                            <option value="1">Last 24 hours</option>
+                            <option value="7" selected>Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                        </select>
+                        <span id="aeStatus" style="font-size:12px;color:var(--text-secondary);"></span>
+                    </div>
+                    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead><tr><th style="text-align:left;padding:8px;">Surface</th><th style="text-align:right;padding:8px;">Views</th><th style="text-align:right;padding:8px;">Clicks</th><th style="text-align:right;padding:8px;">Click rate</th></tr></thead>
+                        <tbody id="aeSurfaces"></tbody>
+                    </table></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-ranking-star"></i> Top ads</h3>
+                    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead><tr><th style="text-align:left;padding:8px;">Ad</th><th style="text-align:left;padding:8px;">Surface</th><th style="text-align:right;padding:8px;">Views</th><th style="text-align:right;padding:8px;">Clicks</th><th style="text-align:right;padding:8px;">Click rate</th></tr></thead>
+                        <tbody id="aeTop"></tbody>
+                    </table></div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="tab-recovery">
+                <div class="panel">
+                    <h3><i class="fas fa-life-ring"></i> Refunds &amp; Recovery</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:14px;">
+                        What happens when a customer has paid but the provider cannot deliver. Orders where the provider <b>definitely refused</b> are refunded at once. Orders where the provider's state is <b>unknown</b> are never refunded or retried automatically: they wait in the review list. <b>Temporary</b> failures (maintenance, low provider balance) are retried on the schedule below, then refunded.
+                    </p>
+                    <div id="rcSwitches" style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px;"></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-tools"></i> Maintenance</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:10px;">Switch a service off for new payments (customers see your message, never a provider name). Paid orders keep being recovered. Retries pause until the end time.</p>
+                    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><tbody id="rcMaint"></tbody></table></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-sliders-h"></i> Retry &amp; refund policy per service</h3>
+                    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead><tr style="text-align:left;border-bottom:1px solid var(--border-color,#e2e8f0);"><th style="padding:8px;">Service</th><th>Retries</th><th>Gap (min)</th><th>Window (min)</th><th>Refund route</th><th>Mode</th><th>Refund fee too</th><th></th></tr></thead>
+                        <tbody id="rcPolicy"></tbody></table></div>
+                    <p style="color:var(--text-secondary);font-size:12px;margin-top:10px;">Routes: <b>Wallet</b> = instant credit. <b>Original payment</b> = Paystack refund API (other gateways fall back to manual). <b>Manual</b> = queued for you. Modes: <b>Auto</b> = system refunds; <b>Approval</b> = waits for you below. Retries can never exceed 10.</p>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-undo"></i> Refund queue &amp; review list</h3>
+                    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead><tr style="text-align:left;border-bottom:1px solid var(--border-color,#e2e8f0);"><th style="padding:8px;">Order</th><th>Service</th><th>Amount</th><th>Route</th><th>Status</th><th>Why</th><th>Action</th></tr></thead>
+                        <tbody id="rcQueue"><tr><td colspan="7" style="padding:12px;">Loading...</td></tr></tbody></table></div>
+                </div>
+            </div>
+
+            <!-- TAB: PROVIDER ROUTING (admin only: customers never see processors) -->
+            <div class="tab-panel" id="tab-routing">
+                <div class="panel" id="qrCard">
+                    <h3><i class="fas fa-bolt"></i> Quick Recharge (airtime)</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">Choose which processor receives airtime orders first. The other stays on standby and is used only when the first one definitely did not accept the order, so nobody is charged twice. Change it back at any time. It takes effect on the next order.</p>
+                    <div id="qrStatus" style="font-size:14px;margin-bottom:12px;">Loading...</div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                        <button class="btn" id="qrBtnVtpass" onclick="setQuickRecharge('vtpass')">VTpass first, Reloadly on standby</button>
+                        <button class="btn" id="qrBtnReloadly" onclick="setQuickRecharge('reloadly')">Reloadly first, VTpass on standby</button>
+                    </div>
+                    <div id="qrWarn" style="font-size:13px;color:#b45309;"></div>
+                    <div id="qrBal" style="font-size:12px;color:var(--text-secondary);margin-top:8px;"></div>
+                </div>
+                <div class="panel">
+                    <h3><i class="fas fa-route"></i> Provider Routing</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:14px;">
+                        Decide which processor Net365 tries first for each service. Customers never see this. Default: VTpass first for electricity, cable TV, education, data and insurance, with Reloadly on standby; Reloadly first for airtime.
+                        A provider you mark as down, or that Net365 senses is down (a run of recent failures), is moved to the back automatically and retried after a short cool-down.
+                    </p>
+                    <div id="routingProviders" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:16px;"></div>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                            <thead><tr style="text-align:left;border-bottom:1px solid var(--border-color,#e2e8f0);">
+                                <th style="padding:8px;">Service</th><th style="padding:8px;">Order used now</th><th style="padding:8px;">VTpass score</th><th style="padding:8px;">Reloadly score</th><th style="padding:8px;">Mode</th>
+                            </tr></thead>
+                            <tbody id="routingRows"><tr><td colspan="5" style="padding:12px;">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                    <p style="color:var(--text-secondary);font-size:12px;margin-top:12px;">
+                        Modes: <b>Default</b> = Net365's standard order. <b>Auto</b> = best 7-day score first. <b>VTpass / Reloadly</b> = force that processor first (the other stays on standby). Score = share of orders that succeeded in the last 7 days (starts at 50 until there is evidence).
+                    </p>
+                </div>
+            </div>
+
+            <!-- TAB: ASK NET365 QUESTIONS -->
+            <div class="tab-panel" id="tab-askq">
+                <div class="panel">
+                    <h3><i class="fas fa-circle-question"></i> Ask Net365: customer questions</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">Every question typed into the Ask box, what Net365 answered, and whether the customer said it helped. When Net365 has no reliable answer it tells the customer you will get back to them, and the question lands here. Your reply appears in the Ask box if they are online, in their notification bell, and by email.</p>
+                    <div id="aqCounts" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;"></div>
+                    <label style="font-size:13px;">Show <select id="aqFilter" onchange="loadAsk()" style="padding:6px;border-radius:8px;"><option value="open">Needs an answer</option><option value="wrong">Marked wrong or "No" by the customer</option><option value="all">Everything</option></select></label>
+                    <div id="aqList" style="margin-top:12px;display:grid;gap:12px;"></div>
+                </div>
+            </div>
+
+            <!-- TAB: MEMBERSHIP -->
+            <div class="tab-panel" id="tab-membership">
+                <div class="panel">
+                    <h3><i class="fas fa-medal"></i> Membership numbers and Founders</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">A permanent number (N365-000042) is issued when a customer's email is verified, in that order. The number is the Founders rank: 1 to 100 Founders 100, 101 to 1,000 Pioneer 1,000, 1,001 to 10,000 Early Adopter 10,000. Numbers are never reused. Existing verified customers were numbered by sign-up order when this was installed.</p>
+                    <div id="mbSummary" style="font-size:14px;margin-bottom:12px;">Loading...</div>
+                    <button class="btn btn-sm" onclick="mbBackfill(true)">Check who is waiting</button>
+                    <button class="btn btn-sm" onclick="mbBackfill(false)">Number everyone waiting</button>
+                    <div id="mbResult" style="font-size:13px;margin-top:10px;color:var(--text-secondary);"></div>
+                </div>
+            </div>
+
+            <!-- TAB: HOME ADVERTS (shown under Ask Net365 on the home page) -->
+            <div class="tab-panel" id="tab-homeads">
+                <div class="panel">
+                    <h3><i class="fas fa-rectangle-ad"></i> Home Adverts</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">These appear in a slider under Ask Net365 on the home page. The Net365 chat animation is the default. Partner adverts are labelled "Sponsored" automatically.</p>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:14px;">
+                        <label style="font-size:13px;">Animation<br><select id="haAnim" style="padding:7px;border-radius:8px;"><option value="first">Show first, then my adverts</option><option value="fallback">Only when there are no adverts</option><option value="off">Adverts only (animation if none)</option></select></label>
+                        <label style="font-size:13px;">Seconds per advert<br><input id="haRot" type="number" min="4" max="30" value="7" style="width:80px;padding:7px;border-radius:8px;"></label>
+                        <button class="btn btn-sm" onclick="haSaveSettings()">Save</button>
+                    </div>
+                    <div id="haForm" style="border:1px solid var(--border-color,#e2e8f0);border-radius:10px;padding:12px;margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+                        <input type="hidden" id="haId">
+                        <label style="font-size:12px;">Title (80)<input id="haTitle" maxlength="80" style="width:100%;box-sizing:border-box;padding:7px;border-radius:8px;"></label>
+                        <label style="font-size:12px;">Text (160)<input id="haBody" maxlength="160" style="width:100%;box-sizing:border-box;padding:7px;border-radius:8px;"></label>
+                        <label style="font-size:12px;">Image address (https://, optional)<input id="haImage" style="width:100%;box-sizing:border-box;padding:7px;border-radius:8px;"></label>
+                        <label style="font-size:12px;">Button text<input id="haCta" maxlength="24" placeholder="Learn more" style="width:100%;box-sizing:border-box;padding:7px;border-radius:8px;"></label>
+                        <label style="font-size:12px;">Button link (https:// or /page)<input id="haUrl" style="width:100%;box-sizing:border-box;padding:7px;border-radius:8px;"></label>
+                        <label style="font-size:12px;">Type<select id="haKind" onchange="haKindChanged()" style="width:100%;padding:7px;border-radius:8px;"><option value="net365">Net365 message</option><option value="partner">Partner advert (Sponsored)</option></select></label>
+                        <label style="font-size:12px;" id="haSponsorWrap">Sponsor name<input id="haSponsor" maxlength="60" style="width:100%;box-sizing:border-box;padding:7px;border-radius:8px;"></label>
+                        <label style="font-size:12px;">Countries (e.g. NG,GH; empty = everyone)<input id="haCountries" placeholder="NG,GH" style="width:100%;box-sizing:border-box;padding:7px;border-radius:8px;"></label>
+                        <label style="font-size:12px;">Starts<input id="haStart" type="date" style="width:100%;box-sizing:border-box;padding:7px;border-radius:8px;"></label>
+                        <label style="font-size:12px;">Ends<input id="haEnd" type="date" style="width:100%;box-sizing:border-box;padding:7px;border-radius:8px;"></label>
+                        <label style="font-size:12px;">Order (lower first)<input id="haSort" type="number" value="0" style="width:100%;box-sizing:border-box;padding:7px;border-radius:8px;"></label>
+                        <label style="font-size:12px;display:flex;gap:6px;align-items:center;"><input id="haActive" type="checkbox" checked> Active</label>
+                        <div style="display:flex;gap:8px;align-items:end;"><button class="btn btn-sm" onclick="haSave()">Save advert</button><button class="btn btn-sm" onclick="haReset()">Clear</button></div>
+                    </div>
+                    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead><tr style="text-align:left;border-bottom:1px solid var(--border-color,#e2e8f0);"><th style="padding:8px;">Advert</th><th style="padding:8px;">Status</th><th style="padding:8px;">Where / when</th><th style="padding:8px;">Views</th><th style="padding:8px;">Clicks</th><th style="padding:8px;"></th></tr></thead>
+                        <tbody id="haRows"><tr><td colspan="6" style="padding:12px;">Loading...</td></tr></tbody>
+                    </table></div>
+                </div>
+            </div>
+
+            <!-- TAB: REPORTS (charts; filled by admin_insights.js) -->
+            <div class="tab-panel" id="tab-insights"></div>
+            <!-- TAB: VISITOR INTEL (admin_insights.js) -->
+            <div class="tab-panel" id="tab-intel"></div>
+            <!-- TAB: SECURITY / SENTINEL (admin_sentinel.js) -->
+            <div class="tab-panel" id="tab-security"></div>
+            <!-- TAB: INTERNATIONAL INTELLIGENCE (admin_intl.js) -->
+            <div class="tab-panel" id="tab-intl"></div>
 
             <!-- TAB: LIVE SUPPORT -->
             <div class="tab-panel" id="tab-chat">
@@ -1812,6 +2098,275 @@
         // ============================================
         // TABS
         // ============================================
+        // ---------------- Learning (Phase 4) ----------------
+        const AL_MODES = [['manual', 'Manual: my rules only'], ['assisted', 'Assisted: suggest, I approve'], ['auto', 'Auto: apply small shifts, log them']];
+        const AL_FIELDS = [
+            { k: 'window_days', label: 'Look back (days)', type: 'num' },
+            { k: 'trial_views', label: 'Trial: views a new ad gets a lift for', type: 'num', help: 'Makes sure every new ad is actually seen.' },
+            { k: 'min_views', label: 'Views before an ad is judged', type: 'num', help: 'Also needed by the ads it is compared with.' },
+            { k: 'max_shift', label: 'Most priority points learning may move an ad', type: 'num', help: 'Automatically kept below the gap between source priorities.' },
+            { k: 'max_step', label: 'Most points per run', type: 'num' },
+            { k: 'explore_pct', label: 'Exploration % (ignore learning)', type: 'num', help: 'Keeps weak starters visible.' },
+            { k: 'confidence_z', label: 'Confidence (z)', type: 'num', help: '1.28 = 90%, 1.64 = 95%, 2.33 = 99%.' },
+            { k: 'interval_minutes', label: 'Background check every (minutes)', type: 'num' },
+            { k: 'auto_pause', label: 'Let Auto mode pause a clearly failing ad', type: 'flag' }
+        ];
+        async function loadAdLearn() {
+            try {
+                const d = await adminFetch('/api/admin/adlearn');
+                if (!d.success) { document.getElementById('alSettings').innerHTML = '<p style="color:#c93434">' + escapeHtml(d.error || 'Learning is not available') + '</p>'; return; }
+                const st = d.settings;
+                let h = [['success', 'Success page mode'], ['email', 'Receipt email mode']].map(m => acField({ k: 'al_mode_' + m[0], label: m[1], type: 'select', opts: AL_MODES, help: m[0] === 'email' ? 'Email scanners can inflate clicks: keep it Assisted until you trust the numbers.' : '' }, st['mode_' + m[0]])).join('');
+                h += AL_FIELDS.map(f => acField(Object.assign({}, f, { k: 'al_' + f.k }), st[f.k])).join('');
+                document.getElementById('alSettings').innerHTML = h;
+                const tb = (head, rows) => '<table style="width:100%;font-size:12.5px;border-collapse:collapse;"><tr style="text-align:left;">' + head.map(x => '<th>' + x + '</th>').join('') + '</tr>' + rows.join('') + '</table>';
+                document.getElementById('alPending').innerHTML = d.pending.length ? tb(['Surface', 'Ad', 'Suggestion', 'Why', ''], d.pending.map(r => {
+                    const what = r.kind === 'shift' ? ('priority ' + (r.new_value > r.prev_value ? 'up' : 'down') + ' (' + r.prev_value + ' to ' + r.new_value + ')') : r.kind === 'pause' ? 'pause this ad' : ('only show on ' + escapeHtml(JSON.parse(r.detail || '{}').tx_type || ''));
+                    return '<tr><td>' + r.surface + '</td><td>' + escapeHtml(r.source) + ' #' + r.ad_id + ' ' + escapeHtml(r.title) + '</td><td>' + what + '</td><td>' + escapeHtml(r.reason || '') + '</td><td><button class="btn btn-primary" onclick="alAct(\'apply\',' + r.id + ')">Apply</button> <button class="btn" onclick="alAct(\'dismiss\',' + r.id + ')">Dismiss</button></td></tr>'; })) : '<p style="font-size:13px;color:var(--text-secondary)">Nothing waiting. In Assisted or Auto mode, suggestions appear here after the next analysis.</p>';
+                const pct = x => x == null ? '-' : (x * 100).toFixed(1) + '%';
+                let sh = '';
+                ['success', 'email'].forEach(sf => {
+                    sh += '<div style="font-weight:700;margin:8px 0 4px;">' + (sf === 'success' ? 'Success page' : 'Receipt email') + '</div>';
+                    sh += d.stats[sf].length ? tb(['Ad', 'Kind', 'Views', 'Clicks', 'Click rate', 'Similar ads', 'Verdict', 'Learned shift', 'Frozen'], d.stats[sf].map(a => {
+                        const verdict = a.trial ? 'new, on trial' : !a.judged ? 'not enough views yet' : a.significant ? (a.z > 0 ? '<b style="color:#1a8f4d">clearly better</b>' : '<b style="color:#c93434">clearly weaker</b>') : 'no clear difference';
+                        return '<tr><td>' + escapeHtml(a.source) + ' #' + a.ad_id + ' ' + escapeHtml(a.title) + '</td><td>' + a.kind + '</td><td>' + a.views + '</td><td>' + a.clicks + '</td><td>' + pct(a.ctr) + '</td><td>' + pct(a.rest_ctr) + '</td><td>' + verdict + '</td><td>' + a.bonus + '</td><td><input type="checkbox" ' + (a.frozen ? 'checked' : '') + ' onchange="alFreeze(\'' + sf + '\',\'' + a.source + '\',' + a.ad_id + ',this.checked)"></td></tr>'; })) : '<p style="font-size:13px;color:var(--text-secondary)">No views recorded in this window yet.</p>';
+                });
+                document.getElementById('alStats').innerHTML = sh;
+                document.getElementById('alLog').innerHTML = d.log.length ? tb(['When', 'Surface', 'Ad', 'Change', 'Why', 'Status', ''], d.log.slice(0, 40).map(r => '<tr><td>' + escapeHtml(r.created_at) + '</td><td>' + r.surface + '</td><td>' + escapeHtml(r.source) + ' #' + r.ad_id + ' ' + escapeHtml(r.title) + '</td><td>' + r.kind + (r.kind === 'shift' ? ' ' + r.prev_value + ' to ' + r.new_value : '') + '</td><td>' + escapeHtml(r.reason || '') + '</td><td>' + r.status.replace('_', ' ') + '</td><td>' + ((r.status === 'applied' || r.status === 'auto_applied') ? '<button class="btn" onclick="alAct(\'undo\',' + r.id + ')">Undo</button>' : '') + '</td></tr>')) : '<p style="font-size:13px;color:var(--text-secondary)">No changes yet.</p>';
+            } catch (e) { console.error(e); }
+        }
+        async function saveAdLearn() {
+            const body = { mode_success: document.getElementById('ac_al_mode_success').value, mode_email: document.getElementById('ac_al_mode_email').value };
+            AL_FIELDS.forEach(f => { const el = document.getElementById('ac_al_' + f.k); if (el) body[f.k] = f.type === 'flag' ? (el.checked ? '1' : '0') : el.value; });
+            const d = await adminFetch('/api/admin/adlearn/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            document.getElementById('alMsg').textContent = d.success ? 'Saved' : (d.error || 'Not saved');
+            if (d.success) loadAdLearn();
+        }
+        async function runAdLearn() {
+            const d = await adminFetch('/api/admin/adlearn/run', { method: 'POST' });
+            document.getElementById('alMsg').textContent = d.success ? d.results.map(r => r.surface + ': ' + (r.skipped || (r.queued + ' queued, ' + r.applied + ' applied'))).join(' | ') : (d.error || 'Failed');
+            loadAdLearn();
+        }
+        async function alAct(what, id) {
+            const d = await adminFetch('/api/admin/adlearn/' + what, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+            if (!d.success) alert(d.error || 'Could not do that');
+            loadAdLearn();
+        }
+        async function alFreeze(surface, source, id, frozen) {
+            await adminFetch('/api/admin/adlearn/freeze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ surface, source, ad_id: id, frozen }) });
+        }
+
+        // ---------------- Ad Serving (Phase 3) ----------------
+        const AS_FIELDS = [
+            { k: 'engine_on', label: 'Serving engine on', type: 'flag', help: 'Off = Phase 2 behaviour.' },
+            { k: 'one_per_advertiser', label: 'One ad per advertiser per page', type: 'flag' },
+            { k: 'success_slots', label: 'Ads the engine may add to the success page (max 3)', type: 'num' },
+            { k: 'email_slots', label: 'Ads the engine may add to a receipt email (max 3)', type: 'num' },
+            { k: 'ad_week_cap', label: 'Views of one ad per person per 7 days', type: 'num', help: 'The per-day cap is "Views of one ad per person per day" in Ad Credits.' },
+            { k: 'user_day_cap', label: 'Engine ads per person per day, all ads', type: 'num' },
+            { k: 'pacing_weight', label: 'Pacing weight', type: 'num', help: 'Points for an ad that is far behind on its budget. 0 = ignore pacing.' },
+            { k: 'variety_weight', label: 'Variety weight', type: 'num', help: 'Small stable shuffle so equal ads rotate.' }
+        ];
+        const AS_SOURCES = [['paid_dominant', 'Paid: Dominant'], ['paid_basic', 'Paid: Basic'], ['boost', 'Boost']];
+        let asData = {};
+        async function loadAdServe() {
+            try {
+                const d = await adminFetch('/api/admin/adserve');
+                if (!d.success) { document.getElementById('asSwitches').innerHTML = '<p style="color:#c93434">' + escapeHtml(d.error || 'Could not load') + '</p>'; return; }
+                asData = d; const st = d.settings;
+                let h = AS_FIELDS.map(f => acField(Object.assign({}, f, { k: 'as_' + f.k }), st[f.k])).join('');
+                ['success', 'email'].forEach(surf => {
+                    const on = String(st[surf + '_sources'] || '').split(',');
+                    h += '<div style="padding:10px;border:1px solid var(--border-color,#ddd);border-radius:10px;"><b style="font-size:13px;">Sources on the ' + (surf === 'success' ? 'success page' : 'receipt email') + '</b>' +
+                        AS_SOURCES.map(x => '<label style="display:flex;gap:8px;align-items:center;margin-top:6px;"><input type="checkbox" class="as_src_' + surf + '" value="' + x[0] + '"' + (on.includes(x[0]) ? ' checked' : '') + '> ' + x[1] + '</label>').join('') +
+                        '<div style="font-size:11.5px;color:var(--text-secondary);margin-top:4px;">' + (surf === 'email' ? 'Emails only show Boost here; paid promos are chosen by the existing email logic.' : 'Paid also needs "Paid campaigns on success page" in Ad Credits.') + '</div></div>';
+                });
+                h += '<div style="padding:10px;border:1px solid var(--border-color,#ddd);border-radius:10px;"><b style="font-size:13px;">Priority (higher runs first)</b>' +
+                    AS_SOURCES.map(x => '<label style="display:flex;gap:8px;align-items:center;margin-top:6px;">' + x[1] + ' <input type="number" id="as_prio_' + x[0] + '" value="' + escapeHtml(String(d.priority[x[0]])) + '" style="width:80px;"></label>').join('') + '</div>';
+                document.getElementById('asSwitches').innerHTML = h;
+                const opts = d.ads.map(a => '<option value="' + a.source + ':' + a.id + '">' + (a.source === 'boost' ? 'Boost' : 'Paid ' + escapeHtml(a.owner)) + ' #' + a.id + ' - ' + escapeHtml(a.title) + '</option>').join('');
+                const inp = (id, ph, t) => '<input id="' + id + '" type="' + (t || 'text') + '" placeholder="' + ph + '">';
+                document.getElementById('asRuleForm').innerHTML = '<select id="asR_ad">' + (opts || '<option value="">No approved ads yet</option>') + '</select>' +
+                    inp('asR_bonus', 'Priority bonus', 'number') + inp('asR_start', 'Start YYYY-MM-DD') + inp('asR_end', 'End YYYY-MM-DD') +
+                    inp('asR_hs', 'From hour 0-23', 'number') + inp('asR_he', 'To hour 0-23', 'number') + inp('asR_types', 'Types: data,tv') +
+                    inp('asR_min', 'Min amount', 'number') + inp('asR_max', 'Max amount', 'number') + inp('asR_note', 'Note') +
+                    '<label style="display:flex;gap:6px;align-items:center;"><input type="checkbox" id="asR_paused"> Paused</label>';
+                const titles = {}; d.ads.forEach(a => titles[a.source + ':' + a.id] = a.title);
+                document.getElementById('asRules').innerHTML = d.rules.length ? '<table style="width:100%;font-size:12.5px;border-collapse:collapse;"><tr style="text-align:left;"><th>Ad</th><th>Bonus</th><th>State</th><th>Limits</th><th></th></tr>' +
+                    d.rules.map(r => { const lim = [r.start_date && ('from ' + r.start_date), r.end_date && ('to ' + r.end_date), (r.hour_start != null) && (r.hour_start + 'h-' + r.hour_end + 'h'), r.tx_types, (r.min_amount != null) && ('min ' + r.min_amount), (r.max_amount != null) && ('max ' + r.max_amount)].filter(Boolean).join(', ');
+                        return '<tr><td>' + escapeHtml(r.source) + ' #' + r.ad_id + ' ' + escapeHtml(titles[r.source + ':' + r.ad_id] || '') + '</td><td>' + r.priority_bonus + '</td><td>' + (r.paused ? '<b style="color:#c93434">paused</b>' : 'active') + '</td><td>' + escapeHtml(lim || '-') + '</td><td><button class="btn" onclick="delAsRule(\'' + r.source + '\',' + r.ad_id + ')">Remove</button></td></tr>'; }).join('') + '</table>' : '<p style="font-size:13px;color:var(--text-secondary)">No per-ad rules. Every approved ad runs with its source priority.</p>';
+                document.getElementById('asToday').innerHTML = d.today.length ? d.today.map(t => escapeHtml(t.surface) + ' / ' + escapeHtml(t.source) + ': <b>' + t.views + '</b>').join('<br>') : 'No ad views yet today.';
+                loadAdLearn();
+            } catch (e) { console.error(e); }
+        }
+        async function saveAdServe() {
+            const body = {};
+            AS_FIELDS.forEach(f => { const el = document.getElementById('as_' + f.k); if (el) body[f.k] = f.type === 'flag' ? (el.checked ? '1' : '0') : el.value; });
+            ['success', 'email'].forEach(surf => { body[surf + '_sources'] = Array.from(document.querySelectorAll('.as_src_' + surf)).filter(x => x.checked).map(x => x.value).join(','); });
+            body.priority = {}; AS_SOURCES.forEach(x => { body.priority[x[0]] = document.getElementById('as_prio_' + x[0]).value; });
+            const d = await adminFetch('/api/admin/adserve/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            document.getElementById('asMsg').textContent = d.success ? 'Saved' : (d.error || 'Not saved');
+            if (d.success) loadAdServe();
+        }
+        async function saveAsRule() {
+            const v = id => document.getElementById(id).value, ad = v('asR_ad').split(':');
+            const body = { source: ad[0], ad_id: ad[1], priority_bonus: v('asR_bonus'), start_date: v('asR_start'), end_date: v('asR_end'), hour_start: v('asR_hs'), hour_end: v('asR_he'), tx_types: v('asR_types'), min_amount: v('asR_min'), max_amount: v('asR_max'), note: v('asR_note'), paused: document.getElementById('asR_paused').checked ? 1 : 0 };
+            const d = await adminFetch('/api/admin/adserve/rule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            document.getElementById('asRuleMsg').textContent = d.success ? 'Saved' : (d.error || 'Not saved');
+            if (d.success) loadAdServe();
+        }
+        async function delAsRule(source, id) {
+            await adminFetch('/api/admin/adserve/rule/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source, ad_id: id }) });
+            loadAdServe();
+        }
+        async function runAsPreview() {
+            const q = new URLSearchParams({ surface: document.getElementById('asPvSurface').value, city: document.getElementById('asPvCity').value, tx_type: document.getElementById('asPvType').value, amount: document.getElementById('asPvAmount').value, hour: document.getElementById('asPvHour').value });
+            const d = await adminFetch('/api/admin/adserve/preview?' + q.toString());
+            const el = document.getElementById('asPreview');
+            if (!d.success) { el.innerHTML = '<span style="color:#c93434">' + escapeHtml(d.error || 'Failed') + '</span>'; return; }
+            el.innerHTML = (d.engine_on ? '' : '<p style="color:#b26a00"><b>The engine is off</b>, so real payments still use Phase 2 serving. This shows what it would do when on.</p>') +
+                '<b>Would show (' + d.would_show.length + ' of ' + d.slots + ' slots)</b><br>' + (d.would_show.map(x => escapeHtml(x.source) + ' #' + x.id + ' ' + escapeHtml(x.label) + ' (score ' + x.score + ')').join('<br>') || 'Nothing') +
+                '<br><br><b>Left out</b><br>' + (d.left_out.map(x => escapeHtml(x.source) + ' #' + x.id + ' ' + escapeHtml(x.label) + ': ' + escapeHtml(x.why)).join('<br>') || 'None');
+        }
+
+        // ---------------- Ad Credits ----------------
+        const AC_SWITCHES = [
+            { k: 'enabled', label: 'Credits enabled', type: 'flag', help: 'Master switch: earning, spending and Boost ads.' },
+            { k: 'boost_on_success', label: 'Boost ads on success page', type: 'flag', help: 'Shown in a free slot after paid ads.' },
+            { k: 'boost_on_email', label: 'Boost ads in receipt emails', type: 'flag', help: 'Replaces house promos only; paid campaigns keep priority.' },
+            { k: 'paid_on_success', label: 'Paid campaigns on success page', type: 'select', opts: [['off', 'Off (email and receipts only)'], ['sponsored', 'Sponsored only'], ['all', 'All paid tiers']], help: 'Today paid campaigns appear only in emails and receipts.' },
+            { k: 'boost_approval', label: 'Boost approval', type: 'select', opts: [['admin', 'Admin reviews every ad'], ['auto', 'Automatic (word filter only)']], help: 'Start with admin review.' },
+            { k: 'boost_allow_national', label: 'Allow nationwide Boost ads', type: 'flag', help: 'Off: a business must pick a city.' },
+            { k: 'unknown_location', label: 'When the viewer city is unknown', type: 'select', opts: [['hide', 'Hide city-targeted ads'], ['show', 'Show them']], help: 'IP location is imprecise on mobile networks.' }
+        ];
+        const AC_NUMBERS = [
+            { k: 'pilot_cities', label: 'Cities where Boost ads may run', type: 'text', help: 'Comma separated, e.g. Aba, Umuahia. Empty = every city.' },
+            { k: 'rollout_pct', label: 'Rollout % of users', type: 'num', help: 'Ramp 10, 50, 100.' },
+            { k: 'holdout_pct', label: 'Holdout % (earn nothing)', type: 'num', help: 'For measuring the effect.' },
+            { k: 'hold_hours', label: 'Hold hours', type: 'num', help: 'Wait before views can be spent.' },
+            { k: 'expiry_days', label: 'Expiry days', type: 'num', help: 'Unused views lapse.' },
+            { k: 'daily_cap', label: 'Most views a user can earn per day', type: 'num' },
+            { k: 'boost_share_cap', label: 'Share of unsold views credits may back (%)', type: 'num' },
+            { k: 'cold_start_daily_views', label: 'Assumed daily ad views until real traffic exists', type: 'num', help: 'Used for the first days.' },
+            { k: 'views_per_tx', label: 'Ad views one transaction produces', type: 'num', help: 'Success page + email = 2.' },
+            { k: 'fee_estimate_pct', label: 'Customer fee as % of amount (estimate)', type: 'num' },
+            { k: 'min_amount_ngn', label: 'Smallest payment that earns (₦)', type: 'num' },
+            { k: 'freq_cap', label: 'Views of one ad per person per day', type: 'num' },
+            { k: 'boost_min_views', label: 'Smallest Boost ad (views)', type: 'num' },
+            { k: 'boost_max_views', label: 'Largest Boost ad (views)', type: 'num' },
+            { k: 'max_active_boosts', label: 'Active Boost ads per business', type: 'num' },
+            { k: 'blocked_words', label: 'Blocked words in ads', type: 'text', help: 'Comma separated.' }
+        ];
+        let acSettings = {};
+        function acField(f, v) {
+            const id = 'ac_' + f.k, help = f.help ? '<div style="font-size:11.5px;color:var(--text-secondary);margin-top:3px;">' + escapeHtml(f.help) + '</div>' : '';
+            let input;
+            if (f.type === 'flag') input = '<label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" id="' + id + '" ' + (String(v) === '1' ? 'checked' : '') + '> <b>' + escapeHtml(f.label) + '</b></label>';
+            else if (f.type === 'select') input = '<label for="' + id + '" style="font-weight:700;font-size:13px;">' + escapeHtml(f.label) + '</label><select id="' + id + '" style="width:100%;margin-top:4px;">' + f.opts.map(o => '<option value="' + o[0] + '"' + (String(v) === o[0] ? ' selected' : '') + '>' + escapeHtml(o[1]) + '</option>').join('') + '</select>';
+            else input = '<label for="' + id + '" style="font-weight:700;font-size:13px;">' + escapeHtml(f.label) + '</label><input id="' + id + '" type="' + (f.type === 'num' ? 'number' : 'text') + '" value="' + escapeHtml(String(v == null ? '' : v)) + '" style="width:100%;margin-top:4px;">';
+            return '<div style="padding:10px;border:1px solid var(--border-color,#ddd);border-radius:10px;">' + input + help + '</div>';
+        }
+        async function loadAdCredits() {
+            try {
+                const d = await adminFetch('/api/admin/adcredits/overview');
+                if (!d.success) { document.getElementById('acSwitches').innerHTML = '<p style="color:#c93434">' + escapeHtml(d.error || 'Could not load') + '</p>'; return; }
+                acSettings = d.settings;
+                document.getElementById('acSwitches').innerHTML = AC_SWITCHES.map(f => acField(f, acSettings[f.k])).join('');
+                document.getElementById('acNumbers').innerHTML = AC_NUMBERS.map(f => acField(f, acSettings[f.k])).join('');
+                document.getElementById('acEarn').innerHTML = (d.services || []).map(s => '<div style="padding:10px;border:1px solid var(--border-color,#ddd);border-radius:10px;"><label for="acE_' + s + '" style="font-weight:700;font-size:13px;text-transform:capitalize;">' + escapeHtml(s) + ' %</label><input id="acE_' + s + '" type="number" step="0.5" min="0" max="20" value="' + ((acSettings.earn_pct || {})[s] ?? 3) + '" style="width:100%;margin-top:4px;"></div>').join('');
+                const m = d.meter, card = (lab, val, note) => '<div style="padding:12px;border:1px solid var(--border-color,#ddd);border-radius:10px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary);">' + lab + '</div><div style="font-size:22px;font-weight:800;">' + val + '</div>' + (note ? '<div style="font-size:11.5px;color:var(--text-secondary);">' + note + '</div>' : '') + '</div>';
+                const mult = Math.round(m.multiplier * 100);
+                document.getElementById('acMeter').innerHTML = [
+                    card('Earning rate now', mult + '%', mult < 100 ? 'Lowered because promised views are near the pool' : 'Full rate'),
+                    card('Daily ad views (forecast)', Math.round(m.daily_views_forecast).toLocaleString(), m.using_cold_start ? 'Using the assumed start value: ' + m.fulfilled_14d + ' payments in 14 days' : 'From the last 14 days of real payments'),
+                    card('Pool credits may back', m.pool_views.toLocaleString(), 'After ' + m.paid_backlog_views.toLocaleString() + ' views sold to paying advertisers'),
+                    card('Already promised', m.outstanding_views.toLocaleString(), m.in_wallets.toLocaleString() + ' in balances, ' + m.reserved_in_boost_ads.toLocaleString() + ' in Boost ads'),
+                    card('Headroom', m.headroom_views.toLocaleString(), m.headroom_views <= 0 ? 'Earning is paused until views are used' : '')
+                ].join('');
+                const t = d.totals, tc = (l, v) => card(l, Number(v).toLocaleString(), '');
+                document.getElementById('acTotals').innerHTML = [tc('Earned', t.earned), tc('Spent', t.spent), tc('Reversed', t.reversed), tc('Expired', t.expired), tc('Available', t.available), tc('On hold', t.held), tc('Boost views shown', t.boost_views_shown), tc('Customers with views', t.users_with_credits), tc('Boost ads live', t.boost_live)].join('');
+                const badge = document.getElementById('boostPendingBadge'); if (badge) badge.textContent = t.boost_pending;
+            } catch (e) { document.getElementById('acSwitches').innerHTML = '<p style="color:#c93434">Could not load: ' + escapeHtml(e.message || 'error') + '</p>'; }
+            loadAdCreditBoosts();
+        }
+        async function saveAdCredits() {
+            const body = {}, msg = document.getElementById('acSaveMsg');
+            AC_SWITCHES.concat(AC_NUMBERS).forEach(f => { const el = document.getElementById('ac_' + f.k); if (!el) return; body[f.k] = f.type === 'flag' ? el.checked : el.value; });
+            const earn = {}; document.querySelectorAll('[id^="acE_"]').forEach(el => { earn[el.id.slice(4)] = el.value; }); body.earn_pct = earn;
+            try {
+                const d = await adminFetch('/api/admin/adcredits/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                msg.style.color = d.success ? '#16a34a' : '#c93434'; msg.textContent = d.success ? 'Saved. Applies to the next payment.' : (d.error || 'Could not save');
+                if (d.success) loadAdCredits();
+            } catch (e) { msg.style.color = '#c93434'; msg.textContent = 'Could not save: ' + (e.message || 'error'); }
+        }
+        async function loadAdCreditBoosts() {
+            const box = document.getElementById('acBoosts'); if (!box) return;
+            const st = (document.getElementById('acBoostFilter') || {}).value || 'pending';
+            try {
+                const d = await adminFetch('/api/admin/adcredits/boost?status=' + encodeURIComponent(st));
+                const list = d.boosts || [];
+                box.innerHTML = list.length ? list.map(b => '<div style="padding:12px;border:1px solid var(--border-color,#ddd);border-radius:10px;margin-bottom:10px;">'
+                    + '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><b>' + escapeHtml(b.title) + '</b><span>' + escapeHtml(b.status) + ' · ' + b.views_used + '/' + b.views_total + ' views · ' + escapeHtml(b.city || 'Nationwide') + '</span></div>'
+                    + '<div style="font-size:13px;margin:6px 0;">' + escapeHtml(b.body) + '</div>'
+                    + '<div style="font-size:12px;color:var(--text-secondary);">' + escapeHtml(b.business_name || '') + ' · ' + escapeHtml(b.owner_email || '') + ' · <a href="' + escapeHtml(b.cta_url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(b.cta_url) + '</a>' + (b.arcon_cert ? ' · approval no. ' + escapeHtml(b.arcon_cert) : '') + (b.compliance_ack_at ? ' · compliance box ticked' : '') + '</div>'
+                    + '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">'
+                    + (['pending', 'paused'].includes(b.status) ? '<button class="btn btn-primary" onclick="adBoostAction(' + Number(b.id) + ',\'approve\')">Approve</button>' : '')
+                    + (b.status === 'approved' ? '<button class="btn" onclick="adBoostAction(' + Number(b.id) + ',\'pause\')">Pause</button>' : '')
+                    + (['pending', 'approved', 'paused'].includes(b.status) ? '<button class="btn btn-danger" onclick="adBoostAction(' + Number(b.id) + ',\'reject\')">Reject</button>' : '')
+                    + '</div></div>').join('') : '<p style="color:var(--text-secondary);font-size:13px;">Nothing here.</p>';
+            } catch (e) { box.innerHTML = '<p style="color:#c93434">Could not load: ' + escapeHtml(e.message || 'error') + '</p>'; }
+        }
+        async function adBoostAction(id, action) {
+            let reason = null;
+            if (action === 'reject') { reason = prompt('Reason shown to the business (they get their views back):'); if (reason === null) return; }
+            try {
+                const d = await adminFetch('/api/admin/adcredits/boost/' + id + '/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+                if (!d.success) alert(d.error || 'Could not do that');
+            } catch (e) { alert('Could not do that: ' + (e.message || 'error')); }
+            loadAdCredits();
+        }
+        async function lookupAdCreditsUser() {
+            const q = document.getElementById('acUserQ').value.trim(), box = document.getElementById('acUser'); if (!q) return;
+            try {
+                const d = await adminFetch('/api/admin/adcredits/user?q=' + encodeURIComponent(q));
+                if (!d.success) { box.innerHTML = '<p style="color:#c93434">' + escapeHtml(d.error || 'Not found') + '</p>'; return; }
+                const b = d.balance;
+                box.innerHTML = '<p><b>' + escapeHtml(d.user.email || ('User ' + d.user.id)) + '</b> (id ' + d.user.id + '): ' + b.available + ' available, ' + b.held + ' on hold, ' + b.spent + ' spent, ' + b.earned + ' earned' + (b.debt ? ', <span style="color:#c93434">' + b.debt + ' owed after a refund</span>' : '') + '</p>'
+                    + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;padding:6px;">When</th><th style="text-align:left;padding:6px;">Type</th><th style="text-align:right;padding:6px;">Views</th><th style="text-align:left;padding:6px;">Reference</th></tr></thead><tbody>'
+                    + (d.ledger || []).map(r => '<tr><td style="padding:6px;">' + escapeHtml((r.created_at || '').replace('T', ' ').slice(0, 16)) + '</td><td style="padding:6px;">' + escapeHtml(r.kind) + '</td><td style="padding:6px;text-align:right;">' + r.views + '</td><td style="padding:6px;">' + escapeHtml(r.reference || '') + '</td></tr>').join('') + '</tbody></table></div>';
+            } catch (e) { box.innerHTML = '<p style="color:#c93434">Could not load: ' + escapeHtml(e.message || 'error') + '</p>'; }
+        }
+        async function reverseAdCredit() {
+            const ref = document.getElementById('acRevRef').value.trim(), msg = document.getElementById('acRevMsg'); if (!ref) return;
+            if (!confirm('Reverse the ad views earned by ' + ref + '?')) return;
+            try {
+                const d = await adminFetch('/api/admin/adcredits/reverse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference: ref }) });
+                msg.style.color = d.success ? '#16a34a' : '#c93434'; msg.textContent = d.success ? 'Reversed.' : (d.error || 'Could not reverse');
+            } catch (e) { msg.style.color = '#c93434'; msg.textContent = 'Could not reverse: ' + (e.message || 'error'); }
+        }
+
+        const AE_SURFACE_LABEL = { email: 'Email', receipt: 'Receipt', success: 'Success page', mobile: 'Mobile' };
+        async function loadAdEngine() {
+            const days = (document.getElementById('aeDays') || {}).value || 7;
+            const surf = document.getElementById('aeSurfaces'), top = document.getElementById('aeTop'), st = document.getElementById('aeStatus');
+            if (!surf || !top) return;
+            try {
+                const d = await adminFetch('/api/admin/adengine/summary?days=' + encodeURIComponent(days));
+                if (!d.success) { surf.innerHTML = '<tr><td colspan="4" style="padding:8px;color:#c93434;">' + escapeHtml(d.error || 'Could not load') + '</td></tr>'; return; }
+                const pct = (x) => (x == null ? 'not enough data' : x + '%');
+                st.textContent = d.tracking_enabled ? (d.total_events + ' events recorded in total') : 'Tracking is switched off (ADENGINE_TRACKING=0)';
+                surf.innerHTML = Object.keys(AE_SURFACE_LABEL).map(k => {
+                    const r = d.by_surface[k] || { views: 0, clicks: 0, click_rate: null };
+                    return '<tr><td style="padding:8px;">' + AE_SURFACE_LABEL[k] + '</td><td style="padding:8px;text-align:right;">' + r.views + '</td><td style="padding:8px;text-align:right;">' + r.clicks + '</td><td style="padding:8px;text-align:right;">' + pct(r.click_rate) + '</td></tr>';
+                }).join('');
+                top.innerHTML = (d.top_ads || []).length ? d.top_ads.map(a =>
+                    '<tr><td style="padding:8px;">' + escapeHtml(a.title || ('Ad #' + a.ad_id)) + '</td><td style="padding:8px;">' + (AE_SURFACE_LABEL[a.surface] || escapeHtml(a.surface)) + '</td><td style="padding:8px;text-align:right;">' + a.views + '</td><td style="padding:8px;text-align:right;">' + a.clicks + '</td><td style="padding:8px;text-align:right;">' + pct(a.click_rate) + '</td></tr>'
+                ).join('') : '<tr><td colspan="5" style="padding:8px;color:var(--text-secondary);">No ad activity recorded yet in this period.</td></tr>';
+            } catch (e) {
+                surf.innerHTML = '<tr><td colspan="4" style="padding:8px;color:#c93434;">Could not load: ' + escapeHtml(e.message || 'error') + '</td></tr>';
+            }
+        }
+
         function switchTab(tab) {
             currentTab = tab;
             document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
@@ -1833,7 +2388,288 @@
             if (tab === 'transactions') loadAdminTransactions();
             if (tab === 'promos') loadPromos();
             if (tab === 'chat') { loadChatConversations(); startAdminChatPolling(); }
+            if (tab === 'routing') { loadQuickRecharge(); loadRouting(); }
+            if (tab === 'homeads') loadHomeAds();
+            if (tab === 'askq') loadAsk();
+            if (tab === 'membership') loadMembership();
+            if (tab === 'recovery') loadRecovery();
             if (tab === 'success-ads') loadSuccessAds();
+            if (tab === 'adengine') loadAdEngine();
+            if (tab === 'adcredits') loadAdCredits();
+            if (tab === 'adserve') loadAdServe();
+            const _missing = (id, fn, file) => { const el = document.getElementById(id); if (el) el.innerHTML = '<div class="panel"><p style="color:#c93434"><b>' + file + ' was not found on the server.</b> Upload it next to app.py and restart, then reload this page.</p></div>'; };
+            if (tab === 'insights') { if (typeof loadInsights === 'function') loadInsights(); else _missing('tab-insights', 'loadInsights', 'admin_insights.js'); }
+            if (tab === 'intel') { if (typeof loadIntel === 'function') loadIntel(); else _missing('tab-intel', 'loadIntel', 'admin_insights.js'); }
+            if (tab === 'security') { if (typeof loadSecurity === 'function') loadSecurity(); else _missing('tab-security', 'loadSecurity', 'admin_sentinel.js'); }
+            if (tab === 'intl') { if (typeof loadIntl === 'function') loadIntl(); else _missing('tab-intl', 'loadIntl', 'admin_intl.js'); }
+        }
+
+
+        // ============================================
+        // PROVIDER ROUTING (admin only)
+        // ============================================
+        const ROUTING_LABEL = { airtime: 'Airtime', electricity: 'Electricity', tv: 'Cable TV', education: 'Education', data: 'Data', insurance: 'Insurance' };
+        const PROVIDER_LABEL = { vtpass: 'VTpass', reloadly: 'Reloadly' };
+        async function loadRouting() {
+            try {
+                const d = await adminFetch('/api/admin/routing');
+                if (!d.success) throw new Error('failed');
+                const box = document.getElementById('routingProviders');
+                box.innerHTML = Object.keys(d.providers).map(p => {
+                    const v = d.providers[p], o = v.overall || {};
+                    return `<div style="border:1px solid var(--border-color,#e2e8f0);border-radius:10px;padding:12px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;"><b>${PROVIDER_LABEL[p] || p}</b>
+                        <span style="font-size:12px;font-weight:700;color:${v.down ? '#c93434' : '#16a34a'}">${v.down ? 'MARKED DOWN' : 'Active'}</span></div>
+                        <div style="font-size:12px;color:var(--text-secondary);margin:6px 0;">7 days: ${o.attempts || 0} orders, ${o.success || 0} delivered, ${o.failed || 0} failed</div>
+                        <input id="routingNote_${p}" value="${escapeHtml(v.note || '')}" placeholder="Note (intel, report...)" style="width:100%;box-sizing:border-box;padding:7px;border:1px solid var(--border-color,#cbd5e1);border-radius:8px;margin-bottom:8px;background:transparent;color:inherit;">
+                        <button class="btn btn-sm ${v.down ? 'btn-success' : 'btn-danger'}" onclick="setProviderDown('${p}', ${v.down ? 'false' : 'true'})">${v.down ? 'Mark active' : 'Mark down (use the other first)'}</button>
+                    </div>`;
+                }).join('');
+                const modeName = { default: 'Default', auto: 'Auto (best score)', vtpass: 'VTpass first', reloadly: 'Reloadly first' };
+                document.getElementById('routingRows').innerHTML = d.services.map(r => {
+                    const cell = p => { const x = r.providers[p]; if (!x || x.supported === false) return '<span style="color:var(--text-secondary)">n/a</span>'; return `<b>${x.score}</b> <span style="color:var(--text-secondary)">(${x.success}/${x.attempts})</span>${x.auto_down && !(d.providers[p] || {}).down ? ' <span style="color:#d97706">sensed down</span>' : ''}`; };
+                    const opts = d.modes.filter(m => m === 'default' || m === 'auto' || (r.providers[m] && r.providers[m].supported !== false))
+                        .map(m => `<option value="${m}" ${m === r.mode ? 'selected' : ''}>${modeName[m]}</option>`).join('');
+                    return `<tr style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                        <td style="padding:8px;font-weight:600;">${ROUTING_LABEL[r.service] || r.service}</td>
+                        <td style="padding:8px;">${r.effective_order.map(p => PROVIDER_LABEL[p] || p).join(' → ')}</td>
+                        <td style="padding:8px;">${cell('vtpass')}</td><td style="padding:8px;">${cell('reloadly')}</td>
+                        <td style="padding:8px;"><select onchange="setRoutingMode('${r.service}', this.value)" style="padding:6px;border-radius:8px;">${opts}</select></td></tr>`;
+                }).join('');
+            } catch (e) {
+                document.getElementById('routingRows').innerHTML = '<tr><td colspan="5" style="padding:12px;color:#c93434;">Could not load routing. Make sure net365_routing.py is on the server, then reload.</td></tr>';
+            }
+        }
+        async function setRoutingMode(service, mode) {
+            try {
+                const d = await adminFetch('/api/admin/routing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service, mode }) });
+                showToast(d.success ? `${ROUTING_LABEL[service]}: ${d.effective_order.map(p => PROVIDER_LABEL[p]).join(' → ')}` : (d.error || 'Could not save'), d.success ? 'success' : 'error');
+            } catch (e) { showToast('Could not save routing', 'error'); }
+            loadRouting(); loadQuickRecharge();
+        }
+        async function setProviderDown(provider, down) {
+            const noteEl = document.getElementById('routingNote_' + provider);
+            try {
+                const d = await adminFetch('/api/admin/routing/provider', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider, down, note: noteEl ? noteEl.value : '' }) });
+                showToast(d.success ? `${PROVIDER_LABEL[provider]} ${down ? 'marked down' : 'marked active'}` : (d.error || 'Could not save'), d.success ? 'success' : 'error');
+            } catch (e) { showToast('Could not save', 'error'); }
+            loadRouting(); loadQuickRecharge();
+        }
+
+        // ============================================
+        // QUICK RECHARGE SWITCH + HOME ADVERTS (admin only)
+        // ============================================
+        let _qrReady = { vtpass: false, reloadly: false, why: {} };
+        async function loadQuickRecharge() {
+            const st = document.getElementById('qrStatus'); if (!st) return;
+            const warn = document.getElementById('qrWarn'), bal = document.getElementById('qrBal'), bv = document.getElementById('qrBtnVtpass'), br = document.getElementById('qrBtnReloadly');
+            let routing = null, prov = null;
+            try { routing = await adminFetch('/api/admin/routing'); } catch (e) { }
+            try { prov = await adminFetch('/api/admin/providers'); } catch (e) { }
+            if (!routing || !routing.success) { st.innerHTML = '<span style="color:#c93434">Could not load. Make sure net365_routing.py is on the server, then reload.</span>'; bv.disabled = br.disabled = true; return; }
+            const row = (routing.services || []).find(r => r.service === 'airtime') || {};
+            const order = (row.effective_order || []).map(p => PROVIDER_LABEL[p] || p);
+            const first = (row.effective_order || [])[0];
+            st.innerHTML = 'Airtime orders go to: <b>' + (order[0] || '?') + '</b> first' + (order[1] ? ', <b>' + order[1] + '</b> on standby' : '') + '.';
+            bv.style.outline = first === 'vtpass' ? '3px solid #16a34a' : ''; br.style.outline = first === 'reloadly' ? '3px solid #16a34a' : '';
+            const p = {}; ((prov && prov.providers) || []).forEach(x => { p[x.provider] = x; });
+            const why = [];
+            if (!prov) why.push('Could not read the processor status.');
+            else {
+                if (!prov.router_enabled) why.push('The router is off. Set PROVIDER_ROUTER_ENABLED=true on the server.');
+                if (!(p.vtpass && p.vtpass.configured)) why.push('VTpass keys are not set on the server.');
+                else if (!p.vtpass.switched_on) why.push('VTpass is switched off in provider settings.');
+            }
+            _qrReady.vtpass = !!prov && prov.router_enabled && !!(p.vtpass && p.vtpass.configured && p.vtpass.switched_on);
+            bv.disabled = !_qrReady.vtpass && first !== 'vtpass';
+            warn.textContent = first === 'vtpass' ? '' : (why.length ? 'VTpass first is not available yet. ' + why.join(' ') + ' Airtime keeps going to Reloadly until then.' : '');
+            const b = x => (x && x.balance != null) ? (typeof x.balance === 'object' ? JSON.stringify(x.balance) : x.balance) : 'n/a';
+            bal.textContent = prov ? ('Balances: VTpass ' + b(p.vtpass) + ' | Reloadly ' + b(p.reloadly)) : '';
+        }
+        async function setQuickRecharge(mode) {
+            if (!confirm(mode === 'vtpass' ? 'Send airtime to VTpass first, with Reloadly on standby?' : 'Send airtime back to Reloadly first, with VTpass on standby?')) return;
+            try {
+                const d = await adminFetch('/api/admin/routing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service: 'airtime', mode }) });
+                showToast(d.success ? ('Airtime: ' + d.effective_order.map(p => PROVIDER_LABEL[p] || p).join(' → ')) : (d.error || 'Could not save'), d.success ? 'success' : 'error');
+            } catch (e) { showToast('Could not save', 'error'); }
+            loadQuickRecharge(); loadRouting();
+        }
+
+        function haKindChanged() { document.getElementById('haSponsorWrap').style.display = document.getElementById('haKind').value === 'partner' ? '' : 'none'; }
+        function haReset() {
+            ['haId', 'haTitle', 'haBody', 'haImage', 'haCta', 'haUrl', 'haSponsor', 'haCountries', 'haStart', 'haEnd'].forEach(i => document.getElementById(i).value = '');
+            document.getElementById('haSort').value = 0; document.getElementById('haActive').checked = true; document.getElementById('haKind').value = 'net365'; haKindChanged();
+        }
+        let _haAds = [];
+        async function loadHomeAds() {
+            haKindChanged();
+            try {
+                const d = await adminFetch('/api/admin/home-ads'); if (!d.success) throw new Error('x');
+                _haAds = d.ads; document.getElementById('haAnim').value = d.settings.animation; document.getElementById('haRot').value = d.settings.rotate;
+                document.getElementById('haRows').innerHTML = d.ads.length ? d.ads.map((a, i) => `<tr style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                    <td style="padding:8px;"><b>${escapeHtml(a.title)}</b><br><span style="color:var(--text-secondary);font-size:12px;">${a.kind === 'partner' ? 'Sponsored: ' + escapeHtml(a.sponsor) : 'Net365 message'}</span></td>
+                    <td style="padding:8px;">${a.live ? '<b style="color:#16a34a">Live</b>' : (a.active ? 'Scheduled / expired' : 'Off')}</td>
+                    <td style="padding:8px;font-size:12px;">${escapeHtml(a.countries || 'Everyone')}<br>${escapeHtml(a.starts_on || '')} ${a.ends_on ? 'to ' + escapeHtml(a.ends_on) : ''}</td>
+                    <td style="padding:8px;">${a.views}</td><td style="padding:8px;">${a.clicks}${a.views ? ' (' + Math.round(a.clicks / a.views * 100) + '%)' : ''}</td>
+                    <td style="padding:8px;white-space:nowrap;"><button class="btn btn-sm" onclick="haEdit(${i})">Edit</button> <button class="btn btn-sm btn-danger" onclick="haDelete(${a.id})">Delete</button></td></tr>`).join('')
+                    : '<tr><td colspan="6" style="padding:12px;color:var(--text-secondary);">No adverts yet. The Net365 chat animation is showing on the home page.</td></tr>';
+            } catch (e) { document.getElementById('haRows').innerHTML = '<tr><td colspan="6" style="padding:12px;color:#c93434;">Could not load. Make sure net365_homeads.py is installed and init_homeads is called in app.py.</td></tr>'; }
+        }
+        function haEdit(i) {
+            const a = _haAds[i]; if (!a) return;
+            const v = (id, x) => document.getElementById(id).value = x == null ? '' : x;
+            v('haId', a.id); v('haTitle', a.title); v('haBody', a.body); v('haImage', a.image_url); v('haCta', a.cta_label); v('haUrl', a.cta_url); v('haKind', a.kind); v('haSponsor', a.sponsor);
+            v('haCountries', a.countries); v('haStart', a.starts_on); v('haEnd', a.ends_on); v('haSort', a.sort); document.getElementById('haActive').checked = a.active; haKindChanged();
+            document.getElementById('haForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        async function haSave() {
+            const g = id => document.getElementById(id).value.trim();
+            const body = { id: g('haId') || null, title: g('haTitle'), body: g('haBody'), image_url: g('haImage'), cta_label: g('haCta'), cta_url: g('haUrl'), kind: g('haKind'), sponsor: g('haSponsor'),
+                countries: g('haCountries'), starts_on: g('haStart'), ends_on: g('haEnd'), sort: g('haSort'), active: document.getElementById('haActive').checked };
+            try {
+                const d = await adminFetch('/api/admin/home-ads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                showToast(d.success ? 'Advert saved' : (d.error || 'Could not save'), d.success ? 'success' : 'error');
+                if (d.success) { haReset(); loadHomeAds(); }
+            } catch (e) { showToast('Could not save', 'error'); }
+        }
+        async function haDelete(id) {
+            if (!confirm('Delete this advert?')) return;
+            try { const d = await adminFetch('/api/admin/home-ads/' + id, { method: 'DELETE' }); showToast(d.success ? 'Deleted' : 'Could not delete', d.success ? 'success' : 'error'); } catch (e) { showToast('Could not delete', 'error'); }
+            loadHomeAds();
+        }
+        async function haSaveSettings() {
+            try {
+                const d = await adminFetch('/api/admin/home-ads/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ animation: document.getElementById('haAnim').value, rotate: document.getElementById('haRot').value }) });
+                showToast(d.success ? 'Saved' : (d.error || 'Could not save'), d.success ? 'success' : 'error');
+            } catch (e) { showToast('Could not save', 'error'); }
+        }
+
+
+        // ============================================
+        // ASK NET365 QUESTIONS + MEMBERSHIP (admin only)
+        // ============================================
+        const AQ_OUT = { action: 'Opened a screen', answered: 'Gave a ready answer', unanswered: 'Said it will get back to them', other: 'Other' };
+        async function loadAsk() {
+            const list = document.getElementById('aqList'); if (!list) return;
+            try {
+                const d = await adminFetch('/api/admin/ask?filter=' + document.getElementById('aqFilter').value); if (!d.success) throw new Error('x');
+                const c = d.counts;
+                document.getElementById('aqCounts').innerHTML = [['Needs an answer', c.open], ['No ready answer', c.unanswered], ['Customer said No', c.thumbs_down], ['Said Yes', c.thumbs_up], ['Total asked', c.total]]
+                    .map(x => `<div style="border:1px solid var(--border-color,#e2e8f0);border-radius:10px;padding:8px 12px;"><b style="font-size:18px">${x[1]}</b><br>${x[0]}</div>`).join('');
+                const bd = document.getElementById('askOpenBadge'); if (bd) { bd.textContent = c.open; bd.style.display = c.open ? '' : 'none'; }
+                list.innerHTML = d.questions.length ? d.questions.map(q => `<div style="border:1px solid var(--border-color,#e2e8f0);border-radius:12px;padding:12px;">
+                    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);"><span>${escapeHtml(q.who)}${q.contact ? ' · ' + escapeHtml(q.contact) : ' · no email'}${q.country ? ' · ' + escapeHtml(q.country) : ''}</span><span>${escapeHtml(q.created_at || '')}</span></div>
+                    <div style="font-size:15px;margin:6px 0;"><b>${escapeHtml(q.question)}</b></div>
+                    <div style="font-size:12.5px;color:var(--text-secondary);">Net365 responded: <b>${AQ_OUT[q.outcome] || q.outcome}</b>${q.shown ? ' — ' + escapeHtml(q.shown.slice(0, 140)) : ''}${q.matched ? ' <i>(' + escapeHtml(q.matched) + ')</i>' : ''}</div>
+                    <div style="font-size:12.5px;margin:4px 0;">Customer: ${q.feedback === 'down' ? '<b style="color:#c93434">said it did not help</b>' : q.feedback === 'up' ? '<b style="color:#16a34a">said it helped</b>' : 'no rating'} · You: ${q.admin_flag === 'wrong' ? '<b style="color:#c93434">marked wrong</b>' : q.admin_flag === 'correct' ? '<b style="color:#16a34a">marked correct</b>' : 'not reviewed'} · Status: <b>${escapeHtml(q.status)}</b></div>
+                    ${q.admin_answer ? `<div style="background:rgba(22,163,74,.1);border-radius:8px;padding:8px;font-size:13px;margin:6px 0;white-space:pre-line;"><b>Your reply</b> (${escapeHtml(q.delivered || 'not delivered')}):<br>${escapeHtml(q.admin_answer)}</div>` : ''}
+                    <textarea id="aqA${q.id}" rows="2" maxlength="1500" placeholder="Write the answer for this customer" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;margin-top:6px;"></textarea>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:6px;font-size:13px;">
+                        <label><input type="checkbox" id="aqP${q.id}" checked> Show in their Ask box and notifications</label>
+                        <label><input type="checkbox" id="aqE${q.id}" ${q.contact ? 'checked' : 'disabled'}> Email${q.contact ? '' : ' (no email known)'}</label>
+                        <button class="btn btn-sm" onclick="aqSend(${q.id})">Send reply</button>
+                        <button class="btn btn-sm" onclick="aqFlag(${q.id},'correct')">Answer was right</button>
+                        <button class="btn btn-sm btn-danger" onclick="aqFlag(${q.id},'wrong')">Answer was wrong</button>
+                        <button class="btn btn-sm" onclick="aqFlag(${q.id},'close')">Close</button>
+                    </div></div>`).join('') : '<p style="color:var(--text-secondary)">Nothing here. New questions that need an answer appear in this list.</p>';
+            } catch (e) { list.innerHTML = '<p style="color:#c93434">Could not load. Make sure net365_askqa.py is installed and init_askqa is called in app.py.</p>'; }
+        }
+        async function aqSend(id) {
+            const a = document.getElementById('aqA' + id).value.trim(); if (!a) { showToast('Write the answer first', 'error'); return; }
+            try {
+                const d = await adminFetch('/api/admin/ask/' + id + '/answer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer: a, in_app: document.getElementById('aqP' + id).checked, email: document.getElementById('aqE' + id).checked }) });
+                showToast(d.success ? (d.warning || ('Sent: ' + d.delivered.join(', '))) : (d.error || 'Could not send'), d.success && !d.warning ? 'success' : 'error');
+            } catch (e) { showToast('Could not send', 'error'); }
+            loadAsk();
+        }
+        async function aqFlag(id, flag) {
+            try { await adminFetch('/api/admin/ask/' + id + '/flag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ flag }) }); } catch (e) { showToast('Could not save', 'error'); }
+            loadAsk();
+        }
+        async function loadMembership() {
+            const box = document.getElementById('mbSummary'); if (!box) return;
+            try {
+                const d = await adminFetch('/api/admin/membership/summary'); if (!d.success) throw new Error('x');
+                const names = {}; d.categories.forEach(c => names[c.key] = c.label); names.NUMBER_ONLY = 'Number only (no badge)';
+                box.innerHTML = `<b>${d.issued}</b> numbers issued · next number <b>${escapeHtml(d.next_number)}</b> · <b>${d.waiting_verified}</b> verified customers waiting<br>` +
+                    Object.keys(d.by_category).map(k => `${escapeHtml(names[k] || k)}: <b>${d.by_category[k]}</b>`).join(' · ');
+            } catch (e) { box.innerHTML = '<span style="color:#c93434">Could not load. Make sure net365_membership.py is installed and init_membership is called in app.py.</span>'; }
+        }
+        async function mbBackfill(dry) {
+            if (!dry && !confirm('Number every verified customer who has no number yet, oldest sign-up first? This cannot be undone.')) return;
+            try {
+                const d = await adminFetch('/api/admin/membership/backfill', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dry_run: dry }) });
+                document.getElementById('mbResult').textContent = !d.success ? (d.error || 'Failed') : dry ? (d.would_issue ? d.would_issue + ' would be numbered, from ' + d.first_number + ' to ' + d.last_number + '.' : 'Nobody is waiting.') : d.issued + ' customers numbered.';
+            } catch (e) { document.getElementById('mbResult').textContent = 'Could not reach the server.'; }
+            loadMembership();
+        }
+
+
+        // ============================================
+        // REFUNDS & RECOVERY (admin only)
+        // ============================================
+        const RC_SVC = { airtime: 'Airtime', electricity: 'Electricity', tv: 'Cable TV', education: 'Education', data: 'Data', insurance: 'Insurance' };
+        async function rcPost(path, body, okMsg) {
+            try {
+                const d = await adminFetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                showToast(d.success ? (okMsg || 'Saved') : (d.error || 'Could not save'), d.success ? 'success' : 'error');
+            } catch (e) { showToast('Could not save', 'error'); }
+            loadRecovery();
+        }
+        async function loadRecovery() {
+            try {
+                const d = await adminFetch('/api/admin/recovery');
+                if (!d.success) throw new Error('x');
+                const sw = (key, label, hint, on) => `<label style="display:flex;gap:8px;align-items:flex-start;border:1px solid var(--border-color,#e2e8f0);border-radius:10px;padding:10px 12px;max-width:340px;cursor:pointer;">
+                    <input type="checkbox" ${on ? 'checked' : ''} onchange="rcPost('/api/admin/recovery/setting',{key:'${key}',value:this.checked})" style="margin-top:3px;">
+                    <span><b>${label}</b><br><span style="font-size:12px;color:var(--text-secondary)">${hint}</span></span></label>`;
+                document.getElementById('rcSwitches').innerHTML =
+                    sw('test_mode', 'Test mode', 'No money moves. Refunds are recorded as "simulated" so you can test every route safely.', d.settings.test_mode) +
+                    sw('pause_retries', 'Pause all retries', 'Stops automatic retries (refunds and review still work).', d.settings.pause_retries);
+                const svcs = ['*'].concat(Object.keys(d.policy));
+                document.getElementById('rcMaint').innerHTML = svcs.map(s => {
+                    const m = d.maintenance[s] || {};
+                    const id = 'rcm_' + (s === '*' ? 'all' : s);
+                    return `<tr style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                        <td style="padding:8px;font-weight:600;">${s === '*' ? 'ALL services (Net365 maintenance)' : RC_SVC[s]}</td>
+                        <td><input type="checkbox" id="${id}_on" ${m.active ? 'checked' : ''}> On</td>
+                        <td><input type="datetime-local" id="${id}_until" value="${(m.until || '').slice(0, 16)}" title="Back at (UTC)"></td>
+                        <td><input id="${id}_msg" value="${escapeHtml(m.message || '')}" placeholder="Message for customers" style="width:230px;padding:5px;"></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="rcPost('/api/admin/recovery/maintenance',{service:'${s}',active:document.getElementById('${id}_on').checked,until:document.getElementById('${id}_until').value,message:document.getElementById('${id}_msg').value},'Maintenance saved')">Save</button></td></tr>`;
+                }).join('');
+                const opt = (list, cur) => list.map(x => `<option value="${x}" ${x === cur ? 'selected' : ''}>${x}</option>`).join('');
+                document.getElementById('rcPolicy').innerHTML = Object.keys(d.policy).map(s => {
+                    const p = d.policy[s], id = 'rcp_' + s;
+                    return `<tr style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                        <td style="padding:8px;font-weight:600;">${RC_SVC[s]}</td>
+                        <td><input type="number" id="${id}_a" value="${p.max_attempts}" min="0" max="${d.hard_max}" style="width:60px;padding:5px;"></td>
+                        <td><input type="number" id="${id}_g" value="${p.gap_minutes}" min="1" style="width:70px;padding:5px;"></td>
+                        <td><input type="number" id="${id}_w" value="${p.window_minutes}" min="1" style="width:80px;padding:5px;"></td>
+                        <td><select id="${id}_r" style="padding:5px;">${opt(d.routes, p.refund_route)}</select></td>
+                        <td><select id="${id}_m" style="padding:5px;">${opt(d.modes, p.refund_mode)}</select></td>
+                        <td><input type="checkbox" id="${id}_f" ${p.refund_fee ? 'checked' : ''}></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="rcPost('/api/admin/recovery/policy',{service:'${s}',max_attempts:document.getElementById('${id}_a').value,gap_minutes:document.getElementById('${id}_g').value,window_minutes:document.getElementById('${id}_w').value,refund_route:document.getElementById('${id}_r').value,refund_mode:document.getElementById('${id}_m').value,refund_fee:document.getElementById('${id}_f').checked},'${RC_SVC[s]} policy saved')">Save</button></td></tr>`;
+                }).join('');
+                const btn = (ref, act, label, cls) => `<button class="btn btn-sm ${cls}" onclick="rcRefund('${ref}','${act}')">${label}</button> `;
+                document.getElementById('rcQueue').innerHTML = d.queue.length ? d.queue.map(q => {
+                    let act = '';
+                    if (['queued', 'review', 'failed', 'simulated'].includes(q.status)) act += btn(q.reference, 'approve', q.status === 'simulated' ? 'Refund for real' : 'Approve &amp; refund', 'btn-success');
+                    if (['queued', 'review', 'failed'].includes(q.status)) act += btn(q.reference, 'done', 'Mark done', 'btn-primary') + btn(q.reference, 'reject', 'Reject', 'btn-danger');
+                    const col = { processed: '#16a34a', failed: '#c93434', review: '#d97706', queued: '#d97706', simulated: '#6366f1', rejected: '#64748b', approved: '#16a34a' }[q.status] || '#64748b';
+                    return `<tr style="border-bottom:1px solid var(--border-color,#e2e8f0);">
+                        <td style="padding:8px;font-size:12px;">${escapeHtml(q.reference)}</td><td>${RC_SVC[q.service] || q.service || ''}</td>
+                        <td>${q.currency} ${Number(q.amount).toLocaleString()}</td><td>${q.route || ''}</td>
+                        <td style="font-weight:700;color:${col}">${q.status.toUpperCase()}</td>
+                        <td style="font-size:12px;max-width:260px;">${escapeHtml((q.note ? q.note + ' · ' : '') + (q.reason || ''))}</td><td>${act}</td></tr>`;
+                }).join('') : '<tr><td colspan="7" style="padding:12px;color:var(--text-secondary);">No refunds or reviews yet.</td></tr>';
+            } catch (e) {
+                document.getElementById('rcQueue').innerHTML = '<tr><td colspan="7" style="padding:12px;color:#c93434;">Could not load. Make sure net365_recovery.py is on the server, then reload.</td></tr>';
+            }
+        }
+        function rcRefund(reference, action) {
+            const msg = { approve: 'Refund this order now?', done: 'Mark this refund as already done elsewhere?', reject: 'Reject this refund?' }[action];
+            if (!confirm(msg)) return;
+            rcPost('/api/admin/recovery/refund', { reference, action }, 'Done');
         }
 
         // ============================================
@@ -4422,5 +5258,8 @@ function showCreateSuccessAdModal() {
         // ============================================
         console.log('Net365 Admin Panel loaded with visitor geo analytics + company intelligence');
     </script>
+    <script src="/admin_insights.js"></script>
+    <script src="/admin_sentinel.js"></script>
+    <script src="/admin_intl.js"></script>
 </body>
 </html>

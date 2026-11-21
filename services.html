@@ -1,682 +1,446 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Net365 Business Services · Invoices, Domains, AI & more</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>" />
-    <style>
-        /* =========================================================
-           NET365 SERVICES PAGE - COMPLETE STYLES
-           ========================================================= */
-        :root {
-            --bg-primary: #f0f4f8;
-            --bg-secondary: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --border-color: #e2e8f0;
-            --card-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
-            --transition: all 0.3s ease;
-            --success: #22c55e;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --primary: #4f46e5;
-            --purple: #7c3aed;
-            --teal: #14b8a6;
-            --pink: #ec4899;
-            --radius: 12px;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#060912">
+<title>Net365 Services</title>
+<meta name="description" content="Pay bills, recharge, invoice, reach customers and grow your business from one place. Ask Net365 what you need and it finds the right service.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+:root{
+  --ember:#ff6a1a; --ember-2:#ff3b30; --amber:#ffb547; --arc:#3be3ff; --signal:#34e39a; --violet:#9b7cff;
+  --fire:linear-gradient(135deg,#ff3b30 0%,#ff6a1a 55%,#ffb547 100%);
+  --bg-0:#eef1f6; --panel:#ffffff; --panel-2:#f3f5f9; --line:rgba(15,23,42,.09); --line-2:rgba(255,106,26,.4);
+  --t0:#0b1020; --t1:#2f3b52; --t2:#5f6c84; --t3:#8d99ae; --glow:rgba(255,106,26,.22); --grid:rgba(15,23,42,.045);
+  --ok:#0fb872; --warn:#c77700; --info:#0f8fb0;
+  --display:'Sora','Inter',system-ui,sans-serif; --body:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; --ease:cubic-bezier(.16,1,.3,1);
+}
+body.dark-mode{--bg-0:#060912;--panel:rgba(16,22,40,.74);--panel-2:rgba(24,32,56,.6);--line:rgba(140,160,210,.14);--line-2:rgba(255,106,26,.5);--t0:#f3f6fc;--t1:#c6d0e3;--t2:#8f9cb6;--t3:#66738f;--glow:rgba(255,106,26,.3);--grid:rgba(140,160,210,.055);--ok:#34e39a;--warn:#ffb547;--info:#3be3ff}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--body);background:var(--bg-0);color:var(--t0);min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(900px 520px at 85% -8%,var(--glow),transparent 62%),radial-gradient(760px 460px at 2% 40%,rgba(59,227,255,.08),transparent 60%),linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:auto,auto,44px 44px,44px 44px;background-attachment:fixed}
+a{color:inherit;text-decoration:none}button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--arc);outline-offset:2px;border-radius:10px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
-        body.dark-mode {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --text-primary: #e2e8f0;
-            --text-secondary: #94a3b8;
-            --border-color: #334155;
-        }
+/* NAV */
+.nav{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 28px;border-bottom:1px solid var(--line);backdrop-filter:blur(16px);background:color-mix(in srgb,var(--bg-0) 74%,transparent)}
+.nav .l,.nav .r{display:flex;align-items:center;gap:12px}
+.back{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:11px;border:1px solid var(--line);background:var(--panel-2);font-size:13px;font-weight:500;color:var(--t1)}
+.back:hover{border-color:var(--line-2)}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.02em}
+.brand i{width:32px;height:32px;border-radius:10px;background:var(--fire);color:#fff;display:grid;place-items:center;font-size:14px;box-shadow:0 8px 22px var(--glow)}
+.links{display:flex;gap:4px}
+.links a{padding:7px 13px;border-radius:10px;font-size:13px;font-weight:600;color:var(--t2)}
+.links a:hover{color:var(--t0);background:var(--panel-2)}
+.links a.on{background:var(--fire);color:#fff;box-shadow:0 6px 18px var(--glow)}
+.ib{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);color:var(--t1);display:grid;place-items:center}
+.ib:hover{border-color:var(--line-2);color:var(--ember)}
+.ib .fa-sun{display:none}body.dark-mode .ib .fa-sun{display:inline}body.dark-mode .ib .fa-moon{display:none}
+.adm{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);font-size:13px;font-weight:600;color:var(--t1)}
+.adm:hover{border-color:var(--line-2);color:var(--ember)}
+.wrap{max-width:1240px;margin:0 auto;padding:30px 28px 90px;position:relative}
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-        body { background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; transition: var(--transition); }
+/* HERO */
+.hero{position:relative;text-align:center;padding:34px 0 10px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:99px;border:1px solid var(--line);background:var(--panel-2);font-size:12px;font-weight:600;color:var(--t1);letter-spacing:.02em}
+.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--signal);animation:ping 2.4s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 8px rgba(52,227,154,0)}0%{box-shadow:0 0 0 0 rgba(52,227,154,.6)}}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,6vw,64px);letter-spacing:-.045em;line-height:1.04;margin:18px auto 14px;max-width:880px}
+h1 em{font-style:normal;background:var(--fire);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{max-width:600px;margin:0 auto;color:var(--t2);font-size:16.5px}
 
-        /* Navigation */
-        .services-nav {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
-            padding: 12px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            flex-wrap: wrap;
-            gap: 8px;
-            transition: var(--transition);
-        }
+/* ASSIST */
+.assist{max-width:780px;margin:30px auto 0;text-align:left;position:relative}
+.assist::before{content:"";position:absolute;inset:-1px;border-radius:24px;padding:1.5px;background:linear-gradient(120deg,rgba(59,227,255,.7),rgba(255,106,26,.7),rgba(155,124,255,.6));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.8}
+.abox{display:flex;align-items:center;gap:12px;padding:10px 10px 10px 18px;border-radius:24px;background:var(--panel);backdrop-filter:blur(16px);box-shadow:0 24px 60px rgba(0,0,0,.14)}
+.orb{width:30px;height:30px;border-radius:50%;flex:none;background:radial-gradient(circle at 32% 28%,#fff,var(--arc) 38%,#1167ff 80%);box-shadow:0 0 22px rgba(59,227,255,.65);animation:br 4s ease-in-out infinite}
+@keyframes br{50%{transform:scale(.88);box-shadow:0 0 12px rgba(59,227,255,.4)}}
+.abox input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:16px;color:var(--t0);padding:10px 0}
+.abox input::placeholder{color:var(--t3)}
+.kbd{font-size:11px;padding:3px 7px;border-radius:7px;border:1px solid var(--line);color:var(--t3);font-family:var(--body)}
+.go{width:44px;height:44px;border-radius:15px;background:var(--fire);color:#fff;display:grid;place-items:center;box-shadow:0 10px 26px var(--glow);transition:transform .2s var(--ease)}
+.go:hover{transform:scale(1.06)}
+.try{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.chip{border:1px solid var(--line);background:var(--panel-2);border-radius:99px;padding:7px 13px;font-size:13px;color:var(--t1);transition:all .2s}
+.chip:hover{border-color:var(--arc);color:var(--t0);transform:translateY(-1px)}
+.reply{margin-top:14px;display:none;border:1px solid rgba(59,227,255,.28);background:var(--panel);border-radius:20px;padding:16px 18px;backdrop-filter:blur(16px);text-align:left;animation:rise .35s var(--ease)}
+.reply.on{display:block}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+.reply .why{font-size:13.5px;color:var(--t1);margin-bottom:12px}
+.reply .why b{color:var(--t0)}
+.picks{display:grid;gap:8px}
+.pick{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:14px;border:1px solid var(--line);background:var(--panel-2);text-align:left;width:100%;transition:border-color .2s,transform .2s}
+.pick:hover{border-color:var(--line-2);transform:translateX(3px)}
+.pick .pi{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,106,26,.12);color:var(--ember);flex:none}
+.pick b{display:block;font-size:14px}.pick span{font-size:12.5px;color:var(--t2)}
+.pick .go2{margin-left:auto;color:var(--t3);font-size:12px;white-space:nowrap}
 
-        .services-nav .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-primary);
-            text-decoration: none;
-        }
-        .services-nav .logo i { color: var(--primary); }
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:38px 0 8px}
+.stat{border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:16px 18px;backdrop-filter:blur(14px)}
+.stat .v{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.stat .k{font-size:12.5px;color:var(--t2)}
+.stat:nth-child(1) .v{background:var(--fire);-webkit-background-clip:text;background-clip:text;color:transparent}
 
-        .nav-links {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .nav-links a {
-            padding: 6px 14px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            transition: var(--transition);
-        }
-        .nav-links a:hover { background: var(--bg-primary); color: var(--text-primary); }
-        .nav-links a.active { background: var(--primary); color: white; }
+/* TOOLBAR */
+.bar{position:sticky;top:65px;z-index:30;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:26px 0 22px;padding:10px;border-radius:18px;border:1px solid var(--line);background:color-mix(in srgb,var(--bg-0) 78%,transparent);backdrop-filter:blur(16px)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{padding:8px 14px;border-radius:12px;font-size:13px;font-weight:600;color:var(--t2);border:1px solid transparent}
+.tab:hover{color:var(--t0);background:var(--panel-2)}
+.tab.on{background:var(--fire);color:#fff;box-shadow:0 8px 22px var(--glow)}
+.seg{display:flex;gap:4px;padding:3px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line)}
+.seg button{padding:6px 12px;border-radius:9px;font-size:12.5px;font-weight:600;color:var(--t2)}
+.seg button.on{background:var(--panel);color:var(--t0);box-shadow:0 2px 10px rgba(0,0,0,.14)}
 
-        .theme-toggle {
-            background: none;
-            border: 1px solid var(--border-color);
-            border-radius: 50%;
-            width: 38px;
-            height: 38px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: var(--text-secondary);
-            transition: var(--transition);
-        }
-        .theme-toggle:hover { background: var(--border-color); }
+/* GRID */
+.sec{margin:34px 0 14px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sec h2{font-family:var(--display);font-size:21px;font-weight:700;letter-spacing:-.03em}
+.sec p{font-size:13.5px;color:var(--t2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.card{position:relative;overflow:hidden;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:22px;padding:22px;backdrop-filter:blur(14px);cursor:pointer;display:flex;flex-direction:column;gap:12px;min-height:200px;
+  transition:transform .35s var(--ease),border-color .25s,box-shadow .35s;animation:in .55s var(--ease) both;animation-delay:calc(var(--i,0)*40ms)}
+@keyframes in{from{opacity:0;transform:translateY(14px)}}
+body:not(.dark-mode) .card{box-shadow:0 12px 34px rgba(15,23,42,.06)}
+.card::before{content:"";position:absolute;inset:0;background:radial-gradient(260px circle at var(--mx,80%) var(--my,0%),var(--glow),transparent 65%);opacity:0;transition:opacity .3s;pointer-events:none}
+.card:hover{transform:translateY(-4px);border-color:var(--line-2)}
+.card:hover::before{opacity:1}
+.card.hit{border-color:var(--arc);box-shadow:0 0 0 1px var(--arc),0 18px 50px rgba(59,227,255,.18)}
+.card.dim{opacity:.38}
+.ct{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.ico{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;font-size:21px;background:rgba(255,106,26,.12);color:var(--ember);border:1px solid rgba(255,106,26,.22);transition:all .3s var(--ease)}
+.card:hover .ico{background:var(--fire);color:#fff;border-color:transparent;transform:rotate(-4deg) scale(1.05);box-shadow:0 10px 26px var(--glow)}
+.card h3{font-family:var(--display);font-size:16.5px;font-weight:700;letter-spacing:-.02em}
+.card p{font-size:13.5px;color:var(--t2);flex:1}
+.cf{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+.price{font-family:var(--display);font-weight:700;font-size:14px}
+.bd{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:4px 10px;border-radius:99px}
+.bd.live{background:rgba(52,227,154,.14);color:var(--ok)}.bd.beta{background:rgba(255,181,71,.16);color:var(--warn)}.bd.soon{background:rgba(148,163,184,.16);color:var(--t2)}
+.bell{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);background:var(--panel-2);display:grid;place-items:center;color:var(--t2);font-size:13px;z-index:2}
+.bell:hover{border-color:var(--line-2);color:var(--ember)}
+.bell.on{background:var(--fire);color:#fff;border-color:transparent}
+.empty{grid-column:1/-1;text-align:center;padding:40px 10px;color:var(--t2)}
 
-        .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+/* ROADMAP */
+.road{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.rd{border:1px dashed var(--line-2);border-radius:20px;padding:18px;background:var(--panel);opacity:.9}
+.rd i{font-size:20px;color:var(--ember);margin-bottom:10px;display:block}
+.rd b{font-family:var(--display);display:block;margin-bottom:3px}.rd span{font-size:13px;color:var(--t2)}
 
-        /* =========================================================
-           HERO SECTION
-           ========================================================= */
-        .services-hero {
-            background: linear-gradient(145deg, #1e3a8a, #312e81);
-            border-radius: 24px;
-            padding: 40px 48px;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 32px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(79, 70, 229, 0.25);
-        }
-        .services-hero::after {
-            content: '🛠️';
-            position: absolute;
-            right: 40px;
-            bottom: 20px;
-            font-size: 90px;
-            opacity: 0.15;
-            pointer-events: none;
-        }
-        .services-hero .badge {
-            background: #f59e0b;
-            color: #78350f;
-            padding: 4px 14px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            align-self: flex-start;
-        }
-        .services-hero h1 { font-size: 32px; font-weight: 800; max-width: 600px; }
-        .services-hero h1 i { color: #fbbf24; margin-right: 8px; }
-        .services-hero p { font-size: 16px; opacity: 0.85; max-width: 540px; line-height: 1.6; }
-        .services-hero .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
-        .btn-primary {
-            background: white; color: #1e3a8a; border: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; transition: var(--transition);
-        }
-        .btn-primary:hover { transform: scale(1.02); box-shadow: 0 4px 20px rgba(255,255,255,0.25); }
-        .btn-outline-light {
-            background: transparent; color: white; border: 1.5px solid rgba(255,255,255,0.4); padding: 12px 28px; border-radius: 999px; font-weight: 600; font-size: 14px; cursor: pointer; transition: var(--transition);
-        }
-        .btn-outline-light:hover { background: rgba(255,255,255,0.1); border-color: white; }
+/* DRAWER */
+.ov{position:fixed;inset:0;z-index:60;background:rgba(3,6,14,.55);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .25s}
+.ov.on{opacity:1;pointer-events:auto}
+.dr{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);z-index:61;background:var(--bg-0);border-left:1px solid var(--line-2);transform:translateX(100%);transition:transform .4s var(--ease);padding:26px;overflow:auto;display:flex;flex-direction:column;gap:16px}
+.dr.on{transform:none}
+.dr .x{align-self:flex-end;width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2)}
+.dr .ico{width:62px;height:62px;font-size:26px;background:var(--fire);color:#fff;border-color:transparent;box-shadow:0 14px 34px var(--glow)}
+.dr h2{font-family:var(--display);font-size:26px;letter-spacing:-.035em;line-height:1.1}
+.dr .d{color:var(--t1);font-size:15px}
+.feat{display:grid;gap:10px}
+.feat div{display:flex;gap:10px;font-size:14px;color:var(--t1)}.feat i{color:var(--signal);margin-top:4px;font-size:13px}
+.meta{display:flex;gap:10px;flex-wrap:wrap}
+.meta div{flex:1;min-width:120px;border:1px solid var(--line);background:var(--panel-2);border-radius:14px;padding:11px 13px}
+.meta span{font-size:12px;color:var(--t2);display:block}.meta b{font-family:var(--display);font-size:15px}
+.cta{display:flex;align-items:center;justify-content:center;gap:9px;padding:14px 18px;border-radius:15px;font-weight:700;font-size:14.5px;background:var(--fire);color:#fff;box-shadow:0 14px 34px var(--glow);width:100%;transition:transform .2s var(--ease)}
+.cta:hover{transform:translateY(-2px)}
+.cta.ghost{background:var(--panel-2);color:var(--t0);box-shadow:none;border:1px solid var(--line)}
+.rel{display:flex;gap:8px;flex-wrap:wrap}
 
-        /* =========================================================
-           SECTION HEADERS
-           ========================================================= */
-        .section-header {
-            margin-bottom: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .section-header h2 {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-        .section-header p {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-        .section-header .badge-count {
-            background: var(--primary);
-            color: white;
-            padding: 2px 12px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 600;
-        }
+.toast{position:fixed;right:18px;bottom:18px;max-width:calc(100% - 36px);padding:12px 16px;border-radius:13px;border:1px solid var(--line-2);background:var(--bg-0);font-size:13.5px;z-index:99;box-shadow:0 14px 36px rgba(0,0,0,.35);animation:rise .3s var(--ease)}
+.foot{margin-top:70px;padding-top:22px;border-top:1px solid var(--line);text-align:center;color:var(--t2);font-size:13px}
+.env{background:var(--fire);color:#fff;padding:2px 11px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 
-        /* =========================================================
-           SERVICE GRID
-           ========================================================= */
-        .service-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 20px;
-            margin-bottom: 48px;
-        }
-
-        .service-card {
-            background: var(--bg-secondary);
-            border-radius: var(--radius);
-            padding: 24px;
-            border: 1px solid var(--border-color);
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-        }
-        .service-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--card-shadow);
-            border-color: var(--primary);
-        }
-        .service-card .card-icon {
-            font-size: 36px;
-            margin-bottom: 12px;
-            display: block;
-        }
-        .service-card .card-icon .fa-solid, 
-        .service-card .card-icon .fa-regular,
-        .service-card .card-icon .fa-brands { font-size: 36px; }
-        .service-card h4 {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-        }
-        .service-card p {
-            font-size: 13px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-        .service-card .card-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border-color);
-        }
-        .service-card .badge {
-            padding: 2px 10px;
-            border-radius: 999px;
-            font-size: 10px;
-            font-weight: 700;
-        }
-        .badge-live { background: #dcfce7; color: #166534; }
-        .badge-beta { background: #fef3c7; color: #92400e; }
-        .badge-coming { background: #f1f5f9; color: #64748b; }
-        .badge-paid { background: #dbeafe; color: #1e40af; }
-
-        body.dark-mode .badge-live { background: #064e3b; color: #86efac; }
-        body.dark-mode .badge-beta { background: #78350f; color: #fcd34d; }
-        body.dark-mode .badge-coming { background: #334155; color: #94a3b8; }
-        body.dark-mode .badge-paid { background: #1e3a5f; color: #93c5fd; }
-
-        .service-card .price-tag {
-            font-weight: 700;
-            color: var(--text-primary);
-            font-size: 14px;
-        }
-
-        /* =========================================================
-           COMING SOON OVERLAY
-           ========================================================= */
-        .service-card.coming-soon { opacity: 0.7; cursor: default; }
-        .service-card.coming-soon:hover { transform: none; border-color: var(--border-color); }
-        .service-card .coming-soon-banner {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: var(--warning);
-            color: #78350f;
-            padding: 2px 12px;
-            border-radius: 999px;
-            font-size: 9px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        /* =========================================================
-           TOAST
-           ========================================================= */
-        .toast {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            padding: 16px 24px;
-            border-radius: var(--radius);
-            color: white;
-            font-weight: 500;
-            z-index: 99999;
-            animation: slideIn 0.3s ease;
-            max-width: 420px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        .toast-success { background: var(--success); }
-        .toast-error { background: var(--danger); }
-        .toast-info { background: var(--info); }
-        .toast-warning { background: var(--warning); }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* =========================================================
-           RESPONSIVE
-           ========================================================= */
-        @media (max-width: 768px) {
-            .services-hero { padding: 28px 20px; }
-            .services-hero h1 { font-size: 24px; }
-            .services-hero::after { font-size: 60px; right: 20px; bottom: 10px; }
-            .service-grid { grid-template-columns: 1fr 1fr; }
-            .services-nav { flex-direction: column; align-items: stretch; }
-            .nav-links { justify-content: center; }
-            .section-header { flex-direction: column; align-items: flex-start; }
-        }
-        @media (max-width: 480px) {
-            .service-grid { grid-template-columns: 1fr; }
-            .services-hero .actions { flex-direction: column; }
-            .btn-primary, .btn-outline-light { text-align: center; justify-content: center; }
-        }
-    </style>
+@media (max-width:980px){.stats{grid-template-columns:repeat(2,1fr)}.road{grid-template-columns:repeat(2,1fr)}.links{display:none}}
+@media (max-width:640px){.nav{padding:10px 14px}.brand span,.adm span{display:none}.wrap{padding:20px 14px 70px}.bar{top:61px}.road{grid-template-columns:1fr}.kbd{display:none}.abox{padding-left:14px}.grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
 </head>
-<body>
+<body class="dark-mode">
+<nav class="nav" aria-label="Main">
+  <div class="l"><a href="/" class="back"><i class="fas fa-arrow-left"></i> Back</a><a href="/services" class="brand"><i class="fas fa-toolbox"></i><span>Net365 Services</span></a></div>
+  <div class="links"><a href="/utilities">Pay &amp; Recharge</a><a href="/business">Bulk SMS</a><a href="/marketplace">Ads</a><a href="/services" class="on">Services</a></div>
+  <div class="r"><button class="ib" onclick="toggleTheme()" aria-label="Switch light or dark theme"><i class="fas fa-moon"></i><i class="fas fa-sun"></i></button><a href="/admin" class="adm"><i class="fas fa-shield-halved"></i><span>Admin</span></a></div>
+</nav>
 
-    <!-- =========================================================
-    NAVIGATION
-    ========================================================= -->
-    <nav class="services-nav">
-        <div style="display:flex;align-items:center;gap:12px;">
-            <a href="/" class="back-btn" style="display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);text-decoration:none;font-size:13px;font-weight:500;padding:6px 14px;border-radius:8px;transition:var(--transition);">
-                <i class="fas fa-arrow-left"></i> Back
-            </a>
-            <a href="#" class="logo"><i class="fas fa-toolbox"></i> Net365 Services</a>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-            <div class="nav-links">
-                <a href="/business">📱 Bulk SMS</a>
-                <a href="/marketplace">📊 Ads</a>
-                <a href="/services" class="active">🛠️ Services</a>
-            </div>
-            <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
-            <a href="/admin" class="btn" style="text-decoration:none;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text-secondary);border:1px solid var(--border-color);background:var(--bg-secondary);transition:var(--transition);">
-                <i class="fas fa-shield-halved"></i> Admin
-            </a>
-        </div>
-    </nav>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow"><i></i>One place for payments, business tools and growth</span>
+    <h1>Tell Net365 what you need. <em>We&rsquo;ll find the service.</em></h1>
+    <p class="lead">Pay bills, recharge, invoice customers, reach people by SMS and get your business online. Ask in your own words.</p>
 
-    <!-- =========================================================
-    MAIN CONTAINER
-    ========================================================= -->
-    <div class="container">
-
-        <!-- =========================================================
-        HERO
-        ========================================================= -->
-        <div class="services-hero">
-            <span class="badge"><i class="fas fa-rocket"></i> Launching</span>
-            <h1><i class="fas fa-toolbox"></i> Business Services Suite</h1>
-            <p>
-                Everything your business needs to operate, grow, and scale.
-                <br />From invoicing and domains to AI tools and professional email.
-            </p>
-            <div class="actions">
-                <button class="btn-primary" onclick="showToast('🚀 Launching the full suite soon!', 'info')">
-                    <i class="fas fa-star"></i> Explore All
-                </button>
-                <button class="btn-outline-light" onclick="showToast('📋 Early access list opening...', 'info')">
-                    <i class="fas fa-envelope"></i> Get Early Access
-                </button>
-            </div>
-        </div>
-
-        <!-- =========================================================
-        CATEGORY 1: FINANCIAL TOOLS (Invoices + Payment Links)
-        ========================================================= -->
-        <div class="section-header">
-            <div>
-                <h2>💰 Financial Tools</h2>
-                <p>Invoicing, payment links, and collection pages for your business.</p>
-            </div>
-            <span class="badge-count">Live</span>
-        </div>
-
-        <div class="service-grid">
-            <!-- Invoices -->
-            <div class="service-card" onclick="showToast('📄 Invoice builder coming soon!', 'info')">
-                <span class="card-icon"><i class="fas fa-file-invoice"></i></span>
-                <h4>Professional Invoices</h4>
-                <p>Create branded, tax-compliant invoices in seconds. Send via SMS or email.</p>
-                <div class="card-meta">
-                    <span class="badge badge-live">Live</span>
-                    <span class="price-tag">Free</span>
-                </div>
-            </div>
-            <!-- Payment Links -->
-            <div class="service-card" onclick="showToast('🔗 Payment links ready!', 'info')">
-                <span class="card-icon"><i class="fas fa-link"></i></span>
-                <h4>Payment Links</h4>
-                <p>Generate instant payment links and share them with customers anywhere.</p>
-                <div class="card-meta">
-                    <span class="badge badge-live">Live</span>
-                    <span class="price-tag">0.5% fee</span>
-                </div>
-            </div>
-            <!-- Collection Page -->
-            <div class="service-card" onclick="showToast('📋 Collection pages coming soon!', 'info')">
-                <span class="card-icon"><i class="fas fa-credit-card"></i></span>
-                <h4>Collection Pages</h4>
-                <p>A branded payment page for your business. Accept multiple payments at once.</p>
-                <div class="card-meta">
-                    <span class="badge badge-beta">Beta</span>
-                    <span class="price-tag">Free</span>
-                </div>
-            </div>
-            <!-- Recurring Billing -->
-            <div class="service-card" onclick="showToast('🔄 Recurring billing coming soon!', 'info')">
-                <span class="card-icon"><i class="fas fa-sync-alt"></i></span>
-                <h4>Recurring Billing</h4>
-                <p>Set up subscriptions and auto-debit your customers monthly or weekly.</p>
-                <div class="card-meta">
-                    <span class="badge badge-coming">Coming</span>
-                    <span class="price-tag">1% fee</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- =========================================================
-        CATEGORY 2: DIGITAL INFRASTRUCTURE (Domains, Hosting, Email)
-        ========================================================= -->
-        <div class="section-header">
-            <div>
-                <h2>🌐 Digital Infrastructure</h2>
-                <p>Domains, hosting, and professional email for your brand.</p>
-            </div>
-            <span class="badge-count">Coming Soon</span>
-        </div>
-
-        <div class="service-grid">
-            <!-- Domains -->
-            <div class="service-card coming-soon" onclick="showToast('🌐 Domain registration coming soon!', 'info')">
-                <span class="coming-soon-banner">Coming Soon</span>
-                <span class="card-icon"><i class="fas fa-globe"></i></span>
-                <h4>Domain Registration</h4>
-                <p>Register .com, .ng, .ai, .org, and 500+ TLDs at competitive prices.</p>
-                <div class="card-meta">
-                    <span class="badge badge-coming">Coming</span>
-                    <span class="price-tag">From ₦5,000/yr</span>
-                </div>
-            </div>
-            <!-- Web Hosting -->
-            <div class="service-card coming-soon" onclick="showToast('🖥️ Hosting plans coming soon!', 'info')">
-                <span class="coming-soon-banner">Coming Soon</span>
-                <span class="card-icon"><i class="fas fa-server"></i></span>
-                <h4>Web Hosting</h4>
-                <p>Shared, VPS, and dedicated hosting with 99.9% uptime and local support.</p>
-                <div class="card-meta">
-                    <span class="badge badge-coming">Coming</span>
-                    <span class="price-tag">From ₦2,500/mo</span>
-                </div>
-            </div>
-            <!-- Business Email -->
-            <div class="service-card coming-soon" onclick="showToast('📧 Business email coming soon!', 'info')">
-                <span class="coming-soon-banner">Coming Soon</span>
-                <span class="card-icon"><i class="fas fa-envelope"></i></span>
-                <h4>Business Email</h4>
-                <p>Professional email with your domain (name@yourbusiness.com).</p>
-                <div class="card-meta">
-                    <span class="badge badge-coming">Coming</span>
-                    <span class="price-tag">From ₦1,000/mo</span>
-                </div>
-            </div>
-            <!-- SSL Certificates -->
-            <div class="service-card coming-soon" onclick="showToast('🔒 SSL certificates coming soon!', 'info')">
-                <span class="coming-soon-banner">Coming Soon</span>
-                <span class="card-icon"><i class="fas fa-lock"></i></span>
-                <h4>SSL Certificates</h4>
-                <p>Secure your website with DV, OV, and EV SSL certificates.</p>
-                <div class="card-meta">
-                    <span class="badge badge-coming">Coming</span>
-                    <span class="price-tag">From ₦15,000/yr</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- =========================================================
-        CATEGORY 3: AI & SAAS (Subscriptions, AI Tools)
-        ========================================================= -->
-        <div class="section-header">
-            <div>
-                <h2>🤖 AI &amp; SaaS Marketplace</h2>
-                <p>Resell premium AI tools and software subscriptions.</p>
-            </div>
-            <span class="badge-count">Beta</span>
-        </div>
-
-        <div class="service-grid">
-            <!-- AI Credits -->
-            <div class="service-card" onclick="showToast('🤖 AI Credits launching soon!', 'info')">
-                <span class="card-icon"><i class="fas fa-brain"></i></span>
-                <h4>AI Credits (ChatGPT, Claude, DALL-E)</h4>
-                <p>Buy prepaid credits for OpenAI, Anthropic, and image generation tools.</p>
-                <div class="card-meta">
-                    <span class="badge badge-beta">Beta</span>
-                    <span class="price-tag">From ₦5,000</span>
-                </div>
-            </div>
-            <!-- Microsoft 365 -->
-            <div class="service-card" onclick="showToast('📄 Microsoft 365 coming soon!', 'info')">
-                <span class="card-icon"><i class="fab fa-microsoft"></i></span>
-                <h4>Microsoft 365</h4>
-                <p>Word, Excel, PowerPoint, Teams, and 1TB OneDrive.</p>
-                <div class="card-meta">
-                    <span class="badge badge-coming">Coming</span>
-                    <span class="price-tag">From ₦4,500/mo</span>
-                </div>
-            </div>
-            <!-- Canva Pro -->
-            <div class="service-card" onclick="showToast('🎨 Canva Pro coming soon!', 'info')">
-                <span class="card-icon"><i class="fas fa-paint-brush"></i></span>
-                <h4>Canva Pro</h4>
-                <p>Professional design tools for businesses and creators.</p>
-                <div class="card-meta">
-                    <span class="badge badge-coming">Coming</span>
-                    <span class="price-tag">From ₦3,500/mo</span>
-                </div>
-            </div>
-            <!-- Spotify / YouTube Premium -->
-            <div class="service-card" onclick="showToast('🎵 Digital subscriptions coming soon!', 'info')">
-                <span class="card-icon"><i class="fas fa-music"></i></span>
-                <h4>Digital Subscriptions</h4>
-                <p>Spotify Premium, YouTube Premium, Netflix, and more.</p>
-                <div class="card-meta">
-                    <span class="badge badge-beta">Beta</span>
-                    <span class="price-tag">From ₦2,000/mo</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- =========================================================
-        CATEGORY 4: BUSINESS COMMUNICATIONS
-        ========================================================= -->
-        <div class="section-header">
-            <div>
-                <h2>📡 Business Communications</h2>
-                <p>Email marketing, WhatsApp Business API, and Bulk SMS.</p>
-            </div>
-            <span class="badge-count">Live</span>
-        </div>
-
-        <div class="service-grid">
-            <!-- Bulk SMS (Redirect to /business) -->
-            <div class="service-card" onclick="window.location.href='/business'">
-                <span class="card-icon"><i class="fas fa-sms"></i></span>
-                <h4>Bulk SMS</h4>
-                <p>Send SMS campaigns to thousands of contacts instantly.</p>
-                <div class="card-meta">
-                    <span class="badge badge-live">Live</span>
-                    <span class="price-tag">From ₦3/SMS</span>
-                </div>
-            </div>
-            <!-- Email Marketing -->
-            <div class="service-card" onclick="showToast('📧 Email marketing coming soon!', 'info')">
-                <span class="card-icon"><i class="fas fa-envelope-open-text"></i></span>
-                <h4>Email Marketing</h4>
-                <p>Design and send professional email campaigns with analytics.</p>
-                <div class="card-meta">
-                    <span class="badge badge-coming">Coming</span>
-                    <span class="price-tag">From ₦5,000/mo</span>
-                </div>
-            </div>
-            <!-- WhatsApp Business API -->
-            <div class="service-card" onclick="showToast('💬 WhatsApp Business API coming soon!', 'info')">
-                <span class="card-icon"><i class="fab fa-whatsapp"></i></span>
-                <h4>WhatsApp Business API</h4>
-                <p>Send automated notifications and broadcast messages on WhatsApp.</p>
-                <div class="card-meta">
-                    <span class="badge badge-coming">Coming</span>
-                    <span class="price-tag">From ₦10,000/mo</span>
-                </div>
-            </div>
-            <!-- Virtual Phone Numbers -->
-            <div class="service-card" onclick="showToast('📱 Virtual numbers coming soon!', 'info')">
-                <span class="card-icon"><i class="fas fa-phone-alt"></i></span>
-                <h4>Virtual Phone Numbers</h4>
-                <p>Get temporary or permanent numbers for OTP and business lines.</p>
-                <div class="card-meta">
-                    <span class="badge badge-beta">Beta</span>
-                    <span class="price-tag">From ₦500</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- =========================================================
-        FUTURE: DIGITAL COMMERCE & PHYSICAL MARKETPLACE (Preview)
-        ========================================================= -->
-        <div style="margin-top: 48px; border-top: 2px solid var(--border-color); padding-top: 32px;">
-            <div class="section-header">
-                <div>
-                    <h2>🚀 On the Horizon: Digital & Physical Marketplace</h2>
-                    <p>Coming next — phones, electronics, computers, home products, fashion, and local merchants.</p>
-                </div>
-                <span class="badge-count">Coming 2025</span>
-            </div>
-            <div class="service-grid" style="opacity:0.6; filter: grayscale(0.2);">
-                <div class="service-card coming-soon" onclick="showToast('📱 Marketplace coming 2025!', 'info')">
-                    <span class="coming-soon-banner">Coming</span>
-                    <span class="card-icon"><i class="fas fa-mobile-alt"></i></span>
-                    <h4>Phones &amp; Electronics</h4>
-                    <p>Smartphones, laptops, accessories from verified merchants.</p>
-                </div>
-                <div class="service-card coming-soon" onclick="showToast('🏠 Marketplace coming 2025!', 'info')">
-                    <span class="coming-soon-banner">Coming</span>
-                    <span class="card-icon"><i class="fas fa-home"></i></span>
-                    <h4>Home &amp; Living</h4>
-                    <p>Furniture, appliances, decor, and home essentials.</p>
-                </div>
-                <div class="service-card coming-soon" onclick="showToast('👗 Marketplace coming 2025!', 'info')">
-                    <span class="coming-soon-banner">Coming</span>
-                    <span class="card-icon"><i class="fas fa-tshirt"></i></span>
-                    <h4>Fashion</h4>
-                    <p>Clothing, footwear, accessories from local designers.</p>
-                </div>
-                <div class="service-card coming-soon" onclick="showToast('🏪 Marketplace coming 2025!', 'info')">
-                    <span class="coming-soon-banner">Coming</span>
-                    <span class="card-icon"><i class="fas fa-store"></i></span>
-                    <h4>Local Merchants</h4>
-                    <p>Support local businesses in your area.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div style="margin-top: 48px; padding: 20px 0; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-secondary); font-size: 13px;">
-            <p>© 2025 Net365. All rights reserved. — <span class="env-badge" style="background:#fbbf24;color:#78350f;padding:2px 12px;border-radius:999px;font-size:10px;font-weight:700;">sandbox</span></p>
-        </div>
-
+    <div class="assist">
+      <form class="abox" id="askForm" role="search" aria-label="Find a service">
+        <div class="orb" aria-hidden="true"></div>
+        <label class="sr" for="ask">What do you need to do?</label>
+        <input id="ask" type="text" autocomplete="off" placeholder="e.g. pay my light bill, get a website">
+        <span class="kbd" aria-hidden="true">/</span>
+        <button class="go" type="submit" aria-label="Find services"><i class="fas fa-arrow-right"></i></button>
+      </form>
+      <div class="reply" id="reply" aria-live="polite"></div>
     </div>
+    <div class="try" id="try"></div>
+  </section>
 
-    <div id="toastContainer"></div>
+  <section class="stats" id="stats" aria-label="Service summary"></section>
 
-    <script>
-        // =========================================================
-        // THEME TOGGLE
-        // =========================================================
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            localStorage.setItem('net365_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-            document.querySelector('.theme-toggle i').className = document.body.classList.contains('dark-mode') ? 'fas fa-sun' : 'fas fa-moon';
-        }
+  <div class="bar">
+    <div class="tabs" id="tabs" role="tablist" aria-label="Categories"></div>
+    <div class="seg" id="seg" role="group" aria-label="Filter by status"></div>
+  </div>
 
-        if (localStorage.getItem('net365_theme') === 'dark') {
-            document.body.classList.add('dark-mode');
-            document.querySelector('.theme-toggle i').className = 'fas fa-sun';
-        }
+  <div id="catalog"></div>
 
-        // =========================================================
-        // TOAST SYSTEM
-        // =========================================================
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const existing = container.querySelector('.toast');
-            if (existing) existing.remove();
+  <div class="sec"><div><h2>On the horizon</h2><p>The marketplace we are building next. Tell us what you want first.</p></div></div>
+  <div class="road" id="road"></div>
 
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                toast.style.transition = 'all 0.3s ease';
-                setTimeout(() => toast.remove(), 300);
-            }, 3500);
-        }
+  <footer class="foot"><p>&copy; <span id="yr"></span> Net365. All rights reserved. <span class="env">sandbox</span></p></footer>
+</main>
 
-        // =========================================================
-        // ACTIVE NAV HIGHLIGHT
-        // =========================================================
-        document.querySelectorAll('.nav-links a').forEach(link => {
-            if (link.href === window.location.href) link.classList.add('active');
-        });
+<div class="ov" id="ov" onclick="closeDrawer()"></div>
+<aside class="dr" id="dr" role="dialog" aria-modal="true" aria-labelledby="drTitle" aria-hidden="true"></aside>
 
-        console.log('🛠️ Net365 Services Suite loaded.');
-        console.log('📋 Ready for Invoices, Domains, AI & more.');
-    </script>
+<script>
+'use strict';
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function toast(m){ var t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 3600); }
+function toggleTheme(){ document.body.classList.toggle('dark-mode'); try { localStorage.setItem('net365_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light'); } catch(e){} }
+try { var th = localStorage.getItem('net365_services_theme') || localStorage.getItem('net365_theme'); if (th === 'light') document.body.classList.remove('dark-mode'); } catch(e){}
+$('yr').textContent = new Date().getFullYear();
+
+/* ---------- catalog ---------- */
+var CATS = [
+  { id:'pay', name:'Pay & Recharge', sub:'Airtime, data, electricity, TV and automatic payments.' },
+  { id:'finance', name:'Financial tools', sub:'Invoices, payment links and collection pages.' },
+  { id:'reach', name:'Reach & growth', sub:'Bulk SMS, adverts, email and WhatsApp.' },
+  { id:'digital', name:'Digital infrastructure', sub:'Domains, hosting, business email and SSL.' },
+  { id:'ai', name:'AI & software', sub:'Prepaid AI credits and software subscriptions.' }
+];
+var S = [
+  { k:'airtime', c:'pay', ic:'fa-mobile-screen', n:'Airtime & Data', st:'live', pr:'Instant', href:'/utilities', d:'Top up any Nigerian network and buy data bundles in seconds. Net365 warns you if the number belongs to a different network.', f:['MTN, Airtel, Glo and 9mobile','Network mismatch warning before you pay','Receipt by email for every purchase'], t:'airtime data recharge top up topup mtn airtel glo 9mobile network credit bundle phone' },
+  { k:'power', c:'pay', ic:'fa-bolt', n:'Electricity', st:'live', pr:'Instant token', href:'/utilities', d:'Pay prepaid and postpaid meters for every distribution company. Enter the meter number and Net365 recognises the company for you.', f:['Meter checked before you pay','Token on your receipt and by email','Warns you if the company does not match the meter'], t:'electricity light nepa power bill meter prepaid postpaid token disco aba ikeja eko ibadan' },
+  { k:'tv', c:'pay', ic:'fa-tv', n:'Cable TV', st:'live', pr:'Instant', href:'/utilities', d:'Renew DStv, GOtv and StarTimes without leaving the page. Pick your package and pay.', f:['DStv, GOtv and StarTimes','Smartcard number checked first','Receipt for every renewal'], t:'cable tv dstv gotv startimes subscription television decoder renew' },
+  { k:'schedule', c:'pay', ic:'fa-calendar-check', n:'Scheduled Payments', st:'live', pr:'Free', href:'/scheduler', d:'Set a payment once and let it run: weekly airtime for the family, monthly bills, staff data allowances.', f:['Daily, weekly or monthly','Forecast of upcoming spend','Pause or stop any time'], t:'schedule scheduled automatic recurring auto repeat monthly weekly staff allowance' },
+  { k:'analytics', c:'pay', ic:'fa-chart-pie', n:'Spending Analytics', st:'live', pr:'Free', href:'/analytics', d:'See where your money goes, how your payments are doing and what to change.', f:['Spend by service and operator','Wallet balances at a glance','Plain-language insights'], t:'analytics report spending insight statistics history dashboard' },
+
+  { k:'invoice', c:'finance', ic:'fa-file-invoice', n:'Professional Invoices', st:'live', pr:'Free', href:'/', d:'Create branded invoices in seconds and send them by SMS or email.', f:['Your logo and details','Send by SMS or email','Track what is paid'], t:'invoice bill customer receipt billing quote client' },
+  { k:'links', c:'finance', ic:'fa-link', n:'Payment Links', st:'live', pr:'0.5% fee', href:'/', d:'Generate a link, share it anywhere and get paid. No website needed.', f:['Share on WhatsApp, SMS or social','Pay by card or transfer','Instant confirmation'], t:'payment link collect money paid accept sell whatsapp share checkout' },
+  { k:'collect', c:'finance', ic:'fa-credit-card', n:'Collection Pages', st:'beta', pr:'Free', d:'A branded page where many people can pay you: dues, tickets, fees, donations.', f:['Your own page and link','Many payers, one place','Live totals'], t:'collection page dues ticket event donation fees church school group pay many' },
+  { k:'recur', c:'finance', ic:'fa-rotate', n:'Recurring Billing', st:'soon', pr:'1% fee', d:'Subscriptions and auto-debit for customers, monthly or weekly.', f:['Weekly or monthly plans','Automatic retries','Customer receipts'], t:'recurring subscription billing auto debit membership monthly plan' },
+
+  { k:'sms', c:'reach', ic:'fa-sms', n:'Bulk SMS', st:'live', pr:'From ₦3/SMS', href:'/business', d:'Send campaigns to thousands of contacts at once, with delivery reports.', f:['Upload a contact list','Your own sender name','Delivery report per message'], t:'sms bulk message text campaign promotion customers marketing broadcast contacts' },
+  { k:'ads', c:'reach', ic:'fa-bullhorn', n:'Ads Marketplace', st:'live', pr:'You set the budget', href:'/marketplace', d:'Put your business in front of Net365 customers.', f:['Choose your audience','Pay for what you run','Track results'], t:'ads advert advertise promote marketing audience reach customers market' },
+  { k:'email', c:'reach', ic:'fa-envelope-open-text', n:'Email Marketing', st:'soon', pr:'From ₦5,000/mo', d:'Design and send email campaigns with analytics.', f:['Templates','Open and click tracking','Contact lists'], t:'email marketing newsletter campaign mailing list' },
+  { k:'wa', c:'reach', ic:'fa-whatsapp', ib:true, n:'WhatsApp Business API', st:'soon', pr:'From ₦10,000/mo', d:'Automated notifications and broadcasts on WhatsApp.', f:['Order and payment alerts','Broadcast to customers','Official business profile'], t:'whatsapp business api notification broadcast chat customers support' },
+  { k:'virtual', c:'reach', ic:'fa-phone', n:'Virtual Phone Numbers', st:'beta', pr:'From ₦500', d:'Temporary or permanent numbers for OTP and business lines.', f:['Receive verification codes','Separate business line','Pay as you go'], t:'virtual number phone otp verification line sim temporary' },
+
+  { k:'domain', c:'digital', ic:'fa-globe', n:'Domain Registration', st:'soon', pr:'From ₦5,000/yr', d:'Register .com, .ng, .ai, .org and 500+ more at competitive prices.', f:['500+ extensions','Simple DNS control','Auto-renew'], t:'domain name website .com .ng .ai .org register brand online web address' },
+  { k:'host', c:'digital', ic:'fa-server', n:'Web Hosting', st:'soon', pr:'From ₦2,500/mo', d:'Shared, VPS and dedicated hosting with local support.', f:['99.9% uptime target','Local support','Easy upgrades'], t:'hosting website server web host vps online site shop store' },
+  { k:'bizmail', c:'digital', ic:'fa-envelope', n:'Business Email', st:'soon', pr:'From ₦1,000/mo', d:'Professional email on your own domain: name@yourbusiness.com.', f:['Your domain','Spam protection','Mobile and desktop'], t:'business email professional mail domain address inbox company' },
+  { k:'ssl', c:'digital', ic:'fa-lock', n:'SSL Certificates', st:'soon', pr:'From ₦15,000/yr', d:'Secure your website with DV, OV and EV certificates.', f:['DV, OV and EV','Padlock in browsers','Install help'], t:'ssl certificate https secure security website padlock' },
+
+  { k:'aicred', c:'ai', ic:'fa-brain', n:'AI Credits', st:'beta', pr:'From ₦5,000', d:'Prepaid credits for leading AI assistants and image tools.', f:['Chat and image tools','Top up in naira','No foreign card needed'], t:'ai credits chatgpt claude openai anthropic dalle image artificial intelligence prepaid' },
+  { k:'m365', c:'ai', ic:'fa-microsoft', ib:true, n:'Microsoft 365', st:'soon', pr:'From ₦4,500/mo', d:'Word, Excel, PowerPoint, Teams and 1TB OneDrive.', f:['Office apps','Teams','1TB storage'], t:'microsoft 365 office word excel powerpoint teams onedrive software' },
+  { k:'canva', c:'ai', ic:'fa-paintbrush', n:'Canva Pro', st:'soon', pr:'From ₦3,500/mo', d:'Professional design tools for businesses and creators.', f:['Brand kit','Premium templates','Background remover'], t:'canva design graphics logo flyer poster creative' },
+  { k:'subs', c:'ai', ic:'fa-music', n:'Digital Subscriptions', st:'beta', pr:'From ₦2,000/mo', d:'Spotify, YouTube Premium, Netflix and more, paid in naira.', f:['Popular streaming services','Pay in naira','Quick activation'], t:'netflix spotify youtube premium streaming subscription music video entertainment' }
+];
+var HORIZON = [['fa-mobile-screen-button','Phones & Electronics','Smartphones and laptops from verified merchants.'],['fa-house','Home & Living','Furniture, appliances and decor.'],['fa-shirt','Fashion','Clothing and accessories from local designers.'],['fa-store','Local Merchants','Support businesses near you.']];
+var GOALS = [
+  ['Start a business online', ['domain','host','bizmail','links','ssl'], 'To get a business online you need a name, a place to live and a way to be paid.'],
+  ['Pay my bills faster', ['power','tv','airtime','schedule'], 'These cover the bills most people pay every month, and you can automate them.'],
+  ['Reach my customers', ['sms','ads','wa','email'], 'These put your message in front of customers by SMS, adverts, WhatsApp and email.'],
+  ['Get paid and look professional', ['invoice','links','collect','recur'], 'These help you bill clearly and collect money without chasing.']
+];
+var SYN = { light:'electricity', nepa:'electricity', current:'electricity', token:'electricity', site:'website', web:'website', shop:'store', store:'website', money:'payment', text:'sms', texts:'sms', message:'sms', messages:'sms', ads:'advert', advertise:'advert', phone:'airtime', credit:'airtime', recharge:'airtime', topup:'airtime', netflix:'subscription', movie:'subscription', logo:'design', flyer:'design', auto:'automatic', repeat:'automatic' };
+var STOP = { 'i':1,'a':1,'an':1,'the':1,'my':1,'to':1,'for':1,'need':1,'want':1,'how':1,'do':1,'can':1,'get':1,'and':1,'of':1,'on':1,'in':1,'me':1,'is':1,'with':1,'please':1,'some':1,'buy':1,'pay':1 };
+var BYK = {}; S.forEach(function(s){ BYK[s.k] = s; });
+var STL = { live:'Live', beta:'Beta', soon:'Coming soon' };
+
+/* ---------- state ---------- */
+var cat = 'all', stf = 'all', hits = null, notify = {};
+try { notify = JSON.parse(localStorage.getItem('net365_notify') || '{}') || {}; } catch(e){}
+function saveNotify(){ try { localStorage.setItem('net365_notify', JSON.stringify(notify)); } catch(e){} }
+
+/* ---------- smart finder: scores the catalog from the words you type ---------- */
+function tokens(q){
+  return String(q).toLowerCase().replace(/[^a-z0-9.\s]/g, ' ').split(/\s+/).filter(function(w){ return w && !STOP[w]; }).map(function(w){ return SYN[w] || w; });
+}
+function rank(q){
+  var tk = tokens(q); if (!tk.length) return [];
+  var out = S.map(function(s){
+    var hay = (s.n + ' ' + s.t).toLowerCase(), name = s.n.toLowerCase(), score = 0, why = [];
+    tk.forEach(function(w){
+      var re = new RegExp('(^|[^a-z])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      if (name.indexOf(w) >= 0) { score += 4; why.push(w); }
+      else if (re.test(hay)) { score += 2; why.push(w); }
+      else if (w.length > 4 && new RegExp('(^|[^a-z])' + w.slice(0, -1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(hay)) { score += 1; why.push(w); }
+    });
+    if (score && s.st === 'live') score += .5;
+    return { s: s, score: score, why: why };
+  }).filter(function(r){ return r.score > 0; }).sort(function(a, b){ return b.score - a.score; });
+  var top = out.length ? out[0].score : 0;
+  return out.filter(function(r){ return r.score >= Math.max(1.5, top * .45); }).slice(0, 4);
+}
+function showReply(html){ var r = $('reply'); r.innerHTML = html; r.classList.add('on'); }
+function pickHtml(s, tag){
+  return '<button class="pick" data-open="' + s.k + '"><span class="pi"><i class="' + (s.ib ? 'fab ' : 'fas ') + s.ic + '"></i></span><span><b>' + esc(s.n) + '</b><span>' + esc(tag || s.d) + '</span></span><span class="go2">' + (s.st === 'live' ? 'Open' : STL[s.st]) + ' <i class="fas fa-chevron-right"></i></span></button>';
+}
+function ask(q){
+  q = String(q || '').trim(); if (!q) { hits = null; $('reply').classList.remove('on'); paint(); return; }
+  var r = rank(q);
+  if (!r.length){
+    hits = null; paint();
+    showReply('<div class="why"><b>I could not match that to a service yet.</b> Try a few plain words like &ldquo;electricity&rdquo;, &ldquo;SMS&rdquo; or &ldquo;website&rdquo;, or browse the categories below.</div>');
+    return;
+  }
+  hits = r.map(function(x){ return x.s.k; });
+  var words = []; r.forEach(function(x){ x.why.forEach(function(w){ if (words.indexOf(w) < 0) words.push(w); }); });
+  var live = r.filter(function(x){ return x.s.st === 'live'; }).length;
+  showReply('<div class="why">For <b>&ldquo;' + esc(q) + '&rdquo;</b> I matched on <b>' + esc(words.slice(0, 4).join(', ')) + '</b>. ' + (live ? 'The first ' + (live > 1 ? 'ones are' : 'one is') + ' ready to use now.' : 'These are not open yet, but you can ask to be told when they launch.') + '</div><div class="picks">' + r.map(function(x){ return pickHtml(x.s); }).join('') + '</div>');
+  paint();
+}
+function goal(i){
+  var g = GOALS[i]; hits = g[1].slice();
+  showReply('<div class="why"><b>' + esc(g[0]) + '.</b> ' + esc(g[2]) + '</div><div class="picks">' + g[1].map(function(k){ return pickHtml(BYK[k]); }).join('') + '</div>');
+  $('ask').value = ''; paint();
+}
+
+/* ---------- render ---------- */
+function drawStatic(){
+  var live = S.filter(function(s){ return s.st === 'live'; }).length, beta = S.filter(function(s){ return s.st === 'beta'; }).length, soon = S.filter(function(s){ return s.st === 'soon'; }).length;
+  $('stats').innerHTML = [[live, 'Live now'], [beta, 'In beta'], [soon, 'Coming soon'], [CATS.length, 'Categories']].map(function(x){ return '<div class="stat"><div class="v">' + x[0] + '</div><div class="k">' + x[1] + '</div></div>'; }).join('');
+  $('try').innerHTML = GOALS.map(function(g, i){ return '<button class="chip" data-goal="' + i + '">' + esc(g[0]) + '</button>'; }).join('');
+  $('tabs').innerHTML = '<button class="tab on" role="tab" data-cat="all">All</button>' + CATS.map(function(c){ return '<button class="tab" role="tab" data-cat="' + c.id + '">' + esc(c.name) + '</button>'; }).join('');
+  $('seg').innerHTML = [['all', 'All'], ['live', 'Live'], ['beta', 'Beta'], ['soon', 'Coming']].map(function(x, i){ return '<button data-st="' + x[0] + '" class="' + (i ? '' : 'on') + '">' + x[1] + '</button>'; }).join('');
+  $('road').innerHTML = HORIZON.map(function(h){ return '<div class="rd"><i class="fas ' + h[0] + '"></i><b>' + esc(h[1]) + '</b><span>' + esc(h[2]) + '</span></div>'; }).join('');
+}
+function cardHtml(s, i){
+  var cls = 'card' + (hits ? (hits.indexOf(s.k) >= 0 ? ' hit' : ' dim') : '');
+  return '<div class="' + cls + '" role="button" tabindex="0" data-open="' + s.k + '" style="--i:' + i + '">' +
+    '<div class="ct"><div class="ico"><i class="' + (s.ib ? 'fab ' : 'fas ') + s.ic + '"></i></div>' +
+    (s.st === 'live' ? '<span class="bd live">Live</span>' : '<button class="bell' + (notify[s.k] ? ' on' : '') + '" data-bell="' + s.k + '" aria-pressed="' + (!!notify[s.k]) + '" aria-label="' + (notify[s.k] ? 'Stop notifying me about ' : 'Notify me about ') + esc(s.n) + '"><i class="fas fa-bell"></i></button>') + '</div>' +
+    '<h3>' + esc(s.n) + '</h3><p>' + esc(s.d) + '</p>' +
+    '<div class="cf"><span class="bd ' + s.st + '">' + STL[s.st] + '</span><span class="price">' + esc(s.pr) + '</span></div></div>';
+}
+function paint(){
+  var out = '', n = 0;
+  CATS.forEach(function(c){
+    if (cat !== 'all' && cat !== c.id) return;
+    var list = S.filter(function(s){ return s.c === c.id && (stf === 'all' || s.st === stf); });
+    if (hits) list.sort(function(a, b){ return (hits.indexOf(b.k) >= 0) - (hits.indexOf(a.k) >= 0); });
+    if (!list.length) return;
+    n += list.length;
+    out += '<div class="sec"><div><h2>' + esc(c.name) + '</h2><p>' + esc(c.sub) + '</p></div></div><div class="grid">' + list.map(function(s, i){ return cardHtml(s, i); }).join('') + '</div>';
+  });
+  $('catalog').innerHTML = out || '<div class="grid"><div class="empty">Nothing here with that filter. Try &ldquo;All&rdquo;.</div></div>';
+}
+
+/* ---------- drawer ---------- */
+var lastFocus = null;
+function openDrawer(k){
+  var s = BYK[k]; if (!s) return; lastFocus = document.activeElement;
+  var rel = S.filter(function(x){ return x.c === s.c && x.k !== s.k; }).slice(0, 3);
+  var cta = s.href ? '<a class="cta" href="' + s.href + '">' + (s.href === '/' ? 'Open your dashboard' : 'Open ' + esc(s.n)) + ' <i class="fas fa-arrow-right"></i></a>'
+    : '<button class="cta" data-bell="' + s.k + '" id="drCta"><i class="fas fa-bell"></i> ' + (notify[s.k] ? 'You will be notified' : 'Notify me when it opens') + '</button>';
+  $('dr').innerHTML = '<button class="x" onclick="closeDrawer()" aria-label="Close"><i class="fas fa-xmark"></i></button>' +
+    '<div class="ico"><i class="' + (s.ib ? 'fab ' : 'fas ') + s.ic + '"></i></div>' +
+    '<div><span class="bd ' + s.st + '">' + STL[s.st] + '</span></div><h2 id="drTitle">' + esc(s.n) + '</h2><p class="d">' + esc(s.d) + '</p>' +
+    '<div class="meta"><div><span>Price</span><b>' + esc(s.pr) + '</b></div><div><span>Category</span><b>' + esc(CATS.filter(function(c){ return c.id === s.c; })[0].name) + '</b></div></div>' +
+    '<div class="feat">' + s.f.map(function(f){ return '<div><i class="fas fa-check"></i><span>' + esc(f) + '</span></div>'; }).join('') + '</div>' + cta +
+    (rel.length ? '<div><p class="sub" style="font-size:12.5px;color:var(--t2);margin-bottom:8px">Also in this category</p><div class="rel">' + rel.map(function(r){ return '<button class="chip" data-open="' + r.k + '">' + esc(r.n) + '</button>'; }).join('') + '</div></div>' : '');
+  $('ov').classList.add('on'); $('dr').classList.add('on'); $('dr').setAttribute('aria-hidden', 'false');
+  setTimeout(function(){ var f = $('dr').querySelector('.x'); if (f) f.focus(); }, 60);
+}
+function closeDrawer(){ $('ov').classList.remove('on'); $('dr').classList.remove('on'); $('dr').setAttribute('aria-hidden', 'true'); if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+function toggleNotify(k){
+  var s = BYK[k]; if (!s) return; notify[k] = !notify[k]; if (!notify[k]) delete notify[k]; saveNotify();
+  if (notify[k]) { try { fetch('/api/services/interest', { method:'POST', credentials:'include', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ service: k }) }).catch(function(){}); } catch(e){} }
+  toast(notify[k] ? 'Saved. We will tell you when ' + s.n + ' opens.' : 'Okay, we will not notify you about ' + s.n + '.');
+  paint(); if ($('dr').classList.contains('on') && $('drCta')) $('drCta').innerHTML = '<i class="fas fa-bell"></i> ' + (notify[k] ? 'You will be notified' : 'Notify me when it opens');
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', function(e){
+  var t = e.target, b = t.closest('[data-bell]'); if (b) { e.stopPropagation(); toggleNotify(b.getAttribute('data-bell')); return; }
+  var o = t.closest('[data-open]'); if (o) { var s = BYK[o.getAttribute('data-open')]; if (o.classList.contains('pick') && s && s.st === 'live' && s.href) { window.location.href = s.href; return; } openDrawer(o.getAttribute('data-open')); return; }
+  var g = t.closest('[data-goal]'); if (g) { goal(+g.getAttribute('data-goal')); $('reply').scrollIntoView({ behavior:'smooth', block:'nearest' }); return; }
+  var c = t.closest('[data-cat]'); if (c) { cat = c.getAttribute('data-cat'); Array.prototype.forEach.call($('tabs').children, function(x){ x.classList.toggle('on', x === c); }); paint(); return; }
+  var f = t.closest('[data-st]'); if (f) { stf = f.getAttribute('data-st'); Array.prototype.forEach.call($('seg').children, function(x){ x.classList.toggle('on', x === f); }); paint(); }
+});
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') closeDrawer();
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('card')) { e.preventDefault(); openDrawer(e.target.getAttribute('data-open')); }
+  if ((e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k')) && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); $('ask').focus(); }
+});
+document.addEventListener('pointermove', function(e){ var c = e.target.closest && e.target.closest('.card'); if (!c) return; var r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px'); });
+$('askForm').addEventListener('submit', function(e){ e.preventDefault(); ask($('ask').value); });
+$('ask').addEventListener('input', function(){ if (!this.value.trim()) ask(''); });
+
+drawStatic(); paint();
+</script>
+<script id="net365-sidebar">
+/* Net365 sidebar: the same navigation as the home page, on every page that loads this script. */
+(function(){
+  if (window.__nxSide) return; window.__nxSide = 1;
+  var path = location.pathname.replace(/\/+$/, '') || '/';
+  var ITEMS = [
+    ['/', 'fa-home', 'Home'], ['/?go=transactions', 'fa-exchange-alt', 'Transactions'], ['/?go=wallet', 'fa-wallet', 'Wallet'], ['/scheduler', 'fa-calendar-check', 'Scheduled Payments'],
+    ['/?go=rewards', 'fa-star', 'Rewards'], ['/?go=contacts', 'fa-address-book', 'Contacts'], ['/utilities', 'fa-bolt', 'Utilities'], ['/business', 'fa-briefcase', 'Business'],
+    ['/?go=bulk', 'fa-upload', 'Bulk Recharge'], ['/?go=referrals', 'fa-users', 'Referrals'], ['/?go=settings', 'fa-cog', 'Settings'], ['/?go=help', 'fa-question-circle', 'Help Center'],
+    ['/services', 'fa-toolbox', 'Services'], ['/bots?src=sidebar', 'fa-comments', 'Chat Bots', 'New']
+  ];
+  function active(h){ var b = h.split('?')[0]; if (b === '/') return false; if (b === '/business') return path === '/business' || path === '/marketplace'; return b === path; }
+  var css = document.createElement('style');
+  css.textContent = [
+    'body.nx-side-on{padding-left:236px}',
+    '.nx-side{position:fixed;left:0;top:0;bottom:0;width:236px;z-index:90;padding:20px 12px;overflow-y:auto;border-right:1px solid rgba(140,160,210,.14);background:#090e1b;color:#c6d0e3;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px}',
+    'body:not(.dark-mode) .nx-side{background:#ffffff;border-right-color:rgba(15,23,42,.09);color:#2f3b52;box-shadow:6px 0 30px rgba(15,23,42,.04)}',
+    '.nx-side *{box-sizing:border-box}',
+    '.nx-logo{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;text-decoration:none;color:inherit;font-weight:800;font-size:19px;letter-spacing:-.03em}',
+    '.nx-logo img{height:38px;width:auto;display:block;object-fit:contain}',
+    '.nx-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);display:none;place-items:center;color:#fff;font-size:15px}',
+    '.nx-item{display:flex;align-items:center;gap:12px;padding:10px 12px;margin:1px 0;border-radius:12px;text-decoration:none;color:#8f9cb6;font-weight:500;transition:background .2s,color .2s}',
+    'body:not(.dark-mode) .nx-item{color:#5f6c84}',
+    '.nx-item i{width:18px;text-align:center;font-size:14px}',
+    '.nx-item:hover{background:rgba(143,156,182,.12);color:#f3f6fc}body:not(.dark-mode) .nx-item:hover{background:rgba(15,23,42,.05);color:#0b1020}',
+    '.nx-item.on{color:#f3f6fc;background:linear-gradient(90deg,rgba(255,106,26,.2),transparent);box-shadow:inset 2px 0 0 #ff6a1a}body:not(.dark-mode) .nx-item.on{color:#0b1020}',
+    '.nx-item.on i{color:#ff6a1a}',
+    '.nx-item em{margin-left:auto;font-style:normal;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:linear-gradient(135deg,#ff3b30,#ff6a1a);color:#fff}',
+    '.nx-invite{margin:18px 2px 0;padding:14px;border-radius:16px;border:1px solid rgba(140,160,210,.14);background:rgba(24,32,56,.5);cursor:pointer;position:relative;overflow:hidden}',
+    'body:not(.dark-mode) .nx-invite{background:#f3f5f9;border-color:rgba(15,23,42,.09)}',
+    '.nx-invite h4{font-size:14px;margin:0 0 4px;color:inherit}.nx-invite p{font-size:12px;margin:0 0 10px;opacity:.75}',
+    '.nx-invite button{border:0;border-radius:9px;padding:7px 12px;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);color:#fff;font-weight:600;font-size:12px;cursor:pointer}',
+    '.nx-invite .g{position:absolute;right:8px;bottom:2px;font-size:32px;opacity:.5}',
+    '.nx-fab{display:none;position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:91;width:48px;height:48px;border-radius:50%;border:0;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);color:#fff;font-size:18px;box-shadow:0 10px 28px rgba(255,106,26,.45);cursor:pointer}',
+    '.nx-back{display:none}',
+    '@media (max-width:900px){body.nx-side-on{padding-left:0}.nx-side{transform:translateX(-104%);transition:transform .3s ease;width:274px;box-shadow:24px 0 60px rgba(0,0,0,.45)}.nx-side.open{transform:none}.nx-fab{display:block}.nx-back.on{display:block;position:fixed;inset:0;z-index:89;background:rgba(3,5,12,.6)}}',
+    '@media (prefers-reduced-motion:reduce){.nx-side{transition:none}}'
+  ].join('\n');
+  document.head.appendChild(css);
+  function build(){
+    var s = document.createElement('aside'); s.className = 'nx-side'; s.id = 'nxSide'; s.setAttribute('aria-label', 'Main navigation');
+    var h = '<a href="/" class="nx-logo" aria-label="Net365 home"><img src="/static/logo.png" alt="Net365" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="nx-mark"><i class="fas fa-bolt"></i></span></a>';
+    ITEMS.forEach(function(it){ h += '<a href="' + it[0] + '" class="nx-item' + (active(it[0]) ? ' on' : '') + '"' + (active(it[0]) ? ' aria-current="page"' : '') + '><i class="fas ' + it[1] + '"></i><span>' + it[2] + '</span>' + (it[3] ? '<em>' + it[3] + '</em>' : '') + '</a>'; });
+    h += '<div class="nx-invite" onclick="location.href=\'/?go=referrals\'"><h4>Invite &amp; Earn</h4><p>Invite friends and earn rewards as they recharge.</p><button type="button" onclick="event.stopPropagation();location.href=\'/?go=referrals\'">Invite now</button><div class="g">🎁</div></div>';
+    s.innerHTML = h;
+    var back = document.createElement('div'); back.className = 'nx-back'; back.id = 'nxBack';
+    var fab = document.createElement('button'); fab.className = 'nx-fab'; fab.type = 'button'; fab.setAttribute('aria-label', 'Open menu'); fab.innerHTML = '<i class="fas fa-bars"></i>';
+    function tog(){ var o = !s.classList.contains('open'); s.classList.toggle('open', o); back.classList.toggle('on', o); }
+    fab.addEventListener('click', tog); back.addEventListener('click', tog);
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && s.classList.contains('open')) tog(); });
+    document.body.appendChild(s); document.body.appendChild(back); document.body.appendChild(fab); document.body.classList.add('nx-side-on');
+  }
+  if (document.body) build(); else document.addEventListener('DOMContentLoaded', build);
+
+/* remember which page the customer started from, so the payment success page can send them back there */
+(function(){ function mark(){ try { var p = location.pathname.replace(/\/+$/, '') || '/'; localStorage.setItem('n365_return', JSON.stringify({ to: p, t: Date.now() })); } catch (e) {} }
+  window.addEventListener('beforeunload', mark); window.addEventListener('pagehide', mark); })();
+})();
+</script>
 </body>
 </html>

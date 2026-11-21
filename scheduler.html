@@ -953,7 +953,462 @@
     .rate-tooltip .row .value {
       font-weight: 600;
     }
-  </style>
+  
+/* =========================================================
+   NET365 SCHEDULER // FUTURISTIC COMMAND CENTER OVERRIDE
+   Visual layer only — existing IDs/workflows preserved.
+   ========================================================= */
+:root{
+  --nx-bg:#05070d;
+  --nx-panel:rgba(13,18,30,.78);
+  --nx-panel-strong:rgba(16,22,36,.94);
+  --nx-line:rgba(148,163,184,.14);
+  --nx-text:#f5f7fb;
+  --nx-muted:#8c98ad;
+  --nx-red:#ff3b30;
+  --nx-orange:#ff7a00;
+  --nx-cyan:#35d9ff;
+  --nx-green:#39e58c;
+  --nx-violet:#9b7cff;
+  --nx-radius:20px;
+}
+html{background:#eef2f7;transition:background .4s ease;}
+html:has(body.dark-mode){background:#05070d;}
+
+body{
+  background:
+    radial-gradient(900px 520px at 78% -5%,rgba(255,91,0,.06),transparent 58%),
+    radial-gradient(760px 520px at 4% 22%,rgba(48,190,255,.05),transparent 58%),
+    linear-gradient(135deg,#f7fafc 0%,#eef2f7 48%,#f7fafc 100%);
+  color:#0f172a;
+  letter-spacing:.01em;
+  transition:background .4s ease,color .3s ease;
+}
+
+/* ============ DARK MODE ============ */
+body.dark-mode{
+  background:
+    radial-gradient(900px 520px at 78% -5%,rgba(255,91,0,.12),transparent 58%),
+    radial-gradient(760px 520px at 4% 22%,rgba(48,190,255,.08),transparent 58%),
+    linear-gradient(135deg,#05070d 0%,#080c15 48%,#05070d 100%);
+  color:var(--nx-text);
+}
+
+/* Grid texture — dark mode only */
+body:before{
+  content:"";
+  position:fixed;inset:0;pointer-events:none;z-index:-1;
+  opacity:0;transition:opacity .4s ease;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:linear-gradient(to bottom,black,transparent 85%);
+}
+body.dark-mode:before{opacity:.32;}
+.scheduler-nav{
+  margin:12px 16px 0;
+  border:1px solid var(--nx-line);
+  border-radius:22px;
+  padding:13px 16px;
+  background:rgba(8,12,21,.82);
+  box-shadow:0 18px 60px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.045);
+  backdrop-filter:blur(24px) saturate(150%);
+}
+.scheduler-nav .logo{
+  color:#fff;
+  font-size:19px;
+  letter-spacing:-.02em;
+}
+.scheduler-nav .logo i{
+  color:var(--nx-orange);
+  filter:drop-shadow(0 0 12px rgba(255,122,0,.42));
+}
+.back-btn,.analytics-link{color:var(--nx-muted);}
+.back-btn:hover,.analytics-link:hover{background:rgba(255,255,255,.05);color:#fff;}
+.nav-tabs{
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.05);
+}
+.nav-tab{color:#8995aa;border-radius:10px;}
+.nav-tab:hover{background:rgba(255,255,255,.05);color:#fff;}
+.nav-tab.active{
+  background:linear-gradient(135deg,var(--nx-red),var(--nx-orange));
+  box-shadow:0 7px 24px rgba(255,83,35,.26),inset 0 1px 0 rgba(255,255,255,.18);
+}
+.theme-toggle{
+  border-color:var(--nx-line);
+  background:rgba(255,255,255,.035);
+  color:#aab5c8;
+}
+.theme-toggle:hover{background:rgba(255,255,255,.08);color:#fff;}
+.rate-display{
+  background:rgba(255,255,255,.035);
+  border-color:var(--nx-line);
+  color:#aab5c8;
+}
+.rate-display:hover{border-color:rgba(53,217,255,.35);color:#fff;}
+.scheduler-container{max-width:1540px;padding:22px 20px 48px;}
+/* Hero / command deck */
+.nx-command{
+  position:relative;
+  overflow:hidden;
+  margin:2px 0 20px;
+  padding:28px;
+  min-height:205px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:28px;
+  background:
+    linear-gradient(120deg,rgba(18,24,40,.94),rgba(10,14,25,.78)),
+    radial-gradient(circle at 88% 25%,rgba(255,122,0,.16),transparent 30%);
+  box-shadow:0 24px 90px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.06);
+}
+.nx-command:after{
+  content:"";
+  position:absolute;right:-100px;top:-130px;width:430px;height:430px;border-radius:50%;
+  border:1px solid rgba(53,217,255,.12);
+  box-shadow:0 0 0 34px rgba(53,217,255,.018),0 0 0 68px rgba(255,122,0,.018);
+}
+.nx-kicker{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 10px;border-radius:999px;
+  border:1px solid rgba(57,229,140,.18);
+  background:rgba(57,229,140,.06);color:#8ff0bb;
+  font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;
+}
+.nx-kicker .pulse{width:7px;height:7px;border-radius:50%;background:var(--nx-green);box-shadow:0 0 12px var(--nx-green);animation:pulse 1.8s infinite;}
+.nx-command h1{
+  margin:14px 0 8px;max-width:800px;
+  font-size:clamp(28px,4vw,46px);line-height:1.02;letter-spacing:-.045em;
+  background:linear-gradient(90deg,#fff 0%,#fff 46%,#ffb36b 80%,#65e4ff 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.nx-command p{max-width:720px;color:#94a0b4;font-size:14px;line-height:1.65;margin:0;}
+.nx-command-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:19px;}
+.nx-command .btn-primary,.nx-command .btn-orange{
+  background:linear-gradient(135deg,var(--nx-red),var(--nx-orange));
+  color:#fff;border:0;box-shadow:0 9px 28px rgba(255,87,36,.2);
+}
+.nx-command .btn-ghost{
+  background:rgba(255,255,255,.045);color:#dce4f2;border:1px solid rgba(255,255,255,.09);
+}
+.nx-command .btn-ghost:hover{background:rgba(255,255,255,.08);}
+.nx-signal{
+  position:absolute;right:30px;bottom:28px;width:230px;height:72px;opacity:.85;
+  display:flex;align-items:flex-end;gap:5px;
+}
+.nx-signal i{display:block;flex:1;border-radius:4px 4px 1px 1px;background:linear-gradient(to top,var(--nx-cyan),rgba(53,217,255,.08));animation:nxbar 1.8s ease-in-out infinite;}
+.nx-signal i:nth-child(2n){background:linear-gradient(to top,var(--nx-orange),rgba(255,122,0,.08));animation-delay:.25s}
+.nx-signal i:nth-child(3n){animation-delay:.55s}
+@keyframes nxbar{0%,100%{height:22%}50%{height:100%}}
+/* Summary strip */
+.nx-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;
+}
+.nx-metric{
+  min-width:0;padding:14px 16px;border-radius:16px;
+  border:1px solid var(--nx-line);background:rgba(10,15,26,.68);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+}
+.nx-metric .label{font-size:10px;color:#77839a;text-transform:uppercase;letter-spacing:.12em;font-weight:800;}
+.nx-metric .value{font-size:22px;font-weight:800;color:#f5f7fb;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nx-metric .sub{font-size:10px;color:#6f7d94;margin-top:3px;}
+/* Existing cards */
+.stats-grid{gap:12px;}
+.stat-card,.table-container{
+  background:linear-gradient(145deg,rgba(15,21,34,.88),rgba(8,12,21,.84));
+  border-color:var(--nx-line);
+  border-radius:20px;
+  box-shadow:0 18px 55px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.035);
+}
+.stat-card{position:relative;overflow:hidden;padding:19px;}
+.stat-card:after{
+  content:"";position:absolute;right:-28px;top:-34px;width:105px;height:105px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,122,0,.12),transparent 67%);
+}
+.stat-card .stat-label{color:#77839a;font-size:10px;letter-spacing:.12em;}
+.stat-card .stat-value{color:#fff;font-size:29px;letter-spacing:-.035em;}
+.stat-card .stat-change{color:#8b98ac;}
+.toolbar{padding:4px 0;}
+.toolbar .search-box input,.form-group input,.form-group select,.form-group textarea{
+  background:rgba(8,12,21,.72);border-color:var(--nx-line);color:#edf2f8;
+}
+.toolbar .search-box input::placeholder,.form-group input::placeholder{color:#66738a;}
+.toolbar .search-box input:focus,.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+  border-color:rgba(53,217,255,.45);
+  box-shadow:0 0 0 3px rgba(53,217,255,.08),0 0 22px rgba(53,217,255,.06);
+}
+.btn-primary{background:linear-gradient(135deg,var(--nx-red),var(--nx-orange));}
+.btn-outline{background:rgba(255,255,255,.035);border-color:var(--nx-line);color:#aeb9ca;}
+.btn-outline:hover{background:rgba(255,255,255,.075);color:#fff;border-color:rgba(255,255,255,.15);}
+.table-container{overflow:hidden;}
+.table-container .table-header{background:rgba(255,255,255,.018);border-bottom-color:var(--nx-line);}
+.table-container .table-header h3{color:#f2f5f9;}
+table th{background:rgba(255,255,255,.025);color:#758198;border-bottom-color:var(--nx-line);}
+table td{border-bottom-color:rgba(255,255,255,.055);color:#dce3ed;}
+table tr:hover td{background:rgba(255,255,255,.025);}
+.schedule-actions button{background:rgba(255,255,255,.045);color:#8e9aaf;}
+.schedule-actions button:hover{background:rgba(255,255,255,.09);color:#fff;}
+.empty-state{color:#78859a;}
+.empty-state h3{color:#e8edf5;}
+/* Modal becomes premium */
+.modal-overlay{background:rgba(1,4,9,.78);backdrop-filter:blur(16px);}
+.modal-content{
+  background:linear-gradient(145deg,#111827,#080d17);
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:26px;
+  box-shadow:0 35px 110px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);
+}
+.modal-content .modal-header h2{color:#fff;letter-spacing:-.025em;}
+.modal-content .modal-close{color:#8b98ac;}
+.modal-content .modal-close:hover{background:rgba(255,255,255,.07);color:#fff;}
+.wallet-selector,.phone-format-hint,.import-area,.rate-tooltip{
+  background:rgba(255,255,255,.028);border-color:var(--nx-line);
+}
+.event-type-card{background:rgba(255,255,255,.025);border-color:var(--nx-line);color:#dce4ef;}
+.event-type-card.selected{background:rgba(255,91,48,.08);border-color:rgba(255,122,0,.65);box-shadow:0 0 20px rgba(255,91,48,.08);}
+body.dark-mode{
+  --bg-primary:#05070d;--bg-secondary:#0d121e;--text-primary:#f5f7fb;--text-secondary:#8c98ad;--border-color:rgba(148,163,184,.14);
+}
+/* Make the existing auth gate match the product */
+.auth-required{padding:110px 20px;}
+.auth-required .icon{color:var(--nx-orange);text-shadow:0 0 30px rgba(255,122,0,.3);}
+/* Floating command hint */
+.nx-shortcut{
+  display:inline-flex;align-items:center;gap:5px;color:#68758b;font-size:10px;margin-left:auto;
+}
+.nx-shortcut kbd{
+  border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04);
+  border-radius:5px;padding:2px 6px;color:#aab5c7;
+}
+/* Mobile */
+@media(max-width:900px){
+  .nx-signal{display:none;}
+  .nx-command{min-height:auto;padding:22px;}
+  .nx-strip{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:768px){
+  .scheduler-nav{margin:8px 8px 0;border-radius:18px;padding:10px;}
+  .scheduler-container{padding:14px 10px 35px;}
+  .nx-command{border-radius:21px;margin-bottom:14px;}
+  .nx-command h1{font-size:31px;}
+  .nx-command p{font-size:13px;}
+  .nx-strip{gap:8px;}
+  .nx-metric{padding:12px;}
+  .nx-metric .value{font-size:19px;}
+  .stats-grid{gap:8px;}
+  .stat-card{border-radius:16px;padding:14px;}
+  .stat-card .stat-value{font-size:23px;}
+}
+@media(max-width:480px){
+  .nx-strip{grid-template-columns:1fr 1fr;}
+  .nx-command-actions .btn{flex:1;justify-content:center;}
+  .nx-metric .sub{display:none;}
+}
+/* =========================================================
+   LIGHT MODE OVERRIDES — Net365 Scheduler
+   Keeps fire brand accents, flips surfaces to light
+   ========================================================= */
+
+/* Nav */
+body:not(.dark-mode) .scheduler-nav{
+  background:rgba(255,255,255,.92);
+  border-color:rgba(15,23,42,.08);
+  box-shadow:0 12px 40px rgba(15,23,42,.06),inset 0 1px 0 rgba(255,255,255,.6);
+}
+body:not(.dark-mode) .scheduler-nav .logo{color:#0f172a;}
+body:not(.dark-mode) .back-btn,
+body:not(.dark-mode) .analytics-link{color:#64748b;}
+body:not(.dark-mode) .back-btn:hover,
+body:not(.dark-mode) .analytics-link:hover{
+  background:rgba(15,23,42,.04);color:#0f172a;
+}
+body:not(.dark-mode) .nav-tabs{
+  background:rgba(15,23,42,.035);border-color:rgba(15,23,42,.06);
+}
+body:not(.dark-mode) .nav-tab{color:#64748b;}
+body:not(.dark-mode) .nav-tab:hover{background:rgba(15,23,42,.05);color:#0f172a;}
+body:not(.dark-mode) .theme-toggle{
+  background:rgba(15,23,42,.03);border-color:rgba(15,23,42,.10);color:#475569;
+}
+body:not(.dark-mode) .theme-toggle:hover{
+  background:rgba(15,23,42,.07);color:#0f172a;
+}
+body:not(.dark-mode) .rate-display{
+  background:rgba(15,23,42,.035);border-color:rgba(15,23,42,.10);color:#475569;
+}
+body:not(.dark-mode) .rate-display:hover{
+  border-color:rgba(255,122,0,.45);color:#0f172a;
+}
+body:not(.dark-mode) .rate-tooltip{
+  background:#ffffff;border-color:rgba(15,23,42,.08);color:#0f172a;
+}
+
+/* Command deck */
+body:not(.dark-mode) .nx-command{
+  background:
+    linear-gradient(120deg,rgba(255,255,255,.96),rgba(248,250,252,.92)),
+    radial-gradient(circle at 88% 25%,rgba(255,122,0,.10),transparent 32%);
+  border-color:rgba(15,23,42,.06);
+  box-shadow:0 20px 60px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.9);
+}
+body:not(.dark-mode) .nx-command:after{
+  border-color:rgba(53,217,255,.15);
+  box-shadow:0 0 0 34px rgba(53,217,255,.02),0 0 0 68px rgba(255,122,0,.02);
+}
+body:not(.dark-mode) .nx-command h1{
+  background:linear-gradient(90deg,#0f172a 0%,#0f172a 46%,#ea580c 80%,#0891b2 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+body:not(.dark-mode) .nx-command p{color:#475569;}
+body:not(.dark-mode) .nx-kicker{
+  background:rgba(22,163,74,.08);color:#15803d;border-color:rgba(22,163,74,.20);
+}
+body:not(.dark-mode) .nx-command .btn-ghost{
+  background:rgba(15,23,42,.04);color:#334155;border-color:rgba(15,23,42,.08);
+}
+body:not(.dark-mode) .nx-command .btn-ghost:hover{
+  background:rgba(15,23,42,.07);color:#0f172a;
+}
+
+/* Metric strip */
+body:not(.dark-mode) .nx-metric{
+  background:#ffffff;border-color:rgba(15,23,42,.07);
+  box-shadow:0 6px 20px rgba(15,23,42,.04);
+}
+body:not(.dark-mode) .nx-metric .value{color:#0f172a;}
+body:not(.dark-mode) .nx-metric .label{color:#64748b;}
+body:not(.dark-mode) .nx-metric .sub{color:#94a3b8;}
+
+/* Stat cards + tables */
+body:not(.dark-mode) .stat-card,
+body:not(.dark-mode) .table-container{
+  background:linear-gradient(145deg,#ffffff,#f8fafc);
+  border-color:rgba(15,23,42,.07);
+  box-shadow:0 10px 30px rgba(15,23,42,.05),inset 0 1px 0 rgba(255,255,255,.9);
+}
+body:not(.dark-mode) .stat-card .stat-label{color:#64748b;}
+body:not(.dark-mode) .stat-card .stat-value{color:#0f172a;}
+body:not(.dark-mode) .stat-card .stat-change{color:#64748b;}
+body:not(.dark-mode) .table-container .table-header{
+  background:rgba(15,23,42,.02);border-bottom-color:rgba(15,23,42,.08);
+}
+body:not(.dark-mode) .table-container .table-header h3{color:#0f172a;}
+body:not(.dark-mode) table th{
+  background:rgba(15,23,42,.03);color:#64748b;border-bottom-color:rgba(15,23,42,.08);
+}
+body:not(.dark-mode) table td{
+  border-bottom-color:rgba(15,23,42,.06);color:#0f172a;
+}
+body:not(.dark-mode) table tr:hover td{background:rgba(15,23,42,.02);}
+body:not(.dark-mode) .schedule-actions button{
+  background:rgba(15,23,42,.04);color:#64748b;
+}
+body:not(.dark-mode) .schedule-actions button:hover{
+  background:rgba(15,23,42,.08);color:#0f172a;
+}
+body:not(.dark-mode) .empty-state{color:#64748b;}
+body:not(.dark-mode) .empty-state h3{color:#0f172a;}
+
+/* Inputs */
+body:not(.dark-mode) .toolbar .search-box input,
+body:not(.dark-mode) .form-group input,
+body:not(.dark-mode) .form-group select,
+body:not(.dark-mode) .form-group textarea{
+  background:#ffffff;border-color:rgba(15,23,42,.10);color:#0f172a;
+}
+body:not(.dark-mode) .toolbar .search-box input::placeholder,
+body:not(.dark-mode) .form-group input::placeholder,
+body:not(.dark-mode) .form-group textarea::placeholder{color:#94a3b8;}
+body:not(.dark-mode) .toolbar .search-box input:focus,
+body:not(.dark-mode) .form-group input:focus,
+body:not(.dark-mode) .form-group select:focus,
+body:not(.dark-mode) .form-group textarea:focus{
+  border-color:rgba(255,122,0,.5);
+  box-shadow:0 0 0 3px rgba(255,122,0,.10);
+}
+
+/* Buttons */
+body:not(.dark-mode) .btn-outline{
+  background:rgba(15,23,42,.03);border-color:rgba(15,23,42,.10);color:#475569;
+}
+body:not(.dark-mode) .btn-outline:hover{
+  background:rgba(15,23,42,.06);color:#0f172a;border-color:rgba(15,23,42,.16);
+}
+
+/* Modal */
+body:not(.dark-mode) .modal-overlay{
+  background:rgba(15,23,42,.45);
+  backdrop-filter:blur(10px);
+}
+body:not(.dark-mode) .modal-content{
+  background:#ffffff;
+  border-color:rgba(15,23,42,.08);
+  box-shadow:0 30px 90px rgba(15,23,42,.18);
+}
+body:not(.dark-mode) .modal-content .modal-header h2{color:#0f172a;}
+body:not(.dark-mode) .modal-content .modal-close{color:#64748b;}
+body:not(.dark-mode) .modal-content .modal-close:hover{
+  background:rgba(15,23,42,.06);color:#0f172a;
+}
+
+/* Utility / hint blocks */
+body:not(.dark-mode) .wallet-selector,
+body:not(.dark-mode) .phone-format-hint,
+body:not(.dark-mode) .import-area{
+  background:rgba(15,23,42,.03);border-color:rgba(15,23,42,.08);
+}
+body:not(.dark-mode) .event-type-card{
+  background:rgba(15,23,42,.02);border-color:rgba(15,23,42,.08);color:#334155;
+}
+body:not(.dark-mode) .event-type-card.selected{
+  background:rgba(255,91,48,.08);
+  border-color:rgba(255,122,0,.6);
+  color:#0f172a;
+  box-shadow:0 0 20px rgba(255,91,48,.10);
+}
+
+/* Auth gate */
+body:not(.dark-mode) .auth-required h2{color:#0f172a;}
+body:not(.dark-mode) .auth-required p{color:#64748b;}
+@media(prefers-reduced-motion:reduce){
+  .nx-signal i,.nx-kicker .pulse{animation:none;}
+}
+
+  /* ===== NET365 SCHEDULER FORECAST STUDIO (additive) ===== */
+#nxs-root{display:grid;gap:18px;margin:0 0 22px}
+.nxs-card{position:relative;background:var(--card-bg,rgba(255,255,255,.7));border:1px solid rgba(128,140,170,.22);border-radius:22px;padding:20px;backdrop-filter:blur(14px);box-shadow:0 14px 40px rgba(15,23,42,.10);min-width:0;color:var(--text-primary,#0f172a)}
+body.dark-mode .nxs-card{background:rgba(13,18,34,.72);border-color:rgba(120,160,255,.16)}
+.nxs-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.nxs-head h3{font-size:17px;font-weight:800;letter-spacing:-.01em;display:flex;gap:8px;align-items:center}
+.nxs-head .sub{font-size:12px;color:var(--text-secondary,#64748b)}
+.nxs-tag{font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:linear-gradient(135deg,rgba(255,59,48,.16),rgba(0,212,255,.16));border:1px solid rgba(128,140,170,.3);font-weight:800}
+.nxs-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.nxs-kpi{border-radius:16px;padding:14px;background:linear-gradient(160deg,rgba(255,122,0,.10),rgba(0,212,255,.06));border:1px solid rgba(128,140,170,.22)}
+.nxs-kpi .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-secondary,#64748b)}
+.nxs-kpi .v{font-size:25px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin-top:2px}
+.nxs-kpi .d{font-size:12px;margin-top:2px;color:var(--text-secondary,#64748b)}
+.nxs-cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px}@media(max-width:900px){.nxs-cols{grid-template-columns:1fr}}
+.nxs-tl{display:grid;grid-template-columns:repeat(15,1fr);gap:6px}
+@media(max-width:560px){.nxs-tl{grid-template-columns:repeat(10,1fr)}}
+.nxs-day{position:relative;aspect-ratio:1/1;border-radius:10px;border:1px solid rgba(128,140,170,.22);display:flex;align-items:flex-end;justify-content:center;font-size:10px;padding-bottom:3px;color:var(--text-secondary,#64748b);overflow:hidden;cursor:default;outline:none}
+.nxs-day i{position:absolute;inset:0;background:linear-gradient(180deg,#ff7a00,#ff3b30);opacity:var(--h,0)}
+.nxs-day span{position:relative;z-index:1;font-weight:700}.nxs-day.has span{color:#fff;mix-blend-mode:normal;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.nxs-day.today{box-shadow:0 0 0 2px #00d4ff}
+.nxs-day:focus-visible,.nxs-day:hover{box-shadow:0 0 0 2px #ff7a00}
+.nxs-tip{min-height:38px;margin-top:12px;font-size:13px;padding:10px 12px;border-radius:12px;background:rgba(128,140,170,.10)}
+.nxs-bar{display:grid;grid-template-columns:96px 1fr auto;gap:10px;align-items:center;margin:9px 0;font-size:13px}
+.nxs-bar .t{height:10px;border-radius:99px;background:rgba(128,140,170,.18);overflow:hidden}.nxs-bar .t i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#ff3b30,#ff7a00,#ffa640);width:0;transition:width .8s cubic-bezier(.16,1,.3,1)}
+.nxs-bar b{font-variant-numeric:tabular-nums}
+.nxs-ins{display:flex;gap:10px;padding:11px 13px;border-radius:14px;margin-top:10px;font-size:13px;line-height:1.5;background:linear-gradient(135deg,rgba(255,90,31,.10),rgba(0,212,255,.08));border:1px solid rgba(128,140,170,.22)}
+.nxs-ins i{margin-top:2px;color:#ff7a00}
+.nxs-ring{--p:0;width:112px;height:112px;border-radius:50%;background:conic-gradient(#39e58c calc(var(--p)*1%),rgba(128,140,170,.2) 0);display:grid;place-items:center;flex:none}
+.nxs-ring div{width:86px;height:86px;border-radius:50%;background:var(--card-bg,#fff);display:grid;place-items:center;font-weight:800;font-size:22px}
+body.dark-mode .nxs-ring div{background:#0d1222}
+.nxs-health{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+@media(prefers-reduced-motion:reduce){.nxs-bar .t i{transition:none}}
+
+</style>
 </head>
 <body>
 
@@ -1015,6 +1470,29 @@
 
   <!-- ========== MAIN CONTAINER ========== -->
   <div class="scheduler-container" id="schedulerContent">
+    <!-- NET365 FUTURISTIC COMMAND DECK -->
+    <section class="nx-command" aria-label="Scheduler command center">
+      <div class="nx-kicker"><span class="pulse"></span> Net365 Automation Grid · Operational</div>
+      <h1>Schedule money, services & people — intelligently.</h1>
+      <p>One control center for recurring airtime, data, utilities, transfers and enterprise recharges. Automate once, monitor continuously, execute securely.</p>
+      <div class="nx-command-actions">
+        <button class="btn btn-primary" type="button" onclick="openCreateSchedule()"><i class="fas fa-bolt"></i> Create automation</button>
+        <button class="btn btn-ghost" type="button" onclick="runAllSchedules('individual')"><i class="fas fa-play"></i> Run now</button>
+        <button class="btn btn-ghost" type="button" onclick="switchTab('enterprise')"><i class="fas fa-building"></i> Enterprise control</button>
+      </div>
+      <div class="nx-signal" aria-hidden="true">
+        <i style="height:35%"></i><i style="height:62%"></i><i style="height:44%"></i><i style="height:88%"></i><i style="height:54%"></i><i style="height:74%"></i><i style="height:42%"></i><i style="height:94%"></i><i style="height:66%"></i><i style="height:82%"></i><i style="height:48%"></i><i style="height:71%"></i>
+      </div>
+    </section>
+
+    <section class="nx-strip" aria-label="Automation overview">
+      <div class="nx-metric"><div class="label">Automation engine</div><div class="value">ACTIVE</div><div class="sub">Recurring execution ready</div></div>
+      <div class="nx-metric"><div class="label">Schedules</div><div class="value" id="nxScheduleCount">0</div><div class="sub">Across all workspaces</div></div>
+      <div class="nx-metric"><div class="label">Upcoming</div><div class="value" id="nxUpcomingCount">0</div><div class="sub">Next execution window</div></div>
+      <div class="nx-metric"><div class="label">Rail status</div><div class="value" id="nxRailStatus">ONLINE</div><div class="sub">Net365 payment rail</div></div>
+    </section>
+
+    <div id="nxs-root"></div>
 
     <!-- ========================================================= -->
     <!-- INDIVIDUAL TAB -->
@@ -1311,6 +1789,7 @@
             <select id="schServiceType" onchange="toggleServiceTypeFields()">
               <option value="airtime">📱 Airtime Top-up</option>
               <option value="data">📶 Data Bundle</option>
+              <option value="tv">📺 TV Subscription (DStv, GOtv, StarTimes, Showmax)</option>
               <option value="utility">⚡ Utility Bill Payment</option>
               <option value="gift">🎁 Gift Card</option>
               <option value="transfer">💸 Wallet Transfer</option>
@@ -1369,6 +1848,42 @@
               <label>📋 Subscriber / Account Number *</label>
               <input type="text" id="schSubscriberAccount" placeholder="Enter utility account / meter / smartcard number" />
               <div id="utilityAccountHint" style="font-size:12px;color:var(--text-secondary);margin-top:5px;"></div>
+            </div>
+          </div>
+
+          <!-- TV / DATA FIELDS (VTpass) -->
+          <div class="form-group full-width" id="svcFields" style="display:none;">
+            <div class="form-group">
+              <label id="svcProductLabel">📺 Provider *</label>
+              <select id="schSvcProduct" onchange="onSvcProductChange()"></select>
+            </div>
+            <div class="form-group" id="svcAccountWrap" style="margin-top:10px;">
+              <label>📟 Smartcard / IUC Number *</label>
+              <input type="text" id="schSvcAccount" inputmode="numeric" placeholder="Enter the smartcard number" oninput="svcVerified=false;document.getElementById('svcVerifyResult').textContent='';" />
+              <button type="button" class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="verifySvcAccount()"><i class="fas fa-search"></i> Check smartcard</button>
+              <div id="svcVerifyResult" style="font-size:12px;margin-top:6px;"></div>
+            </div>
+            <div class="form-group" id="svcModeWrap" style="margin-top:10px;display:none;">
+              <label>What should be paid each time? *</label>
+              <select id="schSvcMode" onchange="onSvcModeChange()">
+                <option value="renew">Renew my current bouquet (price checked each time)</option>
+                <option value="change">A specific bouquet</option>
+              </select>
+            </div>
+            <div class="form-group" id="svcPlanWrap" style="margin-top:10px;">
+              <label>📋 Plan *</label>
+              <select id="schSvcPlan" onchange="onSvcPlanChange()"><option value="">Select plan</option></select>
+            </div>
+            <div class="form-group" id="svcContactWrap" style="margin-top:10px;">
+              <label id="svcContactLabel">📱 Contact phone *</label>
+              <input type="tel" id="schSvcContact" placeholder="08012345678" />
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>Highest price I will approve (₦, optional)</label>
+              <input type="number" id="schSvcMax" min="1" step="1" placeholder="Empty = up to 15% above the amount below" />
+            </div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">
+              Each time this is due we check the smartcard and today's price, then send you a payment link. Nothing is charged until you tap it. If the price rises above your limit, nothing is charged and you are told.
             </div>
           </div>
 
@@ -2056,7 +2571,7 @@
     }
 
     function getServiceIcon(type) {
-      const map = { 'airtime': '📱', 'data': '📶', 'utility': '⚡', 'gift': '🎁', 'transfer': '💸' };
+      const map = { 'airtime': '📱', 'data': '📶', 'tv': '📺', 'utility': '⚡', 'gift': '🎁', 'transfer': '💸' };
       return map[type] || '📌';
     }
 
@@ -2356,6 +2871,8 @@
       // Hide all first
       if (airtimeFields) airtimeFields.style.display = 'none';
       if (utilityFields) utilityFields.style.display = 'none';
+      const svcFields = document.getElementById('svcFields');
+      if (svcFields) svcFields.style.display = 'none';
 
       // Show the selected one
       if (service === 'airtime') {
@@ -2365,7 +2882,96 @@
       } else if (service === 'utility') {
         if (utilityFields) utilityFields.style.display = 'block';
         loadScheduleBillers(document.getElementById('schBiller')?.value || '');
+      } else if (service === 'tv' || service === 'data') {
+        if (svcFields) svcFields.style.display = 'block';
+        const pending = svcEditPending; svcEditPending = null;
+        initSvcFields(pending);
       }
+    }
+
+    // ================================================
+    // TV / DATA SCHEDULES (VTpass). Prices always come from the server.
+    // ================================================
+    const SVC_PRODUCTS = {
+      tv: [['dstv', 'DStv'], ['gotv', 'GOtv'], ['startimes', 'StarTimes'], ['showmax', 'Showmax']],
+      data: [['mtn', 'MTN'], ['airtel', 'Airtel'], ['glo', 'Glo'], ['9mobile', '9mobile']],
+    };
+    let svcPlans = [], svcRenewal = 0, svcVerified = false, svcEditPending = null;
+    const svcKind = () => document.getElementById('schServiceType').value;
+    const svcProduct = () => document.getElementById('schSvcProduct').value;
+    const svcHasCard = () => svcKind() === 'tv' && ['dstv', 'gotv', 'startimes'].includes(svcProduct());
+    const svcCanRenew = () => svcKind() === 'tv' && ['dstv', 'gotv'].includes(svcProduct());
+    const svcRenewing = () => svcCanRenew() && document.getElementById('schSvcMode').value === 'renew';
+    const svcNaira = (n) => '₦' + Number(n || 0).toLocaleString('en-NG');
+
+    async function initSvcFields(editing) {
+      const kind = svcKind();
+      const meta = (editing && editing.metadata) || {};
+      const sel = document.getElementById('schSvcProduct');
+      sel.innerHTML = SVC_PRODUCTS[kind].map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+      document.getElementById('svcProductLabel').textContent = kind === 'tv' ? '📺 TV provider *' : '📶 Network *';
+      if (editing && meta.product) sel.value = meta.product;
+      if (editing) {
+        document.getElementById('schSvcAccount').value = (kind === 'tv' && editing.subscriber_account) || '';
+        document.getElementById('schSvcContact').value = editing.phone || meta.contact_phone || '';
+        document.getElementById('schSvcMax').value = meta.max_amount || '';
+        document.getElementById('schSvcMode').value = meta.subscription_type === 'renew' ? 'renew' : 'change';
+        svcVerified = true;
+      } else {
+        svcVerified = false;
+        document.getElementById('svcVerifyResult').textContent = '';
+      }
+      await onSvcProductChange(editing ? meta.variation_code : '');
+    }
+
+    async function onSvcProductChange(keepPlan) {
+      const kind = svcKind(), product = svcProduct();
+      document.getElementById('svcAccountWrap').style.display = svcHasCard() ? 'block' : 'none';
+      document.getElementById('svcModeWrap').style.display = svcCanRenew() ? 'block' : 'none';
+      document.getElementById('svcContactLabel').textContent =
+        kind === 'data' ? '📱 Phone to receive the data *' : (product === 'showmax' ? '📱 Phone number on the Showmax account *' : '📱 Contact phone *');
+      if (typeof keepPlan !== 'string') { svcVerified = false; svcRenewal = 0; document.getElementById('svcVerifyResult').textContent = ''; }
+      const planSel = document.getElementById('schSvcPlan');
+      planSel.innerHTML = '<option value="">Loading plans…</option>';
+      svcPlans = [];
+      try {
+        const url = kind === 'data' ? `/api/data/plans?network=${encodeURIComponent(product)}` : `/api/services/catalog?product=${encodeURIComponent(product)}`;
+        const r = await fetch(url, { credentials: 'include' });
+        const j = await r.json();
+        svcPlans = ((j && j.plans) || []).slice().sort((a, b) => a.price - b.price);
+      } catch (e) { svcPlans = []; }
+      planSel.innerHTML = svcPlans.length
+        ? '<option value="">Select plan</option>' + svcPlans.map(p => `<option value="${escapeHtml(p.code)}">${escapeHtml(p.name)} — ${svcNaira(p.price)}</option>`).join('')
+        : '<option value="">Plans unavailable right now</option>';
+      if (keepPlan) planSel.value = keepPlan;
+      onSvcModeChange();
+    }
+
+    function onSvcModeChange() {
+      document.getElementById('svcPlanWrap').style.display = svcRenewing() ? 'none' : 'block';
+      if (svcRenewing() && svcRenewal > 0) document.getElementById('schAmount').value = svcRenewal;
+      else onSvcPlanChange();
+    }
+
+    function onSvcPlanChange() {
+      if (svcRenewing()) return;
+      const p = svcPlans.find(x => x.code === document.getElementById('schSvcPlan').value);
+      if (p) document.getElementById('schAmount').value = p.price;
+    }
+
+    async function verifySvcAccount() {
+      const out = document.getElementById('svcVerifyResult');
+      const code = document.getElementById('schSvcAccount').value.replace(/\s+/g, '');
+      if (!/^\d{6,16}$/.test(code)) { out.style.color = 'var(--danger)'; out.textContent = 'Enter the smartcard number first.'; return; }
+      out.style.color = 'var(--text-secondary)'; out.textContent = 'Checking…';
+      const r = await apiFetch('/api/services/verify', { method: 'POST', body: JSON.stringify({ product: svcProduct(), billers_code: code }) });
+      if (!r) { out.textContent = ''; return; }
+      let j = {}; try { j = await r.json(); } catch (e) { /* ignore */ }
+      if (!j.success) { svcVerified = false; out.style.color = 'var(--danger)'; out.textContent = '❌ ' + (j.message || j.error || 'Could not verify this smartcard.'); return; }
+      svcVerified = true; svcRenewal = Number(j.renewal_amount) || 0;
+      out.style.color = 'var(--success)';
+      out.textContent = `✅ ${j.name}${j.bouquet ? ' · ' + j.bouquet : ''}${j.due_date ? ' · due ' + j.due_date : ''}${svcRenewal ? ' · renewal ' + svcNaira(svcRenewal) : ''}`;
+      if (svcRenewing() && svcRenewal > 0) document.getElementById('schAmount').value = svcRenewal;
     }
 
     function toggleFrequencyFields() {
@@ -2497,6 +3103,7 @@
 
       toggleRecipientFields();
       toggleFrequencyFields();
+      svcEditPending = (schedule.service_type === 'tv' || schedule.service_type === 'data') ? schedule : null;
       toggleServiceTypeFields();
       openModal('scheduleModal');
     }
@@ -2589,6 +3196,38 @@
         schedule.operator_id = '';
         schedule.operator_name = '';
         schedule.phone = '';
+      }
+
+      // ============ TV / DATA FIELDS ============
+      if (serviceType === 'tv' || serviceType === 'data') {
+        const product = svcProduct();
+        const label = (SVC_PRODUCTS[serviceType].find(x => x[0] === product) || [0, product])[1];
+        const contactRaw = document.getElementById('schSvcContact').value.replace(/[^\d+]/g, '');
+        const contact = /^0\d{10}$/.test(contactRaw) ? contactRaw : (/^\+?234\d{10}$/.test(contactRaw) ? '0' + contactRaw.replace(/^\+?234/, '') : '');
+        if (!contact) { showToast('Enter a valid Nigerian phone number (e.g. 08012345678).', 'warning'); return; }
+        let account = '';
+        if (svcHasCard()) {
+          account = document.getElementById('schSvcAccount').value.replace(/\s+/g, '');
+          if (!/^\d{6,16}$/.test(account)) { showToast('Enter the smartcard number.', 'warning'); return; }
+          if (!svcVerified) { showToast('Please tap "Check smartcard" first so we know it is correct.', 'warning'); return; }
+        } else if (serviceType === 'tv') {
+          account = contact;           // Showmax is paid against the phone number
+        }
+        const renewing = svcRenewing();
+        const code = document.getElementById('schSvcPlan').value;
+        if (!renewing && !code) { showToast('Please choose a plan.', 'warning'); return; }
+        const plan = svcPlans.find(x => x.code === code);
+        const maxAmt = parseFloat(document.getElementById('schSvcMax').value) || 0;
+        schedule.country_code = 'NG';
+        schedule.operator_id = ''; schedule.operator_name = '';
+        schedule.phone = contact;
+        schedule.subscriber_account = account;
+        schedule.biller_name = renewing ? `${label} renewal` : `${label} ${plan ? plan.name : ''}`.trim().slice(0, 60);
+        schedule.metadata = {
+          product: product, variation_code: renewing ? '' : code,
+          subscription_type: svcCanRenew() ? (renewing ? 'renew' : 'change') : '',
+          contact_phone: contact, max_amount: maxAmt || null,
+        };
       }
 
       // ============ AIRTIME FIELDS ============
@@ -2734,8 +3373,8 @@
       }
       tbody.innerHTML = filtered.map(s => {
         let details = '';
-        if (s.service_type === 'utility') {
-          details = `${s.biller_name || 'Utility Biller'} | ${s.subscriber_account || 'N/A'}`;
+        if (s.service_type === 'utility' || s.service_type === 'tv' || s.service_type === 'data') {
+          details = `${s.biller_name || 'Biller'} | ${s.subscriber_account || s.phone || 'N/A'}`;
         } else {
           details = s.recipient || s.phone || '—';
         }
@@ -2787,8 +3426,8 @@
       }
       tbody.innerHTML = filtered.map(s => {
         let details = '';
-        if (s.service_type === 'utility') {
-          details = `${s.biller_name || 'Utility Biller'} | ${s.subscriber_account || 'N/A'}`;
+        if (s.service_type === 'utility' || s.service_type === 'tv' || s.service_type === 'data') {
+          details = `${s.biller_name || 'Biller'} | ${s.subscriber_account || s.phone || 'N/A'}`;
         } else {
           details = s.recipient || s.phone || '—';
         }
@@ -2826,8 +3465,8 @@
       }
       tbody.innerHTML = list.slice(0, 100).map(s => {
         let details = '';
-        if (s.service_type === 'utility') {
-          details = `${s.biller_name || 'Utility Biller'} | ${s.subscriber_account || 'N/A'}`;
+        if (s.service_type === 'utility' || s.service_type === 'tv' || s.service_type === 'data') {
+          details = `${s.biller_name || 'Biller'} | ${s.subscriber_account || s.phone || 'N/A'}`;
         } else {
           details = s.phone || '—';
         }
@@ -3014,18 +3653,33 @@
     // ================================================
     // THEME
     // ================================================
-    function toggleTheme() {
-      document.body.classList.toggle('dark-mode');
-      localStorage.setItem('net365_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+    function applyTheme(theme){
+      const isDark = theme === 'dark';
+      document.body.classList.toggle('dark-mode', isDark);
       const icon = document.querySelector('.theme-toggle i');
-      icon.className = document.body.classList.contains('dark-mode') ? 'fas fa-sun' : 'fas fa-moon';
+      if (icon) icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+
+      // Sync mobile browser chrome + html background
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', isDark ? '#05070d' : '#eef2f7');
+
+      try { localStorage.setItem('net365_theme', theme); } catch(e){}
     }
 
-    function loadTheme() {
-      if (localStorage.getItem('net365_theme') === 'dark') {
-        document.body.classList.add('dark-mode');
-        document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+    function toggleTheme(){
+      const btn = document.querySelector('.theme-toggle');
+      if (btn){
+        btn.classList.add('switching');
+        setTimeout(() => btn.classList.remove('switching'), 400);
       }
+      const next = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+      applyTheme(next);
+    }
+
+    function loadTheme(){
+      let saved = 'dark';
+      try { saved = localStorage.getItem('net365_theme') || 'dark'; } catch(e){}
+      applyTheme(saved === 'light' ? 'light' : 'dark');
     }
 
     // ================================================
@@ -3311,8 +3965,8 @@
       }
       tbody.innerHTML = filtered.slice(0, 100).map(s => {
         let details = '';
-        if (s.service_type === 'utility') {
-          details = `${s.biller_name || 'Utility Biller'} | ${s.subscriber_account || 'N/A'}`;
+        if (s.service_type === 'utility' || s.service_type === 'tv' || s.service_type === 'data') {
+          details = `${s.biller_name || 'Biller'} | ${s.subscriber_account || s.phone || 'N/A'}`;
         } else {
           details = s.phone || '—';
         }
@@ -3733,7 +4387,168 @@
       console.log(`📊 Individual: ${schedules.individual.length}, SME: ${schedules.sme.length}, Enterprise: ${schedules.enterprise.length}`);
       console.log(`💱 Exchange rate source: ${exchangeRates.source}, NGN: ₦${exchangeRates.NGN.toFixed(2)} = $1`);
       console.log(`🌍 International phone validation enabled for ${Object.keys(COUNTRY_PHONE_FORMATS).length} countries`);
+      // Futuristic command-deck counters — mirrors the existing scheduler state.
+      try {
+        const total = schedules.individual.length + schedules.sme.length + schedules.enterprise.length;
+        const upcoming = [...schedules.individual, ...schedules.sme, ...schedules.enterprise]
+          .filter(x => x && !['completed','failed','paused'].includes(String(x.status || '').toLowerCase())).length;
+        const totalEl = document.getElementById('nxScheduleCount');
+        const upEl = document.getElementById('nxUpcomingCount');
+        if (totalEl) totalEl.textContent = total.toLocaleString();
+        if (upEl) upEl.textContent = upcoming.toLocaleString();
+      } catch (e) {
+        console.debug('Command deck counters deferred:', e);
+      }
+
     });
   </script>
+<script>
+(function () {
+  'use strict';
+  var host = document.getElementById('nxs-root'); if (!host) return;
+  var SYM = { NGN: '₦', USD: '$', GBP: '£', EUR: '€', GHS: '₵', KES: 'KSh', ZAR: 'R' };
+  var LABEL = { airtime: 'Airtime', data: 'Data', utility: 'Utilities', tv: 'Cable TV', transfer: 'Transfers', education: 'Education', electricity: 'Electricity' };
+  function el(t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; }
+  function add(p) { for (var i = 1; i < arguments.length; i++) if (arguments[i]) p.appendChild(arguments[i]); return p; }
+  function ngn(s) {
+    var a = Number(s.amount) || 0, c = String(s.currency || s.wallet_currency || 'NGN').toUpperCase();
+    if (c === 'NGN') return a;
+    try { var r = exchangeRates && exchangeRates.NGN; if (c === 'USD' && r) return a * r; } catch (e) { /* ignore */ }
+    return a;
+  }
+  function money(n) { return '₦' + Math.round(n).toLocaleString('en-NG'); }
+  var STEP = { daily: 1, weekly: 7, monthly: 30, quarterly: 91, yearly: 365 };
+  function occurrences(s, from, to) {
+    var out = [], f = String(s.frequency || 'monthly').toLowerCase(), t = new Date(s.next_run); if (isNaN(t)) return out;
+    if (f === 'once' || f === 'event' || !STEP[f]) { if (t >= from && t <= to) out.push(t); return out; }
+    var guard = 0;
+    while (t <= to && guard++ < 400) {
+      if (t >= from) out.push(new Date(t));
+      if (f === 'monthly') t = new Date(t.getFullYear(), t.getMonth() + 1, t.getDate(), t.getHours(), t.getMinutes());
+      else if (f === 'quarterly') t = new Date(t.getFullYear(), t.getMonth() + 3, t.getDate(), t.getHours(), t.getMinutes());
+      else if (f === 'yearly') t = new Date(t.getFullYear() + 1, t.getMonth(), t.getDate(), t.getHours(), t.getMinutes());
+      else t = new Date(+t + STEP[f] * 864e5);
+    }
+    return out;
+  }
+  function render() {
+    var all = [].concat(schedules.individual || [], schedules.sme || [], schedules.enterprise || []);
+    var active = all.filter(function (s) { return s && ['completed', 'failed', 'paused', 'cancelled'].indexOf(String(s.status || '').toLowerCase()) < 0; });
+    var paused = all.filter(function (s) { return String(s.status || '').toLowerCase() === 'paused'; }), failed = all.filter(function (s) { return String(s.status || '').toLowerCase() === 'failed'; });
+    var from = new Date(); from.setHours(0, 0, 0, 0); var to = new Date(+from + 30 * 864e5 - 1);
+    var days = []; for (var i = 0; i < 30; i++) days.push({ d: new Date(+from + i * 864e5), amt: 0, items: [] });
+    var byType = {}, total = 0, next7 = 0, biggest = null;
+    active.forEach(function (s) {
+      occurrences(s, from, to).forEach(function (o) {
+        var idx = Math.floor((new Date(o.getFullYear(), o.getMonth(), o.getDate()) - from) / 864e5); if (idx < 0 || idx > 29) return;
+        var a = ngn(s); days[idx].amt += a; days[idx].items.push(s.name || 'Schedule'); total += a; if (idx < 7) next7 += a;
+        var k = String(s.service_type || 'airtime').toLowerCase(); byType[k] = (byType[k] || 0) + a;
+      });
+      var one = ngn(s); if (!biggest || one > biggest.a) biggest = { a: one, n: s.name || 'Schedule' };
+    });
+    var health = all.length ? Math.round((all.length - failed.length - paused.length * 0.5) / all.length * 100) : 100;
+    var peak = Math.max.apply(null, days.map(function (d) { return d.amt; }).concat([1]));
+    host.textContent = '';
+    var card = el('section', 'nxs-card'), head = el('div', 'nxs-head'), hl = el('div');
+    add(hl, el('h3', null, 'Cash-flow forecast'), el('div', 'sub', 'What your automations will spend over the next 30 days'));
+    add(head, hl, el('span', 'nxs-tag', 'Forecast studio')); card.appendChild(head);
+    var kp = el('div', 'nxs-kpis');
+    function kpi(k, v, d) { var x = el('div', 'nxs-kpi'); add(x, el('div', 'k', k), el('div', 'v', v), el('div', 'd', d)); return x; }
+    add(kp, kpi('Committed, next 30 days', money(total), active.length + ' active automations'), kpi('Next 7 days', money(next7), next7 ? 'Keep your wallet funded' : 'Nothing due'),
+      kpi('Largest single payment', biggest ? money(biggest.a) : '—', biggest ? biggest.n : 'No schedules yet'), kpi('Needs attention', String(failed.length + paused.length), failed.length + ' failed · ' + paused.length + ' paused'));
+    card.appendChild(kp);
+    var cols = el('div', 'nxs-cols'), left = el('div'), right = el('div');
+    var tl = el('div', 'nxs-tl'), tip = el('div', 'nxs-tip', 'Hover or focus a day to see what runs.'); tip.setAttribute('aria-live', 'polite');
+    days.forEach(function (d, i) {
+      var c = el('div', 'nxs-day' + (d.amt ? ' has' : '') + (i === 0 ? ' today' : '')), h = el('i'), n = el('span', null, String(d.d.getDate()));
+      h.style.setProperty('--h', d.amt ? (0.25 + 0.75 * d.amt / peak).toFixed(2) : 0); add(c, h, n); c.tabIndex = 0;
+      var msg = d.d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + (d.amt ? money(d.amt) + ' · ' + d.items.slice(0, 3).join(', ') + (d.items.length > 3 ? ' +' + (d.items.length - 3) + ' more' : '') : 'nothing scheduled');
+      c.setAttribute('aria-label', msg); ['mouseenter', 'focus'].forEach(function (ev) { c.addEventListener(ev, function () { tip.textContent = msg; }); }); tl.appendChild(c);
+    });
+    add(left, tl, tip);
+    var mixTitle = el('div', 'sub', 'By service'); mixTitle.style.margin = '0 0 4px'; right.appendChild(mixTitle);
+    var keys = Object.keys(byType).sort(function (a, b) { return byType[b] - byType[a]; });
+    if (!keys.length) right.appendChild(el('div', 'sub', 'Create an automation to see your forecast.'));
+    keys.forEach(function (k) { var r = el('div', 'nxs-bar'), t = el('div', 't'), f = el('i'); t.appendChild(f); add(r, el('span', null, LABEL[k] || k), t, el('b', null, money(byType[k]))); right.appendChild(r); setTimeout(function () { f.style.width = Math.max(4, byType[k] / total * 100) + '%'; }, 60); });
+    var hw = el('div', 'nxs-health'), ring = el('div', 'nxs-ring'); ring.style.setProperty('--p', health); ring.appendChild(el('div', null, health + '%'));
+    var ht = el('div'); add(ht, el('b', null, 'Automation health'), el('div', 'sub', failed.length || paused.length ? 'Fix failed and paused items to reach 100%.' : 'Everything is running.'));
+    add(hw, ring, ht); hw.style.marginTop = '16px'; right.appendChild(hw);
+    add(cols, left, right); card.appendChild(cols);
+    var ins = [];
+    if (failed.length) ins.push(['fa-triangle-exclamation', failed.length + ' automation' + (failed.length > 1 ? 's have' : ' has') + ' failed. Open the table below and press Run to retry.']);
+    if (paused.length) ins.push(['fa-circle-pause', paused.length + ' paused. Resume them so reminders and payments keep flowing.']);
+    var heavy = days.filter(function (d) { return d.amt > 0 && d.amt >= peak * 0.9 && peak > 0; })[0];
+    if (heavy && total) ins.push(['fa-calendar-day', 'Your heaviest day is ' + heavy.d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' }) + ' with ' + money(heavy.amt) + ' due. Make sure your wallet or card can cover it.']);
+    if (!all.length) ins.push(['fa-wand-magic-sparkles', 'Start with electricity: Net365 learns how often you buy and reminds you before your meter runs low.']);
+    ins.push(['fa-shield-halved', 'Net365 never charges without your approval: due items arrive as a pay link, and failed deliveries are retried then refunded.']);
+    ins.forEach(function (x) { add(card, add(el('div', 'nxs-ins'), el('i', 'fas ' + x[0]), el('div', null, x[1]))); });
+    host.appendChild(card);
+  }
+  var wrapped = false;
+  function hook() { if (wrapped || typeof renderAllTables !== 'function') return; var o = renderAllTables; renderAllTables = function () { var r = o.apply(this, arguments); try { render(); } catch (e) { console.debug(e); } return r; }; wrapped = true; }
+  hook(); try { render(); } catch (e) { /* schedules not ready yet */ }
+  var last = -1; setInterval(function () { try { var n = [].concat(schedules.individual, schedules.sme, schedules.enterprise).length + ':' + JSON.stringify([].concat(schedules.individual, schedules.sme, schedules.enterprise).map(function (s) { return s.status + s.next_run; })).length; if (n !== last) { last = n; render(); } } catch (e) { /* ignore */ } }, 2500);
+})();
+
+</script>
+<script id="net365-sidebar">
+/* Net365 sidebar: the same navigation as the home page, on every page that loads this script. */
+(function(){
+  if (window.__nxSide) return; window.__nxSide = 1;
+  var path = location.pathname.replace(/\/+$/, '') || '/';
+  var ITEMS = [
+    ['/', 'fa-home', 'Home'], ['/?go=transactions', 'fa-exchange-alt', 'Transactions'], ['/?go=wallet', 'fa-wallet', 'Wallet'], ['/scheduler', 'fa-calendar-check', 'Scheduled Payments'],
+    ['/?go=rewards', 'fa-star', 'Rewards'], ['/?go=contacts', 'fa-address-book', 'Contacts'], ['/utilities', 'fa-bolt', 'Utilities'], ['/business', 'fa-briefcase', 'Business'],
+    ['/?go=bulk', 'fa-upload', 'Bulk Recharge'], ['/?go=referrals', 'fa-users', 'Referrals'], ['/?go=settings', 'fa-cog', 'Settings'], ['/?go=help', 'fa-question-circle', 'Help Center'],
+    ['/services', 'fa-toolbox', 'Services'], ['/bots?src=sidebar', 'fa-comments', 'Chat Bots', 'New']
+  ];
+  function active(h){ var b = h.split('?')[0]; if (b === '/') return false; if (b === '/business') return path === '/business' || path === '/marketplace'; return b === path; }
+  var css = document.createElement('style');
+  css.textContent = [
+    'body.nx-side-on{padding-left:236px}',
+    '.nx-side{position:fixed;left:0;top:0;bottom:0;width:236px;z-index:90;padding:20px 12px;overflow-y:auto;border-right:1px solid rgba(140,160,210,.14);background:#090e1b;color:#c6d0e3;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px}',
+    'body:not(.dark-mode) .nx-side{background:#ffffff;border-right-color:rgba(15,23,42,.09);color:#2f3b52;box-shadow:6px 0 30px rgba(15,23,42,.04)}',
+    '.nx-side *{box-sizing:border-box}',
+    '.nx-logo{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;text-decoration:none;color:inherit;font-weight:800;font-size:19px;letter-spacing:-.03em}',
+    '.nx-logo img{height:38px;width:auto;display:block;object-fit:contain}',
+    '.nx-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);display:none;place-items:center;color:#fff;font-size:15px}',
+    '.nx-item{display:flex;align-items:center;gap:12px;padding:10px 12px;margin:1px 0;border-radius:12px;text-decoration:none;color:#8f9cb6;font-weight:500;transition:background .2s,color .2s}',
+    'body:not(.dark-mode) .nx-item{color:#5f6c84}',
+    '.nx-item i{width:18px;text-align:center;font-size:14px}',
+    '.nx-item:hover{background:rgba(143,156,182,.12);color:#f3f6fc}body:not(.dark-mode) .nx-item:hover{background:rgba(15,23,42,.05);color:#0b1020}',
+    '.nx-item.on{color:#f3f6fc;background:linear-gradient(90deg,rgba(255,106,26,.2),transparent);box-shadow:inset 2px 0 0 #ff6a1a}body:not(.dark-mode) .nx-item.on{color:#0b1020}',
+    '.nx-item.on i{color:#ff6a1a}',
+    '.nx-item em{margin-left:auto;font-style:normal;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:linear-gradient(135deg,#ff3b30,#ff6a1a);color:#fff}',
+    '.nx-invite{margin:18px 2px 0;padding:14px;border-radius:16px;border:1px solid rgba(140,160,210,.14);background:rgba(24,32,56,.5);cursor:pointer;position:relative;overflow:hidden}',
+    'body:not(.dark-mode) .nx-invite{background:#f3f5f9;border-color:rgba(15,23,42,.09)}',
+    '.nx-invite h4{font-size:14px;margin:0 0 4px;color:inherit}.nx-invite p{font-size:12px;margin:0 0 10px;opacity:.75}',
+    '.nx-invite button{border:0;border-radius:9px;padding:7px 12px;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);color:#fff;font-weight:600;font-size:12px;cursor:pointer}',
+    '.nx-invite .g{position:absolute;right:8px;bottom:2px;font-size:32px;opacity:.5}',
+    '.nx-fab{display:none;position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:91;width:48px;height:48px;border-radius:50%;border:0;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);color:#fff;font-size:18px;box-shadow:0 10px 28px rgba(255,106,26,.45);cursor:pointer}',
+    '.nx-back{display:none}',
+    '@media (max-width:900px){body.nx-side-on{padding-left:0}.nx-side{transform:translateX(-104%);transition:transform .3s ease;width:274px;box-shadow:24px 0 60px rgba(0,0,0,.45)}.nx-side.open{transform:none}.nx-fab{display:block}.nx-back.on{display:block;position:fixed;inset:0;z-index:89;background:rgba(3,5,12,.6)}}',
+    '@media (prefers-reduced-motion:reduce){.nx-side{transition:none}}'
+  ].join('\n');
+  document.head.appendChild(css);
+  function build(){
+    var s = document.createElement('aside'); s.className = 'nx-side'; s.id = 'nxSide'; s.setAttribute('aria-label', 'Main navigation');
+    var h = '<a href="/" class="nx-logo" aria-label="Net365 home"><img src="/static/logo.png" alt="Net365" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="nx-mark"><i class="fas fa-bolt"></i></span></a>';
+    ITEMS.forEach(function(it){ h += '<a href="' + it[0] + '" class="nx-item' + (active(it[0]) ? ' on' : '') + '"' + (active(it[0]) ? ' aria-current="page"' : '') + '><i class="fas ' + it[1] + '"></i><span>' + it[2] + '</span>' + (it[3] ? '<em>' + it[3] + '</em>' : '') + '</a>'; });
+    h += '<div class="nx-invite" onclick="location.href=\'/?go=referrals\'"><h4>Invite &amp; Earn</h4><p>Invite friends and earn rewards as they recharge.</p><button type="button" onclick="event.stopPropagation();location.href=\'/?go=referrals\'">Invite now</button><div class="g">🎁</div></div>';
+    s.innerHTML = h;
+    var back = document.createElement('div'); back.className = 'nx-back'; back.id = 'nxBack';
+    var fab = document.createElement('button'); fab.className = 'nx-fab'; fab.type = 'button'; fab.setAttribute('aria-label', 'Open menu'); fab.innerHTML = '<i class="fas fa-bars"></i>';
+    function tog(){ var o = !s.classList.contains('open'); s.classList.toggle('open', o); back.classList.toggle('on', o); }
+    fab.addEventListener('click', tog); back.addEventListener('click', tog);
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && s.classList.contains('open')) tog(); });
+    document.body.appendChild(s); document.body.appendChild(back); document.body.appendChild(fab); document.body.classList.add('nx-side-on');
+  }
+  if (document.body) build(); else document.addEventListener('DOMContentLoaded', build);
+
+/* remember which page the customer started from, so the payment success page can send them back there */
+(function(){ function mark(){ try { var p = location.pathname.replace(/\/+$/, '') || '/'; localStorage.setItem('n365_return', JSON.stringify({ to: p, t: Date.now() })); } catch (e) {} }
+  window.addEventListener('beforeunload', mark); window.addEventListener('pagehide', mark); })();
+})();
+</script>
 </body>
 </html>

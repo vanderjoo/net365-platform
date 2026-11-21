@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Net365 for investors</title>
+<style>
+  :root{--bg:#fff;--ink:#14181f;--muted:#5b6575;--line:#e4e7ec;--accent:#ff6d00;--panel:#f7f8fa}
+  @media (prefers-color-scheme:dark){:root{--bg:#0d1117;--ink:#e6edf3;--muted:#9aa6b6;--line:#262e3a;--panel:#151b23}}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}
+  main{max-width:760px;margin:0 auto;padding:40px 20px 80px} h1{font-size:34px;line-height:1.15;margin:0 0 10px}
+  h2{margin:44px 0 8px;font-size:22px} p{color:var(--muted)} section{padding-top:4px}
+  .btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:12px 18px;font:600 15px system-ui;text-decoration:none;cursor:pointer}
+  .btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+  form{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;display:grid;gap:12px}
+  label{font-size:13px;color:var(--muted);display:grid;gap:4px} input,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+  .note{font-size:12.5px;color:var(--muted)} #msg{font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Net365: one platform for everyday digital transactions</h1>
+    <p>PLACEHOLDER: replace this page's text with your real investor story. Keep the <code>data-section</code>,
+       <code>data-track</code> attributes and the script tag at the bottom: they feed the investor analytics.</p>
+    <a class="btn" href="#interest" data-track="hero-request-access">Request access</a>
+    <a class="btn ghost" href="/static/net365-overview.pdf" data-track="overview-pdf" data-track-type="download">Download overview (PDF)</a>
+  </header>
+
+  <section data-section="Problem"><h2>The problem</h2><p>Replace with your text.</p></section>
+  <section data-section="Product"><h2>The product</h2><p>Replace with your text.</p></section>
+  <section data-section="Traction"><h2>Traction</h2><p>Replace with your text.</p></section>
+  <section data-section="Market"><h2>Market</h2><p>Replace with your text.</p></section>
+
+  <section id="interest" data-section="Interest form">
+    <h2>Talk to us</h2>
+    <form id="f">
+      <label>Your name<input name="name" required maxlength="100" autocomplete="name"></label>
+      <label>Work email<input name="email" type="email" required autocomplete="email"></label>
+      <label>Organisation<input name="organisation" maxlength="120" autocomplete="organization"></label>
+      <label>Role<input name="role" maxlength="80"></label>
+      <label>Message (optional)<textarea name="message" rows="3" maxlength="1000"></textarea></label>
+      <button class="btn" type="submit">Request access</button>
+      <div id="msg" role="status"></div>
+      <p class="note">We will email a link to confirm your address. We keep only the details you enter here.</p>
+    </form>
+  </section>
+
+  <p class="note" style="margin-top:40px">Privacy: this page measures which pages are read and for how long, and recognises the
+    organisation behind a visit from its network name. We do not set tracking cookies for this, and we ignore visitors who send
+    Do-Not-Track or Global Privacy Control. Details in our privacy policy.</p>
+</main>
+<script>
+  (function(){
+    var p=new URLSearchParams(location.search), m=document.getElementById('msg');
+    if(p.get('confirmed')==='1') m.textContent='Thank you. Your email is confirmed and we will be in touch.';
+    if(p.get('confirmed')==='0') m.textContent='That confirmation link is invalid or has expired. Please submit the form again.';
+    var f=document.getElementById('f'), opened=false;
+    f.addEventListener('focusin',function(){ if(!opened){opened=true; window.n365Investor&&n365Investor.track('form_open');} });
+    f.addEventListener('submit',async function(e){
+      e.preventDefault(); var b=f.querySelector('button'); b.disabled=true; m.textContent='Sending...';
+      var d=Object.fromEntries(new FormData(f).entries());
+      try{
+        var r=await fetch('/api/investors/interest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+        var j=await r.json().catch(function(){return{}});
+        m.textContent=j.message||j.error||'Something went wrong. Please try again.';
+        if(j.success){ window.n365Investor&&n365Investor.track('form_submit'); f.reset(); }
+      }catch(err){ m.textContent='Network error. Please try again.'; }
+      b.disabled=false;
+    });
+  })();
+</script>
+<script src="/investor_track.js" defer></script>
+</body>
+</html>

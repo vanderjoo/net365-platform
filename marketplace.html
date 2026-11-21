@@ -1,828 +1,1074 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Net365 Ad Marketplace</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <style>
-        /* =========================================================
-           MARKETPLACE STYLES (same as business page, plus hero)
-           ========================================================= */
-        :root {
-            --bg-primary: #f0f4f8;
-            --bg-secondary: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --border-color: #e2e8f0;
-            --card-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
-            --transition: all 0.3s ease;
-            --success: #22c55e;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --primary: #4f46e5;
-            --purple: #7c3aed;
-            --radius: 12px;
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Net365 Ad Marketplace</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<style>
+/* =========================================================
+   NET365 AD MARKETPLACE · FIRE BRAND · AI EDITION
+   ========================================================= */
+:root{
+  --nx-red:#ff3b30; --nx-orange:#ff7a00; --nx-orange-bright:#ffa640;
+  --nx-fire:linear-gradient(135deg,#ff3b30 0%,#ff7a00 55%,#ffa640 100%);
+  --nx-fire-soft:rgba(255,90,31,.14); --nx-fire-glow:rgba(255,90,31,.35);
+  --nx-cyan:#35d9ff; --nx-green:#39e58c; --nx-violet:#9b7cff;
+  --warning:#ffa640; --danger:#ff3b30;
 
-        body.dark-mode {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --text-primary: #e2e8f0;
-            --text-secondary: #94a3b8;
-            --border-color: #334155;
-        }
+  --bg-primary:#eef2f7; --bg-secondary:#ffffff; --bg-soft:#f8fafc; --bg-raise:#ffffff;
+  --text-primary:#0f172a; --text-secondary:#475569; --text-tertiary:#94a3b8;
+  --border-color:rgba(15,23,42,.09); --border-strong:rgba(255,122,0,.30);
+  --card-shadow:0 12px 32px rgba(15,23,42,.06), inset 0 1px 0 rgba(255,255,255,.9);
+  --card-shadow-hover:0 24px 55px rgba(255,90,31,.14), 0 8px 24px rgba(15,23,42,.08);
+  --grid:rgba(15,23,42,.08);
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-        body { background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; transition: var(--transition); }
+  /* data-viz slots (categorical, fixed order) */
+  --s-basic:#2a78d6; --s-premium:#eb6834; --s-dominant:#6250d6; --s-perf:#1baf7a;
+  --st-live:#16a34a; --st-pending:#d97706; --st-rejected:#e34948; --st-paused:#6b7280; --st-done:#6250d6;
 
-        /* Navigation */
-        .nav {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
-            padding: 12px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 8px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .nav .logo { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; color: var(--text-primary); text-decoration: none; }
-        .nav .logo i { color: var(--primary); }
-        .back-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 8px; transition: var(--transition); }
-        .back-btn:hover { background: var(--bg-primary); color: var(--text-primary); }
-        .theme-toggle { background: none; border: 1px solid var(--border-color); border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); transition: var(--transition); }
-        .theme-toggle:hover { background: var(--border-color); }
+  --transition:all .3s cubic-bezier(.16,1,.3,1);
+  --radius:14px; --radius-lg:20px;
+}
+body.dark-mode{
+  --bg-primary:#05070d; --bg-secondary:#0d1220; --bg-soft:rgba(26,32,52,.55); --bg-raise:#121a2e;
+  --text-primary:#f5f7fb; --text-secondary:#a3aec2; --text-tertiary:#6b778c;
+  --border-color:rgba(255,122,0,.15); --border-strong:rgba(255,122,0,.40);
+  --card-shadow:0 20px 55px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.04);
+  --card-shadow-hover:0 30px 70px rgba(255,90,31,.22), 0 12px 28px rgba(0,0,0,.35);
+  --grid:rgba(255,255,255,.08);
+  --s-basic:#3987e5; --s-premium:#d95926; --s-dominant:#9085e9; --s-perf:#199e70;
+  --st-live:#39e58c; --st-pending:#ffa640; --st-rejected:#e66767; --st-paused:#8c98ad; --st-done:#9085e9;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;}
+html{background:var(--bg-primary);scroll-behavior:smooth;transition:background .35s ease;}
+body{background:var(--bg-primary);color:var(--text-primary);min-height:100vh;position:relative;letter-spacing:.005em;overflow-x:hidden;transition:background .35s ease,color .35s ease;-webkit-font-smoothing:antialiased;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 800px 500px at 12% -10%,rgba(255,59,48,.10),transparent 60%),
+             radial-gradient(ellipse 700px 500px at 100% 12%,rgba(255,122,0,.08),transparent 60%),
+             radial-gradient(ellipse 500px 500px at 50% 110%,rgba(53,217,255,.05),transparent 65%);}
+body.dark-mode::before{background:radial-gradient(ellipse 800px 500px at 12% -10%,rgba(255,59,48,.22),transparent 60%),
+             radial-gradient(ellipse 700px 500px at 100% 12%,rgba(255,122,0,.18),transparent 60%),
+             radial-gradient(ellipse 500px 500px at 50% 110%,rgba(53,217,255,.08),transparent 65%);}
+button{font-family:inherit;}
+a{color:inherit;}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
 
-        .container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+/* ---------- NAV ---------- */
+.nav{margin:12px 16px 0;border:1px solid var(--border-color);border-radius:22px;padding:11px 14px;background:var(--bg-secondary);
+  box-shadow:0 18px 60px rgba(15,23,42,.06);backdrop-filter:blur(24px) saturate(150%);display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:12px;z-index:100;gap:10px;flex-wrap:wrap;}
+body.dark-mode .nav{background:rgba(8,12,21,.84);box-shadow:0 18px 60px rgba(0,0,0,.28);}
+.nav-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--text-secondary);text-decoration:none;font-size:13px;font-weight:600;padding:7px 12px;border-radius:10px;transition:var(--transition);}
+.back-btn:hover{background:var(--nx-fire-soft);color:var(--text-primary);}
+.logo{display:flex;align-items:center;gap:9px;font-size:17px;font-weight:800;text-decoration:none;letter-spacing:-.02em;white-space:nowrap;}
+.logo i{color:var(--nx-orange);filter:drop-shadow(0 0 10px rgba(255,122,0,.45));}
+.nav-right{display:flex;gap:8px;align-items:center;}
+.theme-toggle{width:38px;height:38px;border-radius:50%;border:1px solid var(--border-strong);background:var(--bg-soft);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:var(--transition);}
+.theme-toggle:hover{border-color:var(--nx-orange);color:var(--nx-orange);transform:rotate(12deg);}
+.btn{padding:10px 18px;border:none;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;gap:8px;text-decoration:none;}
+.btn-ghost{background:var(--bg-soft);color:var(--text-secondary);border:1px solid var(--border-color);}
+.btn-ghost:hover{border-color:var(--nx-orange);color:var(--nx-orange);}
+.btn-primary-bg{background:var(--nx-fire);color:#fff;box-shadow:0 8px 24px rgba(255,90,31,.32);}
+.btn-primary-bg:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(255,90,31,.48);}
+.btn[disabled]{opacity:.55;cursor:not-allowed;transform:none;}
 
-        /* Marketplace Hero */
-        .marketplace-hero {
-            background: linear-gradient(145deg, #1e3a8a, #312e81);
-            border-radius: 24px;
-            padding: 40px 48px;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 32px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(79, 70, 229, 0.25);
-        }
-        .marketplace-hero::after {
-            content: '📈';
-            position: absolute;
-            right: 40px;
-            bottom: 20px;
-            font-size: 90px;
-            opacity: 0.15;
-            pointer-events: none;
-        }
-        .marketplace-hero .badge {
-            background: #f59e0b;
-            color: #78350f;
-            padding: 4px 14px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            align-self: flex-start;
-        }
-        .marketplace-hero h1 { font-size: 32px; font-weight: 800; max-width: 600px; }
-        .marketplace-hero h1 i { color: #fbbf24; margin-right: 8px; }
-        .marketplace-hero p { font-size: 16px; opacity: 0.85; max-width: 540px; line-height: 1.6; }
-        .marketplace-hero .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
-        .btn-primary {
-            background: white; color: #1e3a8a; border: none; padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; transition: var(--transition);
-        }
-        .btn-primary:hover { transform: scale(1.02); box-shadow: 0 4px 20px rgba(255,255,255,0.25); }
-        .btn-outline-light {
-            background: transparent; color: white; border: 1.5px solid rgba(255,255,255,0.4); padding: 12px 28px; border-radius: 999px; font-weight: 600; font-size: 14px; cursor: pointer; transition: var(--transition);
-        }
-        .btn-outline-light:hover { background: rgba(255,255,255,0.1); border-color: white; }
+.container{max-width:1240px;margin:0 auto;padding:20px 18px 70px;position:relative;z-index:1;}
 
-        /* Stats */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 16px;
-            margin-bottom: 32px;
-        }
-        .stat-card {
-            background: var(--bg-secondary);
-            border-radius: var(--radius);
-            padding: 18px 20px;
-            border: 1px solid var(--border-color);
-            text-align: center;
-            transition: var(--transition);
-        }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--card-shadow); }
-        .stat-card .number { font-size: 28px; font-weight: 800; color: var(--text-primary); }
-        .stat-card .label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-top: 2px; }
-        .stat-card .icon { font-size: 20px; color: var(--primary); margin-bottom: 4px; }
+/* ---------- HERO ---------- */
+.hero{position:relative;overflow:hidden;border-radius:30px;padding:42px 44px 36px;color:#fff;margin-bottom:22px;
+  background:radial-gradient(circle at 88% 20%,rgba(255,166,64,.34),transparent 42%),radial-gradient(circle at 8% 110%,rgba(155,124,255,.28),transparent 40%),linear-gradient(135deg,#ff3b30 0%,#ff7a00 58%,#ffa640 100%);
+  box-shadow:0 24px 70px rgba(255,90,31,.32),inset 0 1px 0 rgba(255,255,255,.18);}
+.hero::after{content:'';position:absolute;right:-90px;top:-90px;width:340px;height:340px;border-radius:50%;border:1px solid rgba(255,255,255,.16);box-shadow:0 0 0 44px rgba(255,255,255,.04),0 0 0 88px rgba(255,255,255,.02);pointer-events:none;}
+.hero .grid-fx{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(115deg,transparent 30%,#000 100%);-webkit-mask-image:linear-gradient(115deg,transparent 30%,#000 100%);pointer-events:none;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.2);padding:6px 14px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(8px);position:relative;}
+.hero-badge i{font-size:10px;}
+.hero h1{font-size:clamp(28px,4.4vw,46px);font-weight:900;letter-spacing:-.045em;line-height:1.04;max-width:700px;margin:16px 0 12px;position:relative;}
+.hero p{font-size:15.5px;line-height:1.6;max-width:600px;font-weight:500;opacity:.95;position:relative;}
+.advisor{margin-top:24px;max-width:760px;position:relative;}
+.advisor label{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;opacity:.95;}
+.advisor-row{display:flex;gap:8px;background:rgba(255,255,255,.96);border-radius:18px;padding:7px;box-shadow:0 18px 44px rgba(0,0,0,.22);}
+body.dark-mode .advisor-row{background:rgba(10,14,26,.92);}
+.advisor-row input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-size:15px;padding:11px 14px;color:#0f172a;font-weight:500;}
+body.dark-mode .advisor-row input{color:#f5f7fb;}
+.advisor-row input::placeholder{color:#94a3b8;}
+.advisor-row .btn{border-radius:13px;padding:11px 20px;white-space:nowrap;}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.chip{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.34);color:#fff;border-radius:999px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;transition:var(--transition);backdrop-filter:blur(8px);}
+.chip:hover{background:rgba(255,255,255,.3);transform:translateY(-1px);}
+.advice{display:none;margin-top:16px;background:var(--bg-secondary);color:var(--text-primary);border-radius:20px;padding:18px 20px;box-shadow:0 22px 50px rgba(0,0,0,.28);animation:rise .5s cubic-bezier(.16,1,.3,1);}
+.advice.show{display:block;}
+.advice-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.advice-head .tag{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--nx-orange);}
+.advice h3{font-size:18px;font-weight:800;letter-spacing:-.02em;}
+.advice ul{list-style:none;margin:10px 0 14px;}
+.advice li{display:flex;gap:9px;font-size:13.5px;color:var(--text-secondary);padding:3px 0;line-height:1.5;}
+.advice li i{color:var(--nx-orange);margin-top:3px;font-size:12px;}
+.advice-meta{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;}
+.advice-meta div{font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
+.advice-meta b{display:block;font-size:19px;color:var(--text-primary);letter-spacing:-.02em;margin-top:2px;text-transform:none;}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
-        /* Pricing */
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
-            margin-bottom: 40px;
-        }
-        .pricing-card {
-            background: var(--bg-secondary);
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            padding: 24px 20px;
-            transition: var(--transition);
-            position: relative;
-        }
-        .pricing-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow); }
-        .pricing-card.popular { border-color: var(--primary); }
-        .pricing-card.popular::before {
-            content: 'POPULAR';
-            position: absolute;
-            top: -10px;
-            right: 16px;
-            background: var(--primary);
-            color: white;
-            font-size: 9px;
-            font-weight: 700;
-            padding: 2px 12px;
-            border-radius: 999px;
-            letter-spacing: 0.5px;
-        }
-        .pricing-card .plan-name { font-weight: 700; font-size: 18px; color: var(--text-primary); }
-        .pricing-card .plan-price { font-size: 28px; font-weight: 800; color: var(--text-primary); margin: 8px 0 4px; }
-        .pricing-card .plan-price small { font-size: 14px; font-weight: 400; color: var(--text-secondary); }
-        .pricing-card .plan-features { list-style: none; padding: 0; margin: 16px 0; }
-        .pricing-card .plan-features li { padding: 6px 0; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
-        .pricing-card .plan-features li i { color: var(--success); font-size: 12px; width: 16px; }
-        .btn-plan { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 999px; background: transparent; color: var(--text-primary); font-weight: 600; cursor: pointer; transition: var(--transition); }
-        .btn-plan:hover { background: var(--primary); color: white; border-color: var(--primary); }
-        .btn-plan.primary { background: var(--primary); color: white; border-color: var(--primary); }
-        .btn-plan.primary:hover { opacity: 0.85; }
+/* ---------- TABS ---------- */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:6px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:18px;margin-bottom:24px;box-shadow:var(--card-shadow);scrollbar-width:none;position:sticky;top:78px;z-index:50;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{flex:1;min-width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:13px;border:0;background:transparent;color:var(--text-secondary);font-weight:700;font-size:13.5px;cursor:pointer;transition:var(--transition);white-space:nowrap;}
+.tab:hover{color:var(--text-primary);background:var(--nx-fire-soft);}
+.tab.active{background:var(--nx-fire);color:#fff;box-shadow:0 8px 22px rgba(255,90,31,.34);}
+.tab .count{background:rgba(255,255,255,.28);border-radius:999px;font-size:11px;padding:1px 8px;font-weight:800;}
+.tab:not(.active) .count{background:var(--nx-fire-soft);color:var(--nx-orange);}
+.panel{display:none;animation:rise .45s cubic-bezier(.16,1,.3,1);}
+.panel.active{display:block;}
 
-        /* Steps */
-        .steps-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-        .step-item { text-align: center; padding: 20px; }
-        .step-item .step-num { width: 48px; height: 48px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; margin: 0 auto 12px; }
-        .step-item h4 { color: var(--text-primary); margin-bottom: 4px; }
-        .step-item p { color: var(--text-secondary); font-size: 13px; }
+/* ---------- SHARED BLOCKS ---------- */
+.section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:6px 0 16px;}
+.section-head h2{font-size:21px;font-weight:800;letter-spacing:-.03em;}
+.section-head p{color:var(--text-secondary);font-size:13.5px;margin-top:4px;font-weight:500;}
+.card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--card-shadow);position:relative;transition:var(--transition);}
+.card.hover:hover{transform:translateY(-4px);border-color:var(--border-strong);box-shadow:var(--card-shadow-hover);}
+.card h3{font-size:15px;font-weight:800;letter-spacing:-.02em;margin-bottom:3px;}
+.card .sub{font-size:12.5px;color:var(--text-secondary);font-weight:500;margin-bottom:14px;line-height:1.5;}
+.grid{display:grid;gap:16px;}
+.g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
+.g2{grid-template-columns:1.2fr 1fr;}
+.mb{margin-bottom:24px;}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:4px 11px;border-radius:999px;letter-spacing:.04em;}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.dot.live{background:var(--nx-green);box-shadow:0 0 0 0 rgba(57,229,140,.6);animation:ping 1.8s infinite;}
+@keyframes ping{70%{box-shadow:0 0 0 9px rgba(57,229,140,0)}100%{box-shadow:0 0 0 0 rgba(57,229,140,0)}}
 
-        /* Campaign Form (copied from business.html) */
-        .campaign-form {
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            padding: 24px;
-            border: 1px solid var(--border-color);
-            margin-top: 24px;
-        }
-        .campaign-form .form-group { margin-bottom: 16px; }
-        .campaign-form .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
-        .campaign-form .form-group input,
-        .campaign-form .form-group select,
-        .campaign-form .form-group textarea {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 14px;
-            outline: none;
-            transition: var(--transition);
-        }
-        .campaign-form .form-group input:focus,
-        .campaign-form .form-group select:focus,
-        .campaign-form .form-group textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
-        }
-        .campaign-form .form-group textarea { min-height: 120px; resize: vertical; }
-        .campaign-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+/* KPI */
+.kpi{padding:18px;overflow:hidden;}
+.kpi .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--nx-fire-soft);color:var(--nx-orange);font-size:16px;margin-bottom:12px;border:1px solid rgba(255,122,0,.2);}
+.kpi .num{font-size:28px;font-weight:900;letter-spacing:-.04em;line-height:1.05;font-variant-numeric:tabular-nums;}
+.kpi .lab{font-size:11px;text-transform:uppercase;letter-spacing:.09em;font-weight:700;color:var(--text-secondary);margin-top:5px;}
+.kpi .note{font-size:12px;color:var(--text-tertiary);margin-top:6px;font-weight:500;}
 
-        .btn { padding: 10px 20px; border: none; border-radius: var(--radius); font-weight: 600; font-size: 13px; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; }
-        .btn-primary-bg { background: var(--primary); color: white; }
-        .btn-primary-bg:hover { background: #4338ca; transform: translateY(-1px); }
-        .btn-success { background: var(--success); color: white; }
-        .btn-success:hover { background: #16a34a; transform: translateY(-1px); }
+/* bars */
+.bars{display:flex;flex-direction:column;gap:14px;}
+.bar-row .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;font-size:13px;}
+.bar-row .top b{font-weight:800;}
+.bar-row .top span{color:var(--text-secondary);font-variant-numeric:tabular-nums;font-weight:600;}
+.track{height:10px;background:var(--grid);border-radius:999px;overflow:hidden;}
+.fill{height:100%;border-radius:999px;transition:width .9s cubic-bezier(.16,1,.3,1);width:0;}
+.bar-row small{display:block;font-size:11.5px;color:var(--text-tertiary);margin-top:5px;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);font-weight:600;margin-top:12px;}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;}
 
-        /* Toast */
-        .toast {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            padding: 16px 24px;
-            border-radius: var(--radius);
-            color: white;
-            font-weight: 500;
-            z-index: 99999;
-            animation: slideIn 0.3s ease;
-            max-width: 420px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        .toast-success { background: var(--success); }
-        .toast-error { background: var(--danger); }
-        .toast-info { background: var(--info); }
-        .toast-warning { background: var(--warning); }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+/* insights */
+.insights{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}
+.insight{display:flex;gap:13px;padding:15px;border-radius:16px;background:var(--bg-soft);border:1px solid var(--border-color);}
+.insight .ic{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:15px;}
+.insight h4{font-size:13.5px;font-weight:800;letter-spacing:-.01em;margin-bottom:3px;}
+.insight p{font-size:12.8px;line-height:1.5;color:var(--text-secondary);font-weight:500;}
+.insight .act{margin-top:8px;font-size:12px;font-weight:800;color:var(--nx-orange);background:none;border:0;cursor:pointer;padding:0;}
+.ic.good{background:rgba(57,229,140,.15);color:var(--st-live);} .ic.warn{background:rgba(255,166,64,.16);color:var(--st-pending);}
+.ic.info{background:rgba(53,217,255,.14);color:#0891b2;} .ic.ai{background:var(--nx-fire-soft);color:var(--nx-orange);}
+body.dark-mode .ic.info{color:var(--nx-cyan);}
 
-        @media (max-width: 768px) {
-            .marketplace-hero { padding: 28px 20px; }
-            .marketplace-hero h1 { font-size: 24px; }
-            .marketplace-hero::after { font-size: 60px; right: 20px; bottom: 10px; }
-            .campaign-form .form-row { grid-template-columns: 1fr; }
-            .pricing-grid { grid-template-columns: 1fr 1fr; }
-        }
-        @media (max-width: 480px) {
-            .pricing-grid { grid-template-columns: 1fr; }
-            .marketplace-hero .actions { flex-direction: column; }
-            .btn-primary, .btn-outline-light { text-align: center; justify-content: center; }
-        }
-    </style>
+/* ---------- PLANS ---------- */
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:18px;margin-bottom:26px;}
+.plan{padding:26px 22px;overflow:hidden;}
+.plan.popular{border-color:var(--nx-orange);box-shadow:0 0 44px rgba(255,90,31,.15),var(--card-shadow);}
+.plan.popular::before{content:'MOST POPULAR';position:absolute;top:-1px;right:16px;background:var(--nx-fire);color:#fff;font-size:9px;font-weight:800;padding:5px 12px;border-radius:0 0 10px 10px;letter-spacing:.1em;}
+.plan .nm{font-weight:800;font-size:17px;letter-spacing:-.02em;display:flex;align-items:center;gap:9px;}
+.plan .nm .sw{width:10px;height:10px;border-radius:3px;}
+.plan .pr{font-size:28px;font-weight:900;letter-spacing:-.04em;margin:12px 0 2px;}
+.plan .pr small{font-size:12.5px;font-weight:600;color:var(--text-secondary);letter-spacing:0;}
+.plan .cpm{font-size:12px;color:var(--text-tertiary);font-weight:600;margin-bottom:6px;}
+.plan ul{list-style:none;margin:14px 0 18px;}
+.plan li{padding:6px 0;font-size:13px;color:var(--text-secondary);display:flex;gap:10px;font-weight:500;align-items:flex-start;line-height:1.45;}
+.plan li i{color:var(--nx-orange);font-size:12px;margin-top:3px;flex:none;}
+.btn-plan{width:100%;padding:12px;border:1px solid var(--border-color);border-radius:999px;background:var(--bg-soft);color:var(--text-primary);font-weight:800;font-size:13.5px;cursor:pointer;transition:var(--transition);}
+.btn-plan:hover{background:var(--nx-fire);color:#fff;border-color:transparent;box-shadow:0 8px 22px rgba(255,90,31,.32);transform:translateY(-1px);}
+.btn-plan.primary{background:var(--nx-fire);color:#fff;border-color:transparent;box-shadow:0 8px 22px rgba(255,90,31,.35);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--border-color);white-space:nowrap;}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-secondary);font-weight:800;}
+td.y{color:var(--st-live);font-weight:800;} td.n{color:var(--text-tertiary);}
+
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;}
+.step{text-align:center;padding:22px 16px;}
+.step .n{width:46px;height:46px;border-radius:50%;background:var(--nx-fire);color:#fff;display:grid;place-items:center;font-weight:900;font-size:17px;margin:0 auto 12px;box-shadow:0 10px 26px rgba(255,90,31,.4);}
+.step h4{font-weight:800;margin-bottom:5px;letter-spacing:-.02em;} .step p{color:var(--text-secondary);font-size:13px;line-height:1.5;font-weight:500;}
+
+/* ---------- STUDIO ---------- */
+.studio{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start;}
+.form-group{margin-bottom:15px;}
+.form-group label{display:block;font-size:11.5px;font-weight:800;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:12px 15px;border:1.5px solid var(--border-color);border-radius:var(--radius);background:var(--bg-soft);color:var(--text-primary);font-size:14px;outline:none;transition:var(--transition);font-weight:500;}
+.form-group textarea{min-height:110px;resize:vertical;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--nx-orange);box-shadow:0 0 0 4px rgba(255,122,0,.14);background:var(--bg-secondary);}
+.form-group small{display:block;color:var(--text-secondary);font-size:12px;margin-top:6px;font-weight:500;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.tier-info{background:var(--nx-fire-soft);border:1px solid rgba(255,122,0,.24);border-radius:13px;padding:14px;}
+.tier-info strong{display:block;}
+.tier-info div{font-size:12.5px;color:var(--text-secondary);margin-top:4px;line-height:1.5;}
+.target-title{font-size:13px;font-weight:800;margin:18px 0 12px;}
+.target-title span{color:var(--text-secondary);font-weight:500;}
+
+.preview-wrap{position:sticky;top:150px;display:flex;flex-direction:column;gap:16px;}
+.phone-bg{background:linear-gradient(160deg,rgba(255,59,48,.12),rgba(155,124,255,.10));border:1px solid var(--border-color);border-radius:26px;padding:22px 18px;display:grid;place-items:center;}
+.receipt{width:100%;max-width:300px;background:#fff;color:#0f172a;border-radius:6px 6px 0 0;padding:18px 18px 22px;box-shadow:0 22px 50px rgba(15,23,42,.28);position:relative;font-size:12.5px;}
+.receipt::after{content:'';position:absolute;left:0;right:0;bottom:-9px;height:10px;background:linear-gradient(135deg,#fff 50%,transparent 50%) 0 0/14px 10px,linear-gradient(225deg,#fff 50%,transparent 50%) 0 0/14px 10px;}
+.receipt .rh{display:flex;align-items:center;justify-content:space-between;font-weight:900;letter-spacing:.14em;font-size:12px;}
+.receipt .ok{color:#16a34a;font-weight:800;font-size:11px;letter-spacing:.04em;}
+.receipt .line{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #e2e8f0;color:#475569;}
+.receipt .line b{color:#0f172a;}
+.receipt .adbox{margin-top:14px;border:1.5px solid #ff7a00;border-radius:12px;padding:12px;background:linear-gradient(135deg,rgba(255,90,31,.07),rgba(255,166,64,.1));position:relative;}
+.receipt .adtag{position:absolute;top:-9px;left:10px;background:#fff;padding:0 7px;font-size:9.5px;font-weight:800;color:#ff7a00;letter-spacing:.1em;text-transform:uppercase;}
+.receipt .adt{font-weight:800;font-size:13.5px;letter-spacing:-.01em;word-break:break-word;}
+.receipt .adb{color:#475569;margin:5px 0 9px;line-height:1.45;word-break:break-word;}
+.receipt .adcta{display:inline-block;background:linear-gradient(135deg,#ff3b30,#ff7a00);color:#fff;font-weight:800;font-size:11.5px;padding:7px 14px;border-radius:999px;}
+.receipt .ghost{color:#94a3b8;font-style:italic;}
+
+.score{display:flex;gap:16px;align-items:center;}
+.ring{position:relative;width:86px;height:86px;flex:none;}
+.ring svg{transform:rotate(-90deg);}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:22px;font-weight:900;letter-spacing:-.04em;}
+.checks{list-style:none;flex:1;}
+.checks li{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:3px 0;color:var(--text-secondary);font-weight:500;line-height:1.4;}
+.checks li i{margin-top:2px;font-size:12px;flex:none;}
+.checks .ok i{color:var(--st-live);} .checks .no i{color:var(--text-tertiary);}
+.est{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.est div{background:var(--bg-soft);border:1px solid var(--border-color);border-radius:13px;padding:11px;}
+.est span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-tertiary);font-weight:800;}
+.est b{display:block;font-size:17px;letter-spacing:-.03em;margin-top:3px;font-variant-numeric:tabular-nums;}
+
+/* ---------- CAMPAIGNS ---------- */
+.donut-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap;}
+.donut{position:relative;width:170px;height:170px;flex:none;}
+.donut .mid{position:absolute;inset:0;display:grid;place-items:center;text-align:center;}
+.donut .mid b{font-size:28px;font-weight:900;letter-spacing:-.04em;display:block;line-height:1;}
+.donut .mid span{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-secondary);font-weight:800;}
+.status-list{flex:1;min-width:180px;display:flex;flex-direction:column;gap:9px;}
+.status-list div{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;}
+.status-list i{width:11px;height:11px;border-radius:3px;flex:none;}
+.status-list em{margin-left:auto;font-style:normal;font-weight:800;font-variant-numeric:tabular-nums;}
+.camp{padding:18px;margin-bottom:12px;}
+.camp-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+.camp-top strong{font-weight:800;font-size:15px;letter-spacing:-.02em;word-break:break-word;}
+.badges{display:flex;gap:6px;flex-wrap:wrap;}
+.camp-grid{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;margin-top:14px;}
+.mini-ring{position:relative;width:74px;height:74px;}
+.mini-ring svg{transform:rotate(-90deg);} .mini-ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:16px;font-weight:900;}
+.camp-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;}
+.camp-stats span{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-tertiary);font-weight:800;display:block;}
+.camp-stats b{font-size:15px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+.camp-ai{margin-top:12px;font-size:12.5px;color:var(--text-secondary);background:var(--bg-soft);border:1px dashed var(--border-color);border-radius:12px;padding:10px 12px;line-height:1.5;display:flex;gap:9px;}
+.camp-ai i{color:var(--nx-orange);margin-top:3px;}
+.reason{font-size:12.5px;color:var(--st-rejected);margin-top:10px;font-weight:600;}
+.empty{padding:34px 20px;text-align:center;border:1.5px dashed var(--border-color);border-radius:18px;background:var(--bg-soft);color:var(--text-secondary);}
+.empty i{font-size:30px;color:var(--nx-orange);margin-bottom:10px;display:block;}
+.empty h4{color:var(--text-primary);font-size:16px;margin-bottom:5px;}
+.view-toggle{display:inline-flex;border:1px solid var(--border-color);border-radius:11px;overflow:hidden;}
+.view-toggle button{border:0;background:var(--bg-soft);color:var(--text-secondary);font-size:12px;font-weight:700;padding:7px 12px;cursor:pointer;}
+.view-toggle button.on{background:var(--nx-fire);color:#fff;}
+
+/* skeleton */
+.skel{background:linear-gradient(90deg,var(--grid) 25%,transparent 50%,var(--grid) 75%);background-size:200% 100%;animation:sk 1.4s infinite;border-radius:10px;height:14px;}
+@keyframes sk{to{background-position:-200% 0}}
+
+/* toast */
+.toast{position:fixed;bottom:24px;right:24px;padding:15px 22px;border-radius:14px;color:#fff;font-weight:600;font-size:14px;z-index:99999;animation:slideIn .35s cubic-bezier(.34,1.56,.64,1);max-width:420px;box-shadow:0 20px 50px rgba(0,0,0,.3);}
+.toast-success{background:linear-gradient(135deg,#16a34a,#39e58c);} .toast-error{background:linear-gradient(135deg,#dc2626,#ff3b30);}
+.toast-info{background:linear-gradient(135deg,#ff3b30,#ff7a00);} .toast-warning{background:linear-gradient(135deg,#d97706,#ffa640);}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:none;opacity:1}}
+
+@media (max-width:980px){.studio{grid-template-columns:1fr;} .preview-wrap{position:static;} .g2{grid-template-columns:1fr;}}
+@media (max-width:768px){
+  .nav{margin:8px 8px 0;border-radius:18px;flex-wrap:nowrap;} .logo span{font-size:14px;} .nav-right .btn{padding:9px 12px;font-size:12px;} .nav-left{flex:1;} .back-btn span.t{display:none;} .nav-right .btn-ghost{display:none;}
+  .container{padding:14px 12px 60px;} .hero{padding:26px 20px 24px;border-radius:24px;}
+  .advisor-row{flex-direction:column;} .advisor-row .btn{justify-content:center;}
+  .form-row{grid-template-columns:1fr;} .tabs{top:70px;} .est{grid-template-columns:1fr 1fr 1fr;}
+  .camp-grid{grid-template-columns:1fr;justify-items:start;}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+</style>
 </head>
 <body>
-    <nav class="nav">
-        <div style="display:flex;align-items:center;gap:12px;">
-            <a href="/business" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Business</a>
-            <a href="#" class="logo"><i class="fas fa-store-alt"></i> Net365 Ad Marketplace</a>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-            <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
-            <a href="/admin" class="btn" style="text-decoration:none;"><i class="fas fa-shield-halved"></i> Admin</a>
-            <button class="btn btn-primary-bg" onclick="document.getElementById('campaignForm').scrollIntoView({behavior:'smooth'})">
-                <i class="fas fa-rocket"></i> Launch Campaign
-            </button>
-        </div>
-    </nav>
 
-    <div class="container">
-        <!-- Hero -->
-        <div class="marketplace-hero">
-            <span class="badge"><i class="fas fa-store-alt"></i> Marketplace</span>
-            <h1><i class="fas fa-bullhorn"></i> Turn Receipts into Revenue</h1>
-            <p>
-                Reach thousands of verified Net365 users directly on their transaction receipts.
-                <br />Target by transaction type, amount, and customer behavior.
-            </p>
-            <div class="actions">
-                <button class="btn-primary" onclick="document.getElementById('campaignForm').scrollIntoView({behavior:'smooth'})">
-                    <i class="fas fa-rocket"></i> Launch Campaign
-                </button>
-                <button class="btn-outline-light" onclick="window.location.href='/admin'">
-                    <i class="fas fa-chart-line"></i> View Dashboard
-                </button>
-            </div>
-        </div>
+<nav class="nav" aria-label="Marketplace">
+  <div class="nav-left">
+    <a href="/business" class="back-btn"><i class="fas fa-arrow-left"></i> <span class="t">Business</span></a>
+    <a href="#overview" class="logo" data-go="overview"><i class="fas fa-store-alt"></i> <span>Net365 Ad Marketplace</span></a>
+  </div>
+  <div class="nav-right">
+    <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()" aria-label="Toggle light or dark theme"><i class="fas fa-moon" id="themeIcon"></i></button>
+    <a href="/admin" class="btn btn-ghost"><i class="fas fa-shield-halved"></i> Admin</a>
+    <button class="btn btn-primary-bg" onclick="goTab('create')"><i class="fas fa-rocket"></i> Launch Campaign</button>
+  </div>
+</nav>
 
-        <!-- Stats -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="icon"><i class="fas fa-eye"></i></div>
-                <div class="number">10,000+</div>
-                <div class="label">Daily Receipt Views</div>
-            </div>
-            <div class="stat-card">
-                <div class="icon"><i class="fas fa-users"></i></div>
-                <div class="number">150+</div>
-                <div class="label">Active Advertisers</div>
-            </div>
-            <div class="stat-card">
-                <div class="icon"><i class="fas fa-percent"></i></div>
-                <div class="number">4.8%</div>
-                <div class="label">Avg. Click-through Rate</div>
-            </div>
-            <div class="stat-card">
-                <div class="icon"><i class="fas fa-globe"></i></div>
-                <div class="number">190+</div>
-                <div class="label">Countries Reached</div>
-            </div>
-        </div>
+<div class="container">
 
-        <!-- Pricing -->
-        <div style="display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
-            <div>
-                <h2 style="font-size: 22px; font-weight: 700; color: var(--text-primary);">📋 Ad Campaign Tiers</h2>
-                <p style="color: var(--text-secondary); font-size: 14px;">Choose the plan that fits your marketing budget.</p>
-            </div>
-            <span style="font-size: 12px; color: var(--text-secondary); background: var(--bg-secondary); padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border-color);">
-                <i class="fas fa-lock" style="color: var(--success);"></i> Secure PCI-DSS Level 1
-            </span>
-        </div>
+  <!-- HERO + AI ADVISOR -->
+  <header class="hero">
+    <div class="grid-fx"></div>
+    <span class="hero-badge"><i class="fas fa-wand-magic-sparkles"></i> AI-assisted advertising</span>
+    <h1>Turn every receipt into revenue.</h1>
+    <p>Put your brand in front of Net365 customers at the exact moment they pay. Tell the Plan Advisor what you want to achieve and it picks the right tier, budget and targeting.</p>
+    <div class="advisor">
+      <label for="advisorInput"><i class="fas fa-sparkles"></i> Plan Advisor</label>
+      <div class="advisor-row">
+        <input id="advisorInput" type="text" maxlength="300" autocomplete="off" placeholder="e.g. I sell data bundles and want new customers in the evening, budget ₦300k" />
+        <button class="btn btn-primary-bg" id="advisorBtn" type="button"><i class="fas fa-bolt"></i> Recommend a plan</button>
+      </div>
+      <div class="chips" id="advisorChips">
+        <button class="chip" type="button">Try the platform with ₦100k</button>
+        <button class="chip" type="button">Target new airtime buyers, ₦300k</button>
+        <button class="chip" type="button">Own every receipt, launch week, ₦1m</button>
+      </div>
+      <div class="advice" id="advice" aria-live="polite"></div>
+    </div>
+  </header>
 
-        <div class="pricing-grid">
-            <div class="pricing-card">
-                <div class="plan-name">Basic</div>
-                <div class="plan-price">₦100,000 <small>/campaign</small></div>
-                <ul class="plan-features">
-                    <li><i class="fas fa-check-circle"></i> 100,000 Impressions</li>
-                    <li><i class="fas fa-check-circle"></i> Standard rotation</li>
-                    <li><i class="fas fa-check-circle"></i> No targeting</li>
-                    <li><i class="fas fa-check-circle"></i> Basic reporting</li>
-                </ul>
-                <button class="btn-plan" onclick="selectTier('basic')">Get Started</button>
-            </div>
-            <div class="pricing-card popular">
-                <div class="plan-name">Premium</div>
-                <div class="plan-price">₦250k – ₦500k</div>
-                <ul class="plan-features">
-                    <li><i class="fas fa-check-circle"></i> Flexible impressions</li>
-                    <li><i class="fas fa-check-circle"></i> 🎯 Advanced Targeting</li>
-                    <li><i class="fas fa-check-circle"></i> Customer type &amp; hour</li>
-                    <li><i class="fas fa-check-circle"></i> Detailed analytics</li>
-                </ul>
-                <button class="btn-plan primary" onclick="selectTier('premium')">Get Started</button>
-            </div>
-            <div class="pricing-card">
-                <div class="plan-name">Dominant</div>
-                <div class="plan-price">₦1,000,000</div>
-                <ul class="plan-features">
-                    <li><i class="fas fa-check-circle"></i> 200,000 Impressions</li>
-                    <li><i class="fas fa-check-circle"></i> 🏆 Exclusive Slot</li>
-                    <li><i class="fas fa-check-circle"></i> Shows on EVERY receipt</li>
-                    <li><i class="fas fa-check-circle"></i> Premium visibility</li>
-                </ul>
-                <button class="btn-plan" onclick="selectTier('dominant')">Get Started</button>
-            </div>
-            <div class="pricing-card">
-                <div class="plan-name">Performance (CPA) <small style="font-weight:400;">— Coming Soon</small></div>
-                <div class="plan-price">₦200 <small>/click</small></div>
-                <ul class="plan-features">
-                    <li><i class="fas fa-check-circle"></i> Pay-per-click</li>
-                    <li><i class="fas fa-check-circle"></i> Min. 100 clicks</li>
-                    <li><i class="fas fa-check-circle"></i> 📊 Conversion tracking</li>
-                    <li><i class="fas fa-check-circle"></i> Fraud protection</li>
-                </ul>
-                <button class="btn-plan" onclick="showToast('📊 Performance (pay-per-click) campaigns are coming soon — try Basic, Premium, or Dominant for now.', 'info')">Coming Soon</button>
-            </div>
-        </div>
+  <!-- TABS -->
+  <div class="tabs" role="tablist" id="tabs">
+    <button class="tab active" role="tab" data-tab="overview"><i class="fas fa-chart-pie"></i> Market overview</button>
+    <button class="tab" role="tab" data-tab="plans"><i class="fas fa-layer-group"></i> Plans</button>
+    <button class="tab" role="tab" data-tab="create"><i class="fas fa-wand-magic-sparkles"></i> Campaign studio</button>
+    <button class="tab" role="tab" data-tab="campaigns"><i class="fas fa-chart-line"></i> My campaigns <span class="count" id="tabCount">0</span></button>
+  </div>
 
-        <!-- How it Works -->
-        <h2 style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin-top: 20px;">⚡ How It Works</h2>
-        <div class="steps-grid">
-            <div class="step-item">
-                <div class="step-num">1</div>
-                <h4>Create Campaign</h4>
-                <p>Write your ad, select a tier, and set your budget.</p>
-            </div>
-            <div class="step-item">
-                <div class="step-num">2</div>
-                <h4>Target &amp; Launch</h4>
-                <p>Define your audience (new users, high spenders, etc.).</p>
-            </div>
-            <div class="step-item">
-                <div class="step-num">3</div>
-                <h4>Monitor &amp; Optimize</h4>
-                <p>Track impressions, clicks, and conversions in real time.</p>
-            </div>
-            <div class="step-item">
-                <div class="step-num">4</div>
-                <h4>Grow Your Brand</h4>
-                <p>Reach engaged users right when they complete a transaction.</p>
-            </div>
-        </div>
+  <!-- ===================== OVERVIEW ===================== -->
+  <section class="panel active" id="panel-overview" role="tabpanel">
+    <div class="grid g4 mb" id="claims"></div>
 
-        <!-- Campaign Form -->
-        <div id="campaignForm" class="campaign-form">
-            <h3 style="margin-bottom: 4px; color: var(--text-primary);">🧾 Create Your Ad Campaign</h3>
-            <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">
-                Your message appears on other Net365 users' transaction receipts.
-                Every campaign is reviewed before it goes live.
-            </p>
-
-            <div class="form-group" style="margin-bottom:16px;">
-                <label>Campaign Tier</label>
-                <select id="adTier" onchange="onAdTierChange()">
-                    <option value="basic">Basic — Receipt Banner</option>
-                    <option value="premium">Premium — Targeted Receipt Ads</option>
-                    <option value="dominant">Sponsored — Dominant Position</option>
-                    <option value="performance" disabled>Performance — Pay Per Click (coming soon)</option>
-                </select>
-                <small style="color:var(--text-secondary);font-size:12px;display:block;margin-top:4px;" id="adTierDesc"></small>
-            </div>
-
-            <!-- Tier-specific pricing -->
-            <div id="adPricingBasic" class="form-group" style="display:none;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;padding:12px;margin-bottom:16px;">
-                <strong style="color:var(--text-primary);" id="adBasicPriceLine">₦100,000 for 100,000 impressions</strong>
-                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Fixed package — logo, banner, link, and campaign analytics included.</div>
-            </div>
-
-            <div id="adPricingPremium" class="form-group" style="display:none;margin-bottom:16px;">
-                <label>Budget (₦)</label>
-                <input type="number" id="adBudget" placeholder="e.g., 300000" step="1000" />
-                <small style="color:var(--text-secondary);font-size:11px;" id="adPremiumEstimate">Choose a budget between ₦250,000 and ₦500,000</small>
-            </div>
-
-            <div id="adPricingDominant" class="form-group" style="display:none;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;padding:12px;margin-bottom:16px;">
-                <strong style="color:var(--text-primary);" id="adDominantPriceLine">₦1,000,000 for 200,000 impressions</strong>
-                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">Exclusive — your ad shows on <em>every</em> receipt until the budget runs out. Only one Sponsored campaign can run at a time.</div>
-                <div id="adDominantAvailability" style="font-size:12px;font-weight:600;margin-top:6px;"></div>
-            </div>
-
-            <div id="adPricingPerformance" class="form-group" style="display:none;margin-bottom:16px;">
-                <label>Clicks to Buy</label>
-                <input type="number" id="adClicks" placeholder="e.g., 1000" min="100" step="50" />
-                <small style="color:var(--text-secondary);font-size:11px;" id="adPerformanceEstimate">Enter clicks to see cost</small>
-                <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">
-                    <i class="fas fa-qrcode"></i> Includes a scannable QR code and tracked link on the receipt. You're only billed for verified clicks.
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Ad Title</label>
-                    <input type="text" id="adTitle" placeholder="e.g., Fresh Jollof Delivery" maxlength="80" />
-                </div>
-                <div class="form-group">
-                    <label>Button Text (optional)</label>
-                    <input type="text" id="adCtaText" placeholder="e.g., Order now" />
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Message</label>
-                <textarea id="adBody" placeholder="What should Net365 users see?" maxlength="400"></textarea>
-                <small style="color:var(--text-secondary);font-size:11px;" id="adCharCount">0 / 400 characters</small>
-            </div>
-            <div class="form-group">
-                <label>Link</label>
-                <input type="text" id="adCtaUrl" placeholder="https://..." />
-            </div>
-
-            <div id="adTargetingSection">
-                <h4 style="font-size:13px;color:var(--text-primary);margin:16px 0 8px;">
-                    🎯 Targeting <span style="color:var(--text-secondary);font-weight:normal;">(optional — leave blank to show to everyone)</span>
-                </h4>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Only show to customers buying</label>
-                        <select id="adTargetTxType">
-                            <option value="">Any purchase type</option>
-                            <option value="airtime">Airtime</option>
-                            <option value="data">Data</option>
-                            <option value="utility">Utility bills</option>
-                            <option value="topup">Wallet top-up</option>
-                            <option value="giftcard">Gift cards</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Customer type</label>
-                        <select id="adTargetCustomerType">
-                            <option value="">New or returning</option>
-                            <option value="new">New customers only (first transaction)</option>
-                            <option value="returning">Returning customers only</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Min transaction amount (₦, optional)</label>
-                        <input type="number" id="adTargetMinAmount" placeholder="e.g., 1000" min="0" />
-                    </div>
-                    <div class="form-group">
-                        <label>Max transaction amount (₦, optional)</label>
-                        <input type="number" id="adTargetMaxAmount" placeholder="e.g., 50000" min="0" />
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Show only from this hour (0-23, optional)</label>
-                        <input type="number" id="adTargetHourStart" placeholder="e.g., 8" min="0" max="23" />
-                    </div>
-                    <div class="form-group">
-                        <label>...to this hour (0-23, optional)</label>
-                        <input type="number" id="adTargetHourEnd" placeholder="e.g., 20" min="0" max="23" />
-                    </div>
-                </div>
-            </div>
-
-            <div style="margin-top:16px;">
-                <button class="btn btn-primary-bg" onclick="submitReceiptAdCampaign()">
-                    <i class="fas fa-bullhorn"></i> Submit for Review
-                </button>
-            </div>
-
-            <div id="myReceiptAdsSection" style="margin-top:24px;">
-                <h4 style="font-size:14px;color:var(--text-primary);margin-bottom:10px;">Your Campaigns</h4>
-                <div id="myReceiptAdsList" style="color:var(--text-secondary);font-size:13px;">Loading…</div>
-            </div>
-        </div>
+    <div class="section-head">
+      <div><h2>What your money buys</h2><p>Live comparison of every tier, calculated from current marketplace pricing.</p></div>
+      <span class="pill" id="slotPill" style="background:var(--bg-secondary);border:1px solid var(--border-color);"><span class="dot"></span> Checking Sponsored slot…</span>
+    </div>
+    <div class="grid g2 mb">
+      <div class="card">
+        <h3>Cost per 1,000 receipt views</h3>
+        <p class="sub">Lower is cheaper reach. Premium trades a little price for precise targeting; Sponsored is the premium for owning every receipt.</p>
+        <div class="bars" id="cpmBars"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      </div>
+      <div class="card">
+        <h3>Sponsored slot &amp; Premium range</h3>
+        <p class="sub">Only one Sponsored campaign can run at a time. Premium accepts any budget inside its range.</p>
+        <div id="slotBlock"></div>
+      </div>
     </div>
 
-    <div id="toastContainer"></div>
+    <div class="section-head">
+      <div><h2>Net365 AI insights</h2><p>Personalised observations from the marketplace and your own campaigns.</p></div>
+    </div>
+    <div class="insights mb" id="insights"></div>
 
-    <script>
-        // ========== Same as business.html logic ==========
-        let receiptAdPricing = null;
+    <h2 style="font-size:21px;font-weight:800;letter-spacing:-.03em;margin:30px 0 14px;">How it works</h2>
+    <div class="steps">
+      <div class="card step"><div class="n">1</div><h4>Create</h4><p>Write your ad, pick a tier and set your budget. The preview shows it on a real receipt.</p></div>
+      <div class="card step"><div class="n">2</div><h4>Target &amp; launch</h4><p>Choose who sees it: purchase type, amount, customer type and hours of the day.</p></div>
+      <div class="card step"><div class="n">3</div><h4>Review</h4><p>Every campaign is checked before it goes live so receipts stay trusted.</p></div>
+      <div class="card step"><div class="n">4</div><h4>Measure</h4><p>Track delivery, pacing and results for each campaign in My campaigns.</p></div>
+    </div>
+  </section>
 
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            localStorage.setItem('net365_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-            document.querySelector('.theme-toggle i').className = document.body.classList.contains('dark-mode') ? 'fas fa-sun' : 'fas fa-moon';
-        }
+  <!-- ===================== PLANS ===================== -->
+  <section class="panel" id="panel-plans" role="tabpanel">
+    <div class="section-head">
+      <div><h2>Ad campaign tiers</h2><p>Choose the plan that fits your marketing budget.</p></div>
+      <span class="pill" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);"><i class="fas fa-lock" style="color:var(--nx-green)"></i> Secure payments</span>
+    </div>
+    <div class="pricing-grid" id="planGrid"></div>
 
-        if (localStorage.getItem('net365_theme') === 'dark') {
-            document.body.classList.add('dark-mode');
-            document.querySelector('.theme-toggle i').className = 'fas fa-sun';
-        }
+    <div class="card">
+      <h3>Compare at a glance</h3>
+      <p class="sub">What each tier includes.</p>
+      <div class="table-wrap"><table id="compareTable"></table></div>
+    </div>
+  </section>
 
-        const AD_TIER_DESCRIPTIONS = {
-            basic: 'A fixed package — same banner rotates in with other content. No targeting.',
-            premium: 'Choose your budget and target exactly who sees it — purchase type, amount, customer type, time of day.',
-            dominant: 'Exclusive — your ad is the ONLY ad shown, on every single receipt, until the budget runs out.',
-            performance: 'Coming soon — pay only for verified clicks, with a scannable QR code and tracked link on the receipt.'
-        };
+  <!-- ===================== STUDIO ===================== -->
+  <section class="panel" id="panel-create" role="tabpanel">
+    <div class="section-head">
+      <div><h2>Campaign studio</h2><p>Your message appears on other Net365 users' transaction receipts. Every campaign is reviewed before it goes live.</p></div>
+    </div>
+    <div class="studio">
+      <div class="card" id="campaignForm">
+        <div class="form-group">
+          <label for="adTier">Campaign tier</label>
+          <select id="adTier" onchange="onAdTierChange()">
+            <option value="basic">Basic · Receipt banner</option>
+            <option value="premium">Premium · Targeted receipt ads</option>
+            <option value="dominant">Sponsored · Dominant position</option>
+            <option value="performance" disabled>Performance · Pay per click (coming soon)</option>
+          </select>
+          <small id="adTierDesc"></small>
+        </div>
 
-        function onAdTierChange() {
-            const tier = document.getElementById('adTier').value;
-            document.getElementById('adTierDesc').textContent = AD_TIER_DESCRIPTIONS[tier] || '';
+        <div id="adPricingBasic" class="form-group tier-info" style="display:none;">
+          <strong id="adBasicPriceLine">Loading price…</strong>
+          <div>Fixed package: logo, banner, link and campaign analytics included.</div>
+        </div>
+        <div id="adPricingPremium" class="form-group" style="display:none;">
+          <label for="adBudget">Budget (₦)</label>
+          <input type="number" id="adBudget" placeholder="e.g. 300000" step="1000" />
+          <small id="adPremiumEstimate">Choose a budget</small>
+        </div>
+        <div id="adPricingDominant" class="form-group tier-info" style="display:none;">
+          <strong id="adDominantPriceLine">Loading price…</strong>
+          <div>Exclusive: your ad shows on <em>every</em> receipt until the budget runs out. Only one Sponsored campaign can run at a time.</div>
+          <div id="adDominantAvailability" style="font-weight:800;margin-top:6px;"></div>
+        </div>
+        <div id="adPricingPerformance" class="form-group" style="display:none;">
+          <label for="adClicks">Clicks to buy</label>
+          <input type="number" id="adClicks" placeholder="e.g. 1000" min="100" step="50" />
+          <small id="adPerformanceEstimate">Enter clicks to see cost</small>
+        </div>
 
-            document.getElementById('adPricingBasic').style.display = tier === 'basic' ? '' : 'none';
-            document.getElementById('adPricingPremium').style.display = tier === 'premium' ? '' : 'none';
-            document.getElementById('adPricingDominant').style.display = tier === 'dominant' ? '' : 'none';
-            document.getElementById('adPricingPerformance').style.display = tier === 'performance' ? '' : 'none';
+        <div class="form-row">
+          <div class="form-group"><label for="adTitle">Ad title</label><input type="text" id="adTitle" placeholder="e.g. Fresh Jollof Delivery" maxlength="80" /></div>
+          <div class="form-group"><label for="adCtaText">Button text (optional)</label><input type="text" id="adCtaText" placeholder="e.g. Order now" maxlength="24" /></div>
+        </div>
+        <div class="form-group">
+          <label for="adBody">Message</label>
+          <textarea id="adBody" placeholder="What should Net365 users see?" maxlength="400"></textarea>
+          <small id="adCharCount">0 / 400 characters</small>
+        </div>
+        <div class="form-group"><label for="adCtaUrl">Link</label><input type="text" id="adCtaUrl" placeholder="https://..." /></div>
 
-            document.getElementById('adTargetingSection').style.display =
-                (tier === 'premium' || tier === 'performance') ? '' : 'none';
+        <div id="adTargetingSection">
+          <div class="target-title">🎯 Targeting <span>(optional, leave blank to show to everyone)</span></div>
+          <div class="form-row">
+            <div class="form-group"><label for="adTargetTxType">Only show to customers buying</label>
+              <select id="adTargetTxType"><option value="">Any purchase type</option><option value="airtime">Airtime</option><option value="data">Data</option><option value="utility">Utility bills</option><option value="topup">Wallet top-up</option><option value="giftcard">Gift cards</option></select></div>
+            <div class="form-group"><label for="adTargetCustomerType">Customer type</label>
+              <select id="adTargetCustomerType"><option value="">New or returning</option><option value="new">New customers only (first transaction)</option><option value="returning">Returning customers only</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label for="adTargetMinAmount">Min transaction amount (₦)</label><input type="number" id="adTargetMinAmount" placeholder="e.g. 1000" min="0" /></div>
+            <div class="form-group"><label for="adTargetMaxAmount">Max transaction amount (₦)</label><input type="number" id="adTargetMaxAmount" placeholder="e.g. 50000" min="0" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label for="adTargetHourStart">Show only from this hour (0-23)</label><input type="number" id="adTargetHourStart" placeholder="e.g. 8" min="0" max="23" /></div>
+            <div class="form-group"><label for="adTargetHourEnd">...to this hour (0-23)</label><input type="number" id="adTargetHourEnd" placeholder="e.g. 20" min="0" max="23" /></div>
+          </div>
+        </div>
 
-            if (tier === 'dominant' && receiptAdPricing) {
-                const occupied = receiptAdPricing.tiers.dominant.slot_occupied;
-                const el = document.getElementById('adDominantAvailability');
-                el.textContent = occupied ? '⚠️ Currently occupied by another campaign — try again once it completes.' : '✅ Available right now.';
-                el.style.color = occupied ? '#ef4444' : '#10b981';
-            }
+        <button class="btn btn-primary-bg" id="submitBtn" onclick="submitReceiptAdCampaign()"><i class="fas fa-bullhorn"></i> Submit for review</button>
+      </div>
 
-            updateAdPriceEstimate();
-        }
+      <aside class="preview-wrap" aria-label="Live preview">
+        <div class="phone-bg">
+          <div class="receipt" id="receipt">
+            <div class="rh"><span>NET365</span><span class="ok">● SUCCESSFUL</span></div>
+            <div style="margin:10px 0 6px;font-weight:800;font-size:15px;letter-spacing:-.02em;">₦1,000 Airtime</div>
+            <div class="line"><span>Network</span><b>MTN</b></div>
+            <div class="line"><span>Number</span><b>0803 ••• 1212</b></div>
+            <div class="line"><span>Reference</span><b>NV-8K2Q4M</b></div>
+            <div class="adbox"><span class="adtag" id="pvTag">Sponsored</span>
+              <div class="adt" id="pvTitle"></div><div class="adb" id="pvBody"></div><span class="adcta" id="pvCta"></span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Ad strength</h3>
+          <p class="sub">Checked in your browser as you type.</p>
+          <div class="score">
+            <div class="ring"><svg width="86" height="86" viewBox="0 0 86 86"><circle cx="43" cy="43" r="36" fill="none" stroke="var(--grid)" stroke-width="9"/><circle id="scoreArc" cx="43" cy="43" r="36" fill="none" stroke="var(--nx-orange)" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 226"/></svg><b id="scoreNum">0</b></div>
+            <ul class="checks" id="scoreChecks"></ul>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Estimated reach</h3>
+          <p class="sub" id="estSub">Based on current pricing.</p>
+          <div class="est"><div><span>Cost</span><b id="estCost">—</b></div><div><span>Views</span><b id="estViews">—</b></div><div><span>Per 1,000</span><b id="estCpm">—</b></div></div>
+        </div>
+      </aside>
+    </div>
+  </section>
 
-        function updateAdPriceEstimate() {
-            if (!receiptAdPricing) return;
-            const tier = document.getElementById('adTier').value;
-            const t = receiptAdPricing.tiers;
-            const currency = receiptAdPricing.currency;
+  <!-- ===================== CAMPAIGNS / ANALYTICS ===================== -->
+  <section class="panel" id="panel-campaigns" role="tabpanel">
+    <div class="section-head">
+      <div><h2>Your campaign analytics</h2><p>Delivery, spend and pacing across everything you run on Net365.</p></div>
+      <button class="btn btn-primary-bg" onclick="goTab('create')"><i class="fas fa-plus"></i> New campaign</button>
+    </div>
+    <div class="grid g4 mb" id="kpis"></div>
+    <div class="grid g2 mb">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;"><div><h3>Campaigns by status</h3><p class="sub">Where each of your campaigns stands.</p></div>
+          <div class="view-toggle" role="group" aria-label="View"><button class="on" data-v="chart">Chart</button><button data-v="table">Table</button></div></div>
+        <div id="statusViz"></div>
+      </div>
+      <div class="card">
+        <h3>Spend by tier</h3>
+        <p class="sub">How your budget is split.</p>
+        <div id="tierViz"></div>
+      </div>
+    </div>
+    <div class="section-head"><div><h2>All campaigns</h2></div></div>
+    <div id="myReceiptAdsList"><div class="skel" style="height:90px"></div></div>
+  </section>
+</div>
 
-            if (tier === 'premium') {
-                const budget = parseFloat(document.getElementById('adBudget').value);
-                const el = document.getElementById('adPremiumEstimate');
-                if (!budget) {
-                    el.textContent = `Choose a budget between ${currency} ${t.premium.min_budget.toLocaleString()} and ${currency} ${t.premium.max_budget.toLocaleString()}`;
-                    el.style.color = 'var(--text-secondary)';
-                } else if (budget < t.premium.min_budget || budget > t.premium.max_budget) {
-                    el.textContent = `Must be between ${currency} ${t.premium.min_budget.toLocaleString()} and ${currency} ${t.premium.max_budget.toLocaleString()}`;
-                    el.style.color = '#ef4444';
-                } else {
-                    const impressions = Math.floor(budget / t.premium.price_per_impression);
-                    el.textContent = `≈ ${impressions.toLocaleString()} impressions at ${currency} ${t.premium.price_per_impression}/impression`;
-                    el.style.color = 'var(--text-secondary)';
-                }
-            } else if (tier === 'performance') {
-                const clicks = parseInt(document.getElementById('adClicks').value, 10);
-                const el = document.getElementById('adPerformanceEstimate');
-                if (!clicks) {
-                    el.textContent = 'Enter clicks to see cost';
-                    el.style.color = 'var(--text-secondary)';
-                } else if (clicks < t.performance.min_clicks) {
-                    el.textContent = `Minimum is ${t.performance.min_clicks.toLocaleString()} clicks`;
-                    el.style.color = '#ef4444';
-                } else {
-                    const cost = clicks * t.performance.cost_per_click;
-                    el.textContent = `Cost: ${currency} ${cost.toLocaleString()} (${currency} ${t.performance.cost_per_click}/click)`;
-                    el.style.color = 'var(--text-secondary)';
-                }
-            }
-        }
+<div id="toastContainer"></div>
 
-        function updateAdCharCount() {
-            const len = document.getElementById('adBody').value.length;
-            document.getElementById('adCharCount').textContent = `${len} / 400 characters`;
-        }
+<script>
+/* =========================================================
+   CONFIG
+   ========================================================= */
+// Marketing claims shown on the overview. These are static statements, not live measurements:
+// edit them here, or return a `stats` object from /api/receipt-ads/pricing to override them with real numbers.
+const MARKET_CLAIMS = [
+  { icon:'fa-eye',     value:'10,000+', label:'Daily receipt views' },
+  { icon:'fa-users',   value:'150+',    label:'Active advertisers' },
+  { icon:'fa-percent', value:'4.8%',    label:'Average CTR' },
+  { icon:'fa-globe',   value:'190+',    label:'Countries reached' }
+];
+// Display-only fallbacks, used until live pricing loads. Real prices always come from /api/receipt-ads/pricing.
+const FALLBACK_PRICING = { success:false, currency:'₦', tiers:{
+  basic:{price:100000,impressions:100000},
+  premium:{min_budget:250000,max_budget:500000,price_per_impression:null},
+  dominant:{price:1000000,impressions:200000,slot_occupied:false},
+  performance:{cost_per_click:200,min_clicks:100,max_clicks:100000}
+}};
 
-        async function loadReceiptAdPricing() {
-            try {
-                const res = await fetch('/api/receipt-ads/pricing');
-                const data = await res.json();
-                if (data.success) {
-                    receiptAdPricing = data;
-                    const t = data.tiers;
-                    document.getElementById('adBasicPriceLine').textContent =
-                        `${data.currency} ${t.basic.price.toLocaleString()} for ${t.basic.impressions.toLocaleString()} impressions`;
-                    document.getElementById('adDominantPriceLine').textContent =
-                        `${data.currency} ${t.dominant.price.toLocaleString()} for ${t.dominant.impressions.toLocaleString()} impressions`;
-                    document.getElementById('adPremiumEstimate').textContent =
-                        `Choose a budget between ${data.currency} ${t.premium.min_budget.toLocaleString()} and ${data.currency} ${t.premium.max_budget.toLocaleString()} (${data.currency} ${t.premium.price_per_impression}/impression)`;
-                    document.getElementById('adBudget').min = t.premium.min_budget;
-                    document.getElementById('adBudget').max = t.premium.max_budget;
-                    document.getElementById('adClicks').min = t.performance.min_clicks;
-                    document.getElementById('adClicks').max = t.performance.max_clicks;
-                    onAdTierChange();
-                }
-            } catch (e) {
-                document.getElementById('adBasicPriceLine').textContent = 'Pricing unavailable right now.';
-            }
-        }
+const TIER_META = {
+  basic:       { name:'Basic',     color:'var(--s-basic)',    desc:'A fixed package. The same banner rotates in with other content. No targeting.' },
+  premium:     { name:'Premium',   color:'var(--s-premium)',  desc:'Choose your budget and target exactly who sees it: purchase type, amount, customer type, time of day.' },
+  dominant:    { name:'Sponsored', color:'var(--s-dominant)', desc:'Exclusive. Your ad is the ONLY ad shown, on every single receipt, until the budget runs out.' },
+  performance: { name:'Performance', color:'var(--s-perf)',   desc:'Coming soon. Pay only for verified clicks, with a scannable QR code and tracked link on the receipt.' }
+};
+const STATUS_META = {
+  approved:       { label:'Live',           color:'var(--st-live)' },
+  pending_review: { label:'Pending review', color:'var(--st-pending)' },
+  paused:         { label:'Paused',         color:'var(--st-paused)' },
+  completed:      { label:'Completed',      color:'var(--st-done)' },
+  rejected:       { label:'Rejected',       color:'var(--st-rejected)' }
+};
 
-        function selectTier(tier) {
-            document.getElementById('adTier').value = tier;
-            onAdTierChange();
-            document.getElementById('campaignForm').scrollIntoView({ behavior: 'smooth' });
-        }
+let pricing = FALLBACK_PRICING;
+let pricingLive = false;
+let campaigns = [];
+let campaignsLoaded = false;
+let statusView = 'chart';
 
-        document.getElementById('adBudget').addEventListener('input', updateAdPriceEstimate);
-        document.getElementById('adClicks').addEventListener('input', updateAdPriceEstimate);
-        document.getElementById('adBody').addEventListener('input', updateAdCharCount);
+/* =========================================================
+   HELPERS
+   ========================================================= */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+const fmt = (n) => Number(n || 0).toLocaleString();
+const cur = () => pricing.currency || '₦';
+const money = (n) => `${cur()}${fmt(Math.round(n))}`;
+const compact = (n) => { n = Number(n || 0); if (n >= 1e6) return (n/1e6).toFixed(n%1e6?1:0).replace(/\.0$/,'') + 'M'; if (n >= 1e3) return (n/1e3).toFixed(n%1e3?1:0).replace(/\.0$/,'') + 'k'; return String(Math.round(n)); };
+const moneyC = (n) => `${cur()}${compact(n)}`;
+function showToast(message, type = 'info') {
+  const c = $('toastContainer'); const t = document.createElement('div');
+  t.className = `toast toast-${type}`; t.textContent = message; c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(100%)'; t.style.transition = 'all .3s ease'; setTimeout(() => t.remove(), 300); }, 3500);
+}
+function countUp(el, to, formatter) {
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce || !to) { el.textContent = formatter(to); return; }
+  const t0 = performance.now(), dur = 800;
+  (function step(now) { const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = formatter(to * e); if (p < 1) requestAnimationFrame(step); })(t0);
+}
 
-        function receiptAdStatusBadge(status) {
-            const map = {
-                pending_review: ['Pending Review', '#f59e0b'],
-                approved: ['Live', '#10b981'],
-                rejected: ['Rejected', '#ef4444'],
-                paused: ['Paused', '#6b7280'],
-                completed: ['Completed', '#4f46e5'],
-            };
-            const [label, color] = map[status] || [status, '#6b7280'];
-            return `<span style="background:${color};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">${label}</span>`;
-        }
+/* =========================================================
+   THEME
+   ========================================================= */
+function applyTheme(theme) {
+  const isLight = theme === 'light';
+  document.body.classList.toggle('dark-mode', !isLight);
+  const icon = $('themeIcon'); if (icon) icon.className = isLight ? 'fas fa-sun' : 'fas fa-moon';
+  try { localStorage.setItem('net365_theme', isLight ? 'light' : 'dark'); localStorage.setItem('net365_marketplace_theme', theme); } catch (e) {}
+}
+function toggleTheme() {
+  const next = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+  applyTheme(next); showToast(next === 'light' ? '☀️ Light mode enabled' : '🌙 Dark mode enabled', 'info');
+}
+(function () { let s = 'dark'; try { s = localStorage.getItem('net365_marketplace_theme') || localStorage.getItem('net365_theme') || 'dark'; } catch (e) {} applyTheme(s === 'light' ? 'light' : 'dark'); })();
 
-        const AD_TIER_BADGES = {
-            dominant: ['👑 Sponsored', '#7c3aed'],
-            performance: ['🎯 Performance', '#0891b2'],
-            premium: ['⭐ Premium', '#f59e0b'],
-        };
+/* =========================================================
+   TABS
+   ========================================================= */
+const TABS = ['overview', 'plans', 'create', 'campaigns'];
+function goTab(name, push = true) {
+  if (!TABS.includes(name)) name = 'overview';
+  document.querySelectorAll('.tab').forEach(b => { const on = b.dataset.tab === name; b.classList.toggle('active', on); b.setAttribute('aria-selected', on); });
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  if (push) { try { history.replaceState(null, '', '#' + name); } catch (e) {} }
+  if (name === 'overview') { renderCpm(); }
+  window.scrollTo({ top: Math.min(window.scrollY, 360) < 120 ? 0 : 330, behavior: 'smooth' });
+}
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => goTab(b.dataset.tab)));
+document.querySelectorAll('[data-go]').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); goTab(a.dataset.go); }));
+window.addEventListener('hashchange', () => goTab((location.hash || '').slice(1), false));
 
-        async function loadMyReceiptAds() {
-            const list = document.getElementById('myReceiptAdsList');
-            try {
-                const res = await fetch('/api/receipt-ads/campaigns');
-                const data = await res.json();
-                if (!data.success || !Array.isArray(data.campaigns) || data.campaigns.length === 0) {
-                    list.innerHTML = '<p>No campaigns yet — your first one will show up here.</p>';
-                    return;
-                }
-                list.innerHTML = data.campaigns.map(c => {
-                    const isPerformance = c.campaign_tier === 'performance';
-                    const pct = isPerformance
-                        ? (c.clicks_purchased ? Math.round(100 * c.clicks_delivered / c.clicks_purchased) : 0)
-                        : (c.impressions_purchased ? Math.round(100 * c.impressions_delivered / c.impressions_purchased) : 0);
-                    const canPause = c.status === 'approved';
-                    const isPremiumLike = c.campaign_tier === 'basic' && (c.target_tx_type || c.target_customer_type || c.target_min_amount || c.target_max_amount || c.target_hour_start !== null);
-                    const badgeKey = c.campaign_tier === 'basic' && isPremiumLike ? 'premium' : c.campaign_tier;
-                    const [badgeLabel, badgeColor] = AD_TIER_BADGES[badgeKey] || [null, null];
-                    const tierBadge = badgeLabel
-                        ? `<span style="background:${badgeColor};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-right:6px;">${badgeLabel}</span>`
-                        : '';
-                    const progressLine = isPerformance
-                        ? `${(c.clicks_delivered || 0).toLocaleString()} / ${(c.clicks_purchased || 0).toLocaleString()} clicks delivered (${pct}%)`
-                        + (c.conversions_delivered ? ` &middot; ${c.conversions_delivered} conversions` : '')
-                        : `${c.impressions_delivered.toLocaleString()} / ${c.impressions_purchased.toLocaleString()} impressions delivered (${pct}%)`;
-                    return `
-                        <div style="border:1px solid var(--border-color);border-radius:10px;padding:12px;margin-bottom:10px;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <strong style="color:var(--text-primary);">${escapeHtml(c.title)}</strong>
-                                <span>${tierBadge}${receiptAdStatusBadge(c.status)}</span>
-                            </div>
-                            <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">
-                                ${progressLine} &middot; ${c.price_currency} ${Number(c.price_paid).toLocaleString()}
-                            </div>
-                            ${c.status === 'rejected' && c.rejection_reason ? `<div style="font-size:12px;color:#ef4444;margin-top:6px;">Reason: ${escapeHtml(c.rejection_reason)}</div>` : ''}
-                            ${canPause ? `<button class="btn" style="margin-top:8px;font-size:12px;padding:4px 10px;" onclick="pauseReceiptAd(${c.id})">Pause Campaign</button>` : ''}
-                        </div>`;
-                }).join('');
-            } catch (e) {
-                list.innerHTML = '<p>Could not load your campaigns right now.</p>';
-            }
-        }
+/* =========================================================
+   PRICING MATHS (all from live pricing)
+   ========================================================= */
+function tierCpm(tier) {
+  const t = pricing.tiers || {};
+  if (tier === 'basic' && t.basic && t.basic.impressions) return t.basic.price / t.basic.impressions * 1000;
+  if (tier === 'dominant' && t.dominant && t.dominant.impressions) return t.dominant.price / t.dominant.impressions * 1000;
+  if (tier === 'premium' && t.premium && t.premium.price_per_impression) return t.premium.price_per_impression * 1000;
+  return null;
+}
+function premiumImpressions(budget) {
+  const p = pricing.tiers.premium;
+  return p && p.price_per_impression ? Math.floor(budget / p.price_per_impression) : null;
+}
 
-        async function pauseReceiptAd(campaignId) {
-            try {
-                const res = await fetch(`/api/receipt-ads/campaigns/${campaignId}/pause`, { method: 'POST' });
-                const data = await res.json();
-                if (data.success) {
-                    showToast('Campaign paused.', 'info');
-                    loadMyReceiptAds();
-                } else {
-                    showToast(data.error || 'Could not pause campaign.', 'error');
-                }
-            } catch (e) {
-                showToast('Network error — please try again.', 'error');
-            }
-        }
+/* =========================================================
+   OVERVIEW RENDERING
+   ========================================================= */
+function renderClaims() {
+  const stats = pricing.stats;   // optional real numbers from the API override the static claims
+  const rows = Array.isArray(stats) && stats.length ? stats : MARKET_CLAIMS;
+  $('claims').innerHTML = rows.map(r => `<div class="card kpi hover"><div class="ico"><i class="fas ${esc(r.icon || 'fa-chart-simple')}"></i></div><div class="num">${esc(r.value)}</div><div class="lab">${esc(r.label)}</div></div>`).join('');
+}
+function renderCpm() {
+  const rows = ['basic', 'premium', 'dominant'].map(k => ({ k, cpm: tierCpm(k) })).filter(r => r.cpm != null);
+  if (!rows.length) { $('cpmBars').innerHTML = '<p class="sub">Pricing is loading…</p>'; return; }
+  const max = Math.max(...rows.map(r => r.cpm));
+  const base = rows.find(r => r.k === 'basic') || rows[0];
+  const notes = {
+    basic: 'Rotating banner, no targeting',
+    premium: 'Targeted to the customers you choose',
+    dominant: 'Exclusive: only your ad, on every receipt'
+  };
+  $('cpmBars').innerHTML = rows.map(r => {
+    const x = r.cpm / base.cpm;
+    return `<div class="bar-row"><div class="top"><b>${TIER_META[r.k].name}</b><span>${money(r.cpm)} per 1,000 views${r.k !== base.k ? ` · ${x.toFixed(1)}× Basic` : ''}</span></div>
+      <div class="track"><div class="fill" data-w="${(r.cpm / max * 100).toFixed(1)}" style="background:${TIER_META[r.k].color}"></div></div><small>${notes[r.k]}</small></div>`;
+  }).join('') + `<div class="legend"><span><i style="background:var(--s-basic)"></i>Basic</span><span><i style="background:var(--s-premium)"></i>Premium</span><span><i style="background:var(--s-dominant)"></i>Sponsored</span></div>`;
+  requestAnimationFrame(() => document.querySelectorAll('#cpmBars .fill').forEach(f => f.style.width = f.dataset.w + '%'));
+}
+function renderSlot() {
+  const t = pricing.tiers, occ = !!(t.dominant && t.dominant.slot_occupied);
+  const pill = $('slotPill');
+  pill.innerHTML = pricingLive
+    ? `<span class="dot ${occ ? '' : 'live'}" style="${occ ? 'background:var(--st-pending)' : ''}"></span> Sponsored slot: ${occ ? 'occupied' : 'available now'}`
+    : `<span class="dot" style="background:var(--text-tertiary)"></span> Live pricing unavailable`;
+  const p = t.premium || {}; const lo = p.min_budget || 0, hi = p.max_budget || 0;
+  $('slotBlock').innerHTML = `
+    <div class="bar-row" style="margin-bottom:18px"><div class="top"><b>Sponsored slot</b><span>${occ ? 'Occupied' : 'Available'}</span></div>
+      <div class="track"><div class="fill" data-w="${occ ? 100 : 12}" style="background:${occ ? 'var(--st-pending)' : 'var(--st-live)'}"></div></div>
+      <small>${occ ? 'Another brand owns every receipt right now. It frees up when their budget completes.' : 'Nobody is running Sponsored. You would own every receipt from approval.'}</small></div>
+    <div class="bar-row"><div class="top"><b>Premium budget range</b><span>${lo ? money(lo) + ' to ' + money(hi) : '—'}</span></div>
+      <div class="track"><div class="fill" data-w="100" style="background:var(--s-premium)"></div></div>
+      <small>${p.price_per_impression ? `${cur()}${p.price_per_impression} per impression. Any budget in the range works.` : 'Any budget in the range works.'}</small></div>`;
+  requestAnimationFrame(() => document.querySelectorAll('#slotBlock .fill').forEach(f => f.style.width = f.dataset.w + '%'));
+}
 
-        async function submitReceiptAdCampaign() {
-            const tier = document.getElementById('adTier').value;
-            const title = document.getElementById('adTitle').value.trim();
-            const body = document.getElementById('adBody').value.trim();
-            const cta_text = document.getElementById('adCtaText').value.trim();
-            const cta_url = document.getElementById('adCtaUrl').value.trim();
+/* AI insights: rules over real pricing + real campaigns */
+function buildInsights() {
+  const out = [], t = pricing.tiers, list = campaigns;
+  const bc = tierCpm('basic'), pc = tierCpm('premium'), dc = tierCpm('dominant');
+  if (pc && bc) out.push({ ic: 'ai', i: 'fa-bullseye', h: 'Targeting is the best value for focused brands', p: `Premium costs ${money(pc)} per 1,000 views${pc < bc ? ', less than Basic' : ''}, and it lets you pick who sees your ad. Basic reaches everyone, so part of that spend lands on people who will never buy from you.`, a: 'Plan a Premium campaign', go: 'premium' });
+  if (dc && bc) out.push({ ic: 'info', i: 'fa-crown', h: `Sponsored costs ${(dc / bc).toFixed(1)}× Basic per view`, p: 'You pay for exclusivity: your ad is the only one shown. It suits launches, sales and brand moments where owning the whole receipt matters.', a: 'Explore Sponsored', go: 'dominant' });
+  if (t.dominant && pricingLive) out.push(t.dominant.slot_occupied
+    ? { ic: 'warn', i: 'fa-hourglass-half', h: 'Sponsored slot is taken right now', p: 'It frees up when the current campaign finishes. Premium is available immediately if you do not want to wait.' }
+    : { ic: 'good', i: 'fa-circle-check', h: 'Sponsored slot is open', p: 'Nobody is running Sponsored today. A campaign approved now would own every receipt.', a: 'Reserve it', go: 'dominant' });
+  if (campaignsLoaded) {
+    if (!list.length) out.push({ ic: 'ai', i: 'fa-rocket', h: 'Start small, learn fast', p: 'You have no campaigns yet. Basic is the lowest-commitment way to see your ad on real receipts before you scale.', a: 'Create your first campaign', go: 'basic' });
+    list.forEach(c => {
+      const pct = deliveredPct(c);
+      if (c.status === 'approved' && pct >= 80 && pct < 100) out.push({ ic: 'warn', i: 'fa-battery-quarter', h: `"${c.title}" is ${pct}% delivered`, p: 'It will finish soon. Queue a follow-up now so your ad does not disappear from receipts.', a: 'Plan the next one', go: c.campaign_tier === 'performance' ? 'basic' : c.campaign_tier });
+      if (c.status === 'approved' && pct <= 5) out.push({ ic: 'info', i: 'fa-seedling', h: `"${c.title}" has just started`, p: 'Delivery builds as customers transact. Check back after a few hours for a pacing read.' });
+      if (c.status === 'rejected') out.push({ ic: 'warn', i: 'fa-triangle-exclamation', h: `"${c.title}" was not approved`, p: c.rejection_reason ? `Reason given: ${c.rejection_reason}. Fix it and resubmit.` : 'Edit the ad and resubmit it.' });
+      if (c.status === 'pending_review') out.push({ ic: 'info', i: 'fa-magnifying-glass', h: `"${c.title}" is in review`, p: 'Every campaign is checked before it goes live. You will see it flip to Live here.' });
+    });
+    const done = list.filter(c => c.status === 'completed').length;
+    if (done) out.push({ ic: 'good', i: 'fa-flag-checkered', h: `${done} campaign${done > 1 ? 's' : ''} completed`, p: 'Running another campaign soon keeps your brand in front of customers who already saw you.' });
+  }
+  return out.slice(0, 8);
+}
+function renderInsights() {
+  const items = buildInsights();
+  $('insights').innerHTML = items.length ? items.map(x => `<div class="insight"><div class="ic ${x.ic}"><i class="fas ${x.i}"></i></div><div><h4>${esc(x.h)}</h4><p>${esc(x.p)}</p>${x.a ? `<button class="act" data-pick="${esc(x.go)}">${esc(x.a)} →</button>` : ''}</div></div>`).join('')
+    : '<div class="empty" style="grid-column:1/-1"><i class="fas fa-sparkles"></i><h4>Insights are on their way</h4>They appear as soon as pricing and your campaigns load.</div>';
+  document.querySelectorAll('#insights [data-pick]').forEach(b => b.addEventListener('click', () => selectTier(b.dataset.pick)));
+}
 
-            if (!title || !body) {
-                showToast('Please fill in the ad title and message.', 'warning');
-                return;
-            }
-            if (!cta_url) {
-                showToast('Please provide a link for your ad.', 'warning');
-                return;
-            }
+/* =========================================================
+   PLANS
+   ========================================================= */
+function renderPlans() {
+  const t = pricing.tiers, c = cur();
+  const cards = [
+    { k: 'basic', price: t.basic ? `${c}${fmt(t.basic.price)}` : '—', unit: '/campaign', feats: [`${t.basic ? fmt(t.basic.impressions) : '100,000'} impressions`, 'Standard rotation', 'No targeting', 'Basic reporting'] },
+    { k: 'premium', pop: true, price: t.premium ? `${c}${compact(t.premium.min_budget)} – ${c}${compact(t.premium.max_budget)}` : '—', unit: '', feats: ['Flexible impressions', '🎯 Advanced targeting', 'Customer type & hour', 'Detailed analytics'] },
+    { k: 'dominant', price: t.dominant ? `${c}${fmt(t.dominant.price)}` : '—', unit: '', feats: [`${t.dominant ? fmt(t.dominant.impressions) : '200,000'} impressions`, '🏆 Exclusive slot', 'Shows on EVERY receipt', 'Premium visibility'] },
+    { k: 'performance', soon: true, price: `${c}${t.performance ? t.performance.cost_per_click : 200}`, unit: '/click', feats: [`Min. ${t.performance ? fmt(t.performance.min_clicks) : '100'} clicks`, 'Pay-per-click', '📊 Conversion tracking', 'Fraud protection'] }
+  ];
+  $('planGrid').innerHTML = cards.map(p => {
+    const cpm = tierCpm(p.k);
+    return `<div class="card hover plan ${p.pop ? 'popular' : ''}"><div class="nm"><span class="sw" style="background:${TIER_META[p.k].color}"></span>${TIER_META[p.k].name}${p.soon ? ' <small style="font-weight:600;color:var(--text-tertiary)">· coming soon</small>' : ''}</div>
+      <div class="pr">${p.price} <small>${p.unit}</small></div><div class="cpm">${cpm ? `${money(cpm)} per 1,000 views` : (p.soon ? 'Pay only for verified clicks' : '&nbsp;')}</div>
+      <ul>${p.feats.map(f => `<li><i class="fas fa-check-circle"></i>${esc(f)}</li>`).join('')}</ul>
+      ${p.soon ? `<button class="btn-plan" onclick="showToast('📊 Performance (pay-per-click) campaigns are coming soon. Try Basic, Premium, or Sponsored for now.', 'info')">Coming soon</button>`
+               : `<button class="btn-plan ${p.pop ? 'primary' : ''}" onclick="selectTier('${p.k}')">Get started</button>`}</div>`;
+  }).join('');
+  const Y = '<td class="y"><i class="fas fa-check"></i></td>', N = '<td class="n">—</td>';
+  $('compareTable').innerHTML = `<thead><tr><th>Feature</th><th>Basic</th><th>Premium</th><th>Sponsored</th></tr></thead><tbody>
+    <tr><td>Fixed price package</td>${Y}${N}${Y}</tr><tr><td>Choose your own budget</td>${N}${Y}${N}</tr>
+    <tr><td>Targeting (purchase type, amount, hours)</td>${N}${Y}${N}</tr><tr><td>Shown on every receipt</td>${N}${N}${Y}</tr>
+    <tr><td>Exclusive (one at a time)</td>${N}${N}${Y}</tr><tr><td>Campaign analytics</td>${Y}${Y}${Y}</tr></tbody>`;
+}
 
-            const payload = { title, body, cta_text, cta_url, campaign_tier: tier };
+/* =========================================================
+   STUDIO
+   ========================================================= */
+function onAdTierChange() {
+  const tier = $('adTier').value;
+  $('adTierDesc').textContent = TIER_META[tier] ? TIER_META[tier].desc : '';
+  $('adPricingBasic').style.display = tier === 'basic' ? '' : 'none';
+  $('adPricingPremium').style.display = tier === 'premium' ? '' : 'none';
+  $('adPricingDominant').style.display = tier === 'dominant' ? '' : 'none';
+  $('adPricingPerformance').style.display = tier === 'performance' ? '' : 'none';
+  $('adTargetingSection').style.display = (tier === 'premium' || tier === 'performance') ? '' : 'none';
+  const t = pricing.tiers;
+  if (t.basic) $('adBasicPriceLine').textContent = `${money(t.basic.price)} for ${fmt(t.basic.impressions)} impressions`;
+  if (t.dominant) {
+    $('adDominantPriceLine').textContent = `${money(t.dominant.price)} for ${fmt(t.dominant.impressions)} impressions`;
+    const el = $('adDominantAvailability');
+    if (pricingLive) { el.textContent = t.dominant.slot_occupied ? '⚠️ Currently occupied by another campaign. Try again once it completes.' : '✅ Available right now.'; el.style.color = t.dominant.slot_occupied ? 'var(--nx-red)' : 'var(--st-live)'; }
+  }
+  if (t.premium && t.premium.min_budget) { $('adBudget').min = t.premium.min_budget; $('adBudget').max = t.premium.max_budget; }
+  updateAdPriceEstimate(); updatePreview();
+}
+function updateAdPriceEstimate() {
+  const tier = $('adTier').value, t = pricing.tiers, c = cur();
+  if (tier === 'premium' && t.premium) {
+    const budget = parseFloat($('adBudget').value), el = $('adPremiumEstimate');
+    const lo = t.premium.min_budget, hi = t.premium.max_budget;
+    if (!budget) { el.textContent = `Choose a budget between ${c} ${fmt(lo)} and ${c} ${fmt(hi)}`; el.style.color = ''; }
+    else if (budget < lo || budget > hi) { el.textContent = `Must be between ${c} ${fmt(lo)} and ${c} ${fmt(hi)}`; el.style.color = 'var(--nx-red)'; }
+    else { const imp = premiumImpressions(budget); el.textContent = imp ? `≈ ${fmt(imp)} impressions at ${c} ${t.premium.price_per_impression}/impression` : 'Budget accepted'; el.style.color = ''; }
+  } else if (tier === 'performance' && t.performance) {
+    const clicks = parseInt($('adClicks').value, 10), el = $('adPerformanceEstimate');
+    if (!clicks) { el.textContent = 'Enter clicks to see cost'; el.style.color = ''; }
+    else if (clicks < t.performance.min_clicks) { el.textContent = `Minimum is ${fmt(t.performance.min_clicks)} clicks`; el.style.color = 'var(--nx-red)'; }
+    else { el.textContent = `Cost: ${c} ${fmt(clicks * t.performance.cost_per_click)} (${c} ${t.performance.cost_per_click}/click)`; el.style.color = ''; }
+  }
+  updateEstimate();
+}
+function updateEstimate() {
+  const tier = $('adTier').value, t = pricing.tiers; let cost = null, views = null, cpm = null;
+  if (tier === 'basic' && t.basic) { cost = t.basic.price; views = t.basic.impressions; }
+  else if (tier === 'dominant' && t.dominant) { cost = t.dominant.price; views = t.dominant.impressions; }
+  else if (tier === 'premium' && t.premium) { const b = parseFloat($('adBudget').value); if (b >= t.premium.min_budget && b <= t.premium.max_budget) { cost = b; views = premiumImpressions(b); } }
+  if (cost != null && views) cpm = cost / views * 1000;
+  $('estCost').textContent = cost != null ? moneyC(cost) : '—';
+  $('estViews').textContent = views ? compact(views) : '—';
+  $('estCpm').textContent = cpm ? money(cpm) : '—';
+  $('estSub').textContent = tier === 'premium' && cost == null ? 'Enter a budget to see how many receipts you can reach.' : `${TIER_META[tier] ? TIER_META[tier].name : ''} · based on current pricing.`;
+}
+function updateAdCharCount() { $('adCharCount').textContent = `${$('adBody').value.length} / 400 characters`; }
+function updatePreview() {
+  const title = $('adTitle').value.trim(), body = $('adBody').value.trim(), cta = $('adCtaText').value.trim(), tier = $('adTier').value;
+  $('pvTitle').innerHTML = title ? esc(title) : '<span class="ghost">Your ad title</span>';
+  $('pvBody').innerHTML = body ? esc(body) : '<span class="ghost">Your message appears here, right under the receipt details.</span>';
+  $('pvCta').textContent = cta || 'Learn more';
+  $('pvTag').textContent = tier === 'dominant' ? 'Sponsored' : 'Ad';
+  scoreAd();
+}
+function scoreAd() {
+  const title = $('adTitle').value.trim(), body = $('adBody').value.trim(), cta = $('adCtaText').value.trim(), url = $('adCtaUrl').value.trim(), tier = $('adTier').value;
+  const letters = title.replace(/[^A-Za-z]/g, ''), shout = letters.length > 5 && letters === letters.toUpperCase();
+  const checks = [
+    { w: 20, ok: title.length >= 12 && title.length <= 60, t: 'Title is 12 to 60 characters' },
+    { w: 20, ok: body.length >= 50 && body.length <= 240, t: 'Message is 50 to 240 characters, short enough to read at a glance' },
+    { w: 15, ok: cta.length >= 3, t: 'Has a clear button, like "Order now"' },
+    { w: 15, ok: /^https:\/\/[^\s.]+\.[^\s]{2,}/i.test(url), t: 'Link is a secure https address' },
+    { w: 10, ok: title.length > 0 && !shout, t: 'No ALL-CAPS title' },
+    { w: 10, ok: /\d/.test(title + ' ' + body), t: 'Mentions a number, price or offer' },
+    { w: 10, ok: tier === 'premium' ? !!($('adTargetTxType').value || $('adTargetCustomerType').value || $('adTargetMinAmount').value || $('adTargetMaxAmount').value || $('adTargetHourStart').value !== '') : true, t: tier === 'premium' ? 'Uses targeting so spend reaches the right people' : 'Ready for review' }
+  ];
+  const score = checks.reduce((s, c) => s + (c.ok ? c.w : 0), 0);
+  $('scoreNum').textContent = score;
+  const arc = $('scoreArc'), C = 2 * Math.PI * 36; arc.setAttribute('stroke-dasharray', `${(score / 100 * C).toFixed(1)} ${C.toFixed(1)}`);
+  arc.setAttribute('stroke', score >= 80 ? 'var(--st-live)' : score >= 50 ? 'var(--nx-orange)' : 'var(--st-pending)');
+  $('scoreChecks').innerHTML = checks.map(c => `<li class="${c.ok ? 'ok' : 'no'}"><i class="fas ${c.ok ? 'fa-circle-check' : 'fa-circle'}"></i><span>${esc(c.t)}</span></li>`).join('');
+}
+function selectTier(tier, budget) {
+  if (!['basic', 'premium', 'dominant'].includes(tier)) tier = 'basic';
+  $('adTier').value = tier; if (budget && tier === 'premium') $('adBudget').value = budget;
+  onAdTierChange(); goTab('create');
+}
 
-            if (tier === 'premium') {
-                const budget = parseFloat(document.getElementById('adBudget').value);
-                if (!budget || budget < receiptAdPricing.tiers.premium.min_budget || budget > receiptAdPricing.tiers.premium.max_budget) {
-                    showToast(`Premium budget must be between ${receiptAdPricing.currency} ${receiptAdPricing.tiers.premium.min_budget.toLocaleString()} and ${receiptAdPricing.tiers.premium.max_budget.toLocaleString()}.`, 'warning');
-                    return;
-                }
-                payload.budget = budget;
-            } else if (tier === 'performance') {
-                const clicks = parseInt(document.getElementById('adClicks').value, 10);
-                if (!clicks || clicks < receiptAdPricing.tiers.performance.min_clicks) {
-                    showToast(`Minimum is ${receiptAdPricing.tiers.performance.min_clicks.toLocaleString()} clicks.`, 'warning');
-                    return;
-                }
-                payload.clicks = clicks;
-            } else if (tier === 'dominant' && receiptAdPricing.tiers.dominant.slot_occupied) {
-                showToast('The Sponsored slot is currently occupied by another campaign.', 'warning');
-                return;
-            }
+/* =========================================================
+   PLAN ADVISOR (rules run in the browser, using live pricing)
+   ========================================================= */
+function parseBudget(text) {
+  let best = 0; const rx = /(?:₦|ngn|naira|n)?\s*(\d+(?:[.,]\d+)?)\s*(k|m|million|thousand)?\b/gi; let m;
+  while ((m = rx.exec(text))) {
+    let v = parseFloat(m[1].replace(',', '.')); const u = (m[2] || '').toLowerCase();
+    if (u === 'k' || u === 'thousand') v *= 1e3; else if (u === 'm' || u === 'million') v *= 1e6;
+    else if (v < 1000 && v >= 100 && /k\b/i.test(text)) v *= 1e3;
+    if (v >= 10000 && v > best) best = v;
+  }
+  return best;
+}
+function advise(text) {
+  const t = pricing.tiers, low = text.toLowerCase(), budget = parseBudget(text), why = [];
+  const exclusive = /(every receipt|everyone|exclusive|own the|dominate|all customers|launch|big announcement|brand awareness|biggest)/.test(low);
+  const targeted = /(target|new customer|returning|airtime|data|bill|utility|gift ?card|evening|morning|night|hour|weekend|specific|niche|audience|segment)/.test(low);
+  const small = /(test|try|trial|small|first time|start|cheap|pilot|see how)/.test(low);
+  let tier = 'basic';
+  const pMin = t.premium ? t.premium.min_budget : 250000, pMax = t.premium ? t.premium.max_budget : 500000, dPrice = t.dominant ? t.dominant.price : 1000000;
+  if (budget >= dPrice && (exclusive || !targeted)) tier = 'dominant';
+  else if (budget >= pMin && (targeted || !exclusive)) tier = 'premium';
+  else if (!budget) tier = exclusive ? 'dominant' : targeted ? 'premium' : 'basic';
+  else if (budget >= pMin) tier = 'premium';
+  if (small && budget < pMin) tier = 'basic';
+  let useBudget = null;
+  if (tier === 'premium') { useBudget = budget ? Math.min(Math.max(budget, pMin), pMax) : Math.round((pMin + pMax) / 2 / 10000) * 10000; }
+  if (tier === 'basic') why.push(small ? 'You want to test the water, so a fixed, low-commitment package fits.' : 'A fixed package is the simplest way to start.');
+  if (tier === 'premium') { why.push(targeted ? 'You described a specific audience, and only Premium lets you target purchase type, customer type, amount and hours.' : 'Premium lets you choose your budget and focus spend on the right customers.'); if (budget > pMax) why.push(`Your budget is above the Premium range, so I capped it at ${money(pMax)}. Sponsored (${money(dPrice)}) is the next step up.`); }
+  if (tier === 'dominant') why.push('You want maximum visibility. Sponsored shows only your ad on every receipt until the budget runs out.');
+  if (budget && budget < (tier === 'basic' && t.basic ? t.basic.price : 0)) why.push(`Basic costs ${money(t.basic.price)}, a little above the budget you mentioned.`);
+  if (tier === 'dominant' && t.dominant && t.dominant.slot_occupied && pricingLive) why.push('Heads up: the Sponsored slot is occupied right now. Premium is available immediately.');
+  let cost = tier === 'basic' && t.basic ? t.basic.price : tier === 'dominant' && t.dominant ? t.dominant.price : useBudget;
+  let views = tier === 'basic' && t.basic ? t.basic.impressions : tier === 'dominant' && t.dominant ? t.dominant.impressions : (useBudget ? premiumImpressions(useBudget) : null);
+  return { tier, cost, views, budget: useBudget, why };
+}
+function runAdvisor(text) {
+  text = (text || '').trim();
+  if (text.length < 4) { showToast('Tell me a little about your goal or budget first.', 'warning'); return; }
+  const a = advise(text), box = $('advice');
+  box.innerHTML = `<div class="advice-head"><i class="fas fa-wand-magic-sparkles" style="color:var(--nx-orange)"></i><span class="tag">Recommended for you</span></div>
+    <h3>${TIER_META[a.tier].name} plan</h3>
+    <ul>${a.why.map(w => `<li><i class="fas fa-check-circle"></i><span>${esc(w)}</span></li>`).join('')}</ul>
+    <div class="advice-meta"><div>Investment<b>${a.cost ? money(a.cost) : '—'}</b></div><div>Estimated views<b>${a.views ? fmt(a.views) : '—'}</b></div><div>Per 1,000 views<b>${a.cost && a.views ? money(a.cost / a.views * 1000) : '—'}</b></div></div>
+    <button class="btn btn-primary-bg" id="adviceGo"><i class="fas fa-rocket"></i> Use this plan</button>`;
+  box.classList.add('show');
+  $('adviceGo').addEventListener('click', () => selectTier(a.tier, a.budget));
+}
+$('advisorBtn').addEventListener('click', () => runAdvisor($('advisorInput').value));
+$('advisorInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') runAdvisor($('advisorInput').value); });
+document.querySelectorAll('#advisorChips .chip').forEach(c => c.addEventListener('click', () => { $('advisorInput').value = c.textContent; runAdvisor(c.textContent); }));
 
-            if (tier === 'premium' || tier === 'performance') {
-                const targetTxType = document.getElementById('adTargetTxType').value;
-                const targetCustomerType = document.getElementById('adTargetCustomerType').value;
-                const targetMinAmount = document.getElementById('adTargetMinAmount').value;
-                const targetMaxAmount = document.getElementById('adTargetMaxAmount').value;
-                const targetHourStart = document.getElementById('adTargetHourStart').value;
-                const targetHourEnd = document.getElementById('adTargetHourEnd').value;
-                if (targetTxType) payload.target_tx_type = targetTxType;
-                if (targetCustomerType) payload.target_customer_type = targetCustomerType;
-                if (targetMinAmount) payload.target_min_amount = parseFloat(targetMinAmount);
-                if (targetMaxAmount) payload.target_max_amount = parseFloat(targetMaxAmount);
-                if (targetHourStart !== '') payload.target_hour_start = parseInt(targetHourStart, 10);
-                if (targetHourEnd !== '') payload.target_hour_end = parseInt(targetHourEnd, 10);
-            }
+/* =========================================================
+   LOAD PRICING
+   ========================================================= */
+async function loadReceiptAdPricing() {
+  try {
+    const res = await fetch('/api/receipt-ads/pricing'); const data = await res.json();
+    if (data && data.success && data.tiers) { pricing = data; pricingLive = true; }
+  } catch (e) { /* keep fallbacks */ }
+  renderClaims(); renderCpm(); renderSlot(); renderPlans(); onAdTierChange(); renderInsights();
+}
 
-            try {
-                const res = await fetch('/api/receipt-ads/campaigns', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showToast(data.message || 'Campaign submitted for review!', 'success');
-                    document.getElementById('adTitle').value = '';
-                    document.getElementById('adBody').value = '';
-                    document.getElementById('adCtaText').value = '';
-                    document.getElementById('adCtaUrl').value = '';
-                    document.getElementById('adBudget').value = '';
-                    document.getElementById('adClicks').value = '';
-                    document.getElementById('adTargetTxType').value = '';
-                    document.getElementById('adTargetCustomerType').value = '';
-                    document.getElementById('adTargetMinAmount').value = '';
-                    document.getElementById('adTargetMaxAmount').value = '';
-                    document.getElementById('adTargetHourStart').value = '';
-                    document.getElementById('adTargetHourEnd').value = '';
-                    updateAdCharCount();
-                    loadMyReceiptAds();
-                    loadReceiptAdPricing();
-                } else {
-                    showToast(data.error || 'Could not submit campaign.', 'error');
-                }
-            } catch (e) {
-                showToast('Network error — please try again.', 'error');
-            }
-        }
+/* =========================================================
+   CAMPAIGNS & ANALYTICS
+   ========================================================= */
+function deliveredPct(c) {
+  const perf = c.campaign_tier === 'performance';
+  const got = perf ? c.clicks_delivered : c.impressions_delivered, tot = perf ? c.clicks_purchased : c.impressions_purchased;
+  return tot ? Math.min(100, Math.round(100 * (got || 0) / tot)) : 0;
+}
+function tierKey(c) { return TIER_META[c.campaign_tier] ? c.campaign_tier : 'basic'; }
+function ringSvg(pct, size, sw, color) {
+  const r = (size - sw) / 2, C = 2 * Math.PI * r;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--grid)" stroke-width="${sw}"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${(pct / 100 * C).toFixed(1)} ${C.toFixed(1)}"/></svg>`;
+}
+function renderKpis() {
+  const l = campaigns, spend = l.reduce((s, c) => s + Number(c.price_paid || 0), 0);
+  const imp = l.reduce((s, c) => s + Number(c.impressions_delivered || 0), 0);
+  const active = l.filter(c => c.status === 'approved').length;
+  const run = l.filter(c => ['approved', 'completed'].includes(c.status));
+  const avg = run.length ? Math.round(run.reduce((s, c) => s + deliveredPct(c), 0) / run.length) : 0;
+  const clicks = l.reduce((s, c) => s + Number(c.clicks_delivered || 0), 0);
+  const k = [
+    { i: 'fa-wallet', n: spend, f: money, lab: 'Total invested', note: `${l.length} campaign${l.length === 1 ? '' : 's'}` },
+    { i: 'fa-eye', n: imp, f: (v) => fmt(Math.round(v)), lab: 'Receipt views delivered', note: clicks ? `${fmt(clicks)} clicks` : 'Across all campaigns' },
+    { i: 'fa-signal', n: active, f: (v) => String(Math.round(v)), lab: 'Live now', note: active ? 'Showing on receipts' : 'Nothing live right now' },
+    { i: 'fa-gauge-high', n: avg, f: (v) => Math.round(v) + '%', lab: 'Average delivery', note: run.length ? 'Live and completed campaigns' : 'No delivery yet' }
+  ];
+  $('kpis').innerHTML = k.map((x, i) => `<div class="card kpi hover"><div class="ico"><i class="fas ${x.i}"></i></div><div class="num" id="kpi${i}">0</div><div class="lab">${x.lab}</div><div class="note">${esc(x.note)}</div></div>`).join('');
+  k.forEach((x, i) => countUp($('kpi' + i), x.n, x.f));
+}
+function renderStatusViz() {
+  const counts = {}; campaigns.forEach(c => counts[c.status] = (counts[c.status] || 0) + 1);
+  const keys = Object.keys(STATUS_META).filter(k => counts[k]); const total = campaigns.length;
+  if (!total) { $('statusViz').innerHTML = '<div class="empty"><i class="fas fa-chart-pie"></i>No campaigns to chart yet.</div>'; return; }
+  if (statusView === 'table') {
+    $('statusViz').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Status</th><th>Campaigns</th><th>Share</th></tr></thead><tbody>${keys.map(k => `<tr><td>${STATUS_META[k].label}</td><td>${counts[k]}</td><td>${Math.round(100 * counts[k] / total)}%</td></tr>`).join('')}</tbody></table></div>`; return;
+  }
+  const R = 66, C = 2 * Math.PI * R, gap = keys.length > 1 ? 3 : 0; let off = 0;
+  const segs = keys.map(k => { const len = counts[k] / total * C; const s = `<circle cx="85" cy="85" r="${R}" fill="none" stroke="${STATUS_META[k].color}" stroke-width="20" stroke-dasharray="${Math.max(0, len - gap).toFixed(1)} ${(C - Math.max(0, len - gap)).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}"><title>${STATUS_META[k].label}: ${counts[k]}</title></circle>`; off += len; return s; }).join('');
+  $('statusViz').innerHTML = `<div class="donut-wrap"><div class="donut"><svg width="170" height="170" viewBox="0 0 170 170" style="transform:rotate(-90deg)" role="img" aria-label="Campaigns by status"><circle cx="85" cy="85" r="${R}" fill="none" stroke="var(--grid)" stroke-width="20"/>${segs}</svg><div class="mid"><div><b>${total}</b><span>campaigns</span></div></div></div>
+    <div class="status-list">${keys.map(k => `<div><i style="background:${STATUS_META[k].color}"></i>${STATUS_META[k].label}<em>${counts[k]}</em></div>`).join('')}</div></div>`;
+}
+function renderTierViz() {
+  const sp = {}; campaigns.forEach(c => { const k = tierKey(c); sp[k] = (sp[k] || 0) + Number(c.price_paid || 0); });
+  const keys = Object.keys(sp).filter(k => sp[k] > 0), max = Math.max(...keys.map(k => sp[k]), 1), total = keys.reduce((s, k) => s + sp[k], 0);
+  if (!keys.length) { $('tierViz').innerHTML = '<div class="empty"><i class="fas fa-chart-simple"></i>Spend by tier appears after your first paid campaign.</div>'; return; }
+  $('tierViz').innerHTML = `<div class="bars">${keys.map(k => `<div class="bar-row"><div class="top"><b>${TIER_META[k].name}</b><span>${money(sp[k])} · ${Math.round(100 * sp[k] / total)}%</span></div><div class="track"><div class="fill" data-w="${(sp[k] / max * 100).toFixed(1)}" style="background:${TIER_META[k].color}"></div></div></div>`).join('')}</div>`;
+  requestAnimationFrame(() => document.querySelectorAll('#tierViz .fill').forEach(f => f.style.width = f.dataset.w + '%'));
+}
+function campaignInsight(c) {
+  const pct = deliveredPct(c), tier = tierKey(c);
+  if (c.status === 'pending_review') return 'In review. Once approved it starts delivering automatically.';
+  if (c.status === 'rejected') return 'Not approved. Edit the ad using the reason below and resubmit.';
+  if (c.status === 'paused') return pct < 100 ? `Paused at ${pct}% delivered. Unused impressions stay on this campaign.` : 'Paused.';
+  if (c.status === 'completed') return 'Finished. A follow-up campaign keeps your brand in front of the same customers.';
+  if (pct >= 80) return `Almost done at ${pct}%. Queue the next campaign so there is no gap on receipts.`;
+  if (pct >= 40) return `Healthy delivery at ${pct}%. At this pace it completes on its own.`;
+  if (tier === 'dominant') return 'Sponsored delivery depends on receipt volume. It speeds up at busy hours.';
+  return pct ? `Building momentum at ${pct}%.` : 'Just started. Delivery builds as customers transact.';
+}
+function renderCampaignList() {
+  const list = $('myReceiptAdsList');
+  if (!campaigns.length) {
+    list.innerHTML = '<div class="empty"><i class="fas fa-bullhorn"></i><h4>No campaigns yet</h4>Your first one will show up here with live delivery and pacing.<br><br><button class="btn btn-primary-bg" onclick="goTab(\'create\')"><i class="fas fa-rocket"></i> Create a campaign</button></div>'; return;
+  }
+  list.innerHTML = campaigns.map(c => {
+    const perf = c.campaign_tier === 'performance', tk = tierKey(c), pct = deliveredPct(c), sm = STATUS_META[c.status] || { label: c.status, color: 'var(--st-paused)' };
+    const got = perf ? c.clicks_delivered : c.impressions_delivered, tot = perf ? c.clicks_purchased : c.impressions_purchased;
+    const ctr = (!perf && c.clicks_delivered != null && c.impressions_delivered > 0) ? (100 * c.clicks_delivered / c.impressions_delivered).toFixed(2) + '%' : null;
+    const canPause = c.status === 'approved';
+    return `<div class="card camp"><div class="camp-top"><strong>${esc(c.title)}</strong>
+      <div class="badges"><span class="pill" style="background:${TIER_META[tk].color};color:#fff">${TIER_META[tk].name}</span><span class="pill" style="background:${sm.color};color:#fff">${esc(sm.label)}</span></div></div>
+      <div class="camp-grid"><div class="mini-ring">${ringSvg(pct, 74, 9, sm.color)}<b>${pct}%</b></div>
+      <div class="camp-stats"><div><span>${perf ? 'Clicks' : 'Views'} delivered</span><b>${fmt(got)} / ${fmt(tot)}</b></div><div><span>Invested</span><b>${esc(c.price_currency || cur())} ${fmt(c.price_paid)}</b></div>
+        ${ctr ? `<div><span>CTR</span><b>${ctr}</b></div>` : ''}${perf && c.conversions_delivered ? `<div><span>Conversions</span><b>${fmt(c.conversions_delivered)}</b></div>` : ''}</div></div>
+      <div class="camp-ai"><i class="fas fa-wand-magic-sparkles"></i><span>${esc(campaignInsight(c))}</span></div>
+      ${c.status === 'rejected' && c.rejection_reason ? `<div class="reason">Reason: ${esc(c.rejection_reason)}</div>` : ''}
+      ${canPause ? `<button class="btn btn-ghost" style="margin-top:12px;font-size:12px;padding:8px 14px" onclick="pauseReceiptAd(${Number(c.id)})"><i class="fas fa-pause"></i> Pause campaign</button>` : ''}</div>`;
+  }).join('');
+}
+async function loadMyReceiptAds() {
+  try {
+    const res = await fetch('/api/receipt-ads/campaigns'); const data = await res.json();
+    campaigns = (data && data.success && Array.isArray(data.campaigns)) ? data.campaigns : [];
+  } catch (e) { campaigns = []; $('myReceiptAdsList').innerHTML = '<div class="empty"><i class="fas fa-plug-circle-xmark"></i>Could not load your campaigns right now.</div>'; }
+  campaignsLoaded = true;
+  $('tabCount').textContent = campaigns.length;
+  renderKpis(); renderStatusViz(); renderTierViz();
+  if ($('myReceiptAdsList').querySelector('.skel') || campaigns.length || !$('myReceiptAdsList').querySelector('.empty')) renderCampaignList();
+  renderInsights();
+}
+document.querySelectorAll('.view-toggle button').forEach(b => b.addEventListener('click', () => {
+  statusView = b.dataset.v; document.querySelectorAll('.view-toggle button').forEach(x => x.classList.toggle('on', x === b)); renderStatusViz();
+}));
+async function pauseReceiptAd(id) {
+  try {
+    const res = await fetch(`/api/receipt-ads/campaigns/${id}/pause`, { method: 'POST' }); const data = await res.json();
+    if (data.success) { showToast('Campaign paused.', 'info'); loadMyReceiptAds(); } else showToast(data.error || 'Could not pause campaign.', 'error');
+  } catch (e) { showToast('Network error. Please try again.', 'error'); }
+}
 
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                toast.style.transition = 'all 0.3s ease';
-                setTimeout(() => toast.remove(), 300);
-            }, 3500);
-        }
+/* =========================================================
+   SUBMIT (same API contract as before)
+   ========================================================= */
+async function submitReceiptAdCampaign() {
+  const tier = $('adTier').value, title = $('adTitle').value.trim(), body = $('adBody').value.trim(), cta_text = $('adCtaText').value.trim(), cta_url = $('adCtaUrl').value.trim();
+  if (!title || !body) { showToast('Please fill in the ad title and message.', 'warning'); return; }
+  if (!cta_url) { showToast('Please provide a link for your ad.', 'warning'); return; }
+  const payload = { title, body, cta_text, cta_url, campaign_tier: tier }, t = pricing.tiers;
+  if (tier === 'premium') {
+    const budget = parseFloat($('adBudget').value);
+    if (!budget || (t.premium && (budget < t.premium.min_budget || budget > t.premium.max_budget))) { showToast(`Premium budget must be between ${cur()} ${fmt(t.premium.min_budget)} and ${fmt(t.premium.max_budget)}.`, 'warning'); return; }
+    payload.budget = budget;
+  } else if (tier === 'performance') {
+    const clicks = parseInt($('adClicks').value, 10);
+    if (!clicks || clicks < t.performance.min_clicks) { showToast(`Minimum is ${fmt(t.performance.min_clicks)} clicks.`, 'warning'); return; }
+    payload.clicks = clicks;
+  } else if (tier === 'dominant' && t.dominant && t.dominant.slot_occupied) { showToast('The Sponsored slot is currently occupied by another campaign.', 'warning'); return; }
+  if (tier === 'premium' || tier === 'performance') {
+    const v = (id) => $(id).value;
+    if (v('adTargetTxType')) payload.target_tx_type = v('adTargetTxType');
+    if (v('adTargetCustomerType')) payload.target_customer_type = v('adTargetCustomerType');
+    if (v('adTargetMinAmount')) payload.target_min_amount = parseFloat(v('adTargetMinAmount'));
+    if (v('adTargetMaxAmount')) payload.target_max_amount = parseFloat(v('adTargetMaxAmount'));
+    if (v('adTargetHourStart') !== '') payload.target_hour_start = parseInt(v('adTargetHourStart'), 10);
+    if (v('adTargetHourEnd') !== '') payload.target_hour_end = parseInt(v('adTargetHourEnd'), 10);
+  }
+  const btn = $('submitBtn'); btn.disabled = true;
+  try {
+    const res = await fetch('/api/receipt-ads/campaigns', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Campaign submitted for review!', 'success');
+      ['adTitle','adBody','adCtaText','adCtaUrl','adBudget','adClicks','adTargetTxType','adTargetCustomerType','adTargetMinAmount','adTargetMaxAmount','adTargetHourStart','adTargetHourEnd'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+      updateAdCharCount(); updatePreview(); updateEstimate();
+      await loadMyReceiptAds(); loadReceiptAdPricing(); goTab('campaigns');
+    } else showToast(data.error || 'Could not submit campaign.', 'error');
+  } catch (e) { showToast('Network error. Please try again.', 'error'); }
+  btn.disabled = false;
+}
 
-        function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str == null ? '' : String(str);
-            return div.innerHTML;
-        }
+/* =========================================================
+   WIRE-UP
+   ========================================================= */
+['adBudget', 'adClicks'].forEach(id => $(id).addEventListener('input', updateAdPriceEstimate));
+['adTitle', 'adBody', 'adCtaText', 'adCtaUrl', 'adTargetTxType', 'adTargetCustomerType', 'adTargetMinAmount', 'adTargetMaxAmount', 'adTargetHourStart', 'adTargetHourEnd'].forEach(id => { $(id).addEventListener('input', updatePreview); $(id).addEventListener('change', updatePreview); });
+$('adBody').addEventListener('input', updateAdCharCount);
 
-        // Initial load
-        loadReceiptAdPricing();
-        loadMyReceiptAds();
-    </script>
+renderClaims(); renderPlans(); renderSlot(); onAdTierChange(); renderInsights();
+goTab((location.hash || '').slice(1) || 'overview', false);
+loadReceiptAdPricing();
+loadMyReceiptAds();
+</script>
+<script id="net365-sidebar">
+/* Net365 sidebar: the same navigation as the home page, on every page that loads this script. */
+(function(){
+  if (window.__nxSide) return; window.__nxSide = 1;
+  var path = location.pathname.replace(/\/+$/, '') || '/';
+  var ITEMS = [
+    ['/', 'fa-home', 'Home'], ['/?go=transactions', 'fa-exchange-alt', 'Transactions'], ['/?go=wallet', 'fa-wallet', 'Wallet'], ['/scheduler', 'fa-calendar-check', 'Scheduled Payments'],
+    ['/?go=rewards', 'fa-star', 'Rewards'], ['/?go=contacts', 'fa-address-book', 'Contacts'], ['/utilities', 'fa-bolt', 'Utilities'], ['/business', 'fa-briefcase', 'Business'],
+    ['/?go=bulk', 'fa-upload', 'Bulk Recharge'], ['/?go=referrals', 'fa-users', 'Referrals'], ['/?go=settings', 'fa-cog', 'Settings'], ['/?go=help', 'fa-question-circle', 'Help Center'],
+    ['/services', 'fa-toolbox', 'Services'], ['/bots?src=sidebar', 'fa-comments', 'Chat Bots', 'New']
+  ];
+  function active(h){ var b = h.split('?')[0]; if (b === '/') return false; if (b === '/business') return path === '/business' || path === '/marketplace'; return b === path; }
+  var css = document.createElement('style');
+  css.textContent = [
+    'body.nx-side-on{padding-left:236px}',
+    '.nx-side{position:fixed;left:0;top:0;bottom:0;width:236px;z-index:90;padding:20px 12px;overflow-y:auto;border-right:1px solid rgba(140,160,210,.14);background:#090e1b;color:#c6d0e3;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px}',
+    'body:not(.dark-mode) .nx-side{background:#ffffff;border-right-color:rgba(15,23,42,.09);color:#2f3b52;box-shadow:6px 0 30px rgba(15,23,42,.04)}',
+    '.nx-side *{box-sizing:border-box}',
+    '.nx-logo{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;text-decoration:none;color:inherit;font-weight:800;font-size:19px;letter-spacing:-.03em}',
+    '.nx-logo img{height:38px;width:auto;display:block;object-fit:contain}',
+    '.nx-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);display:none;place-items:center;color:#fff;font-size:15px}',
+    '.nx-item{display:flex;align-items:center;gap:12px;padding:10px 12px;margin:1px 0;border-radius:12px;text-decoration:none;color:#8f9cb6;font-weight:500;transition:background .2s,color .2s}',
+    'body:not(.dark-mode) .nx-item{color:#5f6c84}',
+    '.nx-item i{width:18px;text-align:center;font-size:14px}',
+    '.nx-item:hover{background:rgba(143,156,182,.12);color:#f3f6fc}body:not(.dark-mode) .nx-item:hover{background:rgba(15,23,42,.05);color:#0b1020}',
+    '.nx-item.on{color:#f3f6fc;background:linear-gradient(90deg,rgba(255,106,26,.2),transparent);box-shadow:inset 2px 0 0 #ff6a1a}body:not(.dark-mode) .nx-item.on{color:#0b1020}',
+    '.nx-item.on i{color:#ff6a1a}',
+    '.nx-item em{margin-left:auto;font-style:normal;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:linear-gradient(135deg,#ff3b30,#ff6a1a);color:#fff}',
+    '.nx-invite{margin:18px 2px 0;padding:14px;border-radius:16px;border:1px solid rgba(140,160,210,.14);background:rgba(24,32,56,.5);cursor:pointer;position:relative;overflow:hidden}',
+    'body:not(.dark-mode) .nx-invite{background:#f3f5f9;border-color:rgba(15,23,42,.09)}',
+    '.nx-invite h4{font-size:14px;margin:0 0 4px;color:inherit}.nx-invite p{font-size:12px;margin:0 0 10px;opacity:.75}',
+    '.nx-invite button{border:0;border-radius:9px;padding:7px 12px;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);color:#fff;font-weight:600;font-size:12px;cursor:pointer}',
+    '.nx-invite .g{position:absolute;right:8px;bottom:2px;font-size:32px;opacity:.5}',
+    '.nx-fab{display:none;position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:91;width:48px;height:48px;border-radius:50%;border:0;background:linear-gradient(135deg,#ff3b30,#ff6a1a 55%,#ffb547);color:#fff;font-size:18px;box-shadow:0 10px 28px rgba(255,106,26,.45);cursor:pointer}',
+    '.nx-back{display:none}',
+    '@media (max-width:900px){body.nx-side-on{padding-left:0}.nx-side{transform:translateX(-104%);transition:transform .3s ease;width:274px;box-shadow:24px 0 60px rgba(0,0,0,.45)}.nx-side.open{transform:none}.nx-fab{display:block}.nx-back.on{display:block;position:fixed;inset:0;z-index:89;background:rgba(3,5,12,.6)}}',
+    '@media (prefers-reduced-motion:reduce){.nx-side{transition:none}}'
+  ].join('\n');
+  document.head.appendChild(css);
+  function build(){
+    var s = document.createElement('aside'); s.className = 'nx-side'; s.id = 'nxSide'; s.setAttribute('aria-label', 'Main navigation');
+    var h = '<a href="/" class="nx-logo" aria-label="Net365 home"><img src="/static/logo.png" alt="Net365" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="nx-mark"><i class="fas fa-bolt"></i></span></a>';
+    ITEMS.forEach(function(it){ h += '<a href="' + it[0] + '" class="nx-item' + (active(it[0]) ? ' on' : '') + '"' + (active(it[0]) ? ' aria-current="page"' : '') + '><i class="fas ' + it[1] + '"></i><span>' + it[2] + '</span>' + (it[3] ? '<em>' + it[3] + '</em>' : '') + '</a>'; });
+    h += '<div class="nx-invite" onclick="location.href=\'/?go=referrals\'"><h4>Invite &amp; Earn</h4><p>Invite friends and earn rewards as they recharge.</p><button type="button" onclick="event.stopPropagation();location.href=\'/?go=referrals\'">Invite now</button><div class="g">🎁</div></div>';
+    s.innerHTML = h;
+    var back = document.createElement('div'); back.className = 'nx-back'; back.id = 'nxBack';
+    var fab = document.createElement('button'); fab.className = 'nx-fab'; fab.type = 'button'; fab.setAttribute('aria-label', 'Open menu'); fab.innerHTML = '<i class="fas fa-bars"></i>';
+    function tog(){ var o = !s.classList.contains('open'); s.classList.toggle('open', o); back.classList.toggle('on', o); }
+    fab.addEventListener('click', tog); back.addEventListener('click', tog);
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && s.classList.contains('open')) tog(); });
+    document.body.appendChild(s); document.body.appendChild(back); document.body.appendChild(fab); document.body.classList.add('nx-side-on');
+  }
+  if (document.body) build(); else document.addEventListener('DOMContentLoaded', build);
+
+/* remember which page the customer started from, so the payment success page can send them back there */
+(function(){ function mark(){ try { var p = location.pathname.replace(/\/+$/, '') || '/'; localStorage.setItem('n365_return', JSON.stringify({ to: p, t: Date.now() })); } catch (e) {} }
+  window.addEventListener('beforeunload', mark); window.addEventListener('pagehide', mark); })();
+})();
+</script>
 </body>
 </html>
