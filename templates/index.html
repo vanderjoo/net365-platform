@@ -266,6 +266,12 @@
     .icon-btn .badge.show { display: block; }
 
     /* notifications bell panel */
+    #nbBell.nb-alert{background:rgba(255,109,0,.14);border-color:var(--primary,#FF6D00);color:var(--primary,#FF6D00)}
+    #nbBell.nb-alert i{animation:nbRing 2.4s ease-in-out 3}
+    #nbBell.nb-alert::after{content:"";position:absolute;inset:-4px;border-radius:inherit;border:2px solid var(--primary,#FF6D00);opacity:0;animation:nbPulse 2s ease-out 3}
+    @keyframes nbRing{0%,60%,100%{transform:rotate(0)}10%{transform:rotate(14deg)}20%{transform:rotate(-12deg)}30%{transform:rotate(8deg)}40%{transform:rotate(-6deg)}}
+    @keyframes nbPulse{0%{opacity:.7;transform:scale(.9)}100%{opacity:0;transform:scale(1.35)}}
+    @media (prefers-reduced-motion:reduce){ #nbBell.nb-alert i,#nbBell.nb-alert::after{animation:none}#nbBell.nb-alert::after{opacity:.6}}
     #nbPanel{position:fixed;z-index:1100;width:360px;max-width:calc(100vw - 24px);max-height:min(70vh,520px);display:none;flex-direction:column;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.18);overflow:hidden}
     #nbPanel.show{display:flex}
     #nbPanel .nb-h{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border-color);font-weight:700}
@@ -759,6 +765,55 @@
     @media (prefers-reduced-motion:reduce){.nxt *{animation:none!important;transition:none!important}}
 
     /* ===== NET365 SETTINGS + HELP CENTER (shares the .nxt design tokens) ===== */
+
+    /* ---- Account profile + account types ---- */
+    .pf-types{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 14px}
+    .pf-type{position:relative;text-align:left;border:1.5px solid #cbd5e1;background:#fff;border-radius:12px;padding:10px 11px;cursor:pointer;font:inherit;color:#0f172a;transition:border-color .15s,box-shadow .15s}
+    .pf-type b{display:flex;align-items:center;gap:7px;font-size:13px}
+    .pf-type b i{color:#4f46e5;width:16px;text-align:center}
+    .pf-type small{display:block;margin-top:3px;font-size:11px;line-height:1.35;color:#64748b}
+    .pf-type:hover{border-color:#94a3b8}
+    .pf-type.on{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.15)}
+    .pf-type.on::after{content:"\2713";position:absolute;top:7px;right:9px;font-size:12px;font-weight:700;color:#4f46e5}
+    .pf-type:focus-visible{outline:2px solid #4f46e5;outline-offset:2px}
+    @media (max-width:420px){.pf-types{grid-template-columns:1fr}}
+    body.dark-mode .pf-type{background:#1e293b;border-color:#334155;color:#e2e8f0}
+    body.dark-mode .pf-type small{color:#94a3b8}
+    .pf-hero{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+    .pf-av{width:64px;height:64px;border-radius:20px;background:var(--fire);display:grid;place-items:center;color:#fff;font:700 24px var(--n-display);flex:none}
+    .pf-hero h2{font:700 22px var(--n-display);letter-spacing:-.02em;margin:0;color:var(--n-t0)}
+    .pf-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .pf-b{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--n-panel2);border:1px solid var(--n-line);color:var(--n-t1)}
+    .pf-b.ok{color:var(--n-ok)}.pf-b.warn{color:var(--n-warn)}.pf-b.bad{color:var(--n-bad)}
+    .pf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:18px}
+    .pf-f{border:1px solid var(--n-line);background:var(--n-panel2);border-radius:14px;padding:12px 14px;min-width:0}
+    .pf-f span{display:block;font-size:12px;color:var(--n-t2);margin-bottom:4px}
+    .pf-f b{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:15px;font-weight:600;color:var(--n-t0);word-break:break-word}
+    .pf-cp{border:0;background:transparent;color:var(--n-t2);cursor:pointer;padding:4px;border-radius:8px}
+    .pf-cp:hover{color:var(--n-t0);background:var(--n-line)}
+    .pf-edit{margin-top:16px;display:grid;gap:10px;max-width:560px}
+    .pf-edit label{font-size:13px;font-weight:600;color:var(--n-t1)}
+    .pf-edit input,.pf-edit select{width:100%;padding:12px;border:1px solid var(--n-line);border-radius:12px;background:var(--n-panel);color:var(--n-t0);font:inherit;font-size:14px}
+    .pf-note{font-size:13px;color:var(--n-t2);line-height:1.5}
+    body.dark-mode .pf-types .pf-type{color:#e2e8f0}
+
+
+    .pf-detail{font-size:12px;line-height:1.5;color:#475569;background:#f1f5f9;border-radius:12px;padding:10px 12px;margin:-2px 0 14px;display:none}
+    .pf-detail b{color:#0f172a}.pf-detail ul{margin:4px 0 6px 16px;padding:0}
+    body.dark-mode .pf-detail{background:#1e293b;color:#cbd5e1}body.dark-mode .pf-detail b{color:#f1f5f9}
+    .pf-inp{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:12px;margin-bottom:12px;font:inherit;font-size:14px;background:#fff;color:#0f172a;box-sizing:border-box}
+    .pf-lab{display:block;font-size:13px;font-weight:600;margin-bottom:5px;color:#334155}
+    .pf-edit .pf-inp{border-color:var(--n-line);background:var(--n-panel);color:var(--n-t0)}.pf-edit .pf-lab{color:var(--n-t1)}
+    .pf-sec{margin-top:26px}.pf-sec h3{font:700 16px var(--n-display);margin:0 0 4px;color:var(--n-t0)}
+    .pf-caps{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-top:12px}
+    .pf-cap{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--n-line);background:var(--n-panel2);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--n-t0)}
+    .pf-cap em{font-style:normal;font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap}
+    .pf-cap.active em{color:var(--n-ok);background:rgba(15,184,114,.12)}.pf-cap.pending em{color:var(--n-warn);background:rgba(199,119,0,.12)}
+    .pf-cap.unavailable{opacity:.6}.pf-cap.unavailable em{color:var(--n-t2);background:var(--n-line)}
+    .pf-tiers{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:12px}
+    .pf-tier{border:1px solid var(--n-line);background:var(--n-panel2);border-radius:14px;padding:12px;font-size:12px;color:var(--n-t2)}
+    .pf-tier b{display:block;font-size:14px;color:var(--n-t0);margin-bottom:3px}.pf-tier.on{border-color:var(--n-line2);box-shadow:0 0 0 3px var(--n-glow)}
+    .pf-tier button{margin-top:8px}
     .nxp-page{display:none;padding:20px;min-width:0;max-width:100%;box-sizing:border-box;overflow-x:clip}
     @media (max-width:640px){.nxp-page{padding:12px}}
     .nxp-page.active{display:block}
@@ -1127,6 +1182,7 @@ body:before{
   padding:18px!important;
 }
 #net365AuthOverlay .n365-auth-card{
+  max-height:calc(100vh - 36px);
   width:min(980px,100%);
   min-height:min(640px,calc(100vh - 36px));
   display:grid;grid-template-columns:1.02fr .98fr;
@@ -1174,8 +1230,10 @@ body:before{
 }
 .n365-auth-side{
   padding:42px 44px;background:rgba(248,250,252,.98);
-  display:flex;flex-direction:column;justify-content:center;
+  display:flex;flex-direction:column;justify-content:flex-start;overflow-y:auto;max-height:calc(100vh - 36px);
 }
+.n365-auth-side>:first-child{margin-top:auto}
+.n365-auth-side>:last-child{margin-bottom:auto}
 .n365-auth-side h2{font-size:31px;letter-spacing:-.035em;color:#0f172a;margin:0 0 7px}
 .n365-auth-side .sub{color:#64748b;font-size:13px;margin-bottom:22px}
 #net365LoginForm input,#net365LoginForm button{
@@ -1220,6 +1278,34 @@ body:before{
 }
 </style>
 
+
+<script id="net365-storage-guard">
+/* Fail-safe storage wrapper: storage being blocked must never prevent the dashboard booting. */
+(function () {
+  var store;
+  try { store = window.localStorage; } catch (_) { store = null; }
+  window.net365Storage = {
+    getItem: function (key) { try { return store ? store.getItem(key) : null; } catch (_) { return null; } },
+    setItem: function (key, value) { try { if (store) store.setItem(key, String(value)); } catch (_) {} },
+    removeItem: function (key) { try { if (store) store.removeItem(key); } catch (_) {} },
+    clear: function () { try { if (store) store.clear(); } catch (_) {} }
+  };
+})();
+</script>
+
+
+<script id="net365-runtime-guard">
+/* Capture boot-time JS failures for diagnostics; do not expose stack traces in the UI. */
+(function () {
+  window.addEventListener('error', function (event) {
+    try { console.error('[Net365 runtime error]', event.message, event.filename, event.lineno); } catch (_) {}
+  });
+  window.addEventListener('unhandledrejection', function (event) {
+    try { console.error('[Net365 unhandled promise rejection]', event.reason); } catch (_) {}
+  });
+})();
+</script>
+
 </head>
 <body data-device="{{ device_type | default('Unknown') | lower }}">
   <script>
@@ -1249,8 +1335,10 @@ body:before{
       <a href="#" class="nav-item" onclick="showRewardsDashboard();return false"><i class="fas fa-star"></i><span data-i18n="rewards">Rewards</span></a>
       <a href="#" class="nav-item" onclick="showAllContacts();return false"><i class="fas fa-address-book"></i><span data-i18n="contacts">Contacts</span></a>
       <a href="/utilities" class="nav-item" onclick="showToast('📋 Opening Utilities...', 'info');"><i class="fas fa-bolt"></i><span data-i18n="utilities">Utilities</span></a>
+      <a href="/business" class="nav-item" id="navBusiness"><i class="fas fa-briefcase"></i><span>Business</span></a>
       <a href="#" class="nav-item" onclick="showBulkRecharge();return false"><i class="fas fa-upload"></i><span>Bulk Recharge</span></a>
       <a href="#" class="nav-item" onclick="showReferralDashboard();return false"><i class="fas fa-users"></i><span>Referrals</span></a>
+      <a href="#" class="nav-item" id="navProfile" onclick="showProfile();return false"><i class="fas fa-id-card"></i><span>My Profile</span></a>
       <a href="#" class="nav-item" id="navSettings" onclick="showSettings();return false"><i class="fas fa-cog"></i><span data-i18n="settings">Settings</span></a>
       <a href="#" class="nav-item" id="navHelp" onclick="showHelpCenter();return false"><i class="fas fa-question-circle"></i><span data-i18n="help">Help Center</span></a>
       <a href="/services" class="nav-item"><i class="fas fa-toolbox"></i><span>Services</span></a>
@@ -1301,7 +1389,7 @@ body:before{
               <i class="fas fa-user-plus"></i> Create Account
             </a>
             <div class="dropdown-divider"></div>
-            <a href="#" class="dropdown-item" onclick="showToast('👤 Profile coming soon!', 'info')">
+            <a href="#" class="dropdown-item" onclick="showProfile();toggleUserMenu();return false">
               <i class="fas fa-user"></i> My Profile
             </a>
             <a href="#" class="dropdown-item" onclick="showReferralDashboard()">
@@ -1349,24 +1437,26 @@ body:before{
       </section>
       <script>
       (function(){var s=document.getElementById('nblStrip');if(!s)return;
-        try{var t=Number(localStorage.getItem('net365_nbl_hide')||0);if(t&&Date.now()-t<7*864e5){s.style.display='none'}}catch(e){}
-        document.getElementById('nblX').onclick=function(){s.style.display='none';try{localStorage.setItem('net365_nbl_hide',String(Date.now()))}catch(e){}};
+        try{var t=Number(window.net365Storage.getItem('net365_nbl_hide')||0);if(t&&Date.now()-t<7*864e5){s.style.display='none'}}catch(e){}
+        document.getElementById('nblX').onclick=function(){s.style.display='none';try{window.net365Storage.setItem('net365_nbl_hide',String(Date.now()))}catch(e){}};
       })();
       </script>
         <div class="content">
           <!-- LEFT COLUMN -->
           <div class="left-col">
-            <!-- WELCOME BANNER -->
-            <div class="welcome-banner" id="welcomeBanner">
-              <div style="font-size:12px;opacity:0.8;margin-bottom:6px;">WELCOME TO NET365</div>
-              <h1>Recharge the World<br />Fast. Secure. Instant.</h1>
-              <p>A global payments platform for everyone, everywhere.</p>
-              <div class="banner-btns">
-                <button class="btn-white" onclick="location.href='/bots?src=video#demo'">Watch Video</button>
-                <button class="btn-outline" onclick="nxOpenExplore()">Explore More →</button>
-                <button class="btn-outline" onclick="location.href='/bots?src=banner'">Pay by chat →</button>
+            <!-- GREETING -->
+            <header class="rx-greet" id="rxGreetWrap">
+              <div>
+                <h1 id="rxGreet">Pay anything, anywhere.</h1>
+                <p id="rxSub">Airtime, data, bills and gift cards in 190+ countries. Ask in plain words, or tap a service.</p>
+                <div class="rx-links">
+                  <button type="button" onclick="nxOpenVideo()"><i class="fas fa-play"></i> Watch how it works</button>
+                  <button type="button" onclick="nxOpenExplore()"><i class="fas fa-compass"></i> Explore services</button>
+                  <a href="/bots?src=banner"><i class="fas fa-comment-dots"></i> Pay by chat</a>
+                </div>
               </div>
-            </div>
+              <a class="rx-acct" id="rxAcct" role="button" tabindex="0" onclick="showProfile()" style="display:none"><i class="fas fa-id-card"></i><span id="rxAcctTxt"></span></a>
+            </header>
 
             <!-- ASK NET365 + LIVE PULSE (Power Grid v5) -->
             <section class="pg-ask" id="pgAsk" aria-label="Ask Net365">
@@ -1378,139 +1468,69 @@ body:before{
               </form>
               <div class="pg-chips" id="pgChips"></div>
               <div class="pg-reply" id="pgReply" aria-live="polite"></div>
+              <div class="rx-rail" aria-hidden="true"><span class="rx-st">You ask</span><span class="rx-st">You confirm</span><span class="rx-st">We route</span><span class="rx-st">Delivered</span></div>
               <div class="pg-pulse" id="pgPulse"></div>
             </section>
 
-            <!-- PUBLIC DISCOVERY / EVALUATION ENTRY POINTS -->
-            <section class="net365-access-grid" aria-label="Explore Net365 access options">
-              <article class="net365-access-card">
-                <div class="access-icon"><i class="fas fa-compass"></i></div>
-                <h3>Explore Net365</h3>
-                <p>Browse services, utilities, scheduler capabilities, payment features, pricing and public resources. No registration required.</p>
-                <button type="button" onclick="exploreNet365()">Explore services</button>
-              </article>
-              <article class="net365-access-card secondary">
-                <div class="access-icon"><i class="fas fa-flask"></i></div>
-                <h3>Try Interactive Demo</h3>
-                <p>Run a clearly labelled simulated airtime transaction and inspect a sample receipt. No live payment or fulfilment.</p>
-                <button type="button" onclick="openNet365Demo()">Launch demo</button>
-              </article>
-              <article class="net365-access-card">
-                <div class="access-icon"><i class="fas fa-user-check"></i></div>
-                <h3>Start Free Evaluation</h3>
-                <p>Automatically provision a personal 30-day evaluation account with its own dashboard, test wallet and evaluation history.</p>
-                <button type="button" onclick="startNet365Evaluation('personal', this)">Start personal evaluation</button>
-              </article>
-              <article class="net365-access-card business">
-                <div class="access-icon"><i class="fas fa-building"></i></div>
-                <h3>Evaluate Net365 Business APIs</h3>
-                <p>Explore business payment infrastructure, bulk transaction demonstrations, API resources and integration capabilities.</p>
-                <button type="button" onclick="startNet365Evaluation('business', this)">Evaluate business APIs</button>
-              </article>
-            </section>
-            <div class="net365-evaluation-banner" id="net365EvaluationBanner">
-              <span id="net365EvaluationBannerText">You are using a Net365 evaluation account. Live transactions are disabled.</span>
-              <button type="button" onclick="openEvalPanel()" style="border:0;border-radius:8px;padding:7px 11px;background:#1d4ed8;color:#fff;font-weight:700;cursor:pointer">Manage evaluation</button>
+            <!-- REACH -->
+            <div class="rx-reach" id="globalNetworkCard">
+              <span class="rx-live"><i></i>Live</span>
+              <span><b>190+</b> countries</span>
+              <span><b>1,500+</b> operators</span>
+              <span><b>120+</b> payment methods</span>
+              <span><b>99.99%</b> uptime</span>
+              <span class="rx-pci"><i class="fas fa-lock"></i> PCI DSS Level 1</span>
             </div>
 
-            <!-- GLOBAL RECHARGE NETWORK CARD -->
-            <div class="global-network-card" id="globalNetworkCard">
-              <div class="global-network-header">
-                <div class="global-network-title">
-                  <div class="global-network-icon"><i class="fas fa-globe-americas"></i></div>
-                  <div class="global-network-heading">
-                    <h3>GLOBAL RECHARGE NETWORK</h3>
-                    <span>🌍 190+ Countries · 1,500+ Operators</span>
-                  </div>
-                </div>
-                <div class="network-live-status">
-                  <span class="network-live-dot"></span> Live
-                </div>
-              </div>
-
-              <div class="global-network-stats">
-                <div class="global-network-stat">
-                  <div class="network-stat-top"><span class="network-stat-icon"><i class="fas fa-globe"></i></span><span class="network-stat-label">Countries</span></div>
-                  <div class="network-stat-value">190+</div>
-                  <div class="network-stat-sub">global reach</div>
-                </div>
-                <div class="global-network-stat">
-                  <div class="network-stat-top"><span class="network-stat-icon"><i class="fas fa-satellite-dish"></i></span><span class="network-stat-label">Operators</span></div>
-                  <div class="network-stat-value">1,500+</div>
-                  <div class="network-stat-sub">mobile networks</div>
-                </div>
-                <div class="global-network-stat">
-                  <div class="network-stat-top"><span class="network-stat-icon"><i class="fas fa-credit-card"></i></span><span class="network-stat-label">Payment Methods</span></div>
-                  <div class="network-stat-value">120+</div>
-                  <div class="network-stat-sub">local &amp; global</div>
-                </div>
-                <div class="global-network-stat">
-                  <div class="network-stat-top"><span class="network-stat-icon"><i class="fas fa-cloud-upload-alt"></i></span><span class="network-stat-label">Availability</span></div>
-                  <div class="network-stat-value">99.99%</div>
-                  <div class="network-stat-sub">uptime SLA</div>
-                </div>
-                <div class="global-network-stat">
-                  <div class="network-stat-top"><span class="network-stat-icon"><i class="fas fa-exchange-alt"></i></span><span class="network-stat-label">Transactions</span></div>
-                  <div class="network-stat-value">Millions</div>
-                  <div class="network-stat-sub">processed</div>
-                </div>
-              </div>
-
-              <div class="global-network-footer">
-                <div class="global-network-coverage"><i class="fas fa-check-circle" style="color:#22c55e;"></i> 190+ countries covered</div>
-                <div class="network-security"><i class="fas fa-lock"></i> PCI DSS Level 1</div>
-              </div>
-            </div>
-
-            <!-- QUICK ACTIONS -->
+            <!-- SERVICES -->
             <div class="quick-actions" id="quickActions">
-              <div class="action-item" onclick="document.getElementById('rechargeSection').scrollIntoView({behavior:'smooth'})">
-                <div class="action-icon" style="background:#FFC000;"><i class="fas fa-mobile-alt"></i></div>
-                <span>Recharge Airtime</span>
+              <div class="action-item" role="button" tabindex="0" onclick="document.getElementById('rechargeSection').scrollIntoView({behavior:'smooth'})">
+                <div class="action-icon"><i class="fas fa-mobile-alt"></i></div>
+                <span>Airtime</span>
               </div>
-              <div class="action-item" onclick="Net365Hub.open('data')">
-                <div class="action-icon" style="background:#22D3EE;"><i class="fas fa-wifi"></i></div>
-                <span>Buy Data</span>
+              <div class="action-item" role="button" tabindex="0" onclick="Net365Hub.open('data')">
+                <div class="action-icon"><i class="fas fa-wifi"></i></div>
+                <span>Data</span>
               </div>
-              <div class="action-item" onclick="Net365Hub.open('electricity')">
-                <div class="action-icon" style="background:#0E7C93;"><i class="fas fa-bolt"></i></div>
-                <span>Pay Electricity</span>
+              <div class="action-item" role="button" tabindex="0" onclick="Net365Hub.open('electricity')">
+                <div class="action-icon"><i class="fas fa-bolt"></i></div>
+                <span>Electricity</span>
               </div>
-              <div class="action-item" onclick="Net365Hub.open('tv')">
-                <div class="action-icon" style="background:#818CF8;"><i class="fas fa-tv"></i></div>
+              <div class="action-item" role="button" tabindex="0" onclick="Net365Hub.open('tv')">
+                <div class="action-icon"><i class="fas fa-tv"></i></div>
                 <span>Cable TV</span>
               </div>
-              <div class="action-item" data-hub="education" style="display:none" onclick="Net365Hub.open('education')">
-                <div class="action-icon" style="background:#6366F1;"><i class="fas fa-graduation-cap"></i></div>
+              <div class="action-item" role="button" tabindex="0" data-hub="education" style="display:none" onclick="Net365Hub.open('education')">
+                <div class="action-icon"><i class="fas fa-graduation-cap"></i></div>
                 <span>Education</span>
               </div>
-              <div class="action-item" data-hub="insurance" style="display:none" onclick="Net365Hub.open('insurance')">
-                <div class="action-icon" style="background:#10B981;"><i class="fas fa-shield-alt"></i></div>
+              <div class="action-item" role="button" tabindex="0" data-hub="insurance" style="display:none" onclick="Net365Hub.open('insurance')">
+                <div class="action-icon"><i class="fas fa-shield-alt"></i></div>
                 <span>Insurance</span>
               </div>
-              <div class="action-item" onclick="window.location.href='/business'">
-                <div class="action-icon" style="background:#34D399;"><i class="fas fa-gift"></i></div>
-                <span>Gift Cards</span>
+              <div class="action-item" role="button" tabindex="0" onclick="window.location.href='/business'">
+                <div class="action-icon"><i class="fas fa-gift"></i></div>
+                <span>Gift cards</span>
               </div>
-              <div class="action-item" onclick="showToast('Send money coming soon!', 'info')">
-                <div class="action-icon" style="background:#0891B2;"><i class="fas fa-paper-plane"></i></div>
-                <span>Send Money</span>
-              </div>
-              <div class="action-item" onclick="showToast('Crypto coming soon!', 'info')">
-                <div class="action-icon" style="background:#6366F1;"><i class="fab fa-bitcoin"></i></div>
-                <span>Crypto</span>
-              </div>
-              <div class="action-item" onclick="window.location.href='/utilities'">
-                <div class="action-icon" style="background:#2DD4BF;"><i class="fas fa-home"></i></div>
+              <div class="action-item" role="button" tabindex="0" onclick="window.location.href='/utilities'">
+                <div class="action-icon"><i class="fas fa-home"></i></div>
                 <span>Utilities</span>
               </div>
-              <div class="action-item" onclick="showToast('Travel eSIM coming soon!', 'info')">
-                <div class="action-icon" style="background:#38BDF8;"><i class="fas fa-plane"></i></div>
-                <span>Travel eSIM</span>
+              <div class="action-item" role="button" tabindex="0" onclick="showBulkRecharge()">
+                <div class="action-icon"><i class="fas fa-upload"></i></div>
+                <span>Bulk recharge</span>
               </div>
-              <div class="action-item" onclick="showToast('More features coming soon!', 'info')">
-                <div class="action-icon" style="background:#64748b;"><i class="fas fa-th"></i></div>
-                <span>More</span>
+              <div class="action-item" role="button" tabindex="0" onclick="window.location.href='/scheduler'">
+                <div class="action-icon"><i class="fas fa-calendar-check"></i></div>
+                <span>Scheduled</span>
+              </div>
+              <div class="action-item" role="button" tabindex="0" onclick="window.location.href='/bots?src=tiles'">
+                <div class="action-icon"><i class="fas fa-comments"></i></div>
+                <span>Chat bots</span>
+              </div>
+              <div class="action-item" role="button" tabindex="0" onclick="showRewardsDashboard()">
+                <div class="action-icon"><i class="fas fa-star"></i></div>
+                <span>Rewards</span>
               </div>
             </div>
 
@@ -1636,9 +1656,9 @@ body:before{
         <i class="fas fa-microchip"></i>
       </div>
       <div>
-        <h4 class="wallet-f-title">Vault Balance</h4>
+        <h4 class="wallet-f-title">Wallet</h4>
         <div class="wallet-f-status">
-          <span class="status-pulse"></span> Network Active
+          <span class="status-pulse"></span> Ready to pay
         </div>
       </div>
     </div>
@@ -1655,28 +1675,22 @@ body:before{
   <!-- Hero Balance Card -->
   <div class="wallet-f-hero">
     <div class="hero-label-group">
-      <span class="hero-label">Combined Net Worth</span>
-      <span class="hero-badge"><i class="fas fa-shield-halved"></i> Encrypted</span>
+      <span class="hero-label">Available balance</span>
+      <span class="hero-badge"><i class="fas fa-shield-halved"></i> Secured</span>
     </div>
 
     <!-- Balance Container with Privacy Mask Class support -->
     <div class="hero-amount-wrapper" id="balanceContainer">
-      <h1 class="hero-amount" id="walletBalance">₦1,248,500.00</h1>
-      <div class="hero-sub-amount" id="walletBalanceUSD">≈ $850.20 USD</div>
+      <h1 class="hero-amount" id="walletBalance">₦0.00</h1>
+      <div class="hero-sub-amount" id="walletBalanceUSD">≈ $0.00 USD</div>
     </div>
 
-    <!-- Mini Live Market Ticker -->
-    <div class="wallet-f-ticker">
-      <span class="ticker-item"><i class="fas fa-caret-up text-success"></i> NGN/USD +0.4%</span>
-      <span class="ticker-divider">•</span>
-      <span class="ticker-item"><i class="fas fa-caret-down text-danger"></i> GBP/NGN -0.1%</span>
-    </div>
   </div>
 
   <!-- Currency Assets Carousel/Grid -->
   <div class="wallet-f-section-title">
     <span>Multi-Currency Assets</span>
-    <button class="wallet-f-link-btn" onclick="showToast('🔁 Currency swap coming soon!', 'info')"><i class="fas fa-repeat"></i> Swap</button>
+    
   </div>
 
   <div class="wallet-f-currencies" id="walletCurrencyList">
@@ -1688,7 +1702,7 @@ body:before{
       </div>
       <div class="currency-details">
         <span class="currency-name">Nigerian Naira</span>
-        <span class="currency-val">1,248,500.00</span>
+        <span class="currency-val">0.00</span>
       </div>
     </div>
 
@@ -1700,7 +1714,7 @@ body:before{
       </div>
       <div class="currency-details">
         <span class="currency-name">US Dollar</span>
-        <span class="currency-val">850.20</span>
+        <span class="currency-val">0.00</span>
       </div>
     </div>
 
@@ -2648,7 +2662,7 @@ body.dark-mode .wallet-enhanced {
                 </div>
                 <div class="referral-input-group" id="referralGroup">
                   <input type="text" id="referralInput" placeholder="Enter Referral Code" />
-                  <button class="apply-btn" onclick="applyReferralCode()">Apply</button>
+                  <button class="apply-btn" onclick="REF_MANUAL=true;applyReferralCode().finally(function(){REF_MANUAL=false})">Apply</button>
                 </div>
                 <div class="referral-badge" id="referralBadge">✓ Code Applied! ₦50 discount added.</div>
               </div>
@@ -2830,7 +2844,7 @@ body.dark-mode .wallet-enhanced {
                 Mobile Network Operator
               </label>
               <select id="bulkContactOperatorId" class="recharge-select" style="margin-bottom:14px;">
-                <option value="">Auto-detect (may fail in sandbox)</option>
+                <option value="">Auto-detect</option>
               </select>
 
               <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
@@ -2880,26 +2894,27 @@ body.dark-mode .wallet-enhanced {
             <div class="lang-select" onclick="showSettings('appearance')">
               🇬🇧 English <i class="fas fa-chevron-down" style="font-size:10px;"></i>
             </div>
-            <span>© 2025 Net365. All rights reserved.</span>
-            <span class="env-badge">sandbox</span>
+            <span>© <span class="rx-year">2026</span> Net365. All rights reserved.</span>
           </div>
           <div class="footer-links">
-            <a href="#" onclick="showToast('About us coming soon!', 'info')">About Us</a>
-            <a href="#" onclick="showToast('Fees information coming soon!', 'info')">Fees</a>
-            <a href="#" onclick="showToast('Security info coming soon!', 'info')">Security</a>
-            <a href="#" onclick="showToast('Privacy policy coming soon!', 'info')">Privacy</a>
-            <a href="#" onclick="showToast('Terms coming soon!', 'info')">Terms</a>
-            <a href="#" onclick="openSupport(); return false;">Contact Us</a>
-          </div>
-          <div class="footer-social">
-            <i class="fab fa-facebook" onclick="showToast('Facebook coming soon!', 'info')"></i>
-            <i class="fab fa-twitter" onclick="showToast('Twitter coming soon!', 'info')"></i>
-            <i class="fab fa-instagram" onclick="showToast('Instagram coming soon!', 'info')"></i>
-            <i class="fab fa-linkedin" onclick="showToast('LinkedIn coming soon!', 'info')"></i>
+            <a href="#" onclick="showHelpCenter();return false">Help Center</a>
+            <a href="/terms">Terms &amp; Privacy</a>
+            <a href="/bots?src=footer">Chat bots</a>
+            <a href="/services">Services</a>
           </div>
         </footer>
       </div>
 
+      <!-- PROFILE PAGE -->
+      <div id="profileContent" class="nxp-page">
+        <div class="nxt">
+          <div class="nxt-top">
+            <a class="nxt-back" onclick="showDashboard()" role="button" tabindex="0"><i class="fas fa-arrow-left"></i> Dashboard</a>
+            <div class="nxt-title"><i class="fas fa-id-card"></i><span>My profile</span></div>
+          </div>
+          <div class="nxt-panel" id="pfBody"><p class="pf-note">Loading your profile…</p></div>
+        </div>
+      </div>
       <!-- ANALYTICS PAGE -->
       <!-- SETTINGS PAGE -->
       <div id="settingsContent" class="nxp-page">
@@ -3140,13 +3155,13 @@ body.dark-mode .wallet-enhanced {
 
         <footer class="footer">
           <div style="display:flex;align-items:center;gap:12px;">
-            <span>© 2025 Net365. All rights reserved.</span>
-            <span class="env-badge">sandbox</span>
+            <span>© <span class="rx-year">2026</span> Net365. All rights reserved.</span>
           </div>
           <div class="footer-links">
-            <a href="#" onclick="showToast('About us coming soon!', 'info')">About Us</a>
-            <a href="#" onclick="showToast('Privacy policy coming soon!', 'info')">Privacy</a>
-            <a href="#" onclick="showToast('Terms coming soon!', 'info')">Terms</a>
+            <a href="#" onclick="showHelpCenter();return false">Help Center</a>
+            <a href="/terms">Terms &amp; Privacy</a>
+            <a href="/bots?src=footer">Chat bots</a>
+            <a href="/services">Services</a>
           </div>
         </footer>
       </div>
@@ -3580,13 +3595,13 @@ const PROVIDER_NAMES = {
     // ============================================
     function toggleTheme() {
       document.body.classList.toggle('dark-mode');
-      localStorage.setItem('net365_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+      window.net365Storage.setItem('net365_theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
       showToast(document.body.classList.contains('dark-mode') ? '🌙 Dark mode enabled' : '☀️ Light mode enabled', 'info');
     }
 
     function loadTheme() {
-      const saved = localStorage.getItem('net365_theme');
-      if (localStorage.getItem('net365_theme_auto') === '1' && window.matchMedia) {
+      const saved = window.net365Storage.getItem('net365_theme');
+      if (window.net365Storage.getItem('net365_theme_auto') === '1' && window.matchMedia) {
         document.body.classList.toggle('dark-mode', matchMedia('(prefers-color-scheme: dark)').matches);
       } else if (saved === 'dark') {
         document.body.classList.add('dark-mode');
@@ -3607,6 +3622,206 @@ const PROVIDER_NAMES = {
     // ============================================
     // PAGE NAVIGATION
     // ============================================
+
+    // ---- Account types, profile and activation (one identity, many workspaces) ----
+    let PF_META = null;
+    const PF_FALLBACK = [{"key": "individual", "label": "Individual", "ecosystem": "personal", "icon": "user", "business": false, "blurb": "Payments and everyday digital services.", "benefits": ["Airtime, data, bills and TV", "Scheduled payments", "Rewards and referrals"], "for": "People paying for themselves and family.", "verification": "Email confirmation.", "fields": [{"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}, {"key": "sme", "label": "SME / Business", "ecosystem": "business", "icon": "store", "business": true, "blurb": "Grow your business, manage payments and advertise.", "benefits": ["Business wallet and bulk recharge", "Transaction reports", "Advertising credits"], "for": "Shops, small companies and freelancers.", "verification": "Business details reviewed by our team.", "fields": [{"key": "business_name", "label": "Business name", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "reg_status", "label": "Registration status", "required": true, "type": "select", "options": ["Registered", "Not yet registered"], "placeholder": ""}, {"key": "business_category", "label": "Business category", "required": true, "type": "select", "options": ["Retail", "Telecoms and airtime", "Services", "Food and hospitality", "Education", "Technology", "Other"], "placeholder": ""}, {"key": "business_email", "label": "Business email", "required": false, "type": "email", "options": [], "placeholder": ""}, {"key": "contact_person", "label": "Contact person", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "business_address", "label": "Business address", "required": false, "type": "text", "options": [], "placeholder": ""}, {"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}, {"key": "corporate", "label": "Corporate", "ecosystem": "business", "icon": "building", "business": true, "blurb": "Enterprise payment management and business integrations.", "benefits": ["Multi-user finance teams", "Approval flows", "Dedicated support"], "for": "Registered companies and organisations.", "verification": "Company registration and authorised representative checked.", "fields": [{"key": "business_name", "label": "Registered company name", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "reg_no", "label": "Registration number", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "tax_id", "label": "Tax identification number", "required": false, "type": "text", "options": [], "placeholder": ""}, {"key": "representative", "label": "Authorised representative", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "business_email", "label": "Corporate email", "required": true, "type": "email", "options": [], "placeholder": ""}, {"key": "business_address", "label": "Business address", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}, {"key": "developer", "label": "Developer / API", "ecosystem": "ecosystem", "icon": "code", "business": true, "blurb": "Integrate Net365 services into your applications.", "benefits": ["API keys and webhooks", "Integration analytics", "Airtime, data and bills endpoints"], "for": "Developers and companies building apps.", "verification": "Application and organisation reviewed before live keys.", "fields": [{"key": "business_name", "label": "Developer or organisation name", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "app_name", "label": "Application name", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "integration", "label": "Intended integration", "required": true, "type": "select", "options": ["Airtime and data", "Utilities and bills", "Wallet and payments", "Several of these"], "placeholder": ""}, {"key": "website", "label": "Website or application URL", "required": false, "type": "url", "options": [], "placeholder": ""}, {"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}, {"key": "agent", "label": "Agent / Reseller", "ecosystem": "ecosystem", "icon": "network-wired", "business": true, "blurb": "Sell digital services and earn commissions.", "benefits": ["Wholesale pricing", "Sub-accounts for your sellers", "Commission reports"], "for": "Shops, kiosks and distributors.", "verification": "Identity and trading location checked.", "fields": [{"key": "business_name", "label": "Trading name", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "location", "label": "Town or state", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "contact_person", "label": "Contact person", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}, {"key": "partner", "label": "Strategic Partner", "ecosystem": "ecosystem", "icon": "handshake", "business": true, "blurb": "Build commercial and technology partnerships.", "benefits": ["Partner desk", "Co-built services", "Joint reporting"], "for": "Telcos, banks, fintechs and platforms.", "verification": "Reviewed by the partnerships team.", "fields": [{"key": "business_name", "label": "Organisation", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "partnership_type", "label": "Partnership type", "required": true, "type": "select", "options": ["Commercial", "Technology", "Distribution"], "placeholder": ""}, {"key": "contact_person", "label": "Contact person", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "website", "label": "Website", "required": false, "type": "url", "options": [], "placeholder": ""}, {"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}];
+    const PF_COUNTRY_LIST = ["Nigeria", "Ghana", "Kenya", "South Africa", "Tanzania", "Uganda", "Rwanda", "Ethiopia", "Egypt", "Morocco", "Algeria", "Tunisia", "Senegal", "Cote d'Ivoire", "Cameroon", "Benin", "Togo", "Burkina Faso", "Mali", "Niger", "Sierra Leone", "Liberia", "Gambia", "Guinea", "Zambia", "Zimbabwe", "Malawi", "Mozambique", "Botswana", "Namibia", "Angola", "DR Congo", "Republic of the Congo", "Gabon", "Sudan", "Somalia", "Mauritius", "United Kingdom", "United States", "Canada", "Ireland", "France", "Germany", "Spain", "Italy", "Netherlands", "Portugal", "Belgium", "Switzerland", "United Arab Emirates", "Saudi Arabia", "Qatar", "India", "Pakistan", "Bangladesh", "China", "Philippines", "Brazil", "Australia", "Other"];
+    window.__pfType = window.__pfType || 'individual';
+    async function pfMeta() {
+      if (PF_META) return PF_META;
+      try { const r = await fetch(`${API_BASE}/profile/account-types`); const d = await r.json(); if (d.success && d.types && d.types.length) PF_META = d; } catch (e) {}
+      if (!PF_META) PF_META = { types: PF_FALLBACK, tiers: [{ name: 'Starter', note: 'Basic account.' }, { name: 'Standard', note: 'Expanded transaction capabilities.' }, { name: 'Premium', note: 'Advanced services and higher limits.' }, { name: 'Enterprise', note: 'Customised corporate services.' }] };
+      return PF_META;
+    }
+    function pfTypeOf(k) { const t = (PF_META || { types: PF_FALLBACK }).types; return t.find(x => x.key === k) || t[0]; }
+    function pfTypeButtons(types, sel) {
+      return types.map(t => `<button type="button" class="pf-type${t.key === sel ? ' on' : ''}" role="radio" aria-checked="${t.key === sel}" data-k="${t.key}">
+        <b><i class="fas fa-${t.icon}"></i>${nxEsc(t.label)}</b><small>${nxEsc(t.blurb)}</small></button>`).join('');
+    }
+    function pfBindTypes(box, types, sel, onPick) {
+      box.innerHTML = pfTypeButtons(types, sel);
+      box.querySelectorAll('.pf-type').forEach(b => b.addEventListener('click', () => {
+        box.querySelectorAll('.pf-type').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
+        onPick(b.dataset.k);
+      }));
+    }
+    function pfDetailHtml(t) {
+      return `<b>${nxEsc(t.label)}</b>${t.for ? ' is for ' + nxEsc(t.for.charAt(0).toLowerCase() + t.for.slice(1)) : ''}
+        ${t.benefits && t.benefits.length ? '<ul>' + t.benefits.map(x => '<li>' + nxEsc(x) + '</li>').join('') + '</ul>' : ''}
+        <div><b>Verification:</b> ${nxEsc(t.verification)}</div>`;
+    }
+    function pfFieldsHtml(t, vals, pre, optAttr) {
+      vals = vals || {};
+      return t.fields.map(f => {
+        const id = pre + f.key, v = vals[f.key] || (f.key === 'country' ? 'Nigeria' : ''), req = f.required ? '' : ' <span style="font-weight:400;opacity:.7">(optional)</span>';
+        const opts = f.key === 'country' ? (PF_COUNTRY_LIST.includes(v) || !v ? PF_COUNTRY_LIST : [v].concat(PF_COUNTRY_LIST)) : f.options;
+        const ctl = opts && opts.length
+          ? `<select class="pf-inp" id="${id}"><option value="">Select…</option>${opts.map(o => `<option${o === v ? ' selected' : ''}>${nxEsc(o)}</option>`).join('')}</select>`
+          : `<input class="pf-inp" id="${id}" type="${f.type === 'email' ? 'email' : f.type === 'url' ? 'url' : 'text'}" value="${nxEsc(v)}" placeholder="${nxEsc(f.placeholder || '')}" autocomplete="off">`;
+        return `<label class="pf-lab" for="${id}">${nxEsc(f.label)}${req}</label>${ctl}`;
+      }).join('');
+    }
+    function pfCollect(type, pre) {
+      const t = pfTypeOf(type), details = {};
+      for (const f of t.fields) {
+        const el = document.getElementById(pre + f.key), v = el ? el.value.trim() : '';
+        if (f.required && !v) return { error: f.label + ' is required for a ' + t.label + ' account.' };
+        if (v) details[f.key] = v;
+      }
+      return { details };
+    }
+    async function pfDrawRegTypes() {
+      const box = document.getElementById('pfRegTypes'); if (!box) return;
+      const meta = await pfMeta(), detail = document.getElementById('pfRegDetail'), fields = document.getElementById('pfRegFields');
+      const paint = k => {
+        window.__pfType = k; const t = pfTypeOf(k);
+        detail.style.display = 'block'; detail.innerHTML = pfDetailHtml(t);
+        // Each account type brings its own fields.
+        fields.innerHTML = pfFieldsHtml(t, {}, 'pfR_');
+        sel.value = k;
+        box.querySelectorAll('.pf-type').forEach(x => { x.classList.toggle('on', x.dataset.k === k); x.setAttribute('aria-checked', x.dataset.k === k); });
+      };
+      const sel = document.getElementById('pfRegTypeSel');
+      sel.innerHTML = meta.types.map(t => `<option value="${nxEsc(t.key)}">${nxEsc(t.label)}</option>`).join('');
+      sel.onchange = () => paint(sel.value);
+      pfBindTypes(box, meta.types, window.__pfType, paint); paint(window.__pfType);
+    }
+    async function pfSetup(type, details) {
+      const r = await apiFetch(`${API_BASE}/profile/setup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_type: type, country: (details || {}).country, details: details || {} }) });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error || 'Could not set the account type');
+      pfApplyNav(d.profile); return d.profile;
+    }
+    function pfApplyNav(p) {
+      const nb = document.getElementById('navBusiness'); if (nb && p && p.nav) nb.style.display = p.nav.business ? '' : 'none';
+    }
+    async function pfLoadNav() {
+      const r = await apiFetch(`${API_BASE}/profile`); const d = await r.json(); if (d.success) { pfData = d.profile; pfApplyNav(d.profile); }
+    }
+    let pfData = null;
+    async function showProfile() {
+      if (!userId) { showToast('Sign in to see your profile', 'info'); try { handleLoginClick(); } catch (e) {} return; }
+      nxOpenPage('profileContent', 'navProfile');
+      const body = document.getElementById('pfBody');
+      try {
+        await pfMeta();
+        const r = await apiFetch(`${API_BASE}/profile`); const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'failed');
+        pfData = d.profile; pfApplyNav(pfData); pfRender();
+      } catch (e) {
+        body.innerHTML = '<p class="pf-note">We could not load your profile. Check your connection and <a href="#" onclick="showProfile();return false">try again</a>.</p>';
+      }
+    }
+    function pfCopy(v) { try { navigator.clipboard.writeText(v); showToast('Copied', 'success'); } catch (e) { showToast(v, 'info'); } }
+    /* Membership: permanent number, Founders rank and badge. The medal is drawn here, so it looks the same on every phone. */
+    function pfMemberHtml(m) {
+      if (!m) return '';
+      if (m.status !== 'issued') return `<div class="pf-mem pending"><div><b>Membership number</b><span>${nxEsc(m.message || '')}</span></div></div>`;
+      const tone = { f100: ['#ffd36b', '#b8860b'], f1000: ['#e6ebf2', '#8b97a8'], f10000: ['#f0b27a', '#9a5b23'] }[m.badge && m.badge.badge] || ['#cfd8e6', '#6b7a90'];
+      const medal = m.badge ? `<svg class="pf-medal" viewBox="0 0 48 56" width="48" height="56" role="img" aria-label="${nxEsc(m.badge.label)}"><path d="M10 0h10l4 14-9 4zM38 0H28l-4 14 9 4z" fill="${tone[1]}"/><circle cx="24" cy="34" r="19" fill="${tone[0]}" stroke="${tone[1]}" stroke-width="3"/><path d="M24 22l3.6 7.4 8.1 1.1-5.9 5.7 1.4 8-7.2-3.9-7.2 3.9 1.4-8-5.9-5.7 8.1-1.1z" fill="${tone[1]}"/></svg>` : '';
+      return `<div class="pf-mem">${medal}<div style="min-width:0"><b>${m.badge ? nxEsc(m.badge.label) : 'Net365 member'}</b>
+        <span class="pf-memno">Membership No: <em style="font-style:normal;font-weight:700">${nxEsc(m.number)}</em><button class="pf-cp" type="button" aria-label="Copy membership number" data-copy="${nxEsc(m.number)}"><i class="fas fa-copy"></i></button></span>
+        <span>${nxEsc(m.message || '')}${m.since ? ' Member since ' + nxEsc(m.since) + '.' : ''}</span></div></div>`;
+    }
+    function pfRender() {
+      const p = pfData, body = document.getElementById('pfBody'); if (!p || !body) return;
+      const initials = (p.customer_name || 'U').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const vcls = p.verification_status === 'Verified' ? 'ok' : (p.verification_status === 'Rejected' ? 'bad' : 'warn');
+      const row = (label, val, copy) => `<div class="pf-f"><span>${nxEsc(label)}</span><b><em style="font-style:normal">${nxEsc(val || '—')}</em>${copy && val ? `<button class="pf-cp" type="button" aria-label="Copy ${nxEsc(label)}" data-copy="${nxEsc(val)}"><i class="far fa-copy"></i></button>` : ''}</b></div>`;
+      const cur = pfTypeOf(p.account_type), tiers = (PF_META && PF_META.tiers) || [];
+      const have = new Set([p.account_type].concat((p.workspaces || []).map(w => w.kind)));
+      const more = PF_META.types.filter(t => t.key !== 'individual' && !have.has(t.key));
+      const capCount = p.capabilities.filter(c => c.status === 'active').length;
+      body.innerHTML = `
+        <div class="pf-hero">
+          <div class="pf-av" aria-hidden="true">${nxEsc(initials)}</div>
+          <div style="min-width:0"><h2>${nxEsc(p.customer_name)}</h2>
+            <div class="pf-badges">
+              <span class="pf-b"><i class="fas fa-${cur.icon}"></i>${nxEsc(p.account_type_label)}</span>
+              <span class="pf-b ${p.account_status === 'Active' ? 'ok' : 'bad'}"><i class="fas fa-circle" style="font-size:8px"></i>${nxEsc(p.account_status)}</span>
+              <span class="pf-b ${vcls}"><i class="fas fa-shield-halved"></i>${nxEsc(p.verification_status)}</span>
+              <span class="pf-b"><i class="fas fa-layer-group"></i>${nxEsc(p.account_tier)}</span>
+              ${(p.workspaces || []).map(w => `<span class="pf-b ${w.status === 'Verified' ? 'ok' : 'warn'}">${nxEsc(w.label)} · ${nxEsc(w.status)}</span>`).join('')}
+              ${p.affiliate ? '<span class="pf-b ok"><i class="fas fa-bullhorn"></i>Affiliate</span>' : ''}
+            </div></div></div>
+        ${pfMemberHtml(p.membership)}
+        <div class="pf-grid">
+          ${row('Customer name', p.customer_name)}${row('Customer ID', p.customer_id, true)}${row('Account type', p.account_type_label)}
+          ${row('Account status', p.account_status)}${row('Verification status', p.verification_status)}${row('Account tier', p.account_tier)}
+          ${row('Registration date', p.registration_date)}${row('Country', p.country)}${row('Primary currency', p.primary_currency)}
+          ${row('Referral ID', p.referral_id, true)}${p.is_business ? row('Business name', p.business_name) : ''}
+        </div>
+        ${p.is_business && p.verification_status !== 'Verified' ? '<p class="pf-note" style="margin-top:14px">Your business is waiting for review. Features marked Pending switch on once we verify it. Everything else works now.</p>' : ''}
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+          <button class="nxt-btn" type="button" id="pfChange"><i class="fas fa-repeat"></i> Change account type</button>
+          <button class="nxt-btn ghost" type="button" id="pfDetails"><i class="fas fa-pen"></i> Edit details</button>
+        </div>
+        <div id="pfPanel"></div>
+        <div class="pf-sec"><h3>${nxEsc(p.account_type_label)} capabilities</h3><div class="pf-note">${capCount} of ${p.capabilities.length} active. Pending ones unlock after verification.</div>
+          <div class="pf-caps">${p.capabilities.map(c => `<div class="pf-cap ${c.status}"><span>${nxEsc(c.label)}</span><em>${c.status === 'active' ? 'Active' : c.status === 'pending' ? 'Pending' : 'Not available'}</em></div>`).join('')}</div></div>
+        <div class="pf-sec"><h3>Account tier</h3><div class="pf-note">Your type is who you are. Your tier is the level of service and limits you get.</div>
+          <div class="pf-tiers">${tiers.map(t => `<div class="pf-tier${p.tier === t.name ? ' on' : ''}"><b>${nxEsc(t.name)}</b>${nxEsc(t.note)}${p.tier === t.name ? '<div style="margin-top:8px;font-weight:700;color:var(--n-ok)">Your tier</div>' : `<button class="nxt-btn ghost pf-tr" type="button" data-t="${nxEsc(t.name)}">Request ${nxEsc(t.name)}</button>`}</div>`).join('')}</div></div>
+        <div class="pf-sec"><h3>Add more to the same account</h3><div class="pf-note">No new login. Your wallet, history and customer ID stay as they are.</div>
+          <div class="pf-types" style="margin-top:12px" id="pfMore">
+            ${p.affiliate ? '' : '<button type="button" class="pf-type" data-k="affiliate"><b><i class="fas fa-bullhorn"></i>Join the Affiliate programme</b><small>Refer customers and earn commission. Open to every account type.</small></button>'}
+            ${more.map(t => `<button type="button" class="pf-type" data-k="${t.key}"><b><i class="fas fa-${t.icon}"></i>Activate ${nxEsc(t.label)}</b><small>${nxEsc(t.blurb)}</small></button>`).join('')}
+          </div>${(p.affiliate && !more.length) ? '<p class="pf-note">You have everything switched on.</p>' : ''}
+          <div id="pfAct"></div></div>`;
+      body.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => pfCopy(b.dataset.copy)));
+      document.getElementById('pfChange').onclick = pfChangeType;
+      document.getElementById('pfDetails').onclick = pfEditDetails;
+      body.querySelectorAll('.pf-tr').forEach(b => b.onclick = async () => {
+        try { const r = await apiFetch(`${API_BASE}/profile/tier-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tier: b.dataset.t }) }); const d = await r.json(); showToast(d.message || d.error || 'Done', d.success ? 'success' : 'error'); } catch (e) { showToast('No connection. Try again.', 'error'); }
+      });
+      body.querySelectorAll('#pfMore .pf-type').forEach(b => b.onclick = () => pfActivate(b.dataset.k));
+    }
+    function pfFormPanel(host, title, t, vals, saveLabel, onSave) {
+      host.innerHTML = `<div class="pf-edit" style="max-width:560px;margin-top:14px"><h3 style="margin:0 0 6px;font:700 15px var(--n-display);color:var(--n-t0)">${nxEsc(title)}</h3>
+        <div class="pf-note">${nxEsc(t.blurb)} <b>Verification:</b> ${nxEsc(t.verification)}</div>
+        ${pfFieldsHtml(t, vals, 'pfE_')}
+        <div style="display:flex;gap:10px"><button class="nxt-btn" type="button" id="pfOk">${nxEsc(saveLabel)}</button><button class="nxt-btn ghost" type="button" id="pfNo">Cancel</button></div>
+        <div class="pf-note" id="pfErr" role="status"></div></div>`;
+      document.getElementById('pfNo').onclick = () => { host.innerHTML = ''; };
+      document.getElementById('pfOk').onclick = async () => {
+        const col = pfCollect(t.key, 'pfE_'), msg = document.getElementById('pfErr'), btn = document.getElementById('pfOk');
+        if (col.error) { msg.textContent = col.error; return; }
+        btn.disabled = true; msg.textContent = '';
+        try { await onSave(col.details); } catch (e) { msg.textContent = e.message; btn.disabled = false; }
+      };
+    }
+    function pfChangeType() {
+      const p = pfData, host = document.getElementById('pfPanel');
+      if (p.is_business && p.verification_status === 'Verified') { showToast('A verified business account can only be changed by support.', 'info'); return; }
+      let pick = p.account_type;
+      host.innerHTML = `<div class="pf-edit" style="max-width:none;margin-top:14px"><label class="pf-lab">Choose your account type</label><div class="pf-types" id="pfPick" role="radiogroup"></div><div id="pfPickForm"></div></div>`;
+      const draw = () => pfFormPanel(document.getElementById('pfPickForm'), 'Details for ' + pfTypeOf(pick).label, pfTypeOf(pick), Object.assign({ country: p.country }, p.details), 'Save account type', async d => {
+        pfData = await pfSetup(pick, d); pfRender(); showToast('Account type updated', 'success'); });
+      pfBindTypes(document.getElementById('pfPick'), PF_META.types, pick, k => { pick = k; draw(); }); draw();
+    }
+    function pfEditDetails() {
+      const p = pfData, host = document.getElementById('pfPanel'), t = pfTypeOf(p.account_type);
+      pfFormPanel(host, 'Your details', t, Object.assign({ country: p.country }, p.details), 'Save details', async d => {
+        const r = await apiFetch(`${API_BASE}/profile/update`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
+        const j = await r.json(); if (!j.success) throw new Error(j.error || 'Could not save');
+        pfData = j.profile; pfApplyNav(pfData); pfRender(); showToast('Profile updated', 'success'); });
+    }
+    function pfActivate(kind) {
+      const host = document.getElementById('pfAct');
+      const send = async details => {
+        const r = await apiFetch(`${API_BASE}/profile/activate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, details, country: (details || {}).country }) });
+        const j = await r.json(); if (!j.success) throw new Error(j.error || 'Could not activate');
+        pfData = j.profile; pfApplyNav(pfData); pfRender(); showToast(kind === 'affiliate' ? 'You are in the Affiliate programme' : 'Request sent. We will review it.', 'success');
+      };
+      if (kind === 'affiliate') {
+        host.innerHTML = `<div class="pf-edit" style="margin-top:14px"><div class="pf-note">Share your Referral ID <b>${nxEsc(pfData.referral_id)}</b> and earn commission on qualifying sign-ups and transactions. Referral partners, influencers, marketers, ambassadors and sales reps all join here.</div>
+          <div style="display:flex;gap:10px"><button class="nxt-btn" type="button" id="pfOk">Join Affiliate programme</button><button class="nxt-btn ghost" type="button" id="pfNo">Cancel</button></div><div class="pf-note" id="pfErr"></div></div>`;
+        document.getElementById('pfNo').onclick = () => { host.innerHTML = ''; };
+        document.getElementById('pfOk').onclick = async () => { try { await send({}); } catch (e) { document.getElementById('pfErr').textContent = e.message; } };
+        return;
+      }
+      pfFormPanel(host, 'Activate ' + pfTypeOf(kind).label, pfTypeOf(kind), { country: pfData.country }, 'Send for review', send);
+    }
     function showDashboard() {
       document.getElementById('dashboardContent').style.display = 'block';
       document.getElementById('analyticsContent').classList.remove('active');
@@ -3659,7 +3874,7 @@ const PROVIDER_NAMES = {
     // ============================================
     // SETTINGS + HELP CENTER
     // ============================================
-    const NXP_PAGES = ['settingsContent', 'helpContent'];
+    const NXP_PAGES = ['settingsContent', 'helpContent', 'profileContent'];
     function nxHideSubpages() { NXP_PAGES.forEach(id => { const e = document.getElementById(id); if (e) e.classList.remove('active'); }); }
     function nxOpenPage(id, navId) {
       document.getElementById('dashboardContent').style.display = 'none';
@@ -3704,13 +3919,13 @@ const PROVIDER_NAMES = {
         throw new Error(d.error || 'failed');
       } catch (e) { nxpSaved('err', 'Not saved. Try again.'); return false; }
     }
-    function nxpCurTheme() { return localStorage.getItem('net365_theme_auto') === '1' ? 'auto' : (document.body.classList.contains('dark-mode') ? 'dark' : 'light'); }
-    function nxpApplyDark(dark) { document.body.classList.toggle('dark-mode', !!dark); localStorage.setItem('net365_theme', dark ? 'dark' : 'light'); }
+    function nxpCurTheme() { return window.net365Storage.getItem('net365_theme_auto') === '1' ? 'auto' : (document.body.classList.contains('dark-mode') ? 'dark' : 'light'); }
+    function nxpApplyDark(dark) { document.body.classList.toggle('dark-mode', !!dark); window.net365Storage.setItem('net365_theme', dark ? 'dark' : 'light'); }
     function nxpTheme(mode) {
       if (mode === 'auto') {
-        localStorage.setItem('net365_theme_auto', '1');
+        window.net365Storage.setItem('net365_theme_auto', '1');
         nxpApplyDark(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
-      } else { localStorage.removeItem('net365_theme_auto'); nxpApplyDark(mode === 'dark'); }
+      } else { window.net365Storage.removeItem('net365_theme_auto'); nxpApplyDark(mode === 'dark'); }
       nxpPaintTheme();
       if (userId) nxpSave({ theme: document.body.classList.contains('dark-mode') ? 'dark' : 'light' }); else nxpSaved('ok', 'Saved on this device');
     }
@@ -3720,7 +3935,7 @@ const PROVIDER_NAMES = {
       if (userId) nxpSave({ language: code }); else nxpSaved('ok', 'Saved on this device');
     }
     function nxpPaintLang() {
-      const cur = (localStorage.getItem('net365_language') || 'en').split('-')[0];
+      const cur = (window.net365Storage.getItem('net365_language') || 'en').split('-')[0];
       document.getElementById('nxpLangs').innerHTML = NXP_LANGS.map(l => `<button type="button" class="nxp-lang${l[0] === cur ? ' on' : ''}" data-lang="${l[0]}"><em>${l[1]}</em>${nxEsc(l[2])}</button>`).join('');
     }
     async function nxpToggle(key, btn) {
@@ -4539,7 +4754,7 @@ const PROVIDER_NAMES = {
       if (!form) return;
       
       const urlParams = new URLSearchParams(window.location.search);
-      const refParam = urlParams.get('ref') || localStorage.getItem('net365_referral_code') || '';
+      const refParam = urlParams.get('ref') || window.net365Storage.getItem('net365_referral_code') || '';
       
       form.innerHTML = `
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#334155">Full name</label>
@@ -4551,6 +4766,12 @@ const PROVIDER_NAMES = {
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#334155">Phone</label>
         <input id="net365RegPhone" type="tel" autocomplete="tel" placeholder="08012345678" style="width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:12px;margin-bottom:14px;font-size:15px">
         
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:2px;color:#334155">Choose your Net365 account</label>
+        <div style="font-size:12px;color:#64748b;margin-bottom:10px">Pick what fits how you will use Net365. You can add more later without a new login.</div>
+        <select class="pf-inp" id="pfRegTypeSel" aria-label="Account type" style="margin-bottom:10px"></select>
+        <div class="pf-types" id="pfRegTypes" role="radiogroup" aria-label="Account type"></div>
+        <div class="pf-detail" id="pfRegDetail" aria-live="polite"></div>
+        <div id="pfRegFields"></div>
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#334155">Referral Code <span style="font-weight:400;color:#64748b;">(Optional)</span></label>
         <input id="net365RegReferral" type="text" autocomplete="off" placeholder="e.g. NET-XXXXX" value="${refParam}" style="width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:12px;margin-bottom:10px;font-size:15px;text-transform:uppercase">
         <div id="net365RegReferralStatus" style="font-size:12px;margin:-4px 0 14px 0;display:none;"></div>
@@ -4566,6 +4787,7 @@ const PROVIDER_NAMES = {
       `;
       
       form.onsubmit = handleRegisterSubmit;
+      pfDrawRegTypes();
 
       // The account can only be created once the Terms box is ticked.
       const termsBox = document.getElementById('net365RegTerms');
@@ -4655,6 +4877,9 @@ const PROVIDER_NAMES = {
         const password = document.getElementById('net365RegPassword').value;
         let referralCode = document.getElementById('net365RegReferral')?.value.trim().toUpperCase() || '';
         if (!document.getElementById('net365RegTerms')?.checked) throw new Error('Please read and accept the Terms to create an account.');
+        const pfCol = pfCollect(window.__pfType || 'individual', 'pfR_');
+        if (pfCol.error) throw new Error(pfCol.error);
+        const pfBiz = pfCol.details.business_name || '';
         
         if (!referralCode || referralCode === DEFAULT_REFERRAL_CODE) {
           referralCode = DEFAULT_REFERRAL_CODE;
@@ -4679,9 +4904,10 @@ const PROVIDER_NAMES = {
         if (!response.ok || !data.success) throw new Error(data.error || 'Registration failed');
         
         await establishUserSession(data.user);
+        try { await pfSetup(window.__pfType || 'individual', pfCol.details); } catch (e) { /* the account exists; the type can be set from My Profile */ }
         
         
-        localStorage.removeItem('net365_referral_code');
+        window.net365Storage.removeItem('net365_referral_code');
         
         if (data.user && !data.user.email_verified) {
           showVerifyEmailScreen(data.user.email, { dismissible: true });
@@ -4751,6 +4977,7 @@ const PROVIDER_NAMES = {
       }
 
       updateUIForUser(user);
+      try { pfLoadNav(); } catch (e) {}
       try { if (window.Net365Terms) Net365Terms.gate('web'); } catch (e) { /* never block login */ }
 
       const safeStep = async (label, fn) => {
@@ -4780,9 +5007,9 @@ const PROVIDER_NAMES = {
 
       // Referral handling is optional enrichment; never let it break login.
       try {
-        const pendingRef = localStorage.getItem('net365_pending_referral');
+        const pendingRef = window.net365Storage.getItem('net365_pending_referral');
         if (pendingRef && !activeReferralCode && pendingRef !== DEFAULT_REFERRAL_CODE) {
-          localStorage.removeItem('net365_pending_referral');
+          window.net365Storage.removeItem('net365_pending_referral');
           const refInput = document.getElementById('referralInput');
           if (refInput) refInput.value = pendingRef;
           toggleReferralInput();
@@ -5702,6 +5929,8 @@ function toggleReferralInput() {
   }
 }
 
+var REF_MANUAL=false;
+function refToast(m,ty){ if(REF_MANUAL) showToast(m,ty); }
 async function applyReferralCode() {
   let code = document.getElementById('referralInput').value.trim().toUpperCase();
 
@@ -5713,13 +5942,13 @@ async function applyReferralCode() {
 
   // Validate minimum length
   if (code.length < 5) {
-    showToast('⚠️ Please enter a valid referral code (minimum 5 characters).', 'warning');
+    refToast('⚠️ Please enter a valid referral code (minimum 5 characters).', 'warning');
     return;
   }
 
   // Check if already applied (same code) in this session
   if (referralAppliedAttempted && activeReferralCode === code) {
-    showToast('ℹ️ This referral code has already been applied.', 'info');
+    refToast('ℹ️ This referral code has already been applied.', 'info');
     return;
   }
 
@@ -5738,8 +5967,8 @@ async function applyReferralCode() {
     document.getElementById('discountRow').style.display = 'none';
 
     referralAppliedAttempted = true;
-    localStorage.setItem('net365_referral_code', code);
-    showToast(`🔑 Default referral code "${code}" applied.`, 'info');
+    window.net365Storage.setItem('net365_referral_code', code);
+    refToast(`🔑 Default referral code "${code}" applied.`, 'info');
     updateBreakdown();
     return;
   }
@@ -5757,14 +5986,15 @@ async function applyReferralCode() {
     const checkData = await checkResponse.json();
 
     if (!checkData.success || !checkData.valid) {
-      showToast('❌ Invalid referral code. Using default code instead.', 'warning');
-      document.getElementById('referralInput').value = DEFAULT_REFERRAL_CODE;
+      refToast('❌ Invalid referral code. Using default code instead.', 'warning');
+      const _referralInputEl = document.getElementById('referralInput');
+      if (_referralInputEl) _referralInputEl.value = DEFAULT_REFERRAL_CODE;
       return applyReferralCode();
     }
 
     // 2. If user isn't logged in, stash the code for after sign-in.
     if (!userId) {
-      localStorage.setItem('net365_pending_referral', code);
+      window.net365Storage.setItem('net365_pending_referral', code);
       showToast(`🔑 Referral code "${code}" saved. Sign in to apply it!`, 'info');
       handleLoginClick();
       return;
@@ -5797,11 +6027,11 @@ async function applyReferralCode() {
       const errorCode = applyData.code || '';
 
       if (errorCode === 'SELF_REFERRAL') {
-        showToast('⚠️ You cannot use your own referral code. Using default code.', 'warning');
+        refToast('⚠️ You cannot use your own referral code. Using default code.', 'warning');
       } else if (errorCode === 'INVALID_CODE') {
-        showToast('❌ Invalid referral code. Using default.', 'error');
+        refToast('❌ Invalid referral code. Using default.', 'error');
       } else {
-        showToast(applyData.error || 'Failed to apply referral code. Using default.', 'error');
+        refToast(applyData.error || 'Failed to apply referral code. Using default.', 'error');
       }
 
       document.getElementById('referralInput').value = DEFAULT_REFERRAL_CODE;
@@ -5825,15 +6055,15 @@ async function applyReferralCode() {
     document.getElementById('discountRow').style.display = 'flex';
 
     // Persist the REAL code, not the default.
-    localStorage.setItem('net365_referral_code', code);
+    window.net365Storage.setItem('net365_referral_code', code);
     // Clear the pending stash — we've now applied it.
-    localStorage.removeItem('net365_pending_referral');
+    window.net365Storage.removeItem('net365_pending_referral');
 
     referralAppliedAttempted = true;
     updateBreakdown();
 
     if (alreadyReferred) {
-      showToast(`ℹ️ Referral "${code}" is already active on your account.`, 'info');
+      refToast(`ℹ️ Referral "${code}" is already active on your account.`, 'info');
     } else {
       showToast(`🎁 Referral code "${code}" applied successfully!`, 'success');
       if (applyData.referrer) {
@@ -5847,7 +6077,7 @@ async function applyReferralCode() {
     // Network blip / 500 / etc. Do NOT overwrite the code or fall back
     // to default — that would erase a legitimate referral. Just tell
     // the user to retry.
-    showToast('⚠️ Could not verify referral code. Please try again.', 'warning');
+    refToast('⚠️ Could not verify referral code. Please try again.', 'warning');
     // Do not call applyReferralCode() recursively here — a genuine
     // network problem would cause an infinite loop.
   }
@@ -6450,6 +6680,7 @@ async function applyReferralCode() {
         currency: currency,
         provider: selectedPaymentMethod,
         operator_id: selectedOperator.operatorId,
+        operator_name: selectedOperator.name,
         phone: phone,
         country_code: currentCountry,
         email: (document.getElementById('paymentReceiptEmail')?.value || currentUser?.email || '').trim(),
@@ -6495,6 +6726,7 @@ async function applyReferralCode() {
         }
 
         if (pendingPayment.provider === 'wallet') {
+          try { await (window.nxSyncBalance && window.nxSyncBalance(true)); } catch (e) {}
           const balance = Number(walletBalances[pendingPayment.currency] || 0);
           if (!userId) throw new Error('Please sign in to pay from your Net365 Wallet.');
           if (balance + 1e-9 < Number(pendingPayment.amount)) {
@@ -6951,7 +7183,7 @@ async function applyReferralCode() {
                 const combined = JSON.stringify(job.error || '') + ' ' + errText;
                 if (combined.toLowerCase().includes('sandbox')) {
                   showToast(
-                    '💡 Tip: Sandbox only accepts test numbers (2348012345678). Switch to live mode to test real numbers.',
+                    '💡 Tip: check the number and its operator, then try the job again.',
                     'info'
                   );
                 }
@@ -7050,7 +7282,7 @@ function populateBulkContactOperators() {
   // Preserve current selection if it still exists
   const previous = sel.value;
 
-  sel.innerHTML = '<option value="">Auto-detect (may fail in sandbox)</option>' +
+  sel.innerHTML = '<option value="">Auto-detect</option>' +
     ops.map(op => `<option value="${op.id}">${op.name}</option>`).join('');
 
   if (previous && ops.some(op => op.id === previous)) {
@@ -7331,6 +7563,8 @@ async function nbLoad(){
   } catch (e) {}
 }
 function nbBadge(n){
+    document.querySelectorAll('#nbBell').forEach(function(b){ b.classList.toggle('nb-alert', n > 0); b.setAttribute('aria-label', n > 0 ? 'Notifications, ' + n + ' unread' : 'Notifications'); });
+    try { document.title = document.title.replace(/^\(\d+\+?\) /, ''); if (n > 0) document.title = '(' + (n > 9 ? '9+' : n) + ') ' + document.title; } catch (e) {}
   document.querySelectorAll('[data-nb-badge]').forEach(function(b){
     b.textContent = n > 9 ? '9+' : String(n || '');
     b.classList.toggle('show', n > 0);
@@ -7439,7 +7673,7 @@ function nbStart(){
     async function applyLanguage(lang) {
       lang = (lang || 'en').split('-')[0];
       if (!LANG_PACKS[lang]) lang = 'en';
-      localStorage.setItem('net365_language', lang);
+      window.net365Storage.setItem('net365_language', lang);
       document.documentElement.lang = lang;
       document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
       document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -7449,7 +7683,7 @@ function nbStart(){
     }
 
     async function loadLanguagePreference() {
-      let lang = localStorage.getItem('net365_language') || 'en';
+      let lang = window.net365Storage.getItem('net365_language') || 'en';
       try {
         const r = await fetch(`${API_BASE}/settings`);
         const d = await r.json();
@@ -7773,10 +8007,10 @@ function closeContactSelector() {
     function getVisitorId() {
       try {
         const key = 'net365_visitor_id';
-        let id = localStorage.getItem(key);
+        let id = window.net365Storage.getItem(key);
         if (!id) {
           id = 'N365-V-' + Math.random().toString(36).slice(2, 14).toUpperCase();
-          localStorage.setItem(key, id);
+          window.net365Storage.setItem(key, id);
         }
         return id;
       } catch {
@@ -7964,7 +8198,7 @@ async function importSelectedContacts() {
             // Do NOT touch #referralInput here — that field is owned by the
             // referral apply flow (applyReferralCode / toggleReferralInput).
             // Writing to it here is what was stomping on incoming ?ref= codes.
-            localStorage.setItem('net365_agent_code', data.referral_code);
+            window.net365Storage.setItem('net365_agent_code', data.referral_code);
             return;
           }
         } catch (e) {
@@ -7973,10 +8207,10 @@ async function importSelectedContacts() {
       }
 
       // Guest path — reuse or create-once, never overwrite.
-      let stored = localStorage.getItem('net365_agent_code');
+      let stored = window.net365Storage.getItem('net365_agent_code');
       if (!stored) {
         stored = `NET365-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-        localStorage.setItem('net365_agent_code', stored);
+        window.net365Storage.setItem('net365_agent_code', stored);
       }
       display.textContent = stored;
     }   
@@ -7987,9 +8221,12 @@ async function importSelectedContacts() {
       handlePaymentCallback();
       generateAgentCode({ silent: true });
       const defaultSymbol = getCurrencySymbol(CONFIG.defaultCurrency);
-      document.getElementById('currencySymbol').textContent = defaultSymbol;
-      document.getElementById('addMoneySymbol').textContent = defaultSymbol;
-      document.getElementById('transferSymbol').textContent = defaultSymbol;
+      const _currencySymbolEl = document.getElementById('currencySymbol');
+      const _addMoneySymbolEl = document.getElementById('addMoneySymbol');
+      const _transferSymbolEl = document.getElementById('transferSymbol');
+      if (_currencySymbolEl) _currencySymbolEl.textContent = defaultSymbol;
+      if (_addMoneySymbolEl) _addMoneySymbolEl.textContent = defaultSymbol;
+      if (_transferSymbolEl) _transferSymbolEl.textContent = defaultSymbol;
       currentSymbol = defaultSymbol;
       
       document.getElementById('referralInput').value = DEFAULT_REFERRAL_CODE;
@@ -8032,7 +8269,7 @@ async function importSelectedContacts() {
       const refParam = urlParams.get('ref');
       if (refParam) {
         showToast(`🔗 You were referred! Code: ${refParam}`, 'info');
-        localStorage.setItem('net365_referral_code', refParam);
+        window.net365Storage.setItem('net365_referral_code', refParam);
         
         if (userId) {
           try {
@@ -8075,7 +8312,7 @@ async function importSelectedContacts() {
         }, 2000);
       }
       
-      const storedRef = localStorage.getItem('net365_referral_code');
+      const storedRef = window.net365Storage.getItem('net365_referral_code');
       if (storedRef && !refParam && !activeReferralCode && !referralAppliedAttempted) {
         document.getElementById('referralInput').value = storedRef;
         if (userId) {
@@ -10436,7 +10673,7 @@ window.N365QR={matrix:function(text){var q=new QR(-1,EC.M);q.addData(String(text
   var US_ZONES = /^(America\/(New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Detroit|Boise|Indiana\/.*|Kentucky\/.*|North_Dakota\/.*|Juneau|Sitka|Nome|Adak|Menominee)|Pacific\/Honolulu)$/;
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function store(get, v) { try { if (get) return localStorage.getItem(KEY); if (v) localStorage.setItem(KEY, v); else localStorage.removeItem(KEY); } catch (e) { } return null; }
+  function store(get, v) { try { if (get) return window.net365Storage.getItem(KEY); if (v) window.net365Storage.setItem(KEY, v); else window.net365Storage.removeItem(KEY); } catch (e) { } return null; }
   function name(cc) { return NAMES[cc] || cc; }
 
   function detect() {
@@ -10571,16 +10808,23 @@ window.N365QR={matrix:function(text){var q=new QR(-1,EC.M);q.addData(String(text
   }
   function placeholder() { return cur.code === 'NG' ? null : 'Try “mobile data”, “gift cards” or “Starlink”…'; }
 
-  /* "Location: Canada" picker under the Ask box */
+  /* Location under the Ask box: detected automatically (connection, then timezone and language). The customer only sees
+     where we think they are and can correct it; a correction is remembered and "Use my location" goes back to automatic. */
   function mount(host, after) {
     if (!host || host.querySelector('.ng-pill')) return;
-    var w = document.createElement('label'); w.className = 'ng-pill';
-    var s = document.createElement('select'); s.setAttribute('aria-label', 'Your country');
+    var w = document.createElement('div'); w.className = 'ng-pill ng-auto';
+    var t = document.createElement('span'); t.className = 'ng-txt';
+    var chg = document.createElement('button'); chg.type = 'button'; chg.className = 'ng-link';
+    var s = document.createElement('select'); s.setAttribute('aria-label', 'Your country'); s.style.display = 'none';
     Object.keys(NAMES).sort(function (a, b) { return NAMES[a].localeCompare(NAMES[b]); }).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = NAMES[k]; s.appendChild(o); });
-    function sync() { s.value = cur.code; }
-    var t = document.createElement('span'); t.textContent = 'Your location';
-    w.appendChild(t); w.appendChild(s); host.appendChild(w); sync();
-    s.addEventListener('change', function () { set(s.value); });
+    function sync() {
+      s.value = cur.code;
+      if (cur.source === 'saved') { t.textContent = '📍 Showing services for ' + name(cur.code); chg.textContent = 'Use my location'; chg.dataset.m = 'auto'; }
+      else { t.textContent = '📍 ' + name(cur.code) + ' (detected automatically)'; chg.textContent = 'Not right?'; chg.dataset.m = 'change'; }
+    }
+    chg.addEventListener('click', function () { if (chg.dataset.m === 'auto') { reset(); detectFromServer(); } else { s.style.display = ''; chg.style.display = 'none'; s.focus(); } });
+    s.addEventListener('change', function () { set(s.value); s.style.display = 'none'; chg.style.display = ''; });
+    w.appendChild(t); w.appendChild(chg); w.appendChild(s); host.appendChild(w); sync();
     onChange(function () { sync(); if (after) after(country()); });
   }
 
@@ -10653,7 +10897,7 @@ window.N365QR={matrix:function(text){var q=new QR(-1,EC.M);q.addData(String(text
   }
 
   /* ============ HOME: Ask Net365 (reads a sentence, opens the right screen; never pays) ============ */
-  function reply(html) { var r = $('pgReply'); r.innerHTML = html; r.classList.add('on'); }
+  function reply(html) { var r = $('pgReply'); r.innerHTML = html; r.classList.add('on'); if (window.Net365QA) window.Net365QA.logReply(html); }
   function parse(q) {
     var t = q.toLowerCase(), o = { amount: null, meter: null };
     var am = t.match(/(?:₦|ngn\s*|naira\s*|\bn\s?)(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?/) || t.match(/\b(\d[\d,]*(?:\.\d+)?)\s*(k|thousand|naira)\b/);
@@ -10669,7 +10913,9 @@ window.N365QR={matrix:function(text){var q=new QR(-1,EC.M);q.addData(String(text
   function geoOpen(kind, cc) { if (kind === 'giftcards') { reply('Opening <b>Gift Cards</b>.'); setTimeout(function () { window.location.href = '/giftcards'; }, 500); return; } reply('Taking you to <b>Recharge</b>. Enter the phone number and I will find the network.'); var rs = $('rechargeSection'); if (rs) rs.scrollIntoView({ behavior: 'smooth' }); }
   function run(text, skipGeo) {
     text = String(text || '').trim(); if (!text) return;
+    if (!skipGeo && window.Net365QA) window.Net365QA.begin(text);
     if (!skipGeo && window.Net365Share) { var si = window.Net365Share.intent(text); if (si) { reply(si); return; } }
+    if (!skipGeo && window.Net365QA) { var qa = window.Net365QA.answer(text); if (qa) { reply(qa); return; } }
     if (!skipGeo && window.Net365Geo && window.Net365Geo.handle(text, { reply: reply, proceed: function () { run(text, true); }, open: geoOpen })) return;
     var o = parse(text);
     switch (o.intent) {
@@ -10689,7 +10935,7 @@ window.N365QR={matrix:function(text){var q=new QR(-1,EC.M);q.addData(String(text
       case 'refer': reply('Opening Referrals.'); if (typeof showReferralDashboard === 'function') showReferralDashboard(); break;
       case 'theme': reply('Theme changed.'); if (typeof toggleTheme === 'function') toggleTheme(); break;
       case 'utilities': reply('Opening <b>Utilities</b>.'); setTimeout(function () { window.location.href = '/utilities'; }, 500); break;
-      default: reply('I did not catch that. Try “pay electricity”, “DStv”, “buy data”, “what did I spend”, “fund my wallet” or “when is my next top-up”.');
+      default: if (window.Net365QA) { var q2 = window.Net365QA.fallback(text); reply(q2 || window.Net365QA.unknown()); } else reply('I will get back to you on this. I do not have a reliable answer yet.');
     }
   }
   function initAsk() {
@@ -11215,5 +11461,516 @@ function nxOpenExplore(){
 }
 function nxCloseExplore(){ var r=document.getElementById('nxEx'); if(r) r.classList.remove('on'); document.body.style.overflow=''; }
 </script>
+
+<style id="nxVidCss">
+#nxVid{position:fixed;inset:0;z-index:1250;display:none;background:rgba(6,9,18,.78);backdrop-filter:blur(4px);overflow:auto}
+#nxVid.on{display:block}
+#nxVid .box{max-width:860px;margin:4vh auto;background:#0b1020;color:#e8ecf6;border:1px solid #243049;border-radius:20px;padding:24px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px}
+#nxVid h2{margin:0 0 6px;font-size:22px}#nxVid p{margin:0 0 14px;color:#9aa6c0;line-height:1.5;font-size:14px}
+#nxVid .tabs{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+#nxVid .tab{display:block;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid #243049;background:#10172b;color:inherit;font:inherit;cursor:pointer}
+#nxVid .tab b{display:block;font-size:14px}#nxVid .tab span{font-size:12.5px;color:#9aa6c0}
+#nxVid .tab[aria-selected=true]{border-color:#FF6D00;background:#1a1f33}
+#nxVid .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+#nxVid .cta a,#nxVid .cta button{padding:10px 16px;border-radius:99px;border:1px solid #33425f;color:#fff;text-decoration:none;font:600 14px inherit;background:none;cursor:pointer}
+#nxVid .cta a.wa{background:#16a34a;border-color:#16a34a}#nxVid .cta a.tg{background:#229ED9;border-color:#229ED9}
+#nxVid .x{position:absolute;right:max(16px,calc(50% - 410px));margin-top:-8px;width:38px;height:38px;border-radius:50%;border:1px solid #33425f;background:#10172b;color:#fff;font-size:18px;cursor:pointer}
+#nxVid .phone{border:6px solid #1f2a44;border-radius:30px;background:#0e1626;height:480px;display:flex;flex-direction:column;overflow:hidden}
+#nxVid .ph{padding:12px 14px;background:#142038;font-weight:700;font-size:14px;display:flex;gap:8px;align-items:center}
+#nxVid .ph i{width:26px;height:26px;border-radius:50%;background:#FF6D00;display:inline-block}
+#nxVid .msgs{flex:1;overflow:hidden;padding:12px;display:flex;flex-direction:column;justify-content:flex-end;gap:8px}
+#nxVid .m{max-width:88%;padding:9px 12px;border-radius:14px;font-size:13.5px;line-height:1.4;animation:nxIn .3s ease-out both;white-space:pre-line}
+#nxVid .m.bot{background:#1b2742;align-self:flex-start;border-bottom-left-radius:4px}
+#nxVid .m.me{background:#FF6D00;color:#111;align-self:flex-end;border-bottom-right-radius:4px}
+#nxVid .opts{display:flex;flex-direction:column;gap:6px;align-self:stretch;animation:nxIn .3s ease-out both}
+#nxVid .o{padding:9px;border-radius:12px;border:1px solid #33425f;text-align:center;font-size:13px;color:#8fc3ff;background:#10172b}
+#nxVid .o.hit{background:#FF6D00;color:#111;border-color:#FF6D00;transition:all .2s}
+#nxVid .dots{align-self:flex-start;display:flex;gap:4px;padding:10px 12px;background:#1b2742;border-radius:14px}
+#nxVid .dots s{width:6px;height:6px;border-radius:50%;background:#7e8db0;animation:nxDot 1s infinite}#nxVid .dots s:nth-child(2){animation-delay:.15s}#nxVid .dots s:nth-child(3){animation-delay:.3s}
+#nxVid .note{font-size:11.5px;color:#7e8db0;margin-top:10px}
+@keyframes nxIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@keyframes nxDot{50%{transform:translateY(-4px);opacity:.5}}
+@media (max-width:760px){ #nxVid .box{grid-template-columns:1fr;margin:0;border-radius:0;min-height:100vh}#nxVid .phone{height:420px}#nxVid .x{right:16px}}
+@media (prefers-reduced-motion:reduce){ #nxVid .m,#nxVid .opts{animation:none}#nxVid .dots s{animation:none}}
+</style>
+
+<script>
+/* Watch Video: animated example chats. They show how the real WhatsApp / Telegram flows look; numbers are examples. */
+var NXV={cur:0,tm:[],scenes:[
+ {t:'Buy airtime in 3 taps',d:'Pick a number, pick an amount, confirm.',s:[
+  ['me','Airtime'],['bot','Who are we topping up?'],['opt',['📱 My number','🔁 080••••567 · last ₦1,500','✍️ Another number'],1],
+  ['me','🔁 080••••567'],['bot','MTN · How much?'],['opt',['↻ ₦1,500','₦500','₦1,000'],0],
+  ['me','↻ ₦1,500'],['bot','₦1,500 airtime to 080••••567\nPay with card or wallet?'],['opt',['✅ Pay now','Cancel'],0],['bot','✅ Done. Receipt sent.']]},
+ {t:'Buy data without typing',d:'Choose the network, then the bundle.',s:[
+  ['me','Data'],['bot','Which network?'],['opt',['MTN','Airtel','Glo'],1],
+  ['me','Airtel'],['bot','Tap a bundle. Price shown first.'],['opt',['₦500 · 500MB 7d','₦1,000 · 1.5GB 30d','➡️ More plans'],1],
+  ['me','₦1,000 · 1.5GB 30d'],['bot','Airtel 1.5GB · ₦1,000\nSend to 080••••567?'],['opt',['✅ Pay now','Cancel'],0],['bot','✅ Delivered.']]},
+ {t:'Pay your TV or light bill',d:'Smartcards and meters are remembered after the first time.',s:[
+  ['me','Cable TV'],['bot','Which provider?'],['opt',['DStv','GOtv','StarTimes'],0],
+  ['me','DStv'],['bot','Send your smartcard number, or tap one:'],['opt',['701••••678 Ada'],0],
+  ['me','701••••678 Ada'],['bot','✅ Verified: Ada\nPick a bouquet.'],['opt',['₦4,500 Compact','₦9,000 Compact Plus','➡️ More plans'],0],['bot','Confirm and pay. You get a receipt here.']]}
+]};
+function nxVClear(){ NXV.tm.forEach(clearTimeout); NXV.tm=[]; }
+function nxVPlay(i){
+  nxVClear(); NXV.cur=i; var sc=NXV.scenes[i], box=document.getElementById('nxVMsgs'), reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  box.innerHTML=''; document.querySelectorAll('#nxVid .tab').forEach(function(b,k){ b.setAttribute('aria-selected',k===i); });
+  var at=0; function later(ms,f){ at+=reduce?0:ms; NXV.tm.push(setTimeout(f,at)); }
+  sc.s.forEach(function(x){
+    if(x[0]==='bot'){ later(500,function(){ var d=document.createElement('div'); d.className='dots'; d.innerHTML='<s></s><s></s><s></s>'; d.id='nxDots'; box.appendChild(d); }); later(800,function(){ var d=document.getElementById('nxDots'); if(d) d.remove(); add('m bot',x[1]); }); }
+    else if(x[0]==='opt'){ later(300,function(){ var w=document.createElement('div'); w.className='opts'; x[1].forEach(function(o,k){ var e=document.createElement('div'); e.className='o'; e.textContent=o; e.dataset.k=k; w.appendChild(e); }); box.appendChild(w); }); later(900,function(){ var e=box.querySelector('.opts:last-of-type .o[data-k="'+x[2]+'"]'); if(e) e.classList.add('hit'); }); }
+    else { later(500,function(){ var last=box.querySelector('.opts:last-of-type'); add('m me',x[1]); }); }
+  });
+  function add(c,txt){ var m=document.createElement('div'); m.className=c; m.textContent=txt; box.appendChild(m); while(box.scrollHeight>box.clientHeight+2&&box.children.length>2) box.removeChild(box.firstChild); }
+}
+function nxOpenVideo(){
+  var r=document.getElementById('nxVid');
+  if(!r){
+    r=document.createElement('div'); r.id='nxVid'; r.setAttribute('role','dialog'); r.setAttribute('aria-modal','true'); r.setAttribute('aria-label','How Net365 works in chat');
+    r.innerHTML='<div class="box"><div><h2>See how it works</h2><p>Top up and pay bills from the WhatsApp or Telegram chat you already use. Choose an example to watch.</p><div class="tabs">'+NXV.scenes.map(function(s,i){return '<button type="button" class="tab" onclick="nxVPlay('+i+')"><b>'+s.t+'</b><span>'+s.d+'</span></button>';}).join('')+'</div><div class="cta"><a class="wa" href="/bots?src=video&ch=wa">Open WhatsApp</a><a class="tg" href="/bots?src=video&ch=tg">Open Telegram</a><button type="button" onclick="nxVPlay(NXV.cur)">Replay</button></div><div class="note">Example conversations. Plans, prices and options come from your account when you use the real chat.</div></div><div><div class="phone"><div class="ph"><i></i>Net365</div><div class="msgs" id="nxVMsgs"></div></div></div></div><button class="x" type="button" aria-label="Close" onclick="nxCloseVideo()" style="position:fixed;top:14px;right:14px">&times;</button>';
+    document.body.appendChild(r);
+    r.addEventListener('click',function(e){ if(e.target===r) nxCloseVideo(); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape') nxCloseVideo(); });
+  }
+  r.classList.add('on'); document.body.style.overflow='hidden'; nxVPlay(0);
+}
+function nxCloseVideo(){ nxVClear(); var r=document.getElementById('nxVid'); if(r) r.classList.remove('on'); document.body.style.overflow=''; }
+</script>
+
+<script id="nxGoLink">
+/* Links from other pages (the Utilities sidebar, for example): /?go=wallet opens that screen once the home page is ready. */
+(function nxGoLink(){
+  var q = new URLSearchParams(location.search), go = q.get('go') || q.get('section') || (q.get('invite') ? 'referrals' : '');
+  var map = { profile:'showProfile', transactions:'showAnalytics', wallet:'handleAddMoneyClick', rewards:'showRewardsDashboard', contacts:'showAllContacts', bulk:'showBulkRecharge', referrals:'showReferralDashboard', invite:'showReferralDashboard', settings:'showSettings', help:'showHelpCenter', login:'handleLoginClick' };
+  var fn = map[go]; if (!fn) return;
+  var tries = 0, t = setInterval(function(){
+    tries++;
+    if (typeof window[fn] === 'function' && document.readyState === 'complete'){
+      clearInterval(t);
+      setTimeout(function(){ try { window[fn](); history.replaceState(null, '', location.pathname); } catch (e) {} }, 800);
+    } else if (tries > 40) clearInterval(t);
+  }, 250);
+})();
+</script>
+<script id="nxOrigin">
+/* remember which page the customer started from, so the payment success page can send them back there */
+(function(){ function mark(){ try { var p = location.pathname.replace(/\/+$/, '') || '/'; window.net365Storage.setItem('n365_return', JSON.stringify({ to: p, t: Date.now() })); } catch (e) {} }
+  window.addEventListener('beforeunload', mark); window.addEventListener('pagehide', mark); })();
+</script>
+
+<style id="rx-redesign">
+/* Net365 home redesign: ask first, pay in one tap. Loaded last so it wins the cascade. */
+body{--rx-ember:#ff6a1a;--rx-fire:linear-gradient(135deg,#ff3b30 0%,#ff6a1a 55%,#ffb547 100%);--rx-arc:#3be3ff;
+  --rx-surface:var(--pg-panel,#fff);--rx-surface2:var(--pg-panel-2,#f3f5f9);--rx-line:var(--pg-line,rgba(15,23,42,.09));
+  --rx-t0:var(--pg-t0,#0b1020);--rx-t1:var(--pg-t1,#2f3b52);--rx-t2:var(--pg-t2,#5f6c84);--rx-display:'Sora','Inter',system-ui,sans-serif}
+body.dark-mode{--rx-surface:var(--pg-panel,#1e293b);--rx-surface2:var(--pg-panel-2,#243049);--rx-line:var(--pg-line,rgba(140,160,210,.14));--rx-t0:var(--pg-t0,#f3f6fc);--rx-t1:var(--pg-t1,#c6d0e3);--rx-t2:var(--pg-t2,#8f9cb6)}
+body .main{min-width:0}
+body .content{min-width:0;max-width:1320px;margin:0 auto;width:100%;gap:22px}
+body .left-col{gap:18px;min-width:0}
+body .right-col{width:360px;flex:none;gap:18px}
+
+/* greeting */
+.rx-greet{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:6px 2px 2px}
+.rx-greet h1{font:700 clamp(26px,3.1vw,38px)/1.08 var(--rx-display);letter-spacing:-.035em;color:var(--rx-t0);margin:0}
+.rx-greet p{margin:10px 0 0;font-size:15px;line-height:1.55;color:var(--rx-t2);max-width:58ch}
+.rx-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.rx-links button,.rx-links a{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:99px;border:1px solid var(--rx-line);background:var(--rx-surface);color:var(--rx-t1);font:600 13px 'Inter',system-ui,sans-serif;cursor:pointer;text-decoration:none;transition:border-color .15s,transform .15s}
+.rx-links button:hover,.rx-links a:hover{border-color:rgba(255,106,26,.55);transform:translateY(-1px)}
+.rx-links i{color:var(--rx-ember);font-size:12px}
+.rx-acct{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:99px;border:1px solid var(--rx-line);background:var(--rx-surface);color:var(--rx-t1);font:600 13px 'Inter',system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.rx-acct i{color:var(--rx-ember)}
+.rx-acct:hover{border-color:rgba(255,106,26,.55)}
+
+/* the console: the one bold moment on the page */
+body #pgAsk.pg-ask{--pg-t0:#f3f6fc;--pg-t1:#c6d0e3;--pg-t2:#9aa8c4;--pg-t3:#7684a3;--pg-panel-2:rgba(255,255,255,.06);--pg-line:rgba(160,180,230,.16);
+  border:0;border-radius:28px;padding:26px 26px 20px;margin:0;color:#f3f6fc;
+  background:radial-gradient(560px 280px at 100% 0,rgba(255,106,26,.32),transparent 70%),radial-gradient(460px 260px at 0 100%,rgba(59,227,255,.16),transparent 70%),linear-gradient(160deg,#0d1430,#070b18);
+  box-shadow:0 34px 60px -30px rgba(7,11,24,.7)}
+body #pgAsk .pg-head h3{font-size:19px}
+body #pgAsk .pg-head p{font-size:13px;color:#9aa8c4}
+body #pgAsk .pg-row{padding:8px 8px 8px 18px;border-radius:18px;background:rgba(255,255,255,.07);border:1px solid rgba(160,180,230,.24)}
+body #pgAsk .pg-row input{font-size:17px;padding:12px 0;color:#f3f6fc!important}
+body #pgAsk .pg-row input::placeholder{color:#7684a3}
+body #pgAsk .pg-row button{height:46px;padding:0 26px;border-radius:13px;background:var(--rx-fire);color:#fff;font-size:14px;box-shadow:0 10px 24px -10px rgba(255,90,31,.8)}
+body #pgAsk .pg-chip{padding:8px 14px;font-size:13px;background:rgba(255,255,255,.05);border-color:rgba(160,180,230,.2);color:#c6d0e3}
+body #pgAsk .pg-chip:hover{border-color:var(--rx-arc);color:#fff}
+body #pgAsk .pg-p{background:rgba(255,255,255,.05);border-color:rgba(160,180,230,.14)}
+body #pgAsk select{background:rgba(255,255,255,.07);color:#f3f6fc;border:1px solid rgba(160,180,230,.24);border-radius:10px;padding:6px 10px}
+.rx-rail{position:relative;display:grid;grid-template-columns:repeat(4,1fr);margin-top:20px;padding-top:2px}
+.rx-rail:before{content:"";position:absolute;left:12.5%;right:12.5%;top:7px;height:2px;border-radius:2px;background:rgba(160,180,230,.2)}
+.rx-rail:after{content:"";position:absolute;top:2px;left:12.5%;width:12px;height:12px;border-radius:50%;background:var(--rx-ember);box-shadow:0 0 16px 5px rgba(255,106,26,.65);animation:rxTravel 8s cubic-bezier(.65,0,.35,1) infinite}
+.rx-st{position:relative;text-align:center;padding-top:22px;font-size:12px;color:#8190ae}
+.rx-st:before{content:"";position:absolute;top:2px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#0d1430;border:2px solid rgba(160,180,230,.4)}
+@keyframes rxTravel{0%{left:12.5%;opacity:0}8%{opacity:1}85%{left:calc(87.5% - 12px);opacity:1}100%{left:calc(87.5% - 12px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.rx-rail:after{animation:none;left:12.5%}}
+
+/* share and gift strip */
+body .nss-home{margin:0;padding:14px 18px;border-radius:20px;border:1px solid var(--rx-line);background:var(--rx-surface)}
+body .nss-home h3{font-size:15px}
+body .nss-home p{font-size:13px;margin-top:3px}
+
+/* reach strip */
+.rx-reach{display:flex;flex-wrap:wrap;align-items:center;gap:8px 26px;padding:14px 20px;border-radius:20px;border:1px solid var(--rx-line);background:var(--rx-surface);font-size:13px;color:var(--rx-t2)}
+.rx-reach b{font:700 16px var(--rx-display);letter-spacing:-.02em;color:var(--rx-t0);margin-right:4px}
+.rx-live{display:inline-flex;align-items:center;gap:7px;font-weight:600;color:var(--rx-t1)}
+.rx-live i{width:8px;height:8px;border-radius:50%;background:#34e39a;box-shadow:0 0 0 4px rgba(52,227,154,.18)}
+.rx-pci{margin-left:auto;display:inline-flex;gap:6px;align-items:center}
+
+/* service tiles */
+body .quick-actions{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;padding:16px;border-radius:24px;border:1px solid var(--rx-line);background:var(--rx-surface);box-shadow:none}
+body .action-item{display:flex;flex-direction:column;align-items:center;gap:9px;padding:14px 6px 12px;border-radius:18px;border:1px solid transparent;background:transparent;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+body .action-item:hover{background:var(--rx-surface2)!important;border-color:var(--rx-line);transform:translateY(-2px)}
+body .action-item:focus-visible{outline:2px solid var(--rx-ember);outline-offset:2px}
+body .action-icon{width:48px;height:48px;border-radius:15px;font-size:19px;color:var(--rx-ember)!important;background:linear-gradient(145deg,rgba(255,106,26,.16),rgba(255,181,71,.1))!important;border:1px solid rgba(255,106,26,.22);transition:background .15s,color .15s}
+body .action-item:hover .action-icon{background:var(--rx-fire)!important;color:#fff!important}
+body .action-item span{font:600 12.5px 'Inter',system-ui,sans-serif;color:var(--rx-t1)}
+
+/* sections */
+body .dashboard-section,body .card{background:var(--rx-surface);border:1px solid var(--rx-line);border-radius:24px;box-shadow:none}
+body .section-header h3{font:700 16px var(--rx-display);letter-spacing:-.02em;color:var(--rx-t0)}
+body .section-header a{color:var(--rx-ember);font-weight:600}
+body .stat-card,body .service-card{background:var(--rx-surface2)!important;border:1px solid var(--rx-line);border-radius:16px}
+body .stat-card .value{font:700 22px var(--rx-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+body .service-card:hover{box-shadow:none;border-color:rgba(255,106,26,.45)}
+body .tx-item{border-radius:14px}
+body .welcome-banner,body .net365-access-grid,body .net365-evaluation-banner{display:none!important}
+body #walletFuturistic{border-radius:28px}
+body .footer{border-top:1px solid var(--rx-line)}
+
+.ng-auto{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--pg-t2,#9aa8c4);margin:12px 0 0}
+.ng-link{background:none;border:0;padding:0;font:600 13px 'Inter',system-ui,sans-serif;color:var(--rx-ember,#ff6a1a);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.ng-auto select{padding:5px 8px;border-radius:9px;border:1px solid rgba(160,180,230,.3);background:rgba(255,255,255,.08);color:inherit;font-size:13px}
+.ng-auto select option{color:#0b1020}
+.nx-bal-refresh{margin-left:8px;border:0;background:rgba(255,255,255,.08);color:inherit;width:26px;height:26px;border-radius:8px;cursor:pointer;vertical-align:middle}.nx-bal-refresh:hover{background:rgba(255,255,255,.16)}.nx-bal-refresh.spin i{animation:nxspin .6s linear infinite}@keyframes nxspin{to{transform:rotate(360deg)}}
+/* tablet */
+@media (max-width:1180px){body .right-col{width:330px}body .quick-actions{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:1000px){body .content{flex-direction:column}body .right-col{width:100%}}
+/* phone */
+@media (max-width:768px){
+  body .quick-actions{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:12px 8px}
+  body .action-item{padding:10px 2px 8px}
+  body .action-icon{width:44px;height:44px;border-radius:14px}
+  body .action-item span{font-size:11.5px;text-align:center}
+  .rx-greet{order:0;padding:2px 2px 0}.rx-greet h1{font-size:26px}.rx-greet p{font-size:14px}
+  body #walletFuturistic{order:1}
+  body #pgAsk.pg-ask{order:2;padding:18px 16px 14px;border-radius:24px}
+  body #pgAsk .pg-row input{font-size:16px}
+  body #quickActions{order:3}
+  body #rechargeSection{order:4}
+  body .dashboard-section.stats-section{order:5}
+  body .nss-home{order:6}
+  body #globalNetworkCard{order:7}
+  body #recentContactsCard{order:8}
+  body #rewardsCard{order:9}
+  body #aiCard{order:10}
+  body .dashboard-section.recent-section{order:11}
+  .rx-reach{gap:6px 16px;padding:12px 14px}.rx-pci{margin-left:0}
+  .rx-st{font-size:11px}
+}
+</style>
+
+<script id="rx-home">
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var yr=new Date().getFullYear(); document.querySelectorAll('.rx-year').forEach(function(e){e.textContent=yr});
+  function part(){var h=new Date().getHours();return h<12?'Good morning':(h<17?'Good afternoon':'Good evening')}
+  var acctLoaded=false;
+  function paint(){
+    var n=($('userName')||{}).textContent||'', signed=false;
+    try{signed=!!(typeof userId!=='undefined'&&userId)}catch(e){}
+    var g=$('rxGreet'),s=$('rxSub'); if(!g)return;
+    if(signed){
+      var first=n.trim().split(/\s+/)[0]||'there';
+      g.textContent=part()+', '+first;
+      s.textContent='Your wallet is ready. Ask for anything below, or tap a service.';
+      if(!acctLoaded){acctLoaded=true;
+        try{apiFetch(API_BASE+'/profile').then(function(r){return r.json()}).then(function(d){
+          if(d&&d.success&&d.profile){var p=d.profile;$('rxAcctTxt').textContent=p.account_type_label+' · '+p.account_tier;$('rxAcct').style.display='inline-flex'}
+        }).catch(function(){})}catch(e){}}
+    }else{
+      g.textContent='Pay anything, anywhere.';
+      s.textContent='Airtime, data, bills and gift cards in 190+ countries. Ask in plain words, or tap a service.';
+      $('rxAcct').style.display='none';acctLoaded=false;
+    }
+  }
+  var un=$('userName'); if(un&&window.MutationObserver) new MutationObserver(paint).observe(un,{childList:true,characterData:true,subtree:true});
+  paint(); setTimeout(paint,1500);
+  var rA=$('rxAcct'); if(rA) rA.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();showProfile()}});
+  document.querySelectorAll('.action-item').forEach(function(a){a.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();a.click()}})});
+    // ---- Balance stays in step with the server (wallets table), whichever browser or device moved the money ----
+  var balSeq=0, balAt=0;
+  window.nxSyncBalance=function(force){
+    var signed=false; try{signed=!!(typeof userId!=='undefined'&&userId)}catch(e){}
+    if(!signed||(document.hidden&&!force)) return Promise.resolve();
+    var my=++balSeq;
+    return fetch(API_BASE+'/dashboard/summary',{credentials:'include',cache:'no-store',headers:{Accept:'application/json'}})
+      .then(function(r){return r.ok?r.json():null}).then(function(d){
+        if(my!==balSeq||!d||!d.success||!d.summary||!d.summary.wallet) return;   // a newer request already answered
+        updateWalletDisplay(d.summary.wallet.wallets||[]); balAt=Date.now();
+        var el=$('walletBalance'); if(el) el.title='Updated '+new Date(balAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        try{ if(typeof updateWalletPaymentOption==='function') updateWalletPaymentOption(); }catch(e){}
+      }).catch(function(){});
+  };
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) nxSyncBalance(); });
+  window.addEventListener('focus',function(){ nxSyncBalance(); });
+  window.addEventListener('online',function(){ nxSyncBalance(); });
+  window.addEventListener('pageshow',function(e){ if(e.persisted) nxSyncBalance(); });
+  setInterval(function(){ if(Date.now()-balAt>20000) nxSyncBalance(); },25000);
+  (function(){ var lab=document.querySelector('#walletFuturistic .hero-label'); if(!lab||lab.querySelector('.nx-bal-refresh')) return;
+    var b=document.createElement('button'); b.type='button'; b.className='nx-bal-refresh'; b.setAttribute('aria-label','Refresh balance'); b.title='Refresh balance'; b.innerHTML='<i class="fas fa-rotate"></i>';
+    b.onclick=function(){ b.classList.add('spin'); nxSyncBalance(true).then(function(){ setTimeout(function(){b.classList.remove('spin')},400) }); }; lab.appendChild(b); })();
+  // example prompts rotate in the empty field
+  var inp=$('pgAskInput'); if(inp){
+    var ex=['Pay ₦5,000 electricity on Aba Power for meter 4501…','Buy 2GB MTN data for 08031234567…','Renew my DStv Compact…','Send ₦1,000 airtime to Mum every Friday…','What did I spend this month?'],i=0;
+    var ng=true;
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(function(){
+      var cur=inp.placeholder; if(ex.indexOf(cur)===-1) ng=cur.indexOf('Aba')>-1; /* the location code set a placeholder: Nigeria keeps the Aba example, elsewhere it sets a generic one */
+      if(ng&&document.activeElement!==inp&&!inp.value){i=(i+1)%ex.length;inp.placeholder=ex[i]} },4200);
+  }
+})();
+</script>
+<style id="rx-ads-css">
+#rxAd{margin-top:18px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(160,180,230,.18);position:relative;overflow:hidden;color:#f3f6fc}
+#rxAd .sl{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:18px;padding:18px 18px 8px;min-height:190px;align-items:stretch}
+#rxAd .sl.noimg{grid-template-columns:minmax(0,1fr)}
+#rxAd .tag{display:inline-block;font:600 12px/1 inherit;font-family:inherit;color:#9aa8c4;margin-bottom:8px}
+#rxAd .tag.sp{color:#ffb547}
+#rxAd h4{margin:0 0 6px;font:700 18px/1.25 var(--rx-display,inherit)}
+#rxAd p{margin:0 0 14px;font-size:14px;line-height:1.5;color:#c6d0e3;max-width:46ch}
+#rxAd .acts{display:flex;flex-wrap:wrap;gap:8px}
+#rxAd .acts a,#rxAd .acts button{font:600 13.5px/1 inherit;font-family:inherit;padding:11px 16px;border-radius:999px;border:1px solid rgba(160,180,230,.35);background:none;color:#f3f6fc;text-decoration:none;cursor:pointer;min-height:40px;display:inline-flex;align-items:center}
+#rxAd .acts .go{background:linear-gradient(135deg,#ff3b30,#ff6a1a);border-color:transparent;color:#fff}
+#rxAd .acts :focus-visible,#rxAd .bar button:focus-visible{outline:2px solid #3be3ff;outline-offset:2px}
+#rxAd .img{border-radius:14px;overflow:hidden;background:rgba(255,255,255,.06);min-height:140px}
+#rxAd .img img{width:100%;height:100%;object-fit:cover;display:block}
+#rxAd .chat{border-radius:16px;background:#0b1020;border:1px solid #243049;height:158px;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:10px;overflow:hidden}
+#rxAd .m{max-width:88%;padding:7px 10px;border-radius:12px;font-size:12.5px;line-height:1.35;white-space:pre-line;animation:rxAdIn .25s ease-out both}
+#rxAd .m.bot{background:#1b2742;align-self:flex-start;border-bottom-left-radius:4px}
+#rxAd .m.me{background:#ff6a1a;color:#111;align-self:flex-end;border-bottom-right-radius:4px}
+#rxAd .ob{display:flex;gap:5px;flex-wrap:wrap;animation:rxAdIn .25s ease-out both}
+#rxAd .ob span{font-size:11.5px;padding:5px 9px;border-radius:999px;border:1px solid #33425f;color:#8fc3ff;background:#10172b}
+#rxAd .ob span.hit{background:#ff6a1a;border-color:#ff6a1a;color:#111}
+#rxAd .bar{display:flex;align-items:center;gap:10px;padding:4px 14px 12px}
+#rxAd .dots{display:flex;gap:6px;flex:1}
+#rxAd .dots button{width:22px;height:22px;padding:0;border:0;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#rxAd .dots button i{width:8px;height:8px;border-radius:99px;background:rgba(160,180,230,.4);transition:width .2s,background .2s}
+#rxAd .dots button[aria-current=true] i{width:22px;background:#ff6a1a}
+#rxAd .bar .pz{font:600 12px/1 inherit;font-family:inherit;color:#9aa8c4;background:none;border:0;cursor:pointer;padding:8px}
+@keyframes rxAdIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (max-width:700px){ #rxAd .sl{grid-template-columns:minmax(0,1fr);min-height:0}#rxAd .img{min-height:120px;max-height:160px}}
+@media (prefers-reduced-motion:reduce){ #rxAd .m,#rxAd .ob{animation:none}}
+.rx-qchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.rx-qchips button{font:500 12.5px/1 inherit;font-family:inherit;color:#c6d0e3;background:none;border:1px dashed rgba(160,180,230,.4);border-radius:999px;padding:8px 12px;cursor:pointer;min-height:34px}
+.rx-qchips button:hover{border-color:#3be3ff;color:#fff}
+.qa-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.qa-act{font:600 13px/1 inherit;font-family:inherit;color:inherit;background:rgba(255,106,26,.14);border:1px solid rgba(255,106,26,.55);border-radius:999px;padding:9px 13px;cursor:pointer;min-height:38px}
+.qa-act:hover{background:rgba(255,106,26,.26)}.qa-act:focus-visible{outline:2px solid #3be3ff;outline-offset:2px}
+.qa-fb{margin-top:10px;font-size:12.5px;opacity:.9}.qa-fbb{font:600 12.5px/1 inherit;font-family:inherit;color:inherit;background:none;border:1px solid rgba(160,180,230,.4);border-radius:999px;padding:6px 12px;margin-left:6px;cursor:pointer;min-height:32px}
+.qa-follow{margin-top:10px}.qa-mail{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.qa-mail input{flex:1;min-width:180px;font:inherit;color:inherit;background:rgba(255,255,255,.07);border:1px solid rgba(160,180,230,.3);border-radius:12px;padding:9px 12px}
+#qaInbox:empty{display:none}.qa-reply{margin:0 0 12px;padding:14px;border-radius:16px;border:1px solid rgba(59,227,255,.5);background:rgba(59,227,255,.08)}.qa-reply b{display:block;margin-bottom:2px}.qa-ans{margin:8px 0 10px;white-space:pre-line;line-height:1.5}
+.qa-t{display:block;margin-bottom:4px}.qa-note{display:block;opacity:.8;font-size:12.5px;margin-top:8px}
+.pf-mem{display:flex;gap:14px;align-items:center;margin:16px 0 4px;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,106,26,.35);background:linear-gradient(135deg,rgba(255,106,26,.1),rgba(59,227,255,.06))}
+.pf-mem b{display:block;font-size:16px;margin-bottom:2px}.pf-mem span{display:block;font-size:13px;opacity:.85;line-height:1.45}.pf-mem .pf-memno{opacity:1;margin:2px 0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pf-mem.pending{border-style:dashed}
+.pf-medal{flex:none}
+</style>
+
+<script id="rx-ads">
+/* Under Ask Net365: Net365 and partner adverts set in admin (Home Adverts). The chat animation is the default slide. */
+(function(){
+  var host=document.getElementById('pgAsk'); if(!host) return;
+  var box=document.createElement('div'); box.id='rxAd'; box.setAttribute('role','region'); box.setAttribute('aria-roledescription','carousel'); box.setAttribute('aria-label','Net365 highlights');
+  var stage=document.createElement('div'), bar=document.createElement('div'); bar.className='bar';
+  var dots=document.createElement('div'); dots.className='dots'; var pz=document.createElement('button'); pz.type='button'; pz.className='pz'; pz.textContent='Pause';
+  bar.appendChild(dots); bar.appendChild(pz); box.appendChild(stage); box.appendChild(bar); host.appendChild(box);
+  var slides=[{t:'anim'}], idx=0, timers=[], rotate=7, paused=false, hover=false, scene=0, seen={}, reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function safe(u){ u=String(u||''); return (/^https:\/\/[^\s\/]+\.[^\s\/]+/.test(u)||/^\/(?!\/)/.test(u))?u:''; }
+  function clear(){ timers.forEach(clearTimeout); timers=[]; }
+  function later(ms,f){ timers.push(setTimeout(f,ms)); }
+  function el(t,c,x){ var e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; }
+  function ping(id,ev){ try{ fetch('/api/ads/home/'+id+'/event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev}),keepalive:true,credentials:'same-origin'}).catch(function(){}); }catch(e){} }
+  function active(){ return !paused&&!hover&&!document.hidden; }
+
+  function drawAnim(){
+    var sc=(window.NXV&&NXV.scenes&&NXV.scenes.length)?NXV.scenes[scene%NXV.scenes.length]:null;
+    var sl=el('div','sl'); var left=el('div'); left.appendChild(el('span','tag','Net365 · Pay by chat'));
+    left.appendChild(el('h4','',sc?sc.t:'Pay bills from a chat')); left.appendChild(el('p','',sc?sc.d:'Top up and pay bills from the WhatsApp or Telegram chat you already use.'));
+    var a=el('div','acts'); var w=el('button','go','Watch how it works'); w.type='button'; w.onclick=function(){ if(window.nxOpenVideo) nxOpenVideo(); }; a.appendChild(w);
+    var l=el('a','','Pay by chat'); l.href='/bots?src=ask'; a.appendChild(l); left.appendChild(a); sl.appendChild(left);
+    var chat=el('div','chat'); chat.setAttribute('aria-hidden','true'); sl.appendChild(chat); stage.replaceChildren(sl);
+    if(!sc) return 6000;
+    var at=0, last=null;
+    function add(c,t){ var m=el('div','m '+c,t); chat.appendChild(m); while(chat.scrollHeight>chat.clientHeight+2&&chat.children.length>1) chat.removeChild(chat.firstChild); }
+    sc.s.forEach(function(x){
+      if(x[0]==='bot'){ at+=reduce?0:900; (function(t){ later(at,function(){ add('bot',t); }); })(x[1]); }
+      else if(x[0]==='me'){ at+=reduce?0:600; (function(t){ later(at,function(){ add('me',t); }); })(x[1]); }
+      else { at+=reduce?0:500; (function(o,h){ later(at,function(){ var w=el('div','ob'); o.forEach(function(t){ w.appendChild(el('span','',t)); }); chat.appendChild(w); last=w; }); at+=reduce?0:700; later(at,function(){ if(last&&last.children[h]) last.children[h].className='hit'; }); })(x[1],x[2]); }
+    });
+    return reduce?Math.max(rotate*1000,6000):at+2600;
+  }
+  function drawAd(ad){
+    var img=safe(ad.image_url), cta=safe(ad.cta_url), sl=el('div','sl'+(img?'':' noimg')), left=el('div');
+    var tag=el('span','tag'+(ad.kind==='partner'?' sp':''),ad.kind==='partner'?'Sponsored · '+ad.sponsor:'Net365'); left.appendChild(tag);
+    left.appendChild(el('h4','',ad.title)); if(ad.body) left.appendChild(el('p','',ad.body));
+    if(cta){ var a=el('div','acts'), l=el('a','go',ad.cta_label||'Learn more'); l.href=cta; if(/^https:/.test(cta)){ l.target='_blank'; l.rel='noopener noreferrer'+(ad.kind==='partner'?' sponsored':''); } l.addEventListener('click',function(){ ping(ad.id,'click'); }); a.appendChild(l); left.appendChild(a); }
+    sl.appendChild(left);
+    if(img){ var im=el('div','img'), i=document.createElement('img'); i.src=img; i.alt=''; i.loading='lazy'; i.referrerPolicy='no-referrer'; i.onerror=function(){ im.remove(); sl.className='sl noimg'; }; im.appendChild(i); sl.appendChild(im); }
+    stage.replaceChildren(sl);
+    if(!seen[ad.id]){ seen[ad.id]=1; ping(ad.id,'view'); }
+    return rotate*1000;
+  }
+  function paintDots(){
+    dots.replaceChildren(); bar.style.display=slides.length>1?'':'none';
+    slides.forEach(function(s,i){ var b=el('button'); b.type='button'; b.setAttribute('aria-label','Show slide '+(i+1)+' of '+slides.length); if(i===idx) b.setAttribute('aria-current','true'); b.appendChild(el('i')); b.onclick=function(){ show(i); }; dots.appendChild(b); });
+  }
+  function show(i){
+    clear(); idx=((i%slides.length)+slides.length)%slides.length; var s=slides[idx], ms;
+    if(s.t==='anim'){ ms=drawAnim(); } else ms=drawAd(s.ad);
+    paintDots(); box.setAttribute('aria-live',paused?'polite':'off');
+    schedule(ms);
+  }
+  function schedule(ms){
+    clear0=false; later(ms,function(){ if(!active()){ wait=true; return; } step(); });
+  }
+  var wait=false, clear0=false;
+  function step(){ if(slides.length===1){ var s=slides[0]; if(s.t==='anim') scene++; } else if(slides[idx].t==='anim') scene++; show(idx+1); }
+  function resume(){ if(wait&&active()){ wait=false; step(); } }
+  box.addEventListener('mouseenter',function(){ hover=true; }); box.addEventListener('mouseleave',function(){ hover=false; resume(); });
+  box.addEventListener('focusin',function(){ hover=true; }); box.addEventListener('focusout',function(){ hover=false; resume(); });
+  document.addEventListener('visibilitychange',resume);
+  pz.onclick=function(){ paused=!paused; pz.textContent=paused?'Play':'Pause'; if(!paused) resume(); };
+
+  var reqSeq=0;
+  function load(){
+    var cc=''; try{ cc=window.Net365Geo?Net365Geo.country().code:''; }catch(e){} var my=++reqSeq;
+    fetch('/api/ads/home'+(cc?'?country='+encodeURIComponent(cc):''),{credentials:'same-origin',headers:{Accept:'application/json'}}).then(function(r){ return r.ok?r.json():null; }).then(function(d){
+      if(my!==reqSeq) return; var ads=(d&&d.ads)||[], st=(d&&d.settings)||{}; rotate=Math.max(4,Math.min(30,+st.rotate||7));
+      var list=ads.map(function(a){ return {t:'ad',ad:a}; });
+      if(st.animation==='first'||!st.animation) slides=[{t:'anim'}].concat(list); else slides=list.length?list:[{t:'anim'}];
+      wait=false; show(0);
+    }).catch(function(){ if(my!==reqSeq) return; slides=[{t:'anim'}]; show(0); });
+  }
+  show(0); load();
+  if(window.Net365Geo&&Net365Geo.onChange){ var dt; Net365Geo.onChange(function(){ clearTimeout(dt); dt=setTimeout(load,300); }); }
+})();
+</script>
+
+<script id="rx-qa">
+/* Ask Net365: answers to everyday questions. Every answer points at a real screen and only states what the page itself does. */
+(function(){
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  var A={
+    tx:['See my transactions','showAnalytics'], help:['Open Help Centre','showHelpCenter'], wallet:['Open my wallet','handleAddMoneyClick'], profile:['Open my profile','showProfile'],
+    settings:['Open Settings','showSettings'], bulk:['Bulk recharge','showBulkRecharge'], refer:['Referrals','showReferralDashboard'], login:['Sign in','handleLoginClick'],
+    sync:['Refresh my balance','nxSyncBalance'], sched:['Scheduled payments','@/scheduler'], bots:['Pay by chat','@/bots?src=qa'], gift:['Gift cards','@/giftcards'], recharge:['Recharge a number','@recharge'], util:['Open Utilities','@/utilities']
+  };
+  var Q=[
+    ['paid', /(paid|debited|deducted|charged|money (?:gone|left)).*(not|no|never|didn'?t|nothing).*(receiv|arriv|deliver|get|got|credit|show|come|came)|nothing (came|arrived|was received|was delivered)|(paid|debited|deducted|charged).*(but|yet)|(not|never|didn'?t|haven'?t).*(receiv|arriv|deliver|credit).*(airtime|data|token|value|bill|recharge)|(airtime|data|token|recharge).*(not|never|hasn'?t|didn'?t).*(arriv|deliver|come|received|credit)|\bpending\b|still processing/i,
+      'Paid but nothing arrived','Do not pay again yet. Open <b>Transactions</b> and find the order. <b>Pending</b> means it is still being confirmed, and the status updates there when it settles. If it says <b>Failed</b>, or stays pending for a long time, contact support with the order reference so it can be checked.',['tx','help']],
+    ['fail', /fail(ed|ure)?\b|declined|unsuccessful|payment error|went wrong/i,
+      'A payment failed','Open <b>Transactions</b> and check the order status first. A failed order shows the reason there. Keep the order reference and contact support if money left your account and the order does not show a clear result.',['tx','help']],
+    ['refund', /refund|money back|reverse|reversal|chargeback/i,
+      'Refunds','Open the order in <b>Transactions</b> to see whether it was delivered, failed or is still pending. For a refund question, contact support with the order reference. They will see exactly what happened to it.',['tx','help']],
+    ['wrong', /wrong (number|meter|account|smartcard|card|phone|network|amount)|sent (it )?to the wrong|mistake(n|ly)? (number|meter)|typed.*wrong/i,
+      'Sent to the wrong number or meter','Check the order in <b>Transactions</b> to see the number or meter it went to. Once an order is delivered it cannot be undone from here, so contact support quickly with the reference. Next time, the confirm screen shows the name or number again before you pay.',['tx','help']],
+    ['bal', /balance.*(wrong|differ|not (match|tally|update|right|same)|mismatch|different)|(wrong|different|old).*balance|wallet.*(not (updat|show|credit)|empty|zero)|balance (is )?(not|still)/i,
+      'My balance looks wrong','The balance shown on this page is read from your account when the page opens and refreshes after each payment. If you used Net365 on another phone or browser, tap <b>Refresh my balance</b>. If it still looks wrong, open <b>Transactions</b> to see every debit and credit.',['sync','tx','help']],
+    ['fund', /(fund|top ?up|add money|load|put money|deposit).*(wallet|account|balance)|how.*(fund|add money)/i,
+      'Fund your wallet','Open your wallet and choose <b>Add money</b>. You see the amount and the method before you confirm.',['wallet']],
+    ['token', /(electric|power|meter|light|prepaid).*(token|unit)|(token|unit).*(electric|power|meter)|where.*(my )?token|token.*(not|where|lost|missing)/i,
+      'Electricity token','Your token appears on the order in <b>Transactions</b> once the meter is credited, and the receipt shows it too. If the order is still pending, wait for the status to change before you pay again.',['tx','help']],
+    ['receipt', /receipt|proof of payment|invoice|statement/i,
+      'Receipts','Every order has its details in <b>Transactions</b>. Open it to see the reference, amount and status.',['tx']],
+    ['chat', /whatsapp|telegram|bot\b|chat (pay|bot)|pay (by|via|with|through) chat/i,
+      'Pay by chat','You can top up and pay bills from the WhatsApp or Telegram chat you already use. The <b>Watch how it works</b> animation under this box shows an example.',['bots']],
+    ['sched', /recurring|repeat|every (week|month|day)|auto(matic)? (pay|top|recharge)|automatically/i,
+      'Repeat payments','Use <b>Scheduled payments</b> to set a top-up or bill to repeat. You choose the day and the amount.',['sched']],
+    ['bulk', /many numbers|multiple numbers|several numbers|staff|everyone|my team|lots of numbers|bulk/i,
+      'Many numbers at once','<b>Bulk recharge</b> lets you add several numbers and amounts and pay for them together.',['bulk']],
+    ['else', /(for|to) (someone|somebody|my (mum|mom|dad|brother|sister|wife|husband|friend|family|parents))|someone else|another person|abroad|diaspora|send (airtime|data|credit)/i,
+      'Paying for someone else','You can recharge any number or pay any meter or smartcard. Enter their details at the confirm step, and check the name or number shown before you pay. Recharge for another country follows the location shown under this box.',['recharge','gift']],
+    ['acct', /account type|upgrade|business account|sme|corporate|developer|agent account|partner account|affiliate|change my account|my tier|membership/i,
+      'Account type','Your account type and tier are on your <b>profile</b>. You can see what each type unlocks there and request an upgrade.',['profile']],
+    ['profile', /my profile|my details|my (name|email|phone|referral)|account number|customer id/i,
+      'Your profile','Your profile shows your name, account number, account type, status and referral ID.',['profile']],
+    ['safe', /safe|secure|scam|trust|legit|fraud|hack|pci/i,
+      'Is it safe?','You see the full price and the details before every payment, and nothing is charged until you confirm. Card payments use a PCI-compliant payment page. Never share your password or one-time codes with anyone, including anyone claiming to be Net365.',['settings','help']],
+    ['pw', /password|\bpin\b|log ?in|sign ?in|locked|can'?t (get|access)|forgot/i,
+      'Sign-in help','Use <b>Sign in</b> and follow the reset option if you forgot your password. You can change your details later under Settings.',['login','settings']],
+    ['fees', /fee|charge|how much (does|will)|commission|cost to use|price list|hidden/i,
+      'Prices and fees','The price is shown before you pay, and nothing is charged until you confirm. If a price looks different from what you expected, stop at the confirm screen and ask support.',['help']],
+    ['cancel', /cancel|stop (a|the|my) (payment|order)|undo|change my mind/i,
+      'Cancel a payment','Before you tap confirm, nothing has been charged, so you can just close the screen. After you confirm, the order goes to the provider. Open it in <b>Transactions</b> and contact support if you need it checked.',['tx','help']],
+    ['ref', /referr|invite|earn (money|commission)|commission|make money|affiliate programme/i,
+      'Earn by inviting','Share your referral link from <b>Referrals</b>. You can track who joined from there.',['refer']],
+    ['support', /support|human|agent|customer care|speak to|talk to|call you|contact|complain|help me|help centre|help center/i,
+      'Talk to support','Open the <b>Help Centre</b> to reach the team. Have the order reference ready if it is about a payment.',['help']],
+    ['countries', /which countries|what countries|countries do you|where (do|can) you (work|operate)|international|send.*(ghana|kenya|uganda|india|philippines)/i,
+      'Where Net365 works','Net365 tops up mobile networks in many countries. Use the location shown under this box and the list of providers for that country appears when you ask for mobile data or a recharge there.',['recharge','gift']],
+    ['what', /what (is|does) net365|what can (i|you) (do|pay|buy)|what do you (do|sell|offer)|services/i,
+      'What you can do here','Buy <b>airtime and data</b>, pay <b>electricity</b> and <b>cable TV</b>, buy gift cards, set up repeat payments, and recharge many numbers at once. You can also do it all by chat on WhatsApp or Telegram.',['recharge','util','bots']]
+  ];
+  var CHIPS=[['Paid but nothing arrived','my airtime was not received but I was debited'],['Where is my token?','where is my electricity token'],['I used the wrong number','I sent it to the wrong number'],['Refund','how do I get a refund'],['Balance looks wrong','my balance does not match'],['Talk to support','talk to support']];
+  function build(q){
+    var h='<span class="qa-t" data-q="'+q[0]+'"><b>'+esc(q[2])+'</b></span>'+q[3], b=q[4].map(function(k){ return '<button type="button" class="qa-act" data-qa="'+k+'">'+esc(A[k][0])+'</button>'; }).join('');
+    return h+'<div class="qa-acts">'+b+'</div><div class="qa-fb" data-fb-box>Did this answer your question? <button type="button" class="qa-fbb" data-fb="1">Yes</button><button type="button" class="qa-fbb" data-fb="0">No</button></div>';
+  }
+  function find(t){ for(var i=0;i<Q.length;i++) if(Q[i][1].test(t)) return Q[i]; return null; }
+  /* action phrases ("pay electricity", "buy data") are left to the normal Ask logic; only questions and problems come here */
+  var ACTION=/^(pay|buy|recharge|top ?up|send|fund|open|show|go to|take me)\b/i, PROBLEM=/\?|not |n'?t |never|wrong|refund|fail|pending|where|how|why|what|can i|can you|help|support|safe|stuck|missing|problem|issue/i;
+  var LOG={text:'',done:true,id:null,token:0,signed:false}, VK='';
+  try{ VK=window.net365Storage.getItem('n365_ask_vk')||''; if(!VK){ VK=(Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36)).slice(0,28); window.net365Storage.setItem('n365_ask_vk',VK); } }catch(e){ VK=VK||('s'+Math.random().toString(36).slice(2)+Date.now().toString(36)); }
+  function post(u,b){ return fetch(u,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){ return r.json().catch(function(){return {};}); }); }
+  function postLog(q,outcome,shown,matched,token){
+    var cc=''; try{ cc=window.Net365Geo?Net365Geo.country().code:''; }catch(e){}
+    post('/api/ask/log',{question:q,outcome:outcome,shown:shown,matched:matched,visitor:VK,country:cc}).then(function(d){
+      if(!d||!d.success||token!==LOG.token) return; LOG.id=d.id; LOG.signed=!!d.signed_in;
+      if(outcome==='unanswered') follow(d.id,d.signed_in);
+    }).catch(function(){});
+  }
+  function follow(id,signed){
+    var r=document.getElementById('pgReply'); if(!r||r.querySelector('.qa-follow')) return; var d=document.createElement('div'); d.className='qa-follow';
+    if(signed){ d.innerHTML='<span class="qa-note">You will see the reply here, in your notifications and by email.</span>'; }
+    else { d.innerHTML='<span class="qa-note">Leave an email if you want the reply sent to you. If you stay on this page you will also see it here.</span><form class="qa-mail"><input type="email" required maxlength="254" placeholder="you@example.com" aria-label="Your email"><button type="submit" class="qa-act">Send</button></form>';
+      d.querySelector('form').addEventListener('submit',function(e){ e.preventDefault(); var v=d.querySelector('input').value.trim(); post('/api/ask/contact',{id:id,visitor:VK,email:v}).then(function(x){ d.innerHTML=x&&x.success?'<span class="qa-note">Thanks. We will reply to '+esc(v)+'.</span>':'<span class="qa-note">That email does not look right. Try again.</span>'; }); }); }
+    r.appendChild(d);
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest?e.target.closest('.qa-fbb'):null; if(!b) return; var box=b.closest('[data-fb-box]'), good=b.getAttribute('data-fb')==='1', id=LOG.id;
+    box.innerHTML=good?'Thanks for letting us know.':'Sorry about that. <b>I will get back to you on this.</b>';
+    if(id) post('/api/ask/feedback',{id:id,visitor:VK,helpful:good}).catch(function(){}); if(!good&&id) follow(id,LOG.signed);
+  });
+  /* replies from the team: shown here while the customer is on the page, and again next visit until dismissed */
+  function inbox(){ var h=document.getElementById('qaInbox'); if(h) return h; var r=document.getElementById('pgReply'); if(!r||!r.parentNode) return null; h=document.createElement('div'); h.id='qaInbox'; h.setAttribute('aria-live','polite'); r.parentNode.insertBefore(h,r); return h; }
+  function poll(){
+    if(document.hidden) return; fetch('/api/ask/replies?visitor='+encodeURIComponent(VK),{credentials:'same-origin'}).then(function(r){ return r.ok?r.json():null; }).then(function(d){
+      if(!d||!d.replies||!d.replies.length) return; var h=inbox(); if(!h) return;
+      d.replies.forEach(function(x){ if(h.querySelector('[data-rid="'+x.id+'"]')) return; var c=document.createElement('div'); c.className='qa-reply'; c.setAttribute('data-rid',x.id);
+        c.innerHTML='<b>Reply from the Net365 team</b><span class="qa-note">You asked: '+esc(x.question)+'</span><div class="qa-ans"></div><button type="button" class="qa-act">Got it</button>';
+        c.querySelector('.qa-ans').textContent=x.admin_answer; c.querySelector('button').onclick=function(){ post('/api/ask/replies/seen',{ids:[x.id],visitor:VK}); c.remove(); }; h.appendChild(c); });
+    }).catch(function(){});
+  }
+  setTimeout(poll,1500); setInterval(poll,40000); window.addEventListener('focus',poll);
+  window.Net365QA={
+    answer:function(text){ text=String(text||'').trim(); if(!text) return ''; if(ACTION.test(text)&&!/\b(not|n't|never|wrong|failed|refund|pending)\b/i.test(text)) return ''; var q=find(text); if(!q) return ''; if(q[0]==='what'||q[0]==='fees'||q[0]==='ref'||q[0]==='acct'||q[0]==='profile'||q[0]==='bulk'||q[0]==='chat'||q[0]==='sched'){ if(!PROBLEM.test(text)) return ''; } return build(q); },
+    fallback:function(text){ var q=find(String(text||'')); return q?build(q):''; },
+    unknown:function(){ return '<span class="qa-t" data-q="none"><b>I will get back to you on this</b></span>I do not have a reliable answer to that yet, and I would rather not guess. I have passed your question to the team and they will reply.'; },
+    begin:function(t){ LOG.text=String(t||'').trim(); LOG.done=false; LOG.id=null; LOG.token++; },
+    logReply:function(html){ if(LOG.done||!LOG.text) return; LOG.done=true; var m=/data-q="([a-z]+)"/.exec(html||''), tmp=document.createElement('div'); tmp.innerHTML=html||''; var shown=(tmp.textContent||'').replace(/\s+/g,' ').trim().slice(0,200);
+      var outcome=m?(m[1]==='none'?'unanswered':'answered'):'action'; postLog(LOG.text,outcome,shown,m?m[1]:'',LOG.token); },
+    ask:function(t){ var i=document.getElementById('pgAskInput'), f=document.getElementById('pgAskForm'); if(!i||!f) return; i.value=t; if(f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true})); }
+  };
+  document.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest?e.target.closest('.qa-act'):null; if(!b) return; var a=A[b.getAttribute('data-qa')]; if(!a) return;
+    var f=a[1];
+    if(f==='@recharge'){ var r=document.getElementById('rechargeSection'); if(r) r.scrollIntoView({behavior:'smooth'}); }
+    else if(f.charAt(0)==='@'){ window.location.href=f.slice(1); }
+    else if(typeof window[f]==='function'){ window[f](); }
+    else if(f==='handleLoginClick'||f==='showProfile'||f==='showAnalytics'){ window.location.href='/?go='+({handleLoginClick:'login',showProfile:'profile',showAnalytics:'transactions'})[f]; }
+  });
+  var chips=document.getElementById('pgChips');
+  if(chips&&chips.parentNode){ var w=document.createElement('div'); w.className='rx-qchips'; w.setAttribute('aria-label','Common questions');
+    CHIPS.forEach(function(c){ var b=document.createElement('button'); b.type='button'; b.textContent=c[0]; b.onclick=function(){ window.Net365QA.ask(c[1]); }; w.appendChild(b); });
+    chips.parentNode.insertBefore(w,chips.nextSibling); }
+})();
+</script>
+
 </body>
 </html>
