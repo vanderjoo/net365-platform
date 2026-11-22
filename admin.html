@@ -1211,8 +1211,14 @@
             <div class="tab-panel" id="tab-users">
                 <div class="panel">
                     <h3><i class="fas fa-users"></i> User Management</h3>
-                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">Search, suspend, block, or manage user accounts.</p>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">Search, edit, suspend, block or delete user accounts. Deleted accounts are never erased: they move to the audit list with the admin's remarks.</p>
 
+                    <div style="display:flex;gap:8px;margin-bottom:14px;">
+                        <button class="btn btn-sm btn-primary" id="usersSubBtnActive" onclick="showUsersSub('active')"><i class="fas fa-users"></i> Users</button>
+                        <button class="btn btn-sm btn-outline" id="usersSubBtnDeleted" onclick="showUsersSub('deleted')"><i class="fas fa-box-archive"></i> Deleted (audit)</button>
+                    </div>
+
+                    <div id="usersSubActive">
                     <div class="user-search-row">
                         <input type="text" id="userSearchInput" placeholder="Search by email, phone, or name..." onkeyup="if(event.key==='Enter')searchUsers()" />
                         <button class="btn btn-primary" onclick="searchUsers()"><i class="fas fa-search"></i> Search</button>
@@ -1221,6 +1227,16 @@
                     </div>
                     <div id="userSearchResults">
                         <div class="empty-state">Search for users to manage their accounts.</div>
+                    </div>
+                    </div>
+
+                    <div id="usersSubDeleted" style="display:none;">
+                        <div class="user-search-row">
+                            <input type="text" id="deletedSearchInput" placeholder="Search deleted accounts by email, name, phone or remarks..." onkeyup="if(event.key==='Enter')loadDeletedUsers()" />
+                            <button class="btn btn-primary" onclick="loadDeletedUsers()"><i class="fas fa-search"></i> Search</button>
+                            <button class="btn btn-outline" onclick="document.getElementById('deletedSearchInput').value='';loadDeletedUsers();">Clear</button>
+                        </div>
+                        <div id="deletedUsersResults"><div class="empty-state">Loading...</div></div>
                     </div>
                 </div>
             </div>
@@ -1240,6 +1256,17 @@
                         <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">Encryption</div><div class="health-status">Checking...</div></div></div>
                         <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">Exchange Rates</div><div class="health-status">Checking...</div></div></div>
                         <div class="health-item"><div class="status-dot ok"></div><div><div class="health-name">SMS Provider</div><div class="health-status">Checking...</div></div></div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-envelope-circle-check"></i> Alert Emails</h3>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;">Security and block alerts are queued, sent at once, and retried for 24 hours if the email provider is down.</p>
+                    <div id="alertStatusBox"><div class="empty-state">Loading...</div></div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+                        <button class="btn btn-primary btn-sm" onclick="sendTestAlert()"><i class="fas fa-paper-plane"></i> Send test alert</button>
+                        <button class="btn btn-outline btn-sm" onclick="retryFailedAlerts()"><i class="fas fa-rotate"></i> Retry failed</button>
+                        <button class="btn btn-outline btn-sm" onclick="loadAlertStatus()"><i class="fas fa-arrows-rotate"></i> Refresh</button>
                     </div>
                 </div>
 
@@ -1323,6 +1350,59 @@
 
     <!-- ========== MODALS ========== -->
 
+    <!-- EDIT USER MODAL -->
+    <div class="modal-overlay" id="editUserModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit User <span id="editUserIdLabel" style="font-size:13px;color:var(--text-secondary);"></span></h2>
+                <button class="modal-close" onclick="closeModal('editUserModal')">✕</button>
+            </div>
+            <form id="editUserForm" onsubmit="saveEditUser(event)">
+                <div class="form-group"><label>Full Name</label><input type="text" id="editUserName" /></div>
+                <div class="form-group">
+                    <label>Email <span id="editEmailBadge"></span></label>
+                    <input type="email" id="editUserEmail" required />
+                    <small style="color:var(--text-secondary);font-size:11px;">Changing the email marks it unverified and signs the user out. The old address is notified.</small>
+                </div>
+                <div class="form-group">
+                    <label>Phone <span id="editPhoneBadge"></span></label>
+                    <input type="tel" id="editUserPhone" placeholder="0803 123 4567 or +234 803 123 4567" />
+                    <small style="color:var(--text-secondary);font-size:11px;">Changing the phone marks it unverified. Leave empty to remove it.</small>
+                </div>
+                <div class="form-group" style="display:flex;flex-direction:column;gap:6px;">
+                    <label style="display:flex;gap:8px;align-items:center;font-weight:500;"><input type="checkbox" id="editSendEmailVer" /> After saving, send an email verification code</label>
+                    <label style="display:flex;gap:8px;align-items:center;font-weight:500;"><input type="checkbox" id="editSendSmsVer" /> After saving, send an SMS verification code</label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">Save changes</button>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button type="button" class="btn btn-outline" style="flex:1;" onclick="sendVerification('email')"><i class="fas fa-envelope"></i> Send email verification</button>
+                    <button type="button" class="btn btn-outline" style="flex:1;" onclick="sendVerification('phone')"><i class="fas fa-message"></i> Send SMS verification</button>
+                </div>
+                <div id="editUserStatus" style="margin-top:12px;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- REMARKS MODAL (delete / restore) -->
+    <div class="modal-overlay" id="remarksModal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h2 id="remarksTitle">Remarks</h2>
+                <button class="modal-close" onclick="closeModal('remarksModal')">✕</button>
+            </div>
+            <p id="remarksIntro" style="color:var(--text-secondary);font-size:13px;margin:0 0 12px;"></p>
+            <div class="form-group">
+                <label>Remarks * <small style="color:var(--text-secondary);">(kept in the audit trail, at least 5 characters)</small></label>
+                <textarea id="remarksText" rows="4" maxlength="1000" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font:inherit;"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-outline" style="flex:1;" onclick="closeModal('remarksModal')">Cancel</button>
+                <button class="btn btn-danger" style="flex:1;" id="remarksConfirmBtn">Confirm</button>
+            </div>
+            <div id="remarksStatus" style="margin-top:10px;"></div>
+        </div>
+    </div>
+
     <!-- CREATE USER MODAL -->
     <div class="modal-overlay" id="createUserModal">
         <div class="modal-content">
@@ -1340,13 +1420,18 @@
                     <input type="email" id="newUserEmail" required />
                 </div>
                 <div class="form-group">
-                    <label>Phone</label>
-                    <input type="tel" id="newUserPhone" />
+                    <label>Phone (optional)</label>
+                    <input type="tel" id="newUserPhone" placeholder="0803 123 4567 or +234 803 123 4567" />
+                    <small style="color:var(--text-secondary);font-size:11px;">Saved as unverified. It can be used for transactions only after the customer enters the SMS code.</small>
                 </div>
                 <div class="form-group">
                     <label>Password *</label>
                     <input type="password" id="newUserPassword" minlength="8" required />
                     <small style="color:var(--text-secondary);font-size:11px;">Minimum 8 characters</small>
+                </div>
+                <div class="form-group" style="display:flex;flex-direction:column;gap:6px;">
+                    <label style="display:flex;gap:8px;align-items:center;font-weight:500;"><input type="checkbox" id="newUserSendSms" /> Send an SMS verification code to the phone now</label>
+                    <label style="display:flex;gap:8px;align-items:center;font-weight:500;"><input type="checkbox" id="newUserSendEmail" /> Send an email verification code now <small style="color:var(--text-secondary);">(admin-created emails are already marked verified)</small></label>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;">Create Account</button>
                 <div id="createUserStatus" style="margin-top:12px;"></div>
@@ -2383,8 +2468,8 @@
             if (tab === 'promotions') loadPromotions();
             if (tab === 'brands') loadBrands();
             if (tab === 'sms') loadSmsConfig();
-            if (tab === 'users') searchUsers();
-            if (tab === 'health') loadSystemHealth();
+            if (tab === 'users') { showUsersSub('active'); searchUsers(); }
+            if (tab === 'health') { loadSystemHealth(); loadAlertStatus(); }
             if (tab === 'transactions') loadAdminTransactions();
             if (tab === 'promos') loadPromos();
             if (tab === 'chat') { loadChatConversations(); startAdminChatPolling(); }
@@ -4337,6 +4422,9 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
                     return;
                 }
 
+                window.__adminUsers = window.__adminUsers || {};
+                data.users.forEach(u => { window.__adminUsers[u.id] = u; });
+
                 const statusMap = {
                     'active': '<span class="user-status-badge active">Active</span>',
                     'suspended': '<span class="user-status-badge suspended">Suspended</span>',
@@ -4354,7 +4442,8 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
                                     <th>Email</th>
                                     <th>Phone</th>
                                     <th>Status</th>
-                                    <th>Verified</th>
+                                    <th>Email ✓</th>
+                                    <th>Phone ✓</th>
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
@@ -4368,6 +4457,7 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
                                         <td>${escapeHtml(u.phone || 'N/A')}</td>
                                         <td>${statusMap[u.account_status] || statusMap.active}</td>
                                         <td>${u.email_verified ? '✅' : '❌'}</td>
+                                        <td>${u.phone ? (u.phone_verified ? '✅' : '❌') : '—'}</td>
                                         <td>${formatDate(u.created_at)}</td>
                                         <td>
                                             <div style="display:flex;gap:4px;flex-wrap:wrap;">
@@ -4375,6 +4465,8 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
                                                 <button class="btn btn-sm btn-danger" onclick="blockUser(${u.id})">Block</button>
                                                 <button class="btn btn-sm btn-success" onclick="reactivateUser(${u.id})">Reactivate</button>
                                                 <button class="btn btn-sm btn-primary" onclick="showSetPasswordModal(${u.id}, '${escapeHtml(u.full_name || u.email || '')}')">Set PW</button>
+                                                <button class="btn btn-sm btn-outline" onclick="openEditUser(${u.id})"><i class="fas fa-pen"></i> Edit</button>
+                                                <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})"><i class="fas fa-trash"></i> Delete</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -4579,6 +4671,8 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
             document.getElementById('newUserEmail').value = '';
             document.getElementById('newUserPhone').value = '';
             document.getElementById('newUserPassword').value = '';
+            document.getElementById('newUserSendSms').checked = false;
+            document.getElementById('newUserSendEmail').checked = false;
             document.getElementById('createUserStatus').innerHTML = '';
             openModal('createUserModal');
         }
@@ -4610,14 +4704,20 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
                         full_name: name,
                         email: email,
                         phone: phone,
-                        password: password
+                        password: password,
+                        send_phone_verification: !!(phone && document.getElementById('newUserSendSms').checked),
+                        send_email_verification: document.getElementById('newUserSendEmail').checked
                     })
                 });
                 const data = await res.json();
                 if (data.success) {
-                    status.innerHTML = '<span style="color:#22c55e;">Account created successfully!</span>';
-                    showToast('User account created', 'success');
+                    const vs = data.verification_sent || {};
+                    const notes = [];
+                    if (vs.phone) notes.push(vs.phone.sent ? 'SMS code sent' : 'SMS not sent: ' + (vs.phone.error || 'failed'));
+                    if (vs.email) notes.push(vs.email.sent ? 'email code sent' : 'email not sent: ' + (vs.email.error || 'failed'));
+                    showToast('User account created' + (notes.length ? ' (' + notes.join('; ') + ')' : ''), 'success');
                     closeModal('createUserModal');
+                    if (email) document.getElementById('userSearchInput').value = email;
                     searchUsers();
                 } else {
                     status.innerHTML = `<span style="color:#ef4444;">${data.error || 'Failed to create account'}</span>`;
@@ -4625,6 +4725,206 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
             } catch (e) {
                 status.innerHTML = `<span style="color:#ef4444;">${e.message}</span>`;
             }
+        }
+
+        // ============================================
+        // USER EDIT / DELETE (soft, with remarks) / RESTORE / VERIFICATION
+        // ============================================
+        let editingUserId = null;
+
+        function showUsersSub(which) {
+            document.getElementById('usersSubActive').style.display = which === 'active' ? '' : 'none';
+            document.getElementById('usersSubDeleted').style.display = which === 'deleted' ? '' : 'none';
+            document.getElementById('usersSubBtnActive').className = 'btn btn-sm ' + (which === 'active' ? 'btn-primary' : 'btn-outline');
+            document.getElementById('usersSubBtnDeleted').className = 'btn btn-sm ' + (which === 'deleted' ? 'btn-primary' : 'btn-outline');
+            if (which === 'deleted') loadDeletedUsers();
+        }
+
+        async function loadDeletedUsers() {
+            const box = document.getElementById('deletedUsersResults');
+            const q = document.getElementById('deletedSearchInput').value.trim();
+            box.innerHTML = '<div class="empty-state">Loading...</div>';
+            try {
+                const d = await adminFetch('/api/admin/users/deleted' + (q ? '?q=' + encodeURIComponent(q) : ''));
+                if (!d.success || !d.deleted.length) { box.innerHTML = '<div class="empty-state">No deleted accounts.</div>'; return; }
+                box.innerHTML = `<div style="overflow-x:auto;"><table><thead><tr>
+                    <th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Deleted</th><th>By</th><th>Remarks</th><th>State</th><th></th></tr></thead><tbody>
+                    ${d.deleted.map(r => {
+                        const restored = !!r.restored_at;
+                        return `<tr>
+                            <td>${r.user_id}</td>
+                            <td>${escapeHtml(r.full_name || 'N/A')}</td>
+                            <td>${escapeHtml(r.email || 'N/A')}</td>
+                            <td>${escapeHtml(r.phone || '—')}</td>
+                            <td>${formatDate(r.deleted_at)}</td>
+                            <td>${escapeHtml(r.deleted_by || '—')}</td>
+                            <td style="max-width:280px;white-space:normal;">${escapeHtml(r.remarks || '')}</td>
+                            <td>${restored
+                                ? '<span class="user-status-badge active">Restored</span><div style="font-size:11px;color:var(--text-secondary);white-space:normal;">' + formatDate(r.restored_at) + ' · ' + escapeHtml(r.restore_remarks || '') + '</div>'
+                                : '<span class="user-status-badge deleted">Deleted</span>'}</td>
+                            <td>${!restored && r.current_status === 'deleted' ? `<button class="btn btn-sm btn-success" onclick="restoreUser(${r.user_id})">Restore</button>` : ''}</td>
+                        </tr>`;
+                    }).join('')}</tbody></table></div>`;
+            } catch (e) {
+                box.innerHTML = '<div class="empty-state">Failed to load the deleted accounts.</div>';
+            }
+        }
+
+        function openRemarksModal(title, intro, confirmLabel, onConfirm) {
+            document.getElementById('remarksTitle').textContent = title;
+            document.getElementById('remarksIntro').textContent = intro;
+            document.getElementById('remarksText').value = '';
+            document.getElementById('remarksStatus').innerHTML = '';
+            const btn = document.getElementById('remarksConfirmBtn');
+            btn.textContent = confirmLabel;
+            btn.disabled = false;
+            btn.onclick = async () => {
+                const remarks = document.getElementById('remarksText').value.trim();
+                const st = document.getElementById('remarksStatus');
+                if (remarks.length < 5) { st.innerHTML = '<span style="color:#ef4444;">Please write remarks (at least 5 characters).</span>'; return; }
+                btn.disabled = true;
+                try { await onConfirm(remarks); } catch (e) { st.innerHTML = '<span style="color:#ef4444;">' + escapeHtml(e.message || 'Failed') + '</span>'; btn.disabled = false; }
+            };
+            openModal('remarksModal');
+            setTimeout(() => document.getElementById('remarksText').focus(), 80);
+        }
+
+        function deleteUser(userId) {
+            const u = (window.__adminUsers || {})[userId] || {};
+            openRemarksModal(
+                'Delete account',
+                `${u.full_name || u.email || 'User #' + userId} will be signed out and blocked from logging in. Their history is kept and the account moves to the Deleted (audit) list. You can restore it later.`,
+                'Delete account',
+                async (remarks) => {
+                    const d = await adminFetch(`/api/admin/users/${userId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ remarks }) });
+                    if (!d.success) throw new Error(d.error || 'Delete failed');
+                    closeModal('remarksModal');
+                    showToast('Account deleted and recorded in the audit list', 'success');
+                    searchUsers();
+                }
+            );
+        }
+
+        function restoreUser(userId) {
+            openRemarksModal(
+                'Restore account',
+                'The account becomes active again and the user can sign in. Say why it is being restored.',
+                'Restore account',
+                async (remarks) => {
+                    const d = await adminFetch(`/api/admin/users/${userId}/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ remarks }) });
+                    if (!d.success) throw new Error(d.error || 'Restore failed');
+                    closeModal('remarksModal');
+                    showToast('Account restored', 'success');
+                    loadDeletedUsers();
+                }
+            );
+        }
+
+        function openEditUser(userId) {
+            const u = (window.__adminUsers || {})[userId];
+            if (!u) { showToast('Search for the user again, then edit.', 'error'); return; }
+            editingUserId = userId;
+            document.getElementById('editUserIdLabel').textContent = '#' + userId;
+            document.getElementById('editUserName').value = u.full_name || '';
+            document.getElementById('editUserEmail').value = u.email || '';
+            document.getElementById('editUserPhone').value = u.phone || '';
+            document.getElementById('editSendEmailVer').checked = false;
+            document.getElementById('editSendSmsVer').checked = false;
+            document.getElementById('editEmailBadge').innerHTML = u.email_verified ? '<span class="user-status-badge active">verified</span>' : '<span class="user-status-badge suspended">not verified</span>';
+            document.getElementById('editPhoneBadge').innerHTML = u.phone ? (u.phone_verified ? '<span class="user-status-badge active">verified</span>' : '<span class="user-status-badge suspended">not verified</span>') : '';
+            document.getElementById('editUserStatus').innerHTML = '';
+            openModal('editUserModal');
+        }
+
+        async function saveEditUser(event) {
+            event.preventDefault();
+            const u = (window.__adminUsers || {})[editingUserId] || {};
+            const st = document.getElementById('editUserStatus');
+            const body = {};
+            const name = document.getElementById('editUserName').value.trim();
+            const email = document.getElementById('editUserEmail').value.trim();
+            const phone = document.getElementById('editUserPhone').value.trim();
+            if (name !== (u.full_name || '')) body.full_name = name;
+            if (email.toLowerCase() !== (u.email || '').toLowerCase()) body.email = email;
+            if (phone !== (u.phone || '')) body.phone = phone;
+            body.send_email_verification = document.getElementById('editSendEmailVer').checked;
+            body.send_phone_verification = document.getElementById('editSendSmsVer').checked;
+            if (!body.full_name && !body.email && body.phone === undefined && !body.send_email_verification && !body.send_phone_verification) {
+                st.innerHTML = '<span style="color:var(--text-secondary);">Nothing to change.</span>'; return;
+            }
+            if (body.email && !confirm('Change the email? The user will be signed out, the new email will be unverified, and the old address gets a notice.')) return;
+            st.innerHTML = '<span style="color:var(--text-secondary);">Saving...</span>';
+            try {
+                const d = await adminFetch(`/api/admin/users/${editingUserId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                if (!d.success) { st.innerHTML = `<span style="color:#ef4444;">${escapeHtml(d.error || 'Save failed')}</span>`; return; }
+                const vs = d.verification_sent || {}, notes = [];
+                if (vs.email) notes.push(vs.email.sent ? 'email code sent' : 'email NOT sent: ' + (vs.email.error || 'failed'));
+                if (vs.phone) notes.push(vs.phone.sent ? 'SMS code sent' : 'SMS NOT sent: ' + (vs.phone.error || 'failed'));
+                showToast('Saved' + (notes.length ? ' (' + notes.join('; ') + ')' : ''), notes.some(n => n.includes('NOT')) ? 'error' : 'success');
+                closeModal('editUserModal');
+                searchUsers();
+            } catch (e) {
+                st.innerHTML = `<span style="color:#ef4444;">${escapeHtml(e.message)}</span>`;
+            }
+        }
+
+        async function sendVerification(kind) {
+            const st = document.getElementById('editUserStatus');
+            if (!editingUserId) return;
+            st.innerHTML = '<span style="color:var(--text-secondary);">Sending...</span>';
+            try {
+                const d = await adminFetch(`/api/admin/users/${editingUserId}/send-${kind}-verification`, { method: 'POST' });
+                st.innerHTML = d.success
+                    ? `<span style="color:#22c55e;">${kind === 'email' ? 'Email' : 'SMS'} verification code sent.</span>`
+                    : `<span style="color:#ef4444;">${escapeHtml(d.error || 'Could not send')}</span>`;
+            } catch (e) {
+                st.innerHTML = `<span style="color:#ef4444;">${escapeHtml(e.message)}</span>`;
+            }
+        }
+
+        // ============================================
+        // ALERT EMAIL STATUS (health tab)
+        // ============================================
+        async function loadAlertStatus() {
+            const box = document.getElementById('alertStatusBox');
+            if (!box) return;
+            try {
+                const d = await adminFetch('/api/admin/alerts/status');
+                if (!d.success) throw new Error('failed');
+                const c = d.counts || {};
+                const warn = (d.hints || []).map(h => `<div style="color:#b45309;font-size:12px;margin-top:4px;">⚠ ${escapeHtml(h)}</div>`).join('');
+                box.innerHTML = `
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+                        <div><strong>Recipients:</strong> ${d.recipients.length ? d.recipients.map(escapeHtml).join(', ') : '<span style="color:#ef4444;">none configured</span>'}</div>
+                        <div><strong>Provider:</strong> ${escapeHtml(d.provider || 'none')}${d.from_email ? ' · from ' + escapeHtml(d.from_email) : ''}</div>
+                        <div><strong>Sent:</strong> ${c.sent || 0}</div>
+                        <div><strong>Pending:</strong> ${c.pending || 0} · <strong>Failed:</strong> <span style="color:${c.failed ? '#ef4444' : 'inherit'}">${c.failed || 0}</span></div>
+                    </div>${warn}
+                    ${(d.recent || []).length ? `<div style="overflow-x:auto;margin-top:10px;"><table><thead><tr><th>#</th><th>To</th><th>Subject</th><th>Status</th><th>Tries</th><th>Last error</th></tr></thead><tbody>
+                        ${d.recent.map(r => `<tr><td>${r.id}</td><td>${escapeHtml(r.to)}</td><td style="white-space:normal;">${escapeHtml(r.subject)}</td><td>${escapeHtml(r.status)}</td><td>${r.attempts}</td><td style="white-space:normal;">${escapeHtml(r.last_error || '')}</td></tr>`).join('')}
+                    </tbody></table></div>` : ''}`;
+            } catch (e) {
+                box.innerHTML = '<div class="empty-state">Alert status is unavailable (the alerts module did not load; check the platform logs).</div>';
+            }
+        }
+
+        async function sendTestAlert() {
+            showToast('Sending test alert... this can take up to 25 seconds', 'info');
+            try {
+                const d = await adminFetch('/api/admin/alerts/test', { method: 'POST' });
+                if (d.error) { showToast('❌ ' + d.error, 'error'); return; }
+                const lines = Object.entries(d.results || {}).map(([k, v]) => `${k}: ${v}`).join(' | ');
+                showToast((d.success ? '✅ ' : '❌ ') + lines, d.success ? 'success' : 'error');
+            } catch (e) { showToast('❌ ' + e.message, 'error'); }
+            loadAlertStatus();
+        }
+
+        async function retryFailedAlerts() {
+            try {
+                const d = await adminFetch('/api/admin/alerts/retry', { method: 'POST' });
+                showToast(d.success ? `Retrying ${d.retrying} alert(s)` : 'Retry failed', d.success ? 'success' : 'error');
+            } catch (e) { showToast('❌ ' + e.message, 'error'); }
+            setTimeout(loadAlertStatus, 2500);
         }
 
         // ============================================
