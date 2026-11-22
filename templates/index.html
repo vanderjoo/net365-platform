@@ -1089,6 +1089,18 @@ body:before{
   box-shadow:0 10px 28px rgba(79,70,229,.25);
   color:#fff!important;
 }
+/* Side navigation follows the customer's theme: white in Light, dark in Dark */
+body.pg:not(.dark-mode) .sidebar{background:#ffffff!important;border-right:1px solid #e2e8f0!important;box-shadow:8px 0 30px rgba(15,23,42,.05)!important;backdrop-filter:none}
+body.pg:not(.dark-mode) .sidebar .logo:after{color:#64748b}
+body.pg:not(.dark-mode) .sidebar .nav-item{color:#475569!important}
+body.pg:not(.dark-mode) .sidebar .nav-item i{color:#64748b}
+body.pg:not(.dark-mode) .sidebar .nav-item:hover{background:#eef2ff!important;border-color:#c7d2fe!important;color:#1e293b!important}
+body.pg:not(.dark-mode) .sidebar .nav-item:hover i{color:#4f46e5}
+body.pg:not(.dark-mode) .sidebar .nav-divider,body.pg:not(.dark-mode) .sidebar hr{border-color:#e2e8f0!important;background:#e2e8f0}
+body.pg.dark-mode .sidebar{background:rgba(5,10,21,.92)!important;border-right:1px solid rgba(148,163,184,.14)!important}
+body.pg:not(.dark-mode) .sidebar .logo,body.pg:not(.dark-mode) .sidebar .logo span{color:#0f172a!important}
+body.pg:not(.dark-mode) .sidebar .nav-item.active{background:linear-gradient(90deg,rgba(255,106,26,.14),rgba(255,106,26,.03))!important;color:#c2410c!important;box-shadow:inset 3px 0 0 var(--pg-ember,#ff6a1a)!important}
+body.pg:not(.dark-mode) .sidebar .nav-item.active i{color:#ea580c}
 .main{background:transparent}
 .topbar{
   background:rgba(7,11,21,.72)!important;
@@ -3143,10 +3155,10 @@ body.dark-mode .wallet-enhanced {
             <div style="overflow-x: auto;">
               <table class="analytics-table" id="analyticsTable">
                 <thead>
-                  <tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Status</th><th>Reference</th></tr>
+                  <tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Status</th><th>Reference</th><th>Receipt</th></tr>
                 </thead>
                 <tbody id="analyticsTableBody">
-                  <tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">No transactions found</td></tr>
+                  <tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:20px;">No transactions found</td></tr>
                 </tbody>
               </table>
             </div>
@@ -4364,6 +4376,10 @@ const PROVIDER_NAMES = {
       }
     }
 
+    document.addEventListener('click', ev => {
+      const row = ev.target.closest && ev.target.closest('.nx-contact-row'); if (!row) return;
+      const c = (window.__nxContacts || [])[+row.dataset.ci]; if (c) contactClickPay(c.phone || '', c.name || '');
+    });
     function escapeHtmlLocal(str) {
       const div = document.createElement('div');
       div.textContent = str;
@@ -4588,7 +4604,7 @@ const PROVIDER_NAMES = {
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#334155">New Password</label>
         <input id="net365NewPassword" type="password" minlength="8" required placeholder="At least 8 characters" style="width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:12px;margin-bottom:18px;font-size:15px">
         
-        <button id="net365ResetConfirmBtn" type="button" onclick="confirmPasswordReset('${escapeHtmlLocal(email)}')" style="width:100%;border:0;border-radius:12px;padding:14px;background:#22c55e;color:#fff;font-weight:700;font-size:15px;cursor:pointer">
+        <button id="net365ResetConfirmBtn" type="button" data-email="${escapeHtmlLocal(email).replace(/"/g, '&quot;')}" onclick="confirmPasswordReset(this.dataset.email)" style="width:100%;border:0;border-radius:12px;padding:14px;background:#22c55e;color:#fff;font-weight:700;font-size:15px;cursor:pointer">
           Reset Password
         </button>
         
@@ -5167,11 +5183,13 @@ const PROVIDER_NAMES = {
       const config = GATEWAY_CONFIG[countryCode];
         // Guard against missing globals that have historically caused
         // silent DOMContentLoaded aborts.
-        ['SUPPORTED_CURRENCIES', 'GATEWAY_CONFIG', 'COUNTRY_DATA', 'PROVIDER_CURRENCIES', 'PROVIDER_NAMES'].forEach(name => {
-          if (typeof window[name] === 'undefined') {
-            console.error(`⚠️ Missing global: ${name}`);
+        // (top-level const values are not properties of window, so test each by name)
+        [['SUPPORTED_CURRENCIES', typeof SUPPORTED_CURRENCIES], ['GATEWAY_CONFIG', typeof GATEWAY_CONFIG], ['COUNTRY_DATA', typeof COUNTRY_DATA],
+         ['PROVIDER_CURRENCIES', typeof PROVIDER_CURRENCIES], ['PROVIDER_NAMES', typeof PROVIDER_NAMES]].forEach(pair => {
+          if (pair[1] === 'undefined') {
+            console.error(`⚠️ Missing global: ${pair[0]}`);
           }
-        });      
+        });
 
       if (!config) {
         // Country not configured — don't pretend it's Nigeria.
@@ -5350,7 +5368,7 @@ const PROVIDER_NAMES = {
       const displayTx = transactions.slice(0, 5);
       displayTx.forEach(tx => {
         const symbol = getCurrencySymbol(tx.currency);
-        const isCredit = tx.type === 'credit' || tx.tx_type === 'wallet_funding';
+        const isCredit = tx.direction === 'credit' || tx.type === 'credit' || tx.tx_type === 'wallet_funding';
         const iconMap = { 'airtime': 'fa-mobile-alt', 'data': 'fa-wifi', 'electricity': 'fa-bolt', 'wallet': 'fa-wallet',
           'subscription': 'fa-tv', 'reward': 'fa-star', 'referral': 'fa-users', 'transfer': 'fa-exchange-alt',
           'default': 'fa-exchange-alt' };
@@ -5372,7 +5390,7 @@ const PROVIDER_NAMES = {
         title.textContent = tx.description || tx.type || tx.tx_type || 'Transaction';
         const sub = document.createElement('div');
         sub.className = 'sub';
-        sub.textContent = tx.subtype || '';
+        sub.textContent = [tx.plan_type, tx.recipient_masked].filter(Boolean).join(' · ') || tx.subtype || '';
         details.append(title, sub);
         const amountBox = document.createElement('div');
         amountBox.className = 'tx-amount';
@@ -5568,12 +5586,12 @@ const PROVIDER_NAMES = {
             window.location.href = result.authorization_url;
           }, 500);
         } else {
-          statusDiv.innerHTML = `<div class="status error">❌ ${result.error || 'Payment initiation failed'}</div>`;
+          statusDiv.innerHTML = `<div class="status error">❌ ${escapeHtmlLocal(result.error || 'Payment initiation failed')}</div>`;
           btn.disabled = false;
           btn.textContent = originalText;
         }
       } catch (error) {
-        statusDiv.innerHTML = `<div class="status error">❌ ${error.message}</div>`;
+        statusDiv.innerHTML = `<div class="status error">❌ ${escapeHtmlLocal(error.message)}</div>`;
         btn.disabled = false;
         btn.textContent = originalText;
       }
@@ -6828,7 +6846,7 @@ async function applyReferralCode() {
     function renderAnalytics(transactions) {
       if (!transactions || transactions.length === 0) {
         document.getElementById('analyticsTableBody').innerHTML = 
-          '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">No transactions found</td></tr>';
+          '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:20px;">No transactions found</td></tr>';
         return;
       }
 
@@ -6997,25 +7015,69 @@ async function applyReferralCode() {
       const tbody = document.getElementById('analyticsTableBody');
       tbody.innerHTML = '';
       const sorted = [...transactions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      sorted.slice(0, 50).forEach(tx => {
+      window.__nxTxRows = sorted.slice(0, 50);
+      window.__nxTxRows.forEach((tx, idx) => {
         const symbol = getCurrencySymbol(tx.currency);
         const tr = document.createElement('tr');
         const statusColor = tx.status === 'fulfilled' || tx.status === 'completed' ? '#22c55e' :
                           tx.status === 'pending' ? '#f59e0b' : '#ef4444';
+        const kind = [tx.vendor, tx.plan_type].filter(Boolean).join(' · ') || tx.tx_type || tx.type || 'unknown';
+        const who = tx.recipient_masked ? `<div style="font-size:11px;color:var(--text-secondary);">${escapeHtmlLocal(tx.recipient_masked)}</div>` : '';
+        const paid = ['fulfilled', 'completed', 'success', 'paid'].includes(String(tx.status || '').toLowerCase());
         tr.innerHTML = `
           <td style="color:var(--text-primary);">${formatDate(tx.created_at)}</td>
-          <td style="color:var(--text-primary);">${escapeHtmlLocal(tx.description || tx.type || tx.tx_type || 'Transaction')}</td>
-          <td style="color:var(--text-primary);">${escapeHtmlLocal(tx.tx_type || tx.type || 'unknown')}</td>
+          <td style="color:var(--text-primary);">${escapeHtmlLocal(tx.description || tx.type || tx.tx_type || 'Transaction')}${who}</td>
+          <td style="color:var(--text-primary);">${escapeHtmlLocal(kind)}</td>
           <td style="font-weight: 600; color:var(--text-primary);">${symbol}${parseFloat(tx.amount || 0).toFixed(2)}</td>
           <td><span style="color:${statusColor}; font-weight: 600;">${escapeHtmlLocal(tx.status || 'pending')}</span></td>
           <td style="font-size: 11px; color:var(--text-secondary);">${escapeHtmlLocal(tx.reference || tx.id || 'N/A')}</td>
+          <td>${paid ? `<button type="button" class="nx-rcpt" data-rcpt="${idx}" title="Print or save a Net365 receipt" style="border:1px solid var(--border,#cbd5e1);background:transparent;color:var(--text-primary);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;white-space:nowrap;"><i class="fas fa-print"></i> Receipt</button>` : '<span style="color:var(--text-secondary);font-size:11px;">-</span>'}</td>
         `;
         tbody.appendChild(tr);
       });
       if (sorted.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">No transactions found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:20px;">No transactions found</td></tr>';
       }
     }
+
+
+    /* Printable Net365 receipt / invoice for one completed transaction. Opens the print dialog; "Save as PDF" works from there. */
+    async function nxPrintReceipt(row) {
+      let tx = row || {};
+      try {
+        const r = await apiFetch(`${API_BASE}/user/transaction/${encodeURIComponent(tx.reference || '')}`); const d = await r.json();
+        if (d && d.success && d.transaction) tx = d.transaction;
+      } catch (err) { /* the row on screen is enough */ }
+      const e = escapeHtmlLocal, sym = getCurrencySymbol(tx.currency);
+      const money = v => sym + Number(v || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const line = (k, v) => v ? `<tr><th>${e(k)}</th><td>${e(String(v))}</td></tr>` : '';
+      const status = ['fulfilled', 'completed', 'success', 'paid'].includes(String(tx.status || '').toLowerCase()) ? 'Successful' : String(tx.status || 'Pending');
+      const cust = (currentUser && (currentUser.full_name || currentUser.email)) || '';
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>Net365 receipt ${e(tx.reference || '')}</title>
+<style>body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:32px}.w{max-width:620px;margin:0 auto;border:1px solid #cbd5e1;border-radius:14px;padding:28px}
+.h{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0f766e;padding-bottom:14px;margin-bottom:18px}.b{font-size:26px;font-weight:800;color:#0f766e}
+.t{font-size:12px;color:#475569;text-align:right}table{width:100%;border-collapse:collapse}th{text-align:left;color:#475569;font-weight:600;width:38%;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:13px}
+td{padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:14px}.tot td,.tot th{font-size:17px;font-weight:800;border-bottom:0;color:#0f172a}.ok{color:#15803d;font-weight:700}
+.tok{font-family:monospace;font-size:16px;letter-spacing:1px;background:#f1f5f9;padding:6px 10px;border-radius:8px;display:inline-block}.f{margin-top:22px;font-size:11px;color:#64748b;text-align:center;line-height:1.5}
+@media print{body{padding:0}.w{border:0}}</style></head><body><div class="w">
+<div class="h"><div><div class="b">Net365</div><div style="font-size:12px;color:#475569">Payment receipt / invoice</div></div>
+<div class="t">Receipt no.<br><b>${e(tx.reference || '')}</b><br>${e(formatDate(tx.created_at))}</div></div>
+<table>${line('Customer', cust)}${line('Service', tx.description || tx.tx_type)}${line('Vendor', tx.vendor)}${line('Plan type', tx.plan_type)}${line('Paid to / recipient', tx.recipient_masked)}${line('Account name', tx.customer_name)}
+${tx.token ? `<tr><th>Token / PIN</th><td><span class="tok">${e(tx.token)}</span></td></tr>` : ''}
+${tx.service_amount != null ? line('Service amount', money(tx.service_amount)) : ''}${tx.fee_amount ? line('Service fee', money(tx.fee_amount)) : ''}
+<tr class="tot"><th>Total paid</th><td>${e(money(tx.amount))}</td></tr><tr><th>Status</th><td class="ok">${e(status)}</td></tr></table>
+<div class="f">Thank you for using Net365. Keep this receipt as your proof of payment.<br>Questions? Contact Net365 support with the receipt number above.</div></div></body></html>`;
+      const old = document.getElementById('nxRcptFrame'); if (old) old.remove();
+      const fr = document.createElement('iframe'); fr.id = 'nxRcptFrame'; fr.setAttribute('aria-hidden', 'true');
+      fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+      document.body.appendChild(fr);
+      const doc = fr.contentWindow.document; doc.open(); doc.write(html); doc.close();
+      setTimeout(() => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (err) { showToast('Could not open the print window', 'error'); } }, 250);
+    }
+    document.addEventListener('click', ev => {
+      const b = ev.target.closest && ev.target.closest('[data-rcpt]'); if (!b) return;
+      const row = (window.__nxTxRows || [])[+b.dataset.rcpt]; if (row) nxPrintReceipt(row);
+    });
 
     function applyAnalyticsFilters() {
       const type = document.getElementById('analyticsFilterType').value;
@@ -7053,10 +7115,11 @@ async function applyReferralCode() {
         showToast('No transactions to export', 'warning');
         return;
       }
-      let csv = 'Date,Description,Type,Amount,Status,Reference\n';
+      let csv = 'Date,Description,Vendor,Plan type,Type,Amount,Status,Reference\n';
       allTransactions.forEach(t => {
         csv += `${t.created_at || ''},`;
         csv += `"${(t.description || t.type || t.tx_type || 'Transaction').replace(/"/g, '""')}",`;
+        csv += `"${String(t.vendor || '').replace(/"/g, '""')}","${String(t.plan_type || '').replace(/"/g, '""')}",`;
         csv += `${t.tx_type || t.type || 'unknown'},`;
         csv += `${parseFloat(t.amount || 0).toFixed(2)},`;
         csv += `${t.status || 'pending'},`;
@@ -7283,7 +7346,7 @@ function populateBulkContactOperators() {
   const previous = sel.value;
 
   sel.innerHTML = '<option value="">Auto-detect</option>' +
-    ops.map(op => `<option value="${op.id}">${op.name}</option>`).join('');
+    ops.map(op => `<option value="${escapeHtmlLocal(String(op.id)).replace(/"/g, '&quot;')}">${escapeHtmlLocal(op.name)}</option>`).join('');
 
   if (previous && ops.some(op => op.id === previous)) {
     sel.value = previous;
@@ -7621,12 +7684,13 @@ function nbStart(){
         const r = await apiFetch(`${API_BASE}/user/contacts?limit=100`);
         const d = await r.json();
         const contacts = d.contacts || d.data || [];
-        const rows = contacts.length ? contacts.map(c =>
-          `<div style="padding:10px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;color:var(--text-primary);cursor:pointer;" onclick="contactClickPay('${c.phone || ''}', '${c.name || ''}')">
-            <span>👤 ${c.name || 'Contact'}</span>
-            <span>${c.phone || ''}${c.email ? ` · ${c.email}` : ''}</span>
+        const rows = contacts.length ? contacts.map((c, ci) =>
+          `<div class="nx-contact-row" data-ci="${ci}" style="padding:10px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;color:var(--text-primary);cursor:pointer;">
+            <span>👤 ${escapeHtmlLocal(c.name || 'Contact')}</span>
+            <span>${escapeHtmlLocal(c.phone || '')}${c.email ? ` · ${escapeHtmlLocal(c.email)}` : ''}</span>
           </div>`
         ).join('') : '<div style="padding:20px;color:var(--text-secondary);">No contacts imported yet.</div>';
+        window.__nxContacts = contacts;
         openInfoPanel('Contacts', `
           <div style="max-height:55vh;overflow:auto;color:var(--text-primary);">${rows}</div>
           <p style="margin-top:12px;color:var(--text-secondary);font-size:13px;">Click on a contact to auto-fill their phone number.</p>
