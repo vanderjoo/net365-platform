@@ -16,7 +16,6 @@
 - v1.0: first draft.
 - v1.1: adds Chat Channels (section 13), Security Monitoring (14), Support, Tickets and Incidents (15), Verification, Limits, AML and Sanctions (12); expands Privacy (16), Wallets (7), Refund timelines (9) and Termination (20); rewords Limitation of Liability (21); adds General Provisions (27).
 
-> **FOR THE REVIEWERS (delete this box before publishing).** Every `[●]` is a business or legal decision that must be filled in, not guessed: registered address, effective date, refund and complaint timelines (9.8, 24.3), support response targets (15.4, 15.7), wallet partner (7.5) and dormancy period (7.12), data retention periods (16.9), data protection contact (16.10), optional liability cap (21.6). Have a Nigerian lawyer confirm the document against the Nigeria Data Protection Act 2023, the CBN's rules for payment and wallet services, the Federal Competition and Consumer Protection Act 2018 and the AML/CFT rules that apply to Net365's licences.
 
 ---
 
@@ -176,19 +175,7 @@ Net365 may introduce intelligent recommendations, automated assistants, financia
 
 Such features may provide information or recommendations but do not necessarily constitute professional financial, legal, investment or other regulated advice.
 
-**5.6. Insurance Products**
-
-Where Net365 offers insurance, for example third-party motor insurance, the policy is issued by a licensed insurer through a Third-Party Provider and Net365 acts only as a distribution channel. Net365 is not the insurer.
-
-5.6.1. You must give accurate and complete policy details (for example your name, plate number, chassis number and vehicle details). Details on a policy cannot normally be changed after it is issued, and a claim may be rejected if the details you gave were wrong or incomplete.
-
-5.6.2. The cover, exclusions, claims procedure and cancellation rules are those of the insurer's policy document, which prevails over any summary shown on Net365. Premiums are set by the insurer and are shown before you pay.
-
-5.6.3. Your certificate is delivered by link or email once the insurer issues it. If it is not issued, Net365 will refund the amount you paid under section 9 (cancellations and refunds).
-
-5.6.4. You consent to Net365 sharing the details you provide with the insurer and its agents to issue and administer your policy.
-
-**5.7. Future Services**
+**5.6. Future Services**
 
 Net365 may introduce additional products, features, business models, integrations and services.
 
