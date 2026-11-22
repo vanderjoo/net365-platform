@@ -2156,7 +2156,13 @@
             };
             const res = await fetch(path, opts);
             if (res.status === 401) throw new Error('unauthorized');
-            return res.json();
+            const raw = await res.text();
+            try { return JSON.parse(raw); }
+            catch (e) {
+                // A web page came back instead of data: the route does not exist on the server (404/405), or a security rule answered.
+                throw new Error(`The server answered with a web page, not data (HTTP ${res.status}) for ${(opts.method || 'GET')} ${path.split('?')[0]}. `
+                    + (res.status === 404 || res.status === 405 ? 'That endpoint is not deployed: upload net365_accounts.py and the new app.py, then redeploy.' : 'A security rule may have blocked the request.'));
+            }
         }
 
         // ============================================
