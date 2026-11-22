@@ -57,6 +57,13 @@
     .strip span{display:inline-flex;align-items:center;gap:7px}
     .strip i{color:var(--accent)}
 
+    /* ---------- "you came for Netflix" hint ---------- */
+    .hint{display:none;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;font-size:13.5px;
+      background:rgba(255,109,0,.10);border-bottom:1px solid var(--line);color:var(--text)}
+    .hint.show{display:flex}
+    .hint b{color:var(--accent)}
+    .hint button{border:0;background:var(--chip);color:var(--text);border-radius:8px;min-width:32px;min-height:32px;cursor:pointer}
+
     /* ---------- the stage: fills everything left on the screen ---------- */
     .stage{
       flex:1 1 auto;display:flex;flex-direction:column;width:100%;
@@ -104,7 +111,7 @@
 
   <header class="bar">
     <div class="bar-left">
-      <a class="back" href="/business" aria-label="Back to Net365 Business"><i class="fas fa-arrow-left"></i><span>Business</span></a>
+      <a class="back" id="backLink" href="/business" aria-label="Back to Net365 Business"><i class="fas fa-arrow-left"></i><span>Business</span></a>
       <div class="title"><i class="fas fa-gift"></i><span>Gift Cards &amp; Subscriptions</span></div>
     </div>
     <div class="bar-right">
@@ -118,6 +125,11 @@
     <span><i class="fas fa-globe"></i> Global brands</span>
     <span><i class="fas fa-lock"></i> Secure card checkout by Reloadly</span>
     <span><i class="fas fa-wallet"></i> Paid separately from your Net365 wallet</span>
+  </div>
+
+  <div class="hint" id="brandHint" role="status">
+    <span id="brandHintText"></span>
+    <button type="button" aria-label="Dismiss" onclick="this.parentNode.classList.remove('show')"><i class="fas fa-xmark"></i></button>
   </div>
 
   <main class="stage">
@@ -150,6 +162,56 @@
     function toggleTheme(){ applyTheme(document.body.classList.contains('dark') ? 'light' : 'dark'); }
     (function(){ var s=null; try{ s=localStorage.getItem('net365_theme'); }catch(e){} applyTheme(s==='light'?'light':'dark'); })();
 
+    // ---- deep link: /giftcards?brand=netflix&country=US ----
+    // The catalog is Reloadly's embedded widget, which has no documented way to open a brand. So this shows a clear
+    // hint and makes a best-effort attempt to type the brand into the widget's own search box. If the widget changes or
+    // blocks it, nothing breaks: the customer simply sees the hint and searches themselves.
+    (function(){
+      var q = new URLSearchParams(location.search);
+      var brandRaw = (q.get('brand') || '').trim();
+      var brand = brandRaw.replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 30);
+      if (!brand) return;
+      var country = (q.get('country') || '').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 2);
+      var NAMES = { 'netflix':'Netflix', 'spotify':'Spotify', 'google-play':'Google Play', 'googleplay':'Google Play', 'google play':'Google Play' };
+      var COUNTRIES = { US:'United States', GB:'United Kingdom', CA:'Canada', NG:'Nigeria', DE:'Germany', FR:'France', AE:'United Arab Emirates', ZA:'South Africa' };
+      var label = NAMES[brand.toLowerCase()] || brand.replace(/[-_]+/g, ' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+      var where = country ? (COUNTRIES[country] || country) : '';
+      var box = document.getElementById('brandHint'), txt = document.getElementById('brandHintText');
+      txt.textContent = '';
+      txt.appendChild(document.createTextNode('Looking for '));
+      var b = document.createElement('b'); b.textContent = label + (where ? ' (' + where + ')' : ''); txt.appendChild(b);
+      txt.appendChild(document.createTextNode('? Search "' + label + '" in the catalog below' + (where ? ' and choose ' + where + ' as the country.' : '.')));
+      box.classList.add('show');
+
+      var w = document.querySelector('reloadly-widget'), tries = 0, filled = false;
+      var t = setInterval(function(){
+        if (filled || ++tries > 40) { clearInterval(t); return; }
+        var root = w && (w.shadowRoot || w); if (!root) return;
+        var inp = root.querySelector('input[type="search"], input[placeholder*="earch" i], input[aria-label*="earch" i], input[placeholder*="rand" i]');
+        if (!inp || inp.value) return;
+        try {
+          var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+          setter.call(inp, label);
+          inp.dispatchEvent(new Event('input', { bubbles:true, composed:true }));
+          inp.dispatchEvent(new Event('change', { bubbles:true, composed:true }));
+          filled = true;
+        } catch (e) { clearInterval(t); }
+      }, 500);
+    })();
+
+    // ---- back button: return to wherever the customer came from on Net365 (home, quick actions), else Business ----
+    (function(){
+      try {
+        var ref = document.referrer ? new URL(document.referrer) : null;
+        if (ref && ref.origin === location.origin && ref.pathname !== location.pathname) {
+          var a = document.getElementById('backLink');
+          a.href = ref.pathname + ref.search;
+          a.setAttribute('aria-label', 'Go back');
+          a.querySelector('span').textContent = ref.pathname === '/' ? 'Home' : 'Back';
+        }
+      } catch (e) {}
+    })();
+
     // ---- loading / failure detection ----
     (function(){
       var w = document.querySelector('reloadly-widget');
@@ -170,5 +232,6 @@
       }, 400);
     })();
   </script>
+<script src="/pwa.js" defer></script>
 </body>
 </html>
