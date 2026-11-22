@@ -265,15 +265,6 @@ def _nav(prof, ws, aff):
     return nav
 
 
-def _membership(uid):
-    """Membership number, Founders rank and badge (net365_membership.py). None when that module is not installed."""
-    try:
-        import net365_membership
-        return net365_membership.get(uid)
-    except Exception:
-        return None
-
-
 def _card(user, prof):
     uid = user["id"]
     t = ACCOUNT_TYPES[prof["account_type"]]
@@ -294,7 +285,6 @@ def _card(user, prof):
         "capabilities": _capabilities(prof, ws, aff), "nav": _nav(prof, ws, aff),
         "workspaces": [{"kind": w["kind"], "label": ACCOUNT_TYPES[w["kind"]]["label"], "status": w["status"]} for w in ws if w["kind"] in ACCOUNT_TYPES],
         "affiliate": {"status": aff["status"]} if aff else None,
-        "membership": _membership(uid),
     }
 
 
