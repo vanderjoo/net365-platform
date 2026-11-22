@@ -2650,6 +2650,7 @@ body.dark-mode .wallet-enhanced {
                 <input type="tel" id="phoneInput" value="08036939103" placeholder="Enter phone number (e.g. 2348036939103)" oninput="onPhoneInput()" />
                 <button onclick="openContactPicker()"><i class="fas fa-address-book"></i></button>
               </div>
+              <div id="myPhoneChip" style="display:none;margin:-4px 0 10px;font-size:12.5px;color:var(--text-secondary);"></div>
 
               <div class="operator-confirmed" id="detectedOperator" style="display:none;">
                 <span id="detectIcon">✓</span>
@@ -2976,10 +2977,11 @@ body.dark-mode .wallet-enhanced {
             <div class="nxp-stack">
               <section class="nxt-panel nxp-sec" id="nxpProfile" data-lock>
                 <div class="nxt-ph"><div><h2>Profile</h2><p class="nxt-sub">The details on your account</p></div></div>
-                <div class="nxp-row"><div class="t"><b>Name</b></div><div class="v" id="pfName">-</div></div>
-                <div class="nxp-row"><div class="t"><b>Email</b><span id="pfMailNote"></span></div><div class="v" id="pfMail">-</div></div>
-                <div class="nxp-row"><div class="t"><b>Phone</b></div><div class="v" id="pfPhone">-</div></div>
-                <div class="nxp-row"><div class="t"><b>Change a detail</b><span>For now our team updates these for you. It takes one message.</span></div><button class="nxt-btn ghost" type="button" onclick="nxpAskChange()">Request a change</button></div>
+                <div class="nxp-row"><div class="t"><b>Name</b></div><div class="v" id="pfName">-</div><button class="nxt-btn ghost" type="button" onclick="acctEditName('acctNameForm')">Edit</button></div>
+                <div id="acctNameForm"></div>
+                <div class="nxp-row"><div class="t"><b>Email</b><span id="pfMailNote"></span></div><div class="v" id="pfMail">-</div><button class="nxt-btn ghost" type="button" onclick="nxpAskChange()">Request change</button></div>
+                <div class="nxp-row"><div class="t"><b>Phone</b><span id="pfPhoneNote">Confirm it by SMS code to use it for transactions</span></div><div class="v" id="pfPhone">-</div><button class="nxt-btn ghost" type="button" id="pfPhoneBtn" onclick="acctOpenPhone('acctPhoneForm')">Add phone</button></div>
+                <div id="acctPhoneForm"></div>
               </section>
 
               <section class="nxt-panel nxp-sec" id="nxpApp">
@@ -3764,6 +3766,7 @@ const PROVIDER_NAMES = {
           ${row('Registration date', p.registration_date)}${row('Country', p.country)}${row('Primary currency', p.primary_currency)}
           ${row('Referral ID', p.referral_id, true)}${p.is_business ? row('Business name', p.business_name) : ''}
         </div>
+        <div class="pf-sec" id="acctPfCard">${acctCardHtml()}</div>
         ${p.is_business && p.verification_status !== 'Verified' ? '<p class="pf-note" style="margin-top:14px">Your business is waiting for review. Features marked Pending switch on once we verify it. Everything else works now.</p>' : ''}
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
           <button class="nxt-btn" type="button" id="pfChange"><i class="fas fa-repeat"></i> Change account type</button>
@@ -3781,6 +3784,7 @@ const PROVIDER_NAMES = {
           </div>${(p.affiliate && !more.length) ? '<p class="pf-note">You have everything switched on.</p>' : ''}
           <div id="pfAct"></div></div>`;
       body.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => pfCopy(b.dataset.copy)));
+      acctBindCard();
       document.getElementById('pfChange').onclick = pfChangeType;
       document.getElementById('pfDetails').onclick = pfEditDetails;
       body.querySelectorAll('.pf-tr').forEach(b => b.onclick = async () => {
@@ -3960,6 +3964,129 @@ const PROVIDER_NAMES = {
     function nxpSw(id, on) { const e = document.getElementById(id); if (e) e.setAttribute('aria-checked', on ? 'true' : 'false'); }
     const nxpOn = v => !(v === 0 || v === '0' || v === false || v === 'false');
 
+    /* ============================================================
+       ACCOUNT DETAILS: edit name, add / change phone with an SMS code.
+       A phone is saved only after the customer types the code that was texted to it.
+       ============================================================ */
+    const acctEsc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    async function acctApi(path, method, body) {
+      const r = await apiFetch(`${API_BASE}${path}`, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+      let d = {}; try { d = await r.json(); } catch (e) { d = { success: false, error: 'Unexpected response. Please try again.' }; }
+      return d;
+    }
+    function acctMsg(id, cls, text) { const m = document.getElementById(id); if (m) { m.className = 'nxp-msg ' + (cls || ''); m.textContent = text || ''; } }
+    function acctPhoneTag(u) { return !u.phone ? '' : (u.phone_verified ? '<span class="nxp-tag ok">Verified</span>' : '<span class="nxp-tag warn">Not verified</span>'); }
+    function acctPaintPhoneRow(signed, u) {
+      const note = document.getElementById('pfPhoneNote'), btn = document.getElementById('pfPhoneBtn');
+      if (!note || !btn) return;
+      if (!signed) { note.textContent = ''; btn.style.display = 'none'; return; }
+      btn.style.display = '';
+      note.textContent = !u.phone ? 'Add a number and confirm it by SMS code to use it for transactions' : (u.phone_verified ? 'Verified. You can use it for transactions' : 'Not verified yet. Confirm it with an SMS code');
+      btn.textContent = !u.phone ? 'Add phone' : (u.phone_verified ? 'Change' : 'Verify');
+    }
+    function acctCardHtml() {
+      const u = currentUser || {};
+      return `<h3>Contact details</h3>
+        <div class="pf-note">Your phone number can be used for transactions once you confirm it with an SMS code.</div>
+        <div class="pf-grid">
+          <div class="pf-f"><span>Name</span><b><em style="font-style:normal">${acctEsc(u.full_name || '—')}</em><button class="nxt-btn ghost" type="button" data-acct="name" style="padding:4px 10px">Edit</button></b></div>
+          <div class="pf-f"><span>Email ${u.email_verified ? '(verified)' : '(not verified)'}</span><b><em style="font-style:normal">${acctEsc(u.email || '—')}</em></b></div>
+          <div class="pf-f"><span>Phone</span><b><em style="font-style:normal">${acctEsc(u.phone || 'Not added')}</em>${acctPhoneTag(u)}<button class="nxt-btn ghost" type="button" data-acct="phone" style="padding:4px 10px">${!u.phone ? 'Add' : (u.phone_verified ? 'Change' : 'Verify')}</button></b></div>
+        </div>
+        <div id="acctPfPanel"></div>
+        <div class="pf-note" style="margin-top:8px">To change your email, <a href="#" onclick="nxpAskChange();return false">contact support</a>. It is your sign-in, so we check with you first.</div>`;
+    }
+    function acctBindCard() {
+      document.querySelectorAll('#acctPfCard [data-acct]').forEach(b => b.onclick = () => b.dataset.acct === 'name' ? acctEditName('acctPfPanel') : acctOpenPhone('acctPfPanel'));
+    }
+    function acctRefreshViews() {
+      try { if (typeof updateUIForUser === 'function' && currentUser) updateUIForUser(currentUser); } catch (e) {}
+      try { nxpRender(); } catch (e) {}
+      const card = document.getElementById('acctPfCard'); if (card) { card.innerHTML = acctCardHtml(); acctBindCard(); }
+      try { acctPaintChip(); } catch (e) {}
+    }
+    function acctEditName(hostId) {
+      const host = document.getElementById(hostId); if (!host || !currentUser) return;
+      host.innerHTML = `<div class="nxp-form" style="margin:12px 0">
+        <div><label for="acctNameIn">Full name</label><input class="nxp-in" id="acctNameIn" maxlength="120" autocomplete="name" value="${acctEsc(currentUser.full_name || '')}"></div>
+        <div style="display:flex;gap:10px"><button class="nxt-btn" type="button" id="acctNameSave">Save</button><button class="nxt-btn ghost" type="button" id="acctNameCancel">Cancel</button></div>
+        <div class="nxp-msg" id="acctNameMsg" role="status"></div></div>`;
+      document.getElementById('acctNameCancel').onclick = () => { host.innerHTML = ''; };
+      document.getElementById('acctNameSave').onclick = async () => {
+        const v = document.getElementById('acctNameIn').value.trim(), btn = document.getElementById('acctNameSave');
+        if (v.length < 2) { acctMsg('acctNameMsg', 'err', 'Please enter your full name.'); return; }
+        btn.disabled = true;
+        const d = await acctApi('/account/profile', 'PATCH', { full_name: v });
+        btn.disabled = false;
+        if (!d.success) { acctMsg('acctNameMsg', 'err', d.error || 'Could not save your name.'); return; }
+        currentUser.full_name = d.full_name; host.innerHTML = ''; showToast('Name updated', 'success'); acctRefreshViews();
+      };
+    }
+    let acctResendTimer = null;
+    async function acctOpenPhone(hostId) {
+      const host = document.getElementById(hostId); if (!host || !currentUser) return;
+      let info = {};
+      try { info = await acctApi('/account/contact', 'GET'); } catch (e) { info = {}; }
+      const smsOff = info && info.sms_available === false;
+      const start = (phone) => acctPhoneStepCode(host, phone);
+      if (info && info.pending_phone) { start(info.pending_phone); return; }   // a code was already texted (for example by support)
+      host.innerHTML = `<div class="nxp-form" style="margin:12px 0">
+        <div><label for="acctPhoneIn">Phone number</label><input class="nxp-in" id="acctPhoneIn" type="tel" autocomplete="tel" placeholder="0803 123 4567 or +234 803 123 4567" value="${acctEsc((currentUser.phone && !currentUser.phone_verified) ? currentUser.phone : '')}"></div>
+        <div class="nxp-hint" style="font-size:12.5px;color:var(--n-t2)">We text a 6-digit code to this number. It is saved only after you enter the code.</div>
+        <div style="display:flex;gap:10px"><button class="nxt-btn" type="button" id="acctPhoneSend">Send code</button><button class="nxt-btn ghost" type="button" id="acctPhoneCancel">Cancel</button></div>
+        <div class="nxp-msg" id="acctPhoneMsg" role="status">${smsOff ? 'SMS is not available right now. Please try again later.' : ''}</div></div>`;
+      document.getElementById('acctPhoneCancel').onclick = () => { host.innerHTML = ''; };
+      document.getElementById('acctPhoneSend').onclick = async () => {
+        const v = document.getElementById('acctPhoneIn').value.trim(), btn = document.getElementById('acctPhoneSend');
+        if (v.replace(/\D/g, '').length < 8) { acctMsg('acctPhoneMsg', 'err', 'Enter a valid phone number.'); return; }
+        btn.disabled = true; acctMsg('acctPhoneMsg', '', 'Sending the code…');
+        const d = await acctApi('/account/phone/request', 'POST', { phone: v });
+        btn.disabled = false;
+        if (!d.success) { acctMsg('acctPhoneMsg', 'err', d.error || 'Could not send the code.'); return; }
+        start(d.phone);
+      };
+    }
+    function acctPhoneStepCode(host, phone) {
+      host.innerHTML = `<div class="nxp-form" style="margin:12px 0">
+        <div class="pf-note">We sent a 6-digit code to <b>${acctEsc(phone)}</b>. It expires in 10 minutes.</div>
+        <div><label for="acctCodeIn">Enter the code</label><input class="nxp-in" id="acctCodeIn" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="nxt-btn" type="button" id="acctCodeOk">Confirm</button><button class="nxt-btn ghost" type="button" id="acctCodeResend" disabled>Resend code</button><button class="nxt-btn ghost" type="button" id="acctCodeCancel">Cancel</button></div>
+        <div class="nxp-msg" id="acctCodeMsg" role="status"></div></div>`;
+      const resend = document.getElementById('acctCodeResend'); let left = 45;
+      clearInterval(acctResendTimer);
+      const tick = () => { if (!document.body.contains(resend)) { clearInterval(acctResendTimer); return; } resend.textContent = left > 0 ? `Resend code (${left}s)` : 'Resend code'; resend.disabled = left > 0; left--; };
+      tick(); acctResendTimer = setInterval(tick, 1000);
+      document.getElementById('acctCodeCancel').onclick = () => { clearInterval(acctResendTimer); host.innerHTML = ''; };
+      resend.onclick = async () => {
+        resend.disabled = true;
+        const d = await acctApi('/account/phone/request', 'POST', { phone });
+        if (!d.success) { acctMsg('acctCodeMsg', 'err', d.error || 'Could not resend the code.'); return; }
+        left = 45; acctMsg('acctCodeMsg', 'ok', 'A new code is on its way.');
+      };
+      document.getElementById('acctCodeOk').onclick = async () => {
+        const code = document.getElementById('acctCodeIn').value.replace(/\D/g, ''), btn = document.getElementById('acctCodeOk');
+        if (code.length !== 6) { acctMsg('acctCodeMsg', 'err', 'Enter the 6-digit code.'); return; }
+        btn.disabled = true;
+        const d = await acctApi('/account/phone/confirm', 'POST', { code });
+        btn.disabled = false;
+        if (!d.success) { acctMsg('acctCodeMsg', 'err', d.error || 'That code is not correct.'); return; }
+        clearInterval(acctResendTimer);
+        currentUser.phone = d.phone; currentUser.phone_verified = 1;
+        host.innerHTML = ''; showToast('Phone number verified', 'success'); acctRefreshViews();
+      };
+    }
+    function acctPaintChip() {
+      const chip = document.getElementById('myPhoneChip'); if (!chip) return;
+      const u = currentUser;
+      if (!userId || !u) { chip.style.display = 'none'; return; }
+      if (u.phone && u.phone_verified) {
+        chip.style.display = ''; chip.innerHTML = `Your verified number: <b>${acctEsc(u.phone)}</b> <button type="button" id="myPhoneUse" style="margin-left:6px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-primary);border-radius:8px;padding:3px 10px;cursor:pointer">Use it</button>`;
+        document.getElementById('myPhoneUse').onclick = () => { const inp = document.getElementById('phoneInput'); inp.value = u.phone.replace(/^\+/, ''); try { onPhoneInput(); } catch (e) {} };
+      } else {
+        chip.style.display = ''; chip.innerHTML = `<a href="#" onclick="showProfile();return false" style="color:inherit;text-decoration:underline">Add and verify your phone number</a> to use it here in one tap.`;
+      }
+    }
+
     function nxpRender() {
       const u = currentUser, signed = !!userId && !!u;
       const name = signed ? (u.full_name || 'Net365 customer') : 'Guest';
@@ -3975,6 +4102,7 @@ const PROVIDER_NAMES = {
       document.getElementById('pfName').textContent = signed ? (u.full_name || '-') : '-';
       document.getElementById('pfMail').textContent = signed ? (u.email || '-') : '-';
       document.getElementById('pfPhone').textContent = signed ? (u.phone || 'Not added') : '-';
+      acctPaintPhoneRow(signed, u);
       document.getElementById('pfMailNote').textContent = signed ? (u.email_verified || u.is_evaluation ? 'Verified' : 'Not verified yet') : '';
       document.getElementById('nxpOut').style.display = signed ? '' : 'none';
 
@@ -3985,7 +4113,7 @@ const PROVIDER_NAMES = {
 
       const checks = [
         [verified, 'Email verified', 'Verify', "showVerifyEmailScreen(currentUser?.email,{dismissible:true})"],
-        [signed && !!u.phone, 'Phone number on file', 'Ask us to add it', 'nxpAskChange()'],
+        [signed && !!u.phone && !!u.phone_verified, 'Phone number verified', 'Add / verify', "acctOpenPhone('acctPhoneForm');nxpGo('nxpProfile')"],
         [nxpOn(s.email_notifications), 'Purchase receipts on', 'Turn on', "nxpGo('nxpNotif')"],
         [nxpOn(s.notifications_enabled), 'In-app alerts on', 'Turn on', "nxpGo('nxpNotif')"]
       ];
@@ -4993,6 +5121,7 @@ const PROVIDER_NAMES = {
       }
 
       updateUIForUser(user);
+      try { acctPaintChip(); } catch (e) { /* cosmetic only */ }
       try { pfLoadNav(); } catch (e) {}
       try { if (window.Net365Terms) Net365Terms.gate('web'); } catch (e) { /* never block login */ }
 
