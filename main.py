@@ -1360,6 +1360,105 @@ def decrypt_pii(data: str) -> str:
         return data
 
 
+# ============ CUSTOMER-FACING TRANSACTION DESCRIPTION ============
+_TX_NETWORKS = {"mtn": "MTN", "airtel": "Airtel", "glo": "Glo", "9mobile": "9mobile", "etisalat": "9mobile"}
+_TX_TV = {"dstv": "DStv", "gotv": "GOtv", "startimes": "StarTimes", "showmax": "Showmax"}
+_TX_EDU = {"waec": "WAEC result checker", "waec-registration": "WAEC registration", "jamb": "JAMB"}
+_TX_PLAIN = {"wallet_funding": ("Wallet top-up", "wallet", "credit"), "wallet_deposit": ("Wallet top-up", "wallet", "credit"),
+             "transfer": ("Wallet transfer", "transfer", "debit"), "referral": ("Referral reward", "referral", "credit"),
+             "reward": ("Reward", "reward", "credit"), "cart": ("Marketplace order", "marketplace", "debit"),
+             "bulk_recharge": ("Bulk recharge", "airtime", "debit")}
+
+
+def _tx_mask(value):
+    v = re.sub(r"\s+", "", str(value or ""))
+    return (v[:3] + "***" + v[-4:]) if len(v) >= 9 else (("***" + v[-3:]) if len(v) > 3 else "")
+
+
+def _tx_describe(tx):
+    """Fields the customer sees on Transactions: who was paid, prepaid or postpaid, a readable description.
+    Adds description, subtype, vendor, plan_type, recipient_masked, direction, token. Never raises."""
+    try:
+        p = tx.get("payload") if isinstance(tx.get("payload"), dict) else {}
+        res = tx.get("reloadly_result") if isinstance(tx.get("reloadly_result"), dict) else {}
+        full = res.get("full_result") if isinstance(res.get("full_result"), dict) else {}
+        ttype = str(tx.get("tx_type") or "").lower()
+        if ttype in _TX_PLAIN:
+            label, sub, direction = _TX_PLAIN[ttype]
+            out = {"description": label, "subtype": sub, "vendor": "Net365", "plan_type": "", "direction": direction}
+            if ttype == "bulk_recharge":
+                out["description"] = "Bulk airtime recharge"
+            return out
+        def plain(v):
+            try:
+                return decrypt_pii(v) if v else ""
+            except Exception:
+                return str(v or "")
+        phone = plain(p.get("phone"))
+        account = plain(p.get("subscriber_account"))
+        opname = str(p.get("operator_name") or res.get("operatorName") or full.get("operatorName") or "")
+        net = ""
+        for key in (p.get("network"), p.get("product"), opname):
+            k = str(key or "").lower()
+            for name in _TX_NETWORKS:
+                if name in k:
+                    net = _TX_NETWORKS[name]
+                    break
+            if net:
+                break
+        if not net and phone:
+            try:
+                import net365_providers as _np
+                net = _TX_NETWORKS.get(_np.network_for("", phone), "")
+            except Exception:
+                net = ""
+        out = {"direction": "debit", "plan_type": "", "vendor": "", "subtype": "airtime", "description": ""}
+        biller = str(p.get("biller_name") or "").strip()
+        if ttype == "electricity" or (ttype == "utility" and (p.get("meter_type") or p.get("disco"))):
+            meter = "Postpaid" if str(p.get("meter_type") or "").lower().startswith("post") else "Prepaid"
+            vendor = biller or "Electricity"
+            out.update(subtype="electricity", vendor=vendor, plan_type=meter, description=f"{vendor} - {meter} meter")
+            out["recipient_masked"] = _tx_mask(account)
+        elif ttype == "data":
+            vendor = net or "Data"
+            plan = biller or ""
+            if plan.lower().startswith(vendor.lower()):
+                plan = plan[len(vendor):].lstrip(" -:")
+            out.update(subtype="data", vendor=vendor, plan_type="Prepaid data", description=f"{vendor} data" + (f" - {plan}" if plan else ""))
+            out["recipient_masked"] = _tx_mask(phone)
+        elif ttype in ("tv", "subscription") or str(p.get("product") or "").lower() in _TX_TV:
+            vendor = _TX_TV.get(str(p.get("product") or "").lower(), biller or "TV subscription")
+            kind = "Renewal" if str(p.get("subscription_type") or "").lower() == "renew" else "Subscription"
+            out.update(subtype="subscription", vendor=vendor, plan_type=kind, description=f"{vendor} {kind.lower()}" + (f" - {biller}" if biller and biller != vendor else ""))
+            out["recipient_masked"] = _tx_mask(account)
+        elif ttype == "education":
+            vendor = _TX_EDU.get(str(p.get("product") or "").lower(), biller or "Education")
+            out.update(subtype="education", vendor=vendor, description=vendor)
+        elif ttype == "insurance":
+            out.update(subtype="insurance", vendor=biller or "Insurance", description=biller or "Motor insurance")
+        elif ttype == "utility":
+            out.update(subtype="utility", vendor=biller or "Utility bill", description=biller or "Utility bill payment")
+            out["recipient_masked"] = _tx_mask(account)
+        else:  # topup / airtime
+            vendor = net or opname or "Airtime"
+            ng = str(tx.get("currency") or "").upper() == "NGN" or str(p.get("country_code") or "NG").upper() == "NG"
+            out.update(subtype="airtime", vendor=vendor, plan_type="Prepaid airtime (VTU)" if ng else "Prepaid airtime",
+                       description=f"{vendor} airtime" + (" (VTU)" if ng else " top-up"))
+            out["recipient_masked"] = _tx_mask(phone)
+        tok = res.get("token") or full.get("token") or ""
+        if tok:
+            out["token"] = str(tok)[:60]
+        for k in ("service_amount", "fee_amount"):
+            if p.get(k) is not None:
+                out[k] = p.get(k)
+        out["customer_name"] = str(p.get("customer_name") or "")[:80]
+        return out
+    except Exception:
+        logger.exception("tx description failed")
+        return {}
+
+
+
 def decrypt_payload(payload: Dict) -> Dict:
     if not payload:
         return payload
@@ -12991,6 +13090,7 @@ class ReloadlyWebApp:
                         currency=currency,
                         payload={
                             "operator_id": data.get("operator_id"),
+                            "operator_name": str(data.get("operator_name") or "")[:40],
                             "phone": phone,
                             "country_code": country_code,
                             "service_amount": service_amount,
@@ -13322,9 +13422,9 @@ class ReloadlyWebApp:
                         "country_code": data.get("country_code", "NG"),
                         "email": _payer_email,
                     }
+                    payload["operator_name"] = str(data.get("operator_name") or "")[:40]
                     if str(data.get("source") or "") in ("telegram", "whatsapp"):
                         payload["source"] = data["source"]
-                        payload["operator_name"] = str(data.get("operator_name") or "")[:40]
                     if data.get("save_card") and not _is_guest:
                         payload["save_card"] = True
                     if tx_type == "topup":
@@ -13823,6 +13923,8 @@ class ReloadlyWebApp:
             offset = max(request.args.get("offset", 0, type=int), 0)
 
             transactions = db.get_transactions(user_id, limit, offset)
+            for _t in transactions:
+                _t.update(_tx_describe(_t))
             return jsonify({"success": True, "transactions": transactions})
 
         # ============ CUSTOMER-SAFE TRANSACTION RECEIPT ============
@@ -13836,12 +13938,13 @@ class ReloadlyWebApp:
             """
             user_id = g.current_user_id
             try:
-                transactions = db.get_transactions(user_id, 100, 0) or []
                 wanted = str(reference).strip()
-                tx = next((item for item in transactions
-                           if str(item.get("reference") or item.get("id") or "") == wanted), None)
+                tx = db.get_transaction(wanted)
+                if tx and tx.get("user_id") != user_id:
+                    tx = None  # never reveal another customer's transaction
                 if not tx:
                     return jsonify({"success": False, "error": "Transaction not found in your account"}), 404
+                tx.update(_tx_describe(tx))
                 return jsonify({"success": True, "transaction": tx})
             except Exception as e:
                 logger.exception("Customer receipt lookup failed for user %s", user_id)
@@ -19608,7 +19711,7 @@ class ReloadlyWebApp:
             return jsonify({"success": True, "campaigns": campaigns})
 
         @self.app.route("/api/notifications/send", methods=["POST"])
-        @login_required
+        @admin_required  # was login_required: any customer could notify and email any other customer with text of their choice
         def send_notification_route():
             data = request.json
             user_id = data.get("user_id")
