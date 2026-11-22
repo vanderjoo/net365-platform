@@ -4032,7 +4032,7 @@ const PROVIDER_NAMES = {
       if (info && info.pending_phone) { start(info.pending_phone); return; }   // a code was already texted (for example by support)
       host.innerHTML = `<div class="nxp-form" style="margin:12px 0">
         <div><label for="acctPhoneIn">Phone number</label><input class="nxp-in" id="acctPhoneIn" type="tel" autocomplete="tel" placeholder="0803 123 4567 or +234 803 123 4567" value="${acctEsc((currentUser.phone && !currentUser.phone_verified) ? currentUser.phone : '')}"></div>
-        <div class="nxp-hint" style="font-size:12.5px;color:var(--n-t2)">We text a 6-digit code to this number. It is saved only after you enter the code.</div>
+        <div class="nxp-hint" style="font-size:12.5px;color:var(--n-t2)">We text a 6-digit code to this number and save it to your account now. It shows as Not verified until you enter the code.</div>
         <div style="display:flex;gap:10px"><button class="nxt-btn" type="button" id="acctPhoneSend">Send code</button><button class="nxt-btn ghost" type="button" id="acctPhoneCancel">Cancel</button></div>
         <div class="nxp-msg" id="acctPhoneMsg" role="status">${smsOff ? 'SMS is not available right now. Please try again later.' : ''}</div></div>`;
       document.getElementById('acctPhoneCancel').onclick = () => { host.innerHTML = ''; };
@@ -4043,6 +4043,8 @@ const PROVIDER_NAMES = {
         const d = await acctApi('/account/phone/request', 'POST', { phone: v });
         btn.disabled = false;
         if (!d.success) { acctMsg('acctPhoneMsg', 'err', d.error || 'Could not send the code.'); return; }
+        currentUser.phone = d.phone; currentUser.phone_verified = d.verified ? 1 : 0;   // saved now, verified after the code
+        try { acctPaintPhoneRow(true, currentUser); acctPaintChip(); } catch (e) { /* cosmetic */ }
         start(d.phone);
       };
     }
