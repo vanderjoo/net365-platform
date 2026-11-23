@@ -5191,7 +5191,7 @@ from typing import Dict, Optional
 logger = logging.getLogger(__name__)
 
 # Make sure this is defined somewhere in your app config
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://net365co.com").rstrip("/")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://net365co.com")
 
 
 def _send_via_mailgun_api(mg_domain, mg_api_key, from_addr, to_email, subject, html_body, attachment, attachment_name, _result, text_body=None, reply_to=None):
@@ -8341,35 +8341,6 @@ class ReloadlyWebApp:
                         page_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "complete_profile.html"),
                         sms_ready=lambda: SMS_PROVIDER_CONFIGURED or _WA_OTP,
                     )
-
-                    # Chat side of "confirm your number, no code to type". Only the bot may call these (X-Bot-Secret).
-                    #   WhatsApp: the customer sends  VERIFY N365-XXXXXX  and the sender's own number is verified.
-                    #   Telegram: the customer opens the bot from the page and taps "Share my number"; the bot checks it is
-                    #             their OWN contact, then reports it here.
-                    from net365_whatsapp import bot_required as _id_bot_required
-                    from net365_identity import complete_claim as _id_claim, complete_claim_with_contact as _id_claim_contact
-
-                    def _id_claim_reply(ok, res):
-                        res = res or {}
-                        if ok:
-                            return jsonify({"success": True, "masked": res.get("masked"), "national": res.get("national")}), 200
-                        _code = res.get("error") or "invalid_code"
-                        _http = 429 if _code == "rate_limited" else 409 if _code == "phone_in_use" else 400
-                        return jsonify({"success": False, "error_code": _code}), _http
-
-                    @self.app.post("/api/bot/identity/claim")
-                    @_id_bot_required
-                    def bot_identity_claim():
-                        d = request.get_json(silent=True) or {}
-                        return _id_claim_reply(*_id_claim(d.get("code"), d.get("wa")))
-
-                    @self.app.post("/api/bot/identity/claim-contact")
-                    @_id_bot_required
-                    def bot_identity_claim_contact():
-                        d = request.get_json(silent=True) or {}
-                        if d.get("own") is not True:      # the bot must have checked that this is the sender's own contact
-                            return jsonify({"success": False, "error_code": "not_own_contact"}), 400
-                        return _id_claim_reply(*_id_claim_contact(d.get("code"), d.get("phone"), d.get("chat")))
                 except Exception as _id_e:
                     logger.warning(f"Identity engine not loaded: {_id_e}")
                 try:
