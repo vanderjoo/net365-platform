@@ -841,6 +841,7 @@
                                 <tr>
                                     <th>Visited</th>
                                     <th>Visitor</th>
+                                    <th>IP</th>
                                     <th>Path</th>
                                     <th>Organization</th>
                                     <th>Kind</th>
@@ -850,7 +851,6 @@
                                     <th>Browser</th>
                                     <th>Country</th>
                                     <th>City</th>
-                                    <th>IP</th>
                                     <th>Referrer</th>
                                 </tr>
                             </thead>
@@ -2958,6 +2958,7 @@
                 <tr>
                     <td>${formatDate(v.visited_at)}</td>
                     <td>${v.visitor_name ? escapeHtml(v.visitor_name) : '<span style="color:var(--text-secondary)">Guest</span>'}</td>
+                    <td style="font-family:monospace;white-space:nowrap;">${v.ip_address ? escapeHtml(v.ip_address) : '<span style="color:var(--text-secondary)">—</span>'}</td>
                     <td>${escapeHtml(v.path || '')}</td>
                     <td>${orgCell}</td>
                     <td>${kindCell}</td>
@@ -2967,7 +2968,6 @@
                     <td>${escapeHtml(v.browser || '')}</td>
                     <td>${countryCell}</td>
                     <td>${cityCell}</td>
-                    <td style="color:var(--text-secondary);">${escapeHtml(v.ip_address || '')}</td>
                     <td style="color:var(--text-secondary);max-width:180px;overflow:hidden;text-overflow:ellipsis;">${v.referrer ? escapeHtml(v.referrer) : '—'}</td>
                 </tr>`;
             }).join('');

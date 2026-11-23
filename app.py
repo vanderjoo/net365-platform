@@ -7063,6 +7063,24 @@ def _schedule_send_pay_link(schedule: Dict, user_id: int, platform) -> Dict:
     return {"success": True, "reminder_sent": True, "chat": bool(sent), "reference": res["reference"]}
 
 
+def _reloadly_topup_or_failed(platform, **kw):
+    """Run a Reloadly top-up. Reloadly refusing the order (HTTP 4xx, 502/503, or never reachable) comes back as a FAILED
+    result so the caller can move to the standby processor (VTpass). An UNKNOWN outcome (timeout after sending, a dropped
+    connection, 500/504) is re-raised: the order may have been accepted, so nobody orders a second time."""
+    try:
+        return platform.make_topup(**kw)
+    except Exception as e:
+        code = getattr(getattr(e, "response", None), "status_code", None)
+        txt = str(e)
+        never_sent = isinstance(e, requests.exceptions.ConnectTimeout) or any(
+            m in txt for m in ("Failed to establish a new connection", "Name or service not known", "Temporary failure in name resolution"))
+        if (code is not None and (code < 500 or code in (502, 503))) or never_sent:
+            logger.warning(f"Reloadly did not accept the top-up ({code or type(e).__name__}): {e}")
+            return {"status": "FAILED", "error": "Reloadly unavailable",
+                    "message": f"Reloadly could not take the order ({code or 'unreachable'})."}
+        raise
+
+
 def _wallet_airtime_via_router(reference, data, phone, service_amount, rt):
     """Nigerian airtime paid from the Net365 Wallet, offered to the provider router (VTpass / Flutterwave ...) in naira.
     Same rule as card-paid airtime: returns a Reloadly-shaped result when the router accepted the order, None when it is
@@ -9135,7 +9153,8 @@ class ReloadlyWebApp:
                             raise Exception(f"Unable to convert {service_amount} {currency} to USD")
 
                         # Execute Reloadly top‑up
-                        topup_result = self.platform.make_topup(
+                        topup_result = _reloadly_topup_or_failed(
+                            self.platform,
                             operator_id=str(operator_id),
                             amount=str(round(usd_amount, 2)),
                             recipient_phone={"countryCode": country_code, "number": formatted_phone},
@@ -13111,7 +13130,8 @@ class ReloadlyWebApp:
 
                         provider_called = True
                         result = (
-                            self.platform.make_topup(
+                            _reloadly_topup_or_failed(
+                                self.platform,
                                 operator_id=str(data.get("operator_id")),
                                 amount=str(round(usd_amount, 2)),
                                 recipient_phone={
