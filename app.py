@@ -7063,6 +7063,24 @@ def _schedule_send_pay_link(schedule: Dict, user_id: int, platform) -> Dict:
     return {"success": True, "reminder_sent": True, "chat": bool(sent), "reference": res["reference"]}
 
 
+def _reloadly_topup_or_failed(platform, **kw):
+    """Run a Reloadly top-up. Reloadly refusing the order (HTTP 4xx, 502/503, or never reachable) comes back as a FAILED
+    result so the caller can move to the standby processor (VTpass). An UNKNOWN outcome (timeout after sending, a dropped
+    connection, 500/504) is re-raised: the order may have been accepted, so nobody orders a second time."""
+    try:
+        return platform.make_topup(**kw)
+    except Exception as e:
+        code = getattr(getattr(e, "response", None), "status_code", None)
+        txt = str(e)
+        never_sent = isinstance(e, requests.exceptions.ConnectTimeout) or any(
+            m in txt for m in ("Failed to establish a new connection", "Name or service not known", "Temporary failure in name resolution"))
+        if (code is not None and (code < 500 or code in (502, 503))) or never_sent:
+            logger.warning(f"Reloadly did not accept the top-up ({code or type(e).__name__}): {e}")
+            return {"status": "FAILED", "error": "Reloadly unavailable",
+                    "message": f"Reloadly could not take the order ({code or 'unreachable'})."}
+        raise
+
+
 def _wallet_airtime_via_router(reference, data, phone, service_amount, rt):
     """Nigerian airtime paid from the Net365 Wallet, offered to the provider router (VTpass / Flutterwave ...) in naira.
     Same rule as card-paid airtime: returns a Reloadly-shaped result when the router accepted the order, None when it is
@@ -8175,6 +8193,7 @@ class ReloadlyWebApp:
                 sms_ready=lambda: bool(SMS_PROVIDER_CONFIGURED),
                 log_event=log_event, admin_identity=lambda: get_client_ip(),
             )
+            logger.info("Account admin module loaded (edit user, deleted audit, phone verification routes are live)")
         except Exception as _acct_err:
             logger.error(f"Account admin module NOT loaded: {_acct_err}", exc_info=True)
 
@@ -8265,6 +8284,23 @@ class ReloadlyWebApp:
                     init_routing(self.app, db, admin_required)
                 except Exception as _rt_e:
                     logger.warning(f"Provider routing policy not loaded: {_rt_e}")
+                try:
+                    from net365_vtpass_intl import init_vtpass_intl
+
+                    def _vi_chat_err(_uid, _amt):
+                        try:
+                            from net365_whatsapp import chat_purchase_error
+                            return chat_purchase_error(_uid, _amt, "NGN")
+                        except ImportError:
+                            return None
+
+                    init_vtpass_intl(self.app, db, admin_required, login_required, email_verified_required,
+                                     platform_fn=lambda: self.platform, fee_fn=lambda _a: server_fee_for(_a, "NGN"),
+                                     encrypt_pii=encrypt_pii, return_url_fn=_safe_payment_return_url,
+                                     limit_error_fn=lambda _uid, _amt: _purchase_limit_error(_uid, _amt, "NGN"),
+                                     chat_error_fn=_vi_chat_err)
+                except Exception as _vi_e:
+                    logger.warning(f"VTpass international airtime not loaded: {_vi_e}")
                 try:
                     from net365_identity import init_identity
 
@@ -9134,7 +9170,8 @@ class ReloadlyWebApp:
                             raise Exception(f"Unable to convert {service_amount} {currency} to USD")
 
                         # Execute Reloadly top‑up
-                        topup_result = self.platform.make_topup(
+                        topup_result = _reloadly_topup_or_failed(
+                            self.platform,
                             operator_id=str(operator_id),
                             amount=str(round(usd_amount, 2)),
                             recipient_phone={"countryCode": country_code, "number": formatted_phone},
@@ -9593,6 +9630,39 @@ class ReloadlyWebApp:
                             tx_type, reference, paid_amount)
 
                 # -----------------------------------------------------------------
+                # 3a-3. OVERSEAS AIRTIME / DATA / PIN SERVED BY VTPASS (country owned by VTpass, paid in naira by Paystack).
+                #       Reloadly-owned countries never come here; they stay on the "topup" branch above.
+                # -----------------------------------------------------------------
+                elif tx_type == "intl_vtpass":
+                    import net365_vtpass_intl as _vi
+                    paid_amount = float(tx.get("amount", 0))
+                    ires = _vi.fulfil(reference, tx, payload)
+                    pending_i = bool(ires.get("pending"))
+                    result = {k: v for k, v in ires.items() if k != "pending"}
+                    try:
+                        db.create_reloadly_transaction(
+                            reference=reference, user_id=user_id, transaction_type="airtime", amount=paid_amount,
+                            status="processing" if pending_i else "completed",
+                            provider_transaction_id=result["transactionId"], result=ires.get("full_result") or {}, currency="NGN")
+                    except Exception as e:
+                        logger.critical(f"Overseas top-up DELIVERED for {reference} but reloadly_transactions insert failed: {e}")
+                    _i_to = _vi.country_info(payload.get("country_code")) or {}
+                    _i_what = payload.get("plan") or "International top-up"
+                    if user_id:
+                        try:
+                            db.create_notification(user_id, "International Top-up Successful ✅",
+                                                   f"{_i_what} sent to +{payload.get('phone')} ({_i_to.get('name', payload.get('country_code'))}).", "success")
+                        except Exception as e:
+                            logger.warning(f"International notification failed for {reference}: {e}")
+                        send_service_receipt(
+                            user_id, payload, f"✅ International Top-up Receipt — {reference}",
+                            f"Your international top-up was successful.\n\n{payload.get('biller_name') or ''}\nProduct: {_i_what}\n"
+                            f"Number: +{payload.get('phone')}\nAmount: ₦{float(payload.get('service_amount') or paid_amount):,.2f}\n"
+                            + (f"PIN / instructions: {result.get('token')}\n" if result.get("token") else "")
+                            + ("Status: processing, it will reflect shortly.\n" if pending_i else "") + f"Reference: {reference}",
+                            "airtime", reference, paid_amount)
+
+                # -----------------------------------------------------------------
                 # 3b. GIFT CARD (gateway-paid). Codes are fetched at delivery, never stored.
                 # -----------------------------------------------------------------
                 elif tx_type == "giftcard":
@@ -9719,7 +9789,7 @@ class ReloadlyWebApp:
                         threading.Thread(target=notify_merchant_paid, args=(reference,), daemon=True).start()
                     except Exception:
                         pass
-                if tx_type in ("topup", "utility", "giftcard", "merchant", "data", "tv", "education", "electricity", "insurance"):
+                if tx_type in ("topup", "utility", "giftcard", "merchant", "data", "tv", "education", "electricity", "insurance", "intl_vtpass"):
                     try:
                         from net365_whatsapp import notify_after_fulfillment
                         threading.Thread(target=notify_after_fulfillment, args=(reference,), daemon=True).start()
@@ -9751,7 +9821,7 @@ class ReloadlyWebApp:
                 if tx_type == "utility":
                     _utility_trip(str(e))
                 try:
-                    if tx_type in ("topup", "utility", "giftcard", "data", "tv", "education", "electricity", "insurance"):
+                    if tx_type in ("topup", "utility", "giftcard", "data", "tv", "education", "electricity", "insurance", "intl_vtpass"):
                         from net365_whatsapp import notify_delay
                         threading.Thread(target=notify_delay, args=(reference,), daemon=True).start()
                 except Exception:
@@ -12848,6 +12918,15 @@ class ReloadlyWebApp:
                 return jsonify({"success": False, "code": "LIMIT_EXCEEDED", "error": _limit_err}), 400
 
             if data.get("type") != "wallet_funding":
+                _vi_cc = str(data.get("country_code") or "NG").upper()
+                if _vi_cc != "NG":
+                    try:
+                        import net365_vtpass_intl as _vi_guard
+                        if _vi_guard.vtpass_owns(_vi_cc):      # one owner per country: a VTpass country is never sent to Reloadly
+                            return jsonify({"success": False, "code": "USE_VTPASS_INTL",
+                                            "error": "This country is served through our international bundles. Please use that option."}), 409
+                    except ImportError:
+                        pass
                 if not data.get("operator_id") or not data.get("phone"):
                     return (
                         jsonify(
@@ -13110,7 +13189,8 @@ class ReloadlyWebApp:
 
                         provider_called = True
                         result = (
-                            self.platform.make_topup(
+                            _reloadly_topup_or_failed(
+                                self.platform,
                                 operator_id=str(data.get("operator_id")),
                                 amount=str(round(usd_amount, 2)),
                                 recipient_phone={
@@ -13446,6 +13526,14 @@ class ReloadlyWebApp:
 
             if amount <= 0 or not phone or not operator_id:
                 return jsonify({"success": False, "error": "Phone, network and amount are required"}), 400
+            if country_code != "NG":
+                try:
+                    import net365_vtpass_intl as _vi_guard
+                    if _vi_guard.vtpass_owns(country_code):
+                        return jsonify({"success": False, "code": "USE_VTPASS_INTL",
+                                        "error": "This country is served through our international bundles. Please use that option."}), 409
+                except ImportError:
+                    pass
             if country_code == "NG":
                 try:
                     import net365_recovery as _rc
