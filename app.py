@@ -4896,12 +4896,6 @@ def _get_transaction_promo(
                     promo.get("body", "")
                     + f"\n\nYour referral code: {user['referral_code']}"
                 )
-        try:
-            from net365_adcredits import email_promo as _boost_email_promo
-            promo = _boost_email_promo(promo, {"user_id": user_id, "reference": reference,
-                                               "tx_type": str(tx_type or "").lower(), "amount": amount})
-        except Exception:
-            pass
         return promo
     except Exception as e:
         logger.error(f"Transaction email promo lookup failed (non-fatal): {e}")
@@ -5390,11 +5384,6 @@ def send_email_notification(
                     amount=context.get("amount"),
                     created_at=context.get("created_at"),
                 )
-                try:
-                    from net365_adengine import track_email_promo as _ae_track
-                    promo = _ae_track(promo, context)
-                except Exception:
-                    pass
                 promo_html = _build_email_promo_html(promo)
             except NameError:
                 logger.warning("Promo helpers not available, skipping promo block")
@@ -7063,47 +7052,6 @@ def _schedule_send_pay_link(schedule: Dict, user_id: int, platform) -> Dict:
     return {"success": True, "reminder_sent": True, "chat": bool(sent), "reference": res["reference"]}
 
 
-def _reloadly_topup_or_failed(platform, **kw):
-    """Run a Reloadly top-up. Reloadly refusing the order (HTTP 4xx, 502/503, or never reachable) comes back as a FAILED
-    result so the caller can move to the standby processor (VTpass). An UNKNOWN outcome (timeout after sending, a dropped
-    connection, 500/504) is re-raised: the order may have been accepted, so nobody orders a second time."""
-    try:
-        return platform.make_topup(**kw)
-    except Exception as e:
-        code = getattr(getattr(e, "response", None), "status_code", None)
-        txt = str(e)
-        never_sent = isinstance(e, requests.exceptions.ConnectTimeout) or any(
-            m in txt for m in ("Failed to establish a new connection", "Name or service not known", "Temporary failure in name resolution"))
-        if (code is not None and (code < 500 or code in (502, 503))) or never_sent:
-            logger.warning(f"Reloadly did not accept the top-up ({code or type(e).__name__}): {e}")
-            return {"status": "FAILED", "error": "Reloadly unavailable",
-                    "message": f"Reloadly could not take the order ({code or 'unreachable'})."}
-        raise
-
-
-def _wallet_airtime_via_router(reference, data, phone, service_amount, rt):
-    """Nigerian airtime paid from the Net365 Wallet, offered to the provider router (VTpass / Flutterwave ...) in naira.
-    Same rule as card-paid airtime: returns a Reloadly-shaped result when the router accepted the order, None when it is
-    CERTAIN nothing was accepted (the caller may then use Reloadly), and RAISES when the outcome is unknown, so the caller
-    keeps the wallet debit for review instead of refunding or ordering twice."""
-    import net365_providers as _np
-    if not _np.enabled():
-        return None
-    routed = _np.route_purchase(reference=reference, service="airtime",
-                                network=_np.network_for(data.get("operator_name"), phone),
-                                phone=phone, amount=service_amount)
-    if routed.get("status") in ("success", "pending"):
-        logger.info(f"Wallet airtime {reference} routed via {routed.get('provider')} ({routed.get('status')})")
-        rt.record("vtpass", "airtime", True, reference)
-        return {"status": "SUCCESSFUL" if routed["status"] == "success" else "PENDING",
-                "transactionId": routed.get("provider_ref") or f"{routed.get('provider')}-{reference}",
-                "provider": routed.get("provider"), "routed": True}
-    if not routed.get("fallback_ok"):
-        raise Exception("Provider router could not confirm the order; not retrying elsewhere: " + str(routed.get("message") or ""))
-    rt.record("vtpass", "airtime", False, reference)
-    return None
-
-
 def _execute_schedule_fulfillment(schedule: Dict, user_id: int, platform) -> Dict:
     import uuid
 
@@ -8051,14 +7999,8 @@ class ReloadlyWebApp:
         self.app = Flask(__name__)
         flask_secret = os.getenv("FLASK_SECRET_KEY", "").strip()
         if not flask_secret:
-            _is_production = (
-                os.getenv("ENVIRONMENT", "").lower() == "production"
-                or os.getenv("FLASK_ENV", "").lower() == "production"
-                or bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID"))
-                or bool(os.getenv("RENDER_SERVICE_ID"))
-            )
-            if _is_production:
-                raise ValueError("FLASK_SECRET_KEY is required in production deployments")
+            if os.getenv("ENVIRONMENT", "").lower() == "production":
+                raise ValueError("FLASK_SECRET_KEY is required in production")
             flask_secret = "net365-development-secret-change-me"
             logger.warning("FLASK_SECRET_KEY not set; using development-only fallback")
         self.app.secret_key = flask_secret
@@ -8122,84 +8064,9 @@ class ReloadlyWebApp:
         except Exception as _sup_err:
             logger.error(f"Support module failed to start: {_sup_err}")
         # Shield: scores hostile visitors, blocks them (app + Cloudflare edge), emails the team, reports to PostHog. Admin page: /admin/shield.
-        # Smart Share: location-aware recharge identity, one-time requests, gifting. Also serves /api/geo/context.
-        try:
-            from net365_smartshare import init_smartshare
-            init_smartshare(self.app, db, login_required, get_client_ip,
-                            referral_code_fn=lambda uid: db.get_referral_code_by_user_id(uid))
-        except ImportError:
-            logger.warning("net365_smartshare.py not found: Smart Share is not active")
-        except Exception as _ss_err:
-            logger.error(f"Smart Share failed to start: {_ss_err}")
-        # Account profile: types, tiers, workspaces, Affiliate programme.
-        try:
-            from net365_profile import init_profile
-            init_profile(self.app, db.get_db_connection, login_required, admin_required)
-        except ImportError:
-            logger.warning("net365_profile.py not found: account profiles are not active")
-        except Exception as _pf_err:
-            logger.error(f"Account profile module failed to start: {_pf_err}")
-        # Home adverts under Ask Net365 (managed in admin.html > Home Adverts).
-        try:
-            from net365_homeads import init_homeads
-            init_homeads(self.app, db.get_db_connection, admin_required, get_client_ip)
-        except ImportError:
-            logger.warning("net365_homeads.py not found: home adverts are not active (the chat animation still shows)")
-        except Exception as _ha_err:
-            logger.error(f"Home adverts failed to start: {_ha_err}")
-        # Membership: permanent number, Founders rank and badge (existing verified customers are numbered by sign-up order on first start).
-        try:
-            from net365_membership import init_membership
-            init_membership(self.app, db.get_db_connection, login_required, admin_required)
-        except ImportError:
-            logger.warning("net365_membership.py not found: membership numbers are not active")
-        except Exception as _mb_err:
-            logger.error(f"Membership failed to start: {_mb_err}")
-        # Ask Net365 question log, with admin replies (admin.html > Ask Net365).
-        try:
-            from net365_askqa import init_askqa
-            init_askqa(self.app, db.get_db_connection, admin_required, get_authenticated_user, get_client_ip,
-                       notify=lambda _uid, _t, _m: db.create_notification(_uid, _t, _m, "info"),
-                       send_email=lambda _to, _s, _m: send_email_notification(_to, _s, _m))
-        except ImportError:
-            logger.warning("net365_askqa.py not found: Ask Net365 questions are not logged")
-        except Exception as _aq_err:
-            logger.error(f"Ask Net365 log failed to start: {_aq_err}")
-        # Reliable admin email: every alert is stored, sent at once, and retried for 24h (see net365_alerts.py).
-        _mail_fn = send_email_notification
-        _admin_alert_fn = None
-        try:
-            from net365_alerts import init_alerts
-            _al = init_alerts(self.app, db.get_db_connection, send_email_notification, admin_required)
-            _mail_fn = _al["send_email"]
-            _admin_alert_fn = _al["send_admin_alert"]
-            self.app.config["NET365_SEND_ADMIN_ALERT"] = _admin_alert_fn
-            self.app.extensions["net365_send_email"] = _mail_fn
-        except Exception as _al_err:
-            logger.error(f"Admin alerts outbox NOT loaded (emails stay fire-and-forget): {_al_err}", exc_info=True)
-
-        # Account admin (soft-delete audit, admin edit, SMS-confirmed phone numbers).
-        try:
-            from net365_accounts import init_accounts
-
-            def _acct_send_sms(e164, text):
-                num = e164 if SMS_PROVIDER_NAME == "twilio" else e164.lstrip("+")
-                res = send_sms_via_provider([num], text, os.getenv("SMS_SENDER_ID", "Net365"))
-                return bool(res and res.get("sent"))
-
-            self._accounts = init_accounts(
-                self.app, db, login_required, admin_required, rate_limit,
-                send_email=send_email_notification, send_sms=_acct_send_sms,
-                sms_ready=lambda: bool(SMS_PROVIDER_CONFIGURED),
-                log_event=log_event, admin_identity=lambda: get_client_ip(),
-            )
-            logger.info("Account admin module loaded (edit user, deleted audit, phone verification routes are live)")
-        except Exception as _acct_err:
-            logger.error(f"Account admin module NOT loaded: {_acct_err}", exc_info=True)
-
         try:
             from net365_shield import init_shield
-            init_shield(self.app, db, admin_required, get_client_ip, _mail_fn)
+            init_shield(self.app, db, admin_required, get_client_ip, send_email_notification)
         except ImportError:
             logger.warning("net365_shield.py not found: the shield is not active")
         except Exception as _shield_err:
@@ -8285,23 +8152,6 @@ class ReloadlyWebApp:
                 except Exception as _rt_e:
                     logger.warning(f"Provider routing policy not loaded: {_rt_e}")
                 try:
-                    from net365_vtpass_intl import init_vtpass_intl
-
-                    def _vi_chat_err(_uid, _amt):
-                        try:
-                            from net365_whatsapp import chat_purchase_error
-                            return chat_purchase_error(_uid, _amt, "NGN")
-                        except ImportError:
-                            return None
-
-                    init_vtpass_intl(self.app, db, admin_required, login_required, email_verified_required,
-                                     platform_fn=lambda: self.platform, fee_fn=lambda _a: server_fee_for(_a, "NGN"),
-                                     encrypt_pii=encrypt_pii, return_url_fn=_safe_payment_return_url,
-                                     limit_error_fn=lambda _uid, _amt: _purchase_limit_error(_uid, _amt, "NGN"),
-                                     chat_error_fn=_vi_chat_err)
-                except Exception as _vi_e:
-                    logger.warning(f"VTpass international airtime not loaded: {_vi_e}")
-                try:
                     from net365_identity import init_identity
 
                     _WA_OTP = os.getenv("IDENTITY_WHATSAPP_OTP", "").lower() == "true" and bool(os.getenv("WHATSAPP_BOT_SECRET"))
@@ -8371,18 +8221,6 @@ class ReloadlyWebApp:
             init_rewards(self.app, db.get_db_connection, admin_required)
         except Exception as e:
             logger.warning(f"Rewards module not loaded: {e}")
-        # Ad engine (phase 1): ad view/click tracking for every surface. Never affects payments.
-        try:
-            from net365_adengine import init_adengine
-            init_adengine(self.app, db, admin_required, FRONTEND_URL)
-        except Exception as e:
-            logger.warning(f"Ad engine not loaded: {e}")
-        # Ad credits (phase 2): ad views earned by transacting, spent on Boost ads. OFF until admin enables it.
-        try:
-            from net365_adcredits import init_adcredits
-            init_adcredits(self.app, db, admin_required, login_required)
-        except Exception as e:
-            logger.warning(f"Ad credits not loaded: {e}")
         self.setup_routes()
         self._start_pending_sweeper()
         self.app.before_request(_wallet_policy_guard)
@@ -8453,21 +8291,8 @@ class ReloadlyWebApp:
         # NET365 SENTINEL: threat detection + automated defence. Starts in OBSERVATION mode (detects and logs,
         # never auto-blocks) until you switch it in the Security tab. Fails open: an error here never blocks traffic.
         try:
-            import inspect as _inspect
             from net365_sentinel import init_sentinel
-            _sk = {"admin_secret": lambda: ADMIN_SECRET}
-            _sparams = _inspect.signature(init_sentinel).parameters
-            _hooked = next((n for n in ("send_email", "email_sender", "send_mail", "mailer", "notify_email") if n in _sparams), None)
-            if _hooked:
-                _sk[_hooked] = _mail_fn
-                logger.info(f"Sentinel mail hook: connected through '{_hooked}' (queued, retried for 24h)")
-            else:
-                logger.warning(
-                    "Sentinel mail hook: init_sentinel accepts no mail function (parameters: %s). "
-                    "Block alerts depend on Sentinel's own code. Test delivery with POST /api/admin/alerts/test.",
-                    ", ".join(_sparams),
-                )
-            init_sentinel(self.app, db, admin_required, get_client_ip, **_sk)
+            init_sentinel(self.app, db, admin_required, get_client_ip, admin_secret=lambda: ADMIN_SECRET)
         except Exception as e:
             logger.error(f"SENTINEL NOT loaded (site is running without it): {e}", exc_info=True)
 
@@ -9170,8 +8995,7 @@ class ReloadlyWebApp:
                             raise Exception(f"Unable to convert {service_amount} {currency} to USD")
 
                         # Execute Reloadly top‑up
-                        topup_result = _reloadly_topup_or_failed(
-                            self.platform,
+                        topup_result = self.platform.make_topup(
                             operator_id=str(operator_id),
                             amount=str(round(usd_amount, 2)),
                             recipient_phone={"countryCode": country_code, "number": formatted_phone},
@@ -9630,39 +9454,6 @@ class ReloadlyWebApp:
                             tx_type, reference, paid_amount)
 
                 # -----------------------------------------------------------------
-                # 3a-3. OVERSEAS AIRTIME / DATA / PIN SERVED BY VTPASS (country owned by VTpass, paid in naira by Paystack).
-                #       Reloadly-owned countries never come here; they stay on the "topup" branch above.
-                # -----------------------------------------------------------------
-                elif tx_type == "intl_vtpass":
-                    import net365_vtpass_intl as _vi
-                    paid_amount = float(tx.get("amount", 0))
-                    ires = _vi.fulfil(reference, tx, payload)
-                    pending_i = bool(ires.get("pending"))
-                    result = {k: v for k, v in ires.items() if k != "pending"}
-                    try:
-                        db.create_reloadly_transaction(
-                            reference=reference, user_id=user_id, transaction_type="airtime", amount=paid_amount,
-                            status="processing" if pending_i else "completed",
-                            provider_transaction_id=result["transactionId"], result=ires.get("full_result") or {}, currency="NGN")
-                    except Exception as e:
-                        logger.critical(f"Overseas top-up DELIVERED for {reference} but reloadly_transactions insert failed: {e}")
-                    _i_to = _vi.country_info(payload.get("country_code")) or {}
-                    _i_what = payload.get("plan") or "International top-up"
-                    if user_id:
-                        try:
-                            db.create_notification(user_id, "International Top-up Successful ✅",
-                                                   f"{_i_what} sent to +{payload.get('phone')} ({_i_to.get('name', payload.get('country_code'))}).", "success")
-                        except Exception as e:
-                            logger.warning(f"International notification failed for {reference}: {e}")
-                        send_service_receipt(
-                            user_id, payload, f"✅ International Top-up Receipt — {reference}",
-                            f"Your international top-up was successful.\n\n{payload.get('biller_name') or ''}\nProduct: {_i_what}\n"
-                            f"Number: +{payload.get('phone')}\nAmount: ₦{float(payload.get('service_amount') or paid_amount):,.2f}\n"
-                            + (f"PIN / instructions: {result.get('token')}\n" if result.get("token") else "")
-                            + ("Status: processing, it will reflect shortly.\n" if pending_i else "") + f"Reference: {reference}",
-                            "airtime", reference, paid_amount)
-
-                # -----------------------------------------------------------------
                 # 3b. GIFT CARD (gateway-paid). Codes are fetched at delivery, never stored.
                 # -----------------------------------------------------------------
                 elif tx_type == "giftcard":
@@ -9789,7 +9580,7 @@ class ReloadlyWebApp:
                         threading.Thread(target=notify_merchant_paid, args=(reference,), daemon=True).start()
                     except Exception:
                         pass
-                if tx_type in ("topup", "utility", "giftcard", "merchant", "data", "tv", "education", "electricity", "insurance", "intl_vtpass"):
+                if tx_type in ("topup", "utility", "giftcard", "merchant", "data", "tv", "education", "electricity", "insurance"):
                     try:
                         from net365_whatsapp import notify_after_fulfillment
                         threading.Thread(target=notify_after_fulfillment, args=(reference,), daemon=True).start()
@@ -9821,7 +9612,7 @@ class ReloadlyWebApp:
                 if tx_type == "utility":
                     _utility_trip(str(e))
                 try:
-                    if tx_type in ("topup", "utility", "giftcard", "data", "tv", "education", "electricity", "insurance", "intl_vtpass"):
+                    if tx_type in ("topup", "utility", "giftcard", "data", "tv", "education", "electricity", "insurance"):
                         from net365_whatsapp import notify_delay
                         threading.Thread(target=notify_delay, args=(reference,), daemon=True).start()
                 except Exception:
@@ -10728,18 +10519,9 @@ class ReloadlyWebApp:
 
         @self.app.route("/api/chat/messages", methods=["GET"])
         def chat_messages():
-            # A conversation ID is not an authorization credential. Require the
-            # HttpOnly visitor cookie or the authenticated account that owns it.
-            cookie_visitor = (request.cookies.get("net365_chat_visitor") or "").strip()
-            supplied_visitor = (request.args.get("visitor_id") or "").strip()
-            if supplied_visitor and cookie_visitor and not secrets.compare_digest(supplied_visitor, cookie_visitor):
-                return jsonify({"success": False, "error": "Chat session mismatch"}), 403
-            visitor_id = cookie_visitor
+            visitor_id = (request.args.get("visitor_id") or request.cookies.get("net365_chat_visitor") or "").strip()
             conversation_id = request.args.get("conversation_id", type=int)
-            user = get_authenticated_user()
-            if not visitor_id and not user:
-                return jsonify({"success": False, "error": "Chat session required"}), 401
-            if not conversation_id and not visitor_id:
+            if not visitor_id and not conversation_id:
                 return jsonify({"success": False, "error": "Chat session required"}), 400
             conn = db.get_db_connection()
             if conversation_id:
@@ -10750,25 +10532,13 @@ class ReloadlyWebApp:
                 conn.close()
                 return jsonify({"success": True, "conversation": None, "messages": []})
             cid = conv["id"] if isinstance(conv, sqlite3.Row) else conv[0]
-            owner_visitor = conv["visitor_id"] if isinstance(conv, sqlite3.Row) else conv[1]
-            owner_user = conv["user_id"] if isinstance(conv, sqlite3.Row) and "user_id" in conv.keys() else None
-            owns = bool(visitor_id and secrets.compare_digest(str(owner_visitor or ""), visitor_id))
-            owns = owns or bool(user and owner_user and str(owner_user) == str(user.get("id")))
-            if not owns:
-                conn.close()
-                return jsonify({"success": False, "error": "Chat session mismatch"}), 403
-            rows = conn.execute("SELECT id,sender_type,sender_id,message,created_at,read_at FROM chat_messages WHERE conversation_id=? ORDER BY id ASC LIMIT 500", (cid,)).fetchall()
-            messages = [
-                {k: r[k] for k in ("id", "sender_type", "message", "created_at", "read_at")}
-                for r in rows
-            ]
+            rows = conn.execute("SELECT id,sender_type,sender_id,message,created_at,read_at FROM chat_messages WHERE conversation_id=? ORDER BY id ASC", (cid,)).fetchall()
+            messages = [dict(r) for r in rows]
             # Customer reading admin messages marks them read.
             conn.execute("UPDATE chat_messages SET read_at=CURRENT_TIMESTAMP WHERE conversation_id=? AND sender_type='admin' AND read_at IS NULL", (cid,))
             conn.commit()
             conn.close()
-            # Do not return visitor IDs or customer contact details to the browser.
-            safe_conversation = {"id": cid, "status": conv["status"] if isinstance(conv, sqlite3.Row) else None}
-            return jsonify({"success": True, "conversation": safe_conversation, "messages": messages})
+            return jsonify({"success": True, "conversation": dict(conv), "messages": messages})
 
         @self.app.route("/api/chat/messages", methods=["POST"])
         @rate_limit(max_requests=30, window_seconds=60)
@@ -10780,11 +10550,7 @@ class ReloadlyWebApp:
             if len(text) > 4000:
                 return jsonify({"success": False, "error": "Message is too long"}), 400
 
-            cookie_visitor = (request.cookies.get("net365_chat_visitor") or "").strip()
-            supplied_visitor = str(data.get("visitor_id") or "").strip()
-            if supplied_visitor and cookie_visitor and not secrets.compare_digest(supplied_visitor, cookie_visitor):
-                return jsonify({"success": False, "error": "Chat session mismatch"}), 403
-            visitor_id = cookie_visitor
+            visitor_id = (data.get("visitor_id") or request.cookies.get("net365_chat_visitor") or "").strip()
             conversation_id = data.get("conversation_id")
             if not visitor_id and not conversation_id:
                 return jsonify({"success": False, "error": "Start a chat session first"}), 400
@@ -10799,14 +10565,11 @@ class ReloadlyWebApp:
                 return jsonify({"success": False, "error": "Chat session not found"}), 404
             cid = conv["id"] if isinstance(conv, sqlite3.Row) else conv[0]
             conv_visitor = conv["visitor_id"] if isinstance(conv, sqlite3.Row) else conv[1]
-            user = get_authenticated_user()
-            conv_user = conv["user_id"] if isinstance(conv, sqlite3.Row) and "user_id" in conv.keys() else None
-            owns_visitor = bool(visitor_id and secrets.compare_digest(str(conv_visitor or ""), visitor_id))
-            owns_user = bool(user and conv_user and str(conv_user) == str(user.get("id")))
-            if not (owns_visitor or owns_user):
+            if visitor_id and conv_visitor != visitor_id:
                 conn.close()
                 return jsonify({"success": False, "error": "Chat session mismatch"}), 403
 
+            user = get_authenticated_user()
             cur = conn.execute("INSERT INTO chat_messages(conversation_id,sender_type,sender_id,message) VALUES (?,?,?,?)",
                                (cid, "customer", str(user.get("id")) if user else visitor_id, text))
             conn.execute("UPDATE chat_conversations SET status='open', updated_at=CURRENT_TIMESTAMP, last_message_at=CURRENT_TIMESTAMP WHERE id=?", (cid,))
@@ -10886,12 +10649,6 @@ class ReloadlyWebApp:
         @self.app.after_request
         def add_security_headers(response):
             response.headers["X-Content-Type-Options"] = "nosniff"
-            response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-            response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=(self)"
-            response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
-            if request.is_secure:
-                # Avoid includeSubDomains until every Net365 subdomain is confirmed HTTPS-only.
-                response.headers["Strict-Transport-Security"] = "max-age=15552000"
             if request.path == "/app":
                 # Telegram Mini App page: Telegram Web shows it in a frame, so allow Telegram (and only Telegram) to frame it
                 response.headers["Content-Security-Policy"] = "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org"
@@ -10907,7 +10664,6 @@ class ReloadlyWebApp:
             return response
 
         @self.app.route("/")
-        @self.app.route("/index.html")
         def index():
             device_type = parse_user_agent(request.headers.get("User-Agent", ""))["device_type"]
             # ?full=1 lets phone users open the full desktop platform on purpose
@@ -10979,9 +10735,7 @@ class ReloadlyWebApp:
                     "Analytics page not found. Please create analytics.html in the root directory.",
                     404,
                 )
-        @self.app.route("/bots")
-        def bots_page():
-            return send_from_directory(os.path.dirname(os.path.abspath(__file__)), "bots.html")
+
         # ============ PWA (installable app) ============
         _pwa_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pwa")
 
@@ -11969,14 +11723,6 @@ class ReloadlyWebApp:
                                     device_type=device_type,
                                     country=get_request_country(request),
                                 )
-                                try:
-                                    from net365_adengine import record_event as _ae_rec
-                                    _ae_rec("success", "success", _ad["id"], "impression", reference=reference,
-                                            user_id=tx.get("user_id"), tx_type=tx.get("tx_type"),
-                                            amount=tx.get("amount"), country=get_request_country(request),
-                                            device=device_type)
-                                except Exception:
-                                    pass
                             except Exception as e:
                                 logger.warning(f"Impression tracking failed for {_slot_name}: {e}")
                     if ad:
@@ -11989,17 +11735,6 @@ class ReloadlyWebApp:
                         )
                 except Exception as e:
                     logger.warning(f"Success-page ad lookup failed: {e}")
-
-                # Paid campaigns (if admin allows) and Boost ads fill the slots that are still free.
-                try:
-                    if mode != "play":
-                        from net365_adcredits import fill_success_slots, viewer_city
-                        _uid = tx.get("user_id")
-                        ads = fill_success_slots(ads, {
-                            "reference": reference, "user_id": _uid, "tx_type": tx.get("tx_type"),
-                            "amount": tx.get("amount"), "city": viewer_city(_uid, get_client_ip())})
-                except Exception as e:
-                    logger.warning(f"Boost/paid slot fill failed: {e}")
 
                 # ---- rewards (server-side only; never from the browser) --------------------------
                 rewards = None
@@ -12051,14 +11786,6 @@ class ReloadlyWebApp:
                     device_type=parse_user_agent(request.headers.get("User-Agent", ""))["device_type"],
                     country=get_request_country(request),
                 )
-                try:
-                    if (data.get("event") or "click") == "click":
-                        from net365_adengine import record_event as _ae_rec
-                        _ae_rec("success", "success", ad_id, "click", reference=data.get("reference"),
-                                user_id=session.get("user_id"), country=get_request_country(request),
-                                device=parse_user_agent(request.headers.get("User-Agent", ""))["device_type"])
-                except Exception:
-                    pass
                 return jsonify({"success": True})
             except Exception as e:
                 return jsonify({"success": False, "error": str(e)}), 500
@@ -12918,15 +12645,6 @@ class ReloadlyWebApp:
                 return jsonify({"success": False, "code": "LIMIT_EXCEEDED", "error": _limit_err}), 400
 
             if data.get("type") != "wallet_funding":
-                _vi_cc = str(data.get("country_code") or "NG").upper()
-                if _vi_cc != "NG":
-                    try:
-                        import net365_vtpass_intl as _vi_guard
-                        if _vi_guard.vtpass_owns(_vi_cc):      # one owner per country: a VTpass country is never sent to Reloadly
-                            return jsonify({"success": False, "code": "USE_VTPASS_INTL",
-                                            "error": "This country is served through our international bundles. Please use that option."}), 409
-                    except ImportError:
-                        pass
                 if not data.get("operator_id") or not data.get("phone"):
                     return (
                         jsonify(
@@ -13165,54 +12883,29 @@ class ReloadlyWebApp:
                     )
                     if not formatted_phone:
                         raise ValueError("Invalid phone number format")
-                    # Nigerian naira recharge follows the admin's routing policy (Admin > Provider Routing > Airtime), exactly like
-                    # card-paid recharge: VTpass first with Reloadly on standby, or the reverse. The second processor is only used when the
-                    # first one DEFINITELY did not accept the order.
-                    import net365_routing as _rt
-                    _ng_naira = country_code == "NG" and currency == "NGN"
-                    _reloadly_first = _ng_naira and _rt.order("airtime")[0] == "reloadly"
-                    result = None
-                    if _ng_naira and not _reloadly_first:
-                        try:
-                            result = _wallet_airtime_via_router(reference, data, phone, service_amount, _rt)
-                        except Exception:
-                            provider_called = True      # outcome unknown: keep the debit for review, never refund or retry elsewhere
-                            raise
-                        if result is not None:
-                            provider_called = True
-                    if result is None:
-                        usd_amount = self.platform.convert_to_usd(service_amount, currency)
-                        if usd_amount <= 0:
-                            raise ValueError(
-                                "Unable to convert recharge amount to provider currency"
-                            )
-
-                        provider_called = True
-                        result = (
-                            _reloadly_topup_or_failed(
-                                self.platform,
-                                operator_id=str(data.get("operator_id")),
-                                amount=str(round(usd_amount, 2)),
-                                recipient_phone={
-                                    "countryCode": country_code,
-                                    "number": formatted_phone,
-                                },
-                                use_local_amount=False,
-                                custom_identifier=f"wallet-topup-{reference}",
-                                recipient_email=data.get("email")
-                                or g.current_user.get("email"),
-                                is_async=True,
-                            )
-                            or {}
+                    usd_amount = self.platform.convert_to_usd(service_amount, currency)
+                    if usd_amount <= 0:
+                        raise ValueError(
+                            "Unable to convert recharge amount to provider currency"
                         )
-                        if _ng_naira:
-                            _rl_ok = str(result.get("status") or "").upper() != "FAILED" and bool(result.get("transactionId") or result.get("id"))
-                            _rt.record("reloadly", "airtime", _rl_ok, reference)
-                            if not _rl_ok and _reloadly_first:
-                                # Reloadly definitely did not take it: try the standby processor before refunding.
-                                _standby = _wallet_airtime_via_router(reference, data, phone, service_amount, _rt)
-                                if _standby is not None:
-                                    result = _standby
+
+                    provider_called = True
+                    result = (
+                        self.platform.make_topup(
+                            operator_id=str(data.get("operator_id")),
+                            amount=str(round(usd_amount, 2)),
+                            recipient_phone={
+                                "countryCode": country_code,
+                                "number": formatted_phone,
+                            },
+                            use_local_amount=False,
+                            custom_identifier=f"wallet-topup-{reference}",
+                            recipient_email=data.get("email")
+                            or g.current_user.get("email"),
+                            is_async=True,
+                        )
+                        or {}
+                    )
 
                     provider_status = str(result.get("status") or "").upper()
                     transaction_id = result.get("transactionId") or result.get("id")
@@ -13526,14 +13219,6 @@ class ReloadlyWebApp:
 
             if amount <= 0 or not phone or not operator_id:
                 return jsonify({"success": False, "error": "Phone, network and amount are required"}), 400
-            if country_code != "NG":
-                try:
-                    import net365_vtpass_intl as _vi_guard
-                    if _vi_guard.vtpass_owns(country_code):
-                        return jsonify({"success": False, "code": "USE_VTPASS_INTL",
-                                        "error": "This country is served through our international bundles. Please use that option."}), 409
-                except ImportError:
-                    pass
             if country_code == "NG":
                 try:
                     import net365_recovery as _rc
@@ -16085,10 +15770,9 @@ class ReloadlyWebApp:
 
                 _go = "/"
                 try:
-                    from net365_identity import record_identity, profile_status, mode as _id_mode
+                    from net365_identity import record_identity, profile_status
                     record_identity(user["id"], "google", info.get("sub"))
-                    # Verification is optional by default: never redirect unless the business chose to enforce it.
-                    if _id_mode() == "enforce" and not profile_status(user["id"])["complete"]:
+                    if not profile_status(user["id"])["complete"]:
                         _go = "/complete-profile"
                 except Exception as _ie:
                     logger.warning(f"identity check after Google sign-in failed: {_ie}")
@@ -16307,7 +15991,6 @@ class ReloadlyWebApp:
             return jsonify(self.platform.get_operator_by_id(operator_id))
 
         @self.app.route("/api/balance", methods=["GET"])
-        @admin_required
         def get_balance():
             try:
                 return jsonify(self.platform.get_balance())
@@ -16316,7 +15999,7 @@ class ReloadlyWebApp:
                     jsonify(
                         {
                             "success": False,
-                            "error": "Unable to retrieve platform balance",
+                            "error": str(e),
                             "balance": 0,
                             "currency": "USD",
                         }
@@ -16416,7 +16099,6 @@ class ReloadlyWebApp:
             )
 
         @self.app.route("/api/health/dependencies", methods=["GET"])
-        @admin_required
         def health_dependencies():
             status = {
                 "database": db.check_database(),
@@ -18653,92 +18335,6 @@ class ReloadlyWebApp:
 
 
 
-        # ---- moved here from dead code inside get_authenticated_user(): these routes were never registered ----
-        # ============ ADMIN: ALL RECEIPT ADS ============
-        @self.app.route("/api/admin/receipt-ads/all", methods=["GET"])
-        @admin_required
-        def admin_list_all_receipt_ads():
-            """Get all receipt ads for admin."""
-            limit = min(request.args.get("limit", 50, type=int), 100)
-            offset = max(request.args.get("offset", 0, type=int), 0)
-            campaigns = db.get_all_sponsored_campaigns(limit, offset)
-            return jsonify(
-                {"success": True, "campaigns": campaigns, "count": len(campaigns)}
-            )
-
-        # ============ PROMOTIONS MANAGEMENT API ============
-        @self.app.route("/api/admin/promotions", methods=["GET"])
-        @admin_required
-        def admin_get_promotions():
-            """Get all promotions with pagination."""
-            limit = min(request.args.get("limit", 50, type=int), 100)
-            offset = max(request.args.get("offset", 0, type=int), 0)
-            promotions = db.get_all_promotions(limit, offset)
-            return jsonify({"success": True, "promotions": promotions})
-
-        @self.app.route("/api/admin/promotions", methods=["POST"])
-        @admin_required
-        def admin_create_promotion():
-            """Create a new promotion."""
-            data = request.json or {}
-
-            required = ["name", "title", "body"]
-            missing = [f for f in required if not data.get(f)]
-            if missing:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "error": f"Missing required fields: {', '.join(missing)}",
-                        }
-                    ),
-                    400,
-                )
-
-            promo_id = db.create_promotion(
-                name=data.get("name"),
-                title=data.get("title"),
-                body=data.get("body"),
-                cta_text=data.get("cta_text"),
-                cta_url=data.get("cta_url"),
-                promo_type=data.get("promo_type", "standard"),
-                category=data.get("category", "general"),
-                icon=data.get("icon", "🎁"),
-                brand_color=data.get("brand_color", "#4f46e5"),
-                background_color=data.get("background_color", "#f5f3ff"),
-                text_color=data.get("text_color", "#1e293b"),
-                active=data.get("active", True),
-                priority=data.get("priority", 0),
-                start_date=data.get("start_date"),
-                end_date=data.get("end_date"),
-                target_tx_type=data.get("target_tx_type"),
-                target_min_amount=data.get("target_min_amount"),
-                target_max_amount=data.get("target_max_amount"),
-                target_customer_type=data.get("target_customer_type"),
-                target_hour_start=data.get("target_hour_start"),
-                target_hour_end=data.get("target_hour_end"),
-                target_days=data.get("target_days"),
-                max_impressions=data.get("max_impressions"),
-                max_clicks=data.get("max_clicks"),
-                metadata=data.get("metadata"),
-                created_by=(
-                    g.current_user.get("id") if hasattr(g, "current_user") else None
-                ),
-            )
-
-            if promo_id:
-                return jsonify(
-                    {
-                        "success": True,
-                        "promotion_id": promo_id,
-                        "message": "Promotion created successfully",
-                    }
-                )
-            return (
-                jsonify({"success": False, "error": "Failed to create promotion"}),
-                500,
-            )
-
         @self.app.route("/api/admin/promotions/<int:promo_id>", methods=["GET"])
         @admin_required
         def admin_get_promotion(promo_id):
@@ -19074,14 +18670,12 @@ class ReloadlyWebApp:
         @admin_required
         def admin_search_users():
             query = (request.args.get("q") or "").strip()
-            include_deleted = request.args.get("include_deleted") in ("1", "true", "yes")
-            _not_deleted = "" if include_deleted else " AND COALESCE(account_status,'active') != 'deleted'"
             conn = db.get_db_connection()
             c = conn.cursor()
 
             if not query:
-                # Return total count and empty list when no query (deleted accounts are audited separately)
-                total = c.execute("SELECT COUNT(*) FROM users WHERE 1=1" + _not_deleted).fetchone()[0] or 0
+                # Return total count and empty list when no query
+                total = c.execute("SELECT COUNT(*) FROM users").fetchone()[0] or 0
                 conn.close()
                 return jsonify({"success": True, "users": [], "total": total})
 
@@ -19089,7 +18683,7 @@ class ReloadlyWebApp:
                 """
                 SELECT id, email, phone, full_name, account_status, status_reason, status_changed_at,
                        email_verified, phone_verified, created_at
-                FROM users WHERE (email LIKE ? OR phone LIKE ? OR full_name LIKE ?)""" + _not_deleted + """
+                FROM users WHERE email LIKE ? OR phone LIKE ? OR full_name LIKE ?
                 LIMIT 25
                 """,
                 (f"%{query}%", f"%{query}%", f"%{query}%"),
@@ -19537,16 +19131,7 @@ class ReloadlyWebApp:
             email = (data.get("email") or "").strip().lower()
             password = data.get("password")
             full_name = data.get("full_name")
-            phone = (data.get("phone") or "").strip() or None
-            if phone:
-                try:
-                    from net365_accounts import normalize_phone as _np_norm
-                    _e164 = _np_norm(phone)
-                except Exception:
-                    _e164 = None
-                if not _e164:
-                    return jsonify({"success": False, "error": "That phone number does not look valid. Use 0803... or +234803..."}), 400
-                phone = _e164
+            phone = data.get("phone")
             if not email or not password:
                 return (
                     jsonify({"success": False, "error": "Email and password required"}),
@@ -19591,57 +19176,22 @@ class ReloadlyWebApp:
             log_event(
                 user_id=user_id,
                 event_type="account_created_by_admin",
-                details={"admin": _admin_identity(), "phone_added": bool(phone)},
+                details={"admin": _admin_identity()},
                 status="success",
             )
-            # A phone typed in by an admin is stored UNverified: it only becomes usable for transactions after the
-            # customer enters the SMS code. The admin can send that code now (or later from the user's Edit dialog).
-            try:
-                if phone:
-                    _c2 = db.get_db_connection()
-                    _c2.execute("UPDATE users SET phone_verified=0 WHERE id=?", (user_id,))
-                    _c2.commit()
-                    _c2.close()
-            except Exception as _pe:
-                logger.warning(f"Could not flag phone as unverified for {user_id}: {_pe}")
-            _sent = {}
-            try:
-                _acct = getattr(self, "_accounts", None)
-                _u = db.get_user(user_id) or {}
-                if _acct and data.get("send_email_verification"):
-                    _sent["email"] = _acct["send_email_code"](_u)
-                if _acct and data.get("send_phone_verification") and phone:
-                    _sent["phone"] = _acct["send_phone_code"](_u, _admin_identity())
-            except Exception as _se:
-                logger.warning(f"Verification sends after admin create failed: {_se}")
             return jsonify(
-                {"success": True, "user": sanitize_user(db.get_user(user_id)), "verification_sent": _sent}
+                {"success": True, "user": sanitize_user(db.get_user(user_id))}
             )
 
         @self.app.route("/api/admin/users/<int:target_user_id>", methods=["DELETE"])
         @admin_required
         def admin_delete_user(target_user_id):
-            data = request.get_json(silent=True) or {}
-            try:
-                from net365_accounts import clean_remarks as _cr, record_user_deletion as _rud
-            except Exception as _imp:
-                logger.error(f"Deletion audit module missing: {_imp}")
-                return jsonify({"success": False, "error": "Deletion audit is unavailable, so nothing was deleted."}), 500
-            reason = _cr(data.get("remarks") or data.get("reason"))
-            if not reason:
-                return jsonify({"success": False, "error": "Remarks are required to delete an account (at least 5 characters)."}), 400
+            data = request.json or {}
+            reason = (data.get("reason") or "Deleted by admin").strip()
             user = db.get_user(target_user_id)
             if not user:
                 return jsonify({"success": False, "error": "User not found"}), 404
-            if (user.get("account_status") or "active") == "deleted":
-                return jsonify({"success": False, "error": "This account is already deleted."}), 409
 
-            # Audit first: if this fails, nothing is deleted.
-            try:
-                _rud(db, user, reason, _admin_identity())
-            except Exception as _ae:
-                logger.error(f"Could not write deletion audit for {target_user_id}: {_ae}", exc_info=True)
-                return jsonify({"success": False, "error": "Could not record the audit entry, so nothing was deleted."}), 500
             db.set_account_status(target_user_id, "deleted", reason)
             killed = db.kill_user_sessions(target_user_id)
             log_event(
@@ -19815,7 +19365,6 @@ class ReloadlyWebApp:
             return jsonify({"success": result})
 
         @self.app.route("/api/utilities/transactions", methods=["GET"])
-        @admin_required
         @safe_api_response
         def get_utility_transactions():
             try:
@@ -19838,7 +19387,6 @@ class ReloadlyWebApp:
             return jsonify([])
 
         @self.app.route("/api/utilities/transactions/<transaction_id>", methods=["GET"])
-        @admin_required
         @safe_api_response
         def get_utility_transaction(transaction_id):
             try:
