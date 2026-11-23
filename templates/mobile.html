@@ -4383,7 +4383,7 @@ body.pg.pg-light #n365h .i,body.pg.pg-light #n365h select,body.pg.pg-light #n365
 (function () {
   if (window.Net365Geo) return;
   var KEY = 'net365_geo_country';
-  var NAMES = { NG: 'Nigeria', GH: 'Ghana', KE: 'Kenya', ZA: 'South Africa', UG: 'Uganda', TZ: 'Tanzania', US: 'United States', CA: 'Canada', GB: 'United Kingdom', FR: 'France', DE: 'Germany', IT: 'Italy', ES: 'Spain', NL: 'Netherlands', BE: 'Belgium', AT: 'Austria', IE: 'Ireland', PT: 'Portugal', FI: 'Finland', GR: 'Greece', CH: 'Switzerland', SE: 'Sweden', NO: 'Norway', DK: 'Denmark', PL: 'Poland', AU: 'Australia', NZ: 'New Zealand', JP: 'Japan', CN: 'China', HK: 'Hong Kong', SG: 'Singapore', MY: 'Malaysia', TH: 'Thailand', ID: 'Indonesia', PH: 'Philippines', IN: 'India', KR: 'South Korea', AE: 'United Arab Emirates', SA: 'Saudi Arabia', QA: 'Qatar', TR: 'Turkey', IL: 'Israel', EG: 'Egypt', BR: 'Brazil', MX: 'Mexico' };
+  var NAMES = { NG: 'Nigeria', GH: 'Ghana', KE: 'Kenya', ZA: 'South Africa', UG: 'Uganda', TZ: 'Tanzania', US: 'United States', CA: 'Canada', GB: 'United Kingdom', FR: 'France', DE: 'Germany', IT: 'Italy', ES: 'Spain', NL: 'Netherlands', BE: 'Belgium', AT: 'Austria', IE: 'Ireland', PT: 'Portugal', FI: 'Finland', GR: 'Greece', CH: 'Switzerland', SE: 'Sweden', NO: 'Norway', DK: 'Denmark', PL: 'Poland', AU: 'Australia', NZ: 'New Zealand', JP: 'Japan', CN: 'China', HK: 'Hong Kong', SG: 'Singapore', MY: 'Malaysia', TH: 'Thailand', ID: 'Indonesia', PH: 'Philippines', IN: 'India', KR: 'South Korea', AE: 'United Arab Emirates', SA: 'Saudi Arabia', QA: 'Qatar', TR: 'Turkey', IL: 'Israel', EG: 'Egypt', BR: 'Brazil', MX: 'Mexico', CM: 'Cameroon', CI: "Cote d'Ivoire", SN: 'Senegal', RW: 'Rwanda', ET: 'Ethiopia', ZM: 'Zambia', ZW: 'Zimbabwe', BW: 'Botswana', MW: 'Malawi', SL: 'Sierra Leone', LR: 'Liberia', GM: 'Gambia', MA: 'Morocco', PK: 'Pakistan', BD: 'Bangladesh', LK: 'Sri Lanka', NP: 'Nepal', VN: 'Vietnam', JM: 'Jamaica', TT: 'Trinidad and Tobago', LU: 'Luxembourg', CZ: 'Czechia', RO: 'Romania', KW: 'Kuwait', OM: 'Oman', BH: 'Bahrain', CO: 'Colombia', CL: 'Chile', AR: 'Argentina', PE: 'Peru' };
   var TZ = { 'Africa/Lagos': 'NG', 'Africa/Accra': 'GH', 'Africa/Nairobi': 'KE', 'Africa/Johannesburg': 'ZA', 'Africa/Kampala': 'UG', 'Africa/Dar_es_Salaam': 'TZ', 'Africa/Cairo': 'EG', 'Europe/London': 'GB', 'Europe/Paris': 'FR', 'Europe/Berlin': 'DE', 'Europe/Rome': 'IT', 'Europe/Madrid': 'ES', 'Europe/Amsterdam': 'NL', 'Europe/Brussels': 'BE', 'Europe/Vienna': 'AT', 'Europe/Dublin': 'IE', 'Europe/Lisbon': 'PT', 'Europe/Helsinki': 'FI', 'Europe/Athens': 'GR', 'Europe/Zurich': 'CH', 'Europe/Stockholm': 'SE', 'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK', 'Europe/Warsaw': 'PL', 'Europe/Istanbul': 'TR', 'Pacific/Auckland': 'NZ', 'Asia/Tokyo': 'JP', 'Asia/Shanghai': 'CN', 'Asia/Hong_Kong': 'HK', 'Asia/Singapore': 'SG', 'Asia/Kuala_Lumpur': 'MY', 'Asia/Bangkok': 'TH', 'Asia/Jakarta': 'ID', 'Asia/Manila': 'PH', 'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN', 'Asia/Seoul': 'KR', 'Asia/Dubai': 'AE', 'Asia/Riyadh': 'SA', 'Asia/Qatar': 'QA', 'Asia/Jerusalem': 'IL', 'America/Sao_Paulo': 'BR', 'America/Mexico_City': 'MX' };
   var CA_ZONES = /^America\/(Toronto|Vancouver|Edmonton|Winnipeg|Halifax|St_Johns|Regina|Montreal|Moncton|Glace_Bay|Goose_Bay|Iqaluit|Rankin_Inlet|Resolute|Thunder_Bay|Nipigon|Yellowknife|Whitehorse|Dawson|Dawson_Creek|Fort_Nelson|Cambridge_Bay|Inuvik|Swift_Current|Atikokan|Blanc-Sablon|Pangnirtung|Rainy_River)$/;
   var US_ZONES = /^(America\/(New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Detroit|Boise|Indiana\/.*|Kentucky\/.*|North_Dakota\/.*|Juneau|Sitka|Nome|Adak|Menominee)|Pacific\/Honolulu)$/;
@@ -4489,7 +4489,7 @@ body.pg.pg-light #n365h .i,body.pg.pg-light #n365h select,body.pg.pg-light #n365
   function handle(text, ctx) {
     text = String(text || ''); CTX = ctx; var seq = ++SEQ, t = text.toLowerCase(), cc = cur.code, nm = name(cc);
     /* "I'm in Canada" */
-    var m = t.match(/\b(?:i'?m|i am|am|live|living|based|located|currently)\s+(?:in|at)\s+(?:the\s+)?([a-z .]+)/);
+    var m = t.match(/\b(?:i'?m|i am|am|live|living|based|located|currently)\s+(?:in|at)\s+(?:the\s+)?([a-z .]+)/) || t.match(/\b(?:travel(?:l)?ing|flying|moving|heading|relocating)\s+to\s+(?:the\s+)?([a-z .]+)/);
     if (m) { var c = countryFromText(m[1]); if (c) { set(c); ctx.reply('Got it. I will use <b>' + esc(name(c)) + '</b> from now on. You can change it any time under the Ask box.'); return true; } }
     var ngSignal = NG_SIGNAL.test(text);
     /* services Net365 does not carry */
@@ -4519,25 +4519,44 @@ body.pg.pg-light #n365h .i,body.pg.pg-light #n365h select,body.pg.pg-light #n365
 
   /* chips that fit the country */
   function chips() {
-    return cur.code === 'NG' ? ['Pay electricity', 'Pay Aba Power', 'DStv', 'Buy data', 'What did I spend?', 'Fund my wallet']
-      : ['Recharge a phone', 'Mobile data', 'Gift cards', 'What did I spend?', 'Fund my wallet', 'Pay electricity in Nigeria'];
+    return cur.code === 'NG' ? ['Pay electricity', 'Pay Aba Power', 'DStv', 'Buy data', 'Share & Gift', 'What did I spend?']
+      : ['Recharge a phone', 'Mobile data', 'Gift someone', 'Gift cards', 'Pay electricity in Nigeria', 'What did I spend?'];
   }
   function placeholder() { return cur.code === 'NG' ? null : 'Try “mobile data”, “gift cards” or “Starlink”…'; }
 
-  /* "Location: Canada" picker under the Ask box */
+  /* Location under the Ask box: detected automatically (connection, then timezone and language). The customer only sees
+     where we think they are and can correct it; a correction is remembered and "Use my location" goes back to automatic. */
   function mount(host, after) {
     if (!host || host.querySelector('.ng-pill')) return;
-    var w = document.createElement('label'); w.className = 'ng-pill';
-    var s = document.createElement('select'); s.setAttribute('aria-label', 'Your country');
+    var w = document.createElement('div'); w.className = 'ng-pill ng-auto';
+    var t = document.createElement('span'); t.className = 'ng-txt';
+    var chg = document.createElement('button'); chg.type = 'button'; chg.className = 'ng-link';
+    var s = document.createElement('select'); s.setAttribute('aria-label', 'Your country'); s.style.display = 'none';
     Object.keys(NAMES).sort(function (a, b) { return NAMES[a].localeCompare(NAMES[b]); }).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = NAMES[k]; s.appendChild(o); });
-    function sync() { s.value = cur.code; }
-    var t = document.createElement('span'); t.textContent = 'Your location';
-    w.appendChild(t); w.appendChild(s); host.appendChild(w); sync();
-    s.addEventListener('change', function () { set(s.value); });
+    function sync() {
+      s.value = cur.code;
+      if (cur.source === 'saved') { t.textContent = '📍 Showing services for ' + name(cur.code); chg.textContent = 'Use my location'; chg.dataset.m = 'auto'; }
+      else { t.textContent = '📍 ' + name(cur.code) + ' (detected automatically)'; chg.textContent = 'Not right?'; chg.dataset.m = 'change'; }
+    }
+    chg.addEventListener('click', function () { if (chg.dataset.m === 'auto') { reset(); detectFromServer(); } else { s.style.display = ''; chg.style.display = 'none'; s.focus(); } });
+    s.addEventListener('change', function () { set(s.value); s.style.display = 'none'; chg.style.display = ''; });
+    w.appendChild(t); w.appendChild(chg); w.appendChild(s); host.appendChild(w); sync();
     onChange(function () { sync(); if (after) after(country()); });
   }
 
-  window.Net365Geo = { country: country, set: set, reset: reset, handle: handle, chips: chips, placeholder: placeholder, mount: mount, onChange: onChange, names: NAMES };
+  /* Automatic detection: the server reads the visitor's country from the connection (Cloudflare's CF-IPCountry header).
+   A country the customer picked themselves always wins. Nothing is stored by this call. */
+  var serverCtx = null;
+  function detectFromServer() {
+    return fetch('/api/geo/context', { credentials: 'include', headers: { Accept: 'application/json' } }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d || !d.country || !NAMES[d.country]) return; serverCtx = d;
+      if (cur.source !== 'saved' && cur.code !== d.country) { cur = { code: d.country, source: 'connection' }; listeners.forEach(function (f) { try { f(country()); } catch (e) { } }); }
+      else if (cur.source !== 'saved') cur.source = 'connection';
+    }).catch(function () { });
+  }
+  function where() { return { code: cur.code, name: name(cur.code), source: cur.source, region: serverCtx && serverCtx.region || '', city: serverCtx && serverCtx.city || '' }; }
+  detectFromServer();
+  window.Net365Geo = { country: country, where: where, set: set, reset: reset, handle: handle, chips: chips, placeholder: placeholder, mount: mount, onChange: onChange, names: NAMES, operators: operators, refresh: detectFromServer };
 })();
 
 /* NET365 MOBILE — POWER GRID v6 behaviour.
@@ -4602,7 +4621,7 @@ body.pg.pg-light #n365h .i,body.pg.pg-light #n365h select,body.pg.pg-light #n365
   }
 
   /* ---------- Ask Net365: reads a sentence and opens the right screen. It never pays. ---------- */
-  function reply(html) { var r = $('pgReply'); r.innerHTML = html; r.classList.add('on'); }
+  function reply(html) { var r = $('pgReply'); r.innerHTML = html; r.classList.add('on'); if (window.Net365QA) window.Net365QA.logReply(html); }
   function parse(q) {
     var t = q.toLowerCase(), o = { amount: null, meter: null };
     var am = t.match(/(?:₦|ngn\s*|naira\s*|\bn\s?)(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?/) || t.match(/\b(\d[\d,]*(?:\.\d+)?)\s*(k|thousand|naira)\b/);
@@ -4619,6 +4638,9 @@ body.pg.pg-light #n365h .i,body.pg.pg-light #n365h select,body.pg.pg-light #n365
   function geoOpen(kind, cc) { if (kind === 'giftcards') { go('/giftcards', 'Opening <b>Gift Cards</b>.'); return; } if (typeof setManualCountry === 'function') { try { setManualCountry(cc); } catch (e) { } } reply('Opening <b>Recharge</b> for ' + esc(window.Net365Geo.country().name) + '.'); showView('recharge'); }
   function run(text, skipGeo) {
     text = String(text || '').trim(); if (!text) return;
+    if (!skipGeo && window.Net365QA) window.Net365QA.begin(text);
+    if (!skipGeo && window.Net365Share) { var si = window.Net365Share.intent(text); if (si) { reply(si); return; } }
+    if (!skipGeo && window.Net365QA) { var qa = window.Net365QA.answer(text); if (qa) { reply(qa); return; } }
     if (!skipGeo && window.Net365Geo && window.Net365Geo.handle(text, { reply: reply, proceed: function () { run(text, true); }, open: geoOpen })) return;
     var o = parse(text);
     switch (o.intent) {
@@ -4639,7 +4661,7 @@ body.pg.pg-light #n365h .i,body.pg.pg-light #n365h select,body.pg.pg-light #n365
       case 'refer': reply('Opening Rewards.'); if (typeof openRewards === 'function') openRewards(); break;
       case 'support': reply('Opening Support.'); if (typeof openSheet === 'function') openSheet('supportSheet'); break;
       case 'theme': reply('Theme changed.'); applyTheme(/light/.test(text.toLowerCase()) ? 'light' : 'dark'); break;
-      default: reply('I did not catch that. Try “pay electricity”, “DStv”, “buy data”, “what did I spend”, “fund my wallet” or “when is my next top-up”.');
+      default: if (window.Net365QA) { var q2 = window.Net365QA.fallback(text); reply(q2 || window.Net365QA.unknown()); } else reply('I will get back to you on this. I do not have a reliable answer yet.');
     }
   }
   (function initAsk() {
@@ -4720,5 +4742,1035 @@ body.pg.pg-light #n365h .i,body.pg.pg-light #n365h select,body.pg.pg-light #n365
 })();
 
 </script>
+
+<style id="mx-upgrade-css">
+/* Net365 mobile upgrade: profile, membership, adverts, Q&A, Smart Share. Colours come from the app's own tokens so light and dark both work. */
+body{--pg-bad:#ff5a5f;--pg-ok:#34e39a;--pg-line:var(--line);--pg-t0:var(--ink);--pg-t1:var(--ink-2);--pg-t2:var(--ink-3);--rx-line:var(--line);--rx-surface:var(--card)}
+.mx-acct{display:none;align-items:center;gap:6px;margin:8px 0 0;padding:7px 12px;border-radius:999px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);font:700 12.5px/1 var(--font);cursor:pointer;min-height:34px}
+.mx-acct.on{display:inline-flex}.mx-acct i{color:var(--brand)}
+.eye-btn.mx-refresh{margin-right:-2px}.eye-btn.mx-refresh.spin i{animation:mxspin .6s linear infinite}@keyframes mxspin{to{transform:rotate(360deg)}}
+/* sign-up account type */
+#mxRegBox{display:none;margin-bottom:14px}#mxRegBox.on{display:block}
+#mxRegBox .mx-h{font-size:13px;font-weight:700;margin-bottom:2px;color:var(--ink)}#mxRegBox .mx-s{font-size:12px;color:var(--ink-3);margin-bottom:10px}
+#mxRegBox #pfRegTypes{display:none}
+.pf-detail{display:none;font-size:13px;line-height:1.5;color:var(--ink-2);background:var(--slate-soft);border-radius:12px;padding:10px 12px;margin:10px 0}.pf-detail ul{margin:6px 0 6px 18px}
+.pf-lab{display:block;font-size:13px;font-weight:600;margin:12px 0 6px;color:var(--ink)}
+.pf-inp{width:100%;padding:13px;border:1px solid var(--line-strong);border-radius:12px;background:var(--card);color:var(--ink);font:500 15px var(--font);min-height:46px}
+/* profile page */
+#view-profile .pf-hero{display:flex;gap:14px;align-items:center;margin-bottom:6px}
+.pf-av{flex:none;width:56px;height:56px;border-radius:18px;background:var(--brand-grad);color:#fff;display:grid;place-items:center;font:800 20px var(--font)}
+#view-profile h2{font-size:19px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px;overflow-wrap:anywhere}
+.pf-badges{display:flex;flex-wrap:wrap;gap:6px}.pf-b{display:inline-flex;gap:5px;align-items:center;font:700 11.5px/1 var(--font);padding:6px 9px;border-radius:999px;background:var(--slate-soft);color:var(--ink-2)}
+.pf-b.ok{background:var(--success-soft);color:var(--success)}.pf-b.warn{background:var(--warning-soft);color:var(--warning)}.pf-b.bad{background:var(--danger-soft);color:var(--danger)}
+.pf-mem{display:flex;gap:14px;align-items:center;margin:16px 0 4px;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,106,26,.45);background:linear-gradient(135deg,rgba(255,106,26,.12),rgba(59,227,255,.07))}
+.pf-mem b{display:block;font-size:16px;margin-bottom:2px}.pf-mem span{display:block;font-size:13px;color:var(--ink-2);line-height:1.45}.pf-mem .pf-memno{margin:2px 0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--ink)}.pf-mem.pending{border-style:dashed}.pf-medal{flex:none}
+.pf-grid{margin-top:14px;border:1px solid var(--line);border-radius:16px;background:var(--card);overflow:hidden}
+.pf-f{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:14px}.pf-f:last-child{border-bottom:0}
+.pf-f span{color:var(--ink-3)}.pf-f b{display:flex;align-items:center;gap:6px;text-align:right;overflow-wrap:anywhere;font-weight:700}
+.pf-cp{border:0;background:var(--slate-soft);color:var(--ink-2);width:30px;height:30px;border-radius:9px;cursor:pointer}
+.pf-note{font-size:13px;line-height:1.5;color:var(--ink-2);margin:6px 0}
+.pf-sec{margin-top:22px}.pf-sec h3{font-size:15px;font-weight:800;margin-bottom:2px}
+.pf-caps{display:grid;gap:8px;margin-top:10px}.pf-cap{display:flex;justify-content:space-between;gap:10px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:13.5px}
+.pf-cap em{font-style:normal;font-weight:700;font-size:12px;color:var(--ink-3)}.pf-cap.active em{color:var(--success)}.pf-cap.pending em{color:var(--warning)}
+.pf-tiers{display:grid;gap:8px;margin-top:10px}.pf-tier{padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);font-size:13px;color:var(--ink-2)}.pf-tier b{display:block;color:var(--ink);font-size:14px;margin-bottom:2px}.pf-tier.on{border-color:var(--brand)}
+.pf-types{display:grid;gap:8px}.pf-type{text-align:left;padding:12px 14px;border:1px solid var(--line-strong);border-radius:14px;background:var(--card);color:var(--ink);cursor:pointer;font-family:var(--font);min-height:48px}
+.pf-type b{display:flex;gap:8px;align-items:center;font-size:14px}.pf-type small{display:block;margin-top:3px;font-size:12.5px;color:var(--ink-3);line-height:1.4}.pf-type.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-soft)}
+.pf-edit{margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.nxt-btn{font:700 14px var(--font);padding:12px 16px;border-radius:999px;border:0;background:var(--brand-grad);color:#fff;cursor:pointer;min-height:44px}.nxt-btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line-strong)}.nxt-btn:disabled{opacity:.6}
+/* adverts under Ask Net365 */
+#rxAd{margin-top:14px;border-radius:18px;background:var(--pg-panel-2,var(--card));border:1px solid var(--line-strong);position:relative;overflow:hidden;color:var(--ink)}
+#rxAd .sl{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;padding:16px 16px 6px;align-items:stretch}
+#rxAd .tag{display:inline-block;font:700 12px/1 var(--font);color:var(--ink-3);margin-bottom:8px}#rxAd .tag.sp{color:#b45309}
+#rxAd h4{margin:0 0 6px;font:800 17px/1.25 var(--font)}#rxAd p{margin:0 0 12px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+#rxAd .acts{display:flex;flex-wrap:wrap;gap:8px}
+#rxAd .acts a,#rxAd .acts button{font:700 13.5px/1 var(--font);padding:11px 16px;border-radius:999px;border:1px solid var(--line-strong);background:none;color:var(--ink);text-decoration:none;cursor:pointer;min-height:44px;display:inline-flex;align-items:center}
+#rxAd .acts .go{background:var(--brand-grad);border-color:transparent;color:#fff}
+#rxAd .img{border-radius:14px;overflow:hidden;background:var(--slate-soft);max-height:160px}#rxAd .img img{width:100%;height:100%;object-fit:cover;display:block}
+#rxAd .chat{border-radius:16px;background:#0b1020;border:1px solid #243049;height:158px;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:10px;overflow:hidden}
+#rxAd .m{max-width:88%;padding:7px 10px;border-radius:12px;font-size:12.5px;line-height:1.35;white-space:pre-line;color:#f3f6fc;animation:rxAdIn .25s ease-out both}
+#rxAd .m.bot{background:#1b2742;align-self:flex-start;border-bottom-left-radius:4px}#rxAd .m.me{background:#ff6a1a;color:#111;align-self:flex-end;border-bottom-right-radius:4px}
+#rxAd .ob{display:flex;gap:5px;flex-wrap:wrap;animation:rxAdIn .25s ease-out both}#rxAd .ob span{font-size:11.5px;padding:5px 9px;border-radius:999px;border:1px solid #33425f;color:#8fc3ff;background:#10172b}#rxAd .ob span.hit{background:#ff6a1a;border-color:#ff6a1a;color:#111}
+#rxAd .bar{display:flex;align-items:center;gap:10px;padding:2px 12px 10px}#rxAd .dots{display:flex;gap:2px;flex:1}
+#rxAd .dots button{width:26px;height:26px;padding:0;border:0;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#rxAd .dots button i{width:8px;height:8px;border-radius:99px;background:var(--line-strong);transition:width .2s,background .2s}#rxAd .dots button[aria-current=true] i{width:22px;background:#ff6a1a}
+#rxAd .bar .pz{font:700 12px/1 var(--font);color:var(--ink-3);background:none;border:0;cursor:pointer;padding:10px}
+@keyframes rxAdIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@media (prefers-reduced-motion:reduce){ #rxAd .m,#rxAd .ob{animation:none}}
+/* Ask answers */
+.rx-qchips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.rx-qchips button{font:600 12.5px/1 var(--font);color:var(--ink-2);background:none;border:1px dashed var(--line-strong);border-radius:999px;padding:10px 12px;cursor:pointer;min-height:40px}
+.qa-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.qa-act{font:700 13px/1 var(--font);color:var(--ink);background:rgba(255,106,26,.14);border:1px solid rgba(255,106,26,.55);border-radius:999px;padding:11px 14px;cursor:pointer;min-height:44px}
+.qa-fb{margin-top:10px;font-size:12.5px}.qa-fbb{font:700 12.5px/1 var(--font);color:inherit;background:none;border:1px solid var(--line-strong);border-radius:999px;padding:9px 14px;margin-left:6px;cursor:pointer;min-height:40px}
+.qa-follow{margin-top:10px}.qa-mail{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.qa-mail input{flex:1;min-width:150px;font:inherit;color:inherit;background:var(--card);border:1px solid var(--line-strong);border-radius:12px;padding:10px 12px}
+#qaInbox:empty{display:none}.qa-reply{margin:0 0 12px;padding:14px;border-radius:16px;border:1px solid rgba(59,227,255,.6);background:rgba(59,227,255,.1)}.qa-reply b{display:block;margin-bottom:2px}.qa-ans{margin:8px 0 10px;white-space:pre-line;line-height:1.5}
+.qa-t{display:block;margin-bottom:4px}.qa-note{display:block;opacity:.85;font-size:12.5px;margin-top:8px}
+/* Smart Share (scoped to .nss) */
+html.nss-lock{overflow:hidden}
+.nss{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:flex-end;justify-content:center;background:rgba(4,7,16,.66);backdrop-filter:blur(6px)}
+.nss[hidden]{display:none}
+.nss{--pg-ember:#ff6a1a;--pg-arc:#3be3ff;--pg-fire:linear-gradient(135deg,#ff3b30 0%,#ff6a1a 55%,#ffb547 100%);--pg-panel:#fff;--pg-panel-2:#f3f5f9;--pg-line:rgba(15,23,42,.1);--pg-t0:#0b1020;--pg-t1:#2f3b52;--pg-t2:#5f6c84;--pg-ok:#0fb872;--pg-bad:#e5342b;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--pg-t0)}
+body.dark-mode .nss{--pg-panel:#0e1426;--pg-panel-2:#151d36;--pg-line:rgba(140,160,210,.18);--pg-t0:#f3f6fc;--pg-t1:#c6d0e3;--pg-t2:#8f9cb6;--pg-ok:#34e39a;--pg-bad:#ff6b61}
+.nss-card{width:100%;max-width:760px;max-height:94vh;display:flex;flex-direction:column;background:var(--pg-panel);border:1px solid var(--pg-line);border-radius:24px 24px 0 0;box-shadow:0 -20px 80px rgba(0,0,0,.45);overflow:hidden}
+@media (min-width:760px){.nss{align-items:center}.nss-card{border-radius:24px;max-height:90vh}}
+.nss-h{display:flex;justify-content:space-between;gap:12px;padding:22px 24px 8px;background:radial-gradient(520px 140px at 100% -30%,rgba(255,106,26,.28),transparent 70%)}
+.nss-h h2{margin:0;font:800 24px/1.1 'Sora','Inter',sans-serif;letter-spacing:-.025em;color:var(--pg-t0)}
+.nss-h p{margin:6px 0 0;font-size:13.5px;color:var(--pg-t2)}
+.nss-x{width:40px;height:40px;border-radius:12px;border:1px solid var(--pg-line);background:var(--pg-panel-2);color:var(--pg-t0);font-size:22px;line-height:1;cursor:pointer;flex:none}
+.nss-tabs{display:flex;gap:6px;padding:10px 24px 0;overflow-x:auto;border-bottom:1px solid var(--pg-line);scrollbar-width:none}
+.nss-tabs button{flex:none;border:0;background:none;color:var(--pg-t2);font:600 14px/1 inherit;font-family:inherit;padding:12px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;min-height:44px}
+.nss-tabs button.on{color:var(--pg-t0);border-bottom-color:var(--pg-ember)}
+.nss :focus-visible{outline:2px solid var(--pg-arc);outline-offset:2px}
+.nss-body{padding:20px 24px 28px;overflow:auto;-webkit-overflow-scrolling:touch}
+.nss-body h3{margin:0 0 6px;font:700 17px/1.25 'Sora','Inter',sans-serif;color:var(--pg-t0)}
+.nss-h3{margin:22px 0 10px!important}
+.nss-sub{margin:4px 0 12px;font-size:13.5px;line-height:1.55;color:var(--pg-t1);max-width:62ch}
+.nss-lab{margin:0 0 4px;font-size:12.5px;font-weight:600;color:var(--pg-t2)}
+.nss-id{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start;padding:18px;border:1px solid var(--pg-line);border-radius:20px;background:var(--pg-panel-2);position:relative}
+.nss-id:before{content:"";position:absolute;inset:-1px;border-radius:20px;padding:1px;background:var(--pg-fire);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.55;pointer-events:none}
+.nss-qr{display:flex;flex-direction:column;gap:8px;align-items:center;font-size:12px;color:var(--pg-t2);text-align:center;max-width:176px}
+.nss-qr svg{border-radius:12px;background:#fff;display:block;max-width:100%;height:auto}
+.nss-code{font:800 28px/1.1 'Sora','Inter',sans-serif;letter-spacing:.04em;background:var(--pg-fire);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:8px;word-break:break-all}
+.nss-code.sm{font-size:20px}
+.nss-chipset{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}
+.nss-chipset span{font-size:12.5px;padding:5px 10px;border-radius:99px;border:1px solid var(--pg-line);background:var(--pg-panel);color:var(--pg-t1)}
+.nss-link input,.nss-form input:not([type=checkbox]),.nss-form select,.nss-find input{width:100%;box-sizing:border-box;padding:12px 13px;border-radius:12px;border:1px solid var(--pg-line);background:var(--pg-panel);color:var(--pg-t0);font:500 14.5px/1.2 inherit;font-family:inherit;min-height:46px}
+.nss-link{margin-bottom:12px}
+.nss-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.nss-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:12px;border:0;background:var(--pg-fire);color:#fff;font:700 14px/1 inherit;font-family:inherit;cursor:pointer;text-decoration:none;box-shadow:0 8px 22px rgba(255,106,26,.28)}
+.nss-btn.ghost{background:var(--pg-panel);color:var(--pg-t0);border:1px solid var(--pg-line);box-shadow:none}
+.nss-btn{white-space:nowrap}.nss-btn.sm{min-height:38px;padding:0 13px;font-size:13px}
+.nss-btn[disabled]{opacity:.55;cursor:default}
+.nss-note{margin:16px 0 0;padding:13px 15px;border-radius:14px;border:1px solid rgba(59,227,255,.3);background:rgba(59,227,255,.06);font-size:13.5px;line-height:1.55;color:var(--pg-t1)}
+.nss-note b{color:var(--pg-t0)}.nss-note p{margin:4px 0 0}
+.nss-form{display:block}
+.nss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.nss-form label,.nss-find label{display:block;font-size:13px;font-weight:600;color:var(--pg-t1)}
+.nss-form label input:not([type=checkbox]),.nss-form label select,.nss-find label input{margin-top:6px}
+.nss-wide{display:block;margin:12px 0}
+.nss-detect{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:4px 0;font-size:12.5px;color:var(--pg-t2)}
+.nss-fs{border:1px solid var(--pg-line);border-radius:14px;padding:10px 14px 14px;margin:14px 0}
+.nss-fs legend{padding:0 6px;font-size:13px;font-weight:600;color:var(--pg-t1)}
+.nss-cks{display:flex;flex-wrap:wrap;gap:8px}
+.nss-ck{display:inline-flex!important;align-items:center;gap:8px;padding:9px 13px;border:1px solid var(--pg-line);border-radius:99px;cursor:pointer;min-height:40px;box-sizing:border-box}
+.nss-ck input{width:16px;height:16px;accent-color:#ff6a1a}
+.nss-sw{display:flex!important;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--pg-line)}
+.nss-sw input{width:20px;height:20px;margin-top:2px;accent-color:#ff6a1a;flex:none}
+.nss-sw small{display:block;font-weight:400;color:var(--pg-t2);margin-top:2px;line-height:1.45}
+.nss-err{min-height:18px;margin-top:8px;font-size:13px;color:var(--pg-bad)}
+.nss-empty{text-align:center;padding:34px 16px;color:var(--pg-t1)}
+.nss-empty.slim{padding:22px 12px}
+.nss-empty b{display:block;font:700 16px/1.3 'Sora','Inter',sans-serif;color:var(--pg-t0);margin-bottom:6px}
+.nss-empty p{margin:0 auto 14px;max-width:46ch;font-size:13.5px;line-height:1.55}
+.nss-req{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;padding:14px;margin-top:14px;border:1px solid var(--pg-line);border-radius:18px;background:var(--pg-panel-2)}
+.nss-req.fresh{border-color:rgba(255,106,26,.5)}
+.nss-find{display:flex;gap:10px;align-items:flex-end}.nss-find .nss-wide{flex:1;margin:0}
+.nss-loc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.nss-loc>div{padding:10px 12px;border:1px solid var(--pg-line);border-radius:12px;background:var(--pg-panel-2)}
+.nss-loc>div.hot{border-color:rgba(255,106,26,.5)}
+.nss-loc dt{font-size:12px;color:var(--pg-t2);margin:0 0 3px}.nss-loc dd{margin:0;font-weight:700;font-size:14px;color:var(--pg-t0)}.nss-loc small{margin-left:6px;font-weight:400;color:var(--pg-t2)}
+.nss-results{display:grid;gap:8px;margin-top:12px}
+.nss-person{display:grid;grid-template-columns:1fr auto;gap:2px 12px;text-align:left;padding:12px 14px;border:1px solid var(--pg-line);border-radius:14px;background:var(--pg-panel-2);color:var(--pg-t0);cursor:pointer;font-family:inherit;min-height:56px}
+.nss-person span{font-size:13px;color:var(--pg-t2)}.nss-person code{grid-column:2;grid-row:1/3;align-self:center;font-size:12px;color:var(--pg-t2)}
+.nss-person-card{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:14px 16px;border:1px solid var(--pg-line);border-radius:16px;background:var(--pg-panel-2);margin-top:6px}
+.nss-svcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.nss-svc{text-align:left;padding:14px;border-radius:16px;border:1px solid var(--pg-line);background:var(--pg-panel-2);color:var(--pg-t0);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;gap:5px;min-height:84px}
+.nss-svc:hover{border-color:rgba(255,106,26,.55)}.nss-svc b{font-size:14.5px}.nss-svc span{font-size:12.5px;line-height:1.45;color:var(--pg-t2)}
+.nss-numwrap{margin-top:14px}
+.nss-status{font-size:12px;font-weight:700;padding:5px 10px;border-radius:99px;border:1px solid var(--pg-line);white-space:nowrap}.nss-status.ok{color:var(--pg-ok);border-color:currentColor}
+.nss-home{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:20px;padding:18px 20px;border-radius:22px;border:1px solid rgba(255,106,26,.38);background:var(--pg-panel,#fff);position:relative;overflow:hidden}
+.nss-home:before{content:"";position:absolute;inset:0;background:radial-gradient(420px 140px at 0 0,rgba(255,106,26,.16),transparent 70%);pointer-events:none}
+.nss-home h3{margin:0;font:700 18px/1.2 'Sora','Inter',sans-serif;color:var(--pg-t0,inherit);position:relative}.nss-home p{margin:6px 0 0;max-width:52ch;font-size:13.5px;line-height:1.5;color:var(--pg-t2,#5f6c84);position:relative}
+.nss-homebtns{display:flex;gap:8px;flex-wrap:wrap;position:relative}
+.nss-homebtns button{min-height:42px;padding:0 15px;border-radius:12px;border:1px solid var(--pg-line,rgba(15,23,42,.1));background:var(--pg-panel-2,#f3f5f9);color:var(--pg-t0,inherit);font:600 13.5px/1 inherit;font-family:inherit;cursor:pointer}
+.nss-homebtns button:first-child{background:var(--pg-fire);color:#fff;border:0}
+@media (max-width:560px){.nss-id,.nss-req{grid-template-columns:1fr}.nss-qr{max-width:none;align-items:center;margin:0 auto}.nss-grid{grid-template-columns:1fr}.nss-find{flex-direction:column;align-items:stretch}.nss-h,.nss-body{padding-left:16px;padding-right:16px}.nss-tabs{padding-left:16px;padding-right:16px}.nss-code{font-size:24px}}
+@media (prefers-reduced-motion:no-preference){.nss-card{animation:nssIn .32s cubic-bezier(.16,1,.3,1)}@keyframes nssIn{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}}
+
+.ng-auto{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);margin:12px 0 0}
+.ng-link{background:none;border:0;padding:8px 0;font:700 13px var(--font);color:var(--brand);cursor:pointer;text-decoration:underline;text-underline-offset:3px;min-height:40px}
+.ng-auto select{padding:8px 10px;border-radius:9px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);font-size:13px}
+</style>
+
+<script id="mx-shims">
+/* names the lifted desktop modules expect, mapped onto the mobile app */
+(function(){
+  if (!('userId' in window)) Object.defineProperty(window, 'userId', { configurable: true, get: function(){ try { return currentUser ? (currentUser.id || currentUser.email || 1) : null; } catch (e) { return null; } } });
+  if (typeof window.showToast !== 'function') window.showToast = function(m, t){ toast(m, t || 'info'); };
+  if (typeof window.showLoginScreen !== 'function') window.showLoginScreen = function(msg){ if (msg) toast(msg, 'info'); openSheet('authModal'); };
+  if (typeof window.apiFetch !== 'function') window.apiFetch = function(u, o){ o = o || {}; o.credentials = o.credentials || 'include'; return fetch(u, o); };
+  if (typeof window.nxEsc !== 'function') window.nxEsc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+})();
+</script>
+<script id="mx-profile">
+    let PF_META = null;
+    const PF_FALLBACK = [{"key": "individual", "label": "Individual", "ecosystem": "personal", "icon": "user", "business": false, "blurb": "Payments and everyday digital services.", "benefits": ["Airtime, data, bills and TV", "Scheduled payments", "Rewards and referrals"], "for": "People paying for themselves and family.", "verification": "Email confirmation.", "fields": [{"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}, {"key": "sme", "label": "SME / Business", "ecosystem": "business", "icon": "store", "business": true, "blurb": "Grow your business, manage payments and advertise.", "benefits": ["Business wallet and bulk recharge", "Transaction reports", "Advertising credits"], "for": "Shops, small companies and freelancers.", "verification": "Business details reviewed by our team.", "fields": [{"key": "business_name", "label": "Business name", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "reg_status", "label": "Registration status", "required": true, "type": "select", "options": ["Registered", "Not yet registered"], "placeholder": ""}, {"key": "business_category", "label": "Business category", "required": true, "type": "select", "options": ["Retail", "Telecoms and airtime", "Services", "Food and hospitality", "Education", "Technology", "Other"], "placeholder": ""}, {"key": "business_email", "label": "Business email", "required": false, "type": "email", "options": [], "placeholder": ""}, {"key": "contact_person", "label": "Contact person", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "business_address", "label": "Business address", "required": false, "type": "text", "options": [], "placeholder": ""}, {"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}, {"key": "corporate", "label": "Corporate", "ecosystem": "business", "icon": "building", "business": true, "blurb": "Enterprise payment management and business integrations.", "benefits": ["Multi-user finance teams", "Approval flows", "Dedicated support"], "for": "Registered companies and organisations.", "verification": "Company registration and authorised representative checked.", "fields": [{"key": "business_name", "label": "Registered company name", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "reg_no", "label": "Registration number", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "tax_id", "label": "Tax identification number", "required": false, "type": "text", "options": [], "placeholder": ""}, {"key": "representative", "label": "Authorised representative", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "business_email", "label": "Corporate email", "required": true, "type": "email", "options": [], "placeholder": ""}, {"key": "business_address", "label": "Business address", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}, {"key": "developer", "label": "Developer / API", "ecosystem": "ecosystem", "icon": "code", "business": true, "blurb": "Integrate Net365 services into your applications.", "benefits": ["API keys and webhooks", "Integration analytics", "Airtime, data and bills endpoints"], "for": "Developers and companies building apps.", "verification": "Application and organisation reviewed before live keys.", "fields": [{"key": "business_name", "label": "Developer or organisation name", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "app_name", "label": "Application name", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "integration", "label": "Intended integration", "required": true, "type": "select", "options": ["Airtime and data", "Utilities and bills", "Wallet and payments", "Several of these"], "placeholder": ""}, {"key": "website", "label": "Website or application URL", "required": false, "type": "url", "options": [], "placeholder": ""}, {"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}, {"key": "agent", "label": "Agent / Reseller", "ecosystem": "ecosystem", "icon": "network-wired", "business": true, "blurb": "Sell digital services and earn commissions.", "benefits": ["Wholesale pricing", "Sub-accounts for your sellers", "Commission reports"], "for": "Shops, kiosks and distributors.", "verification": "Identity and trading location checked.", "fields": [{"key": "business_name", "label": "Trading name", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "location", "label": "Town or state", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "contact_person", "label": "Contact person", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}, {"key": "partner", "label": "Strategic Partner", "ecosystem": "ecosystem", "icon": "handshake", "business": true, "blurb": "Build commercial and technology partnerships.", "benefits": ["Partner desk", "Co-built services", "Joint reporting"], "for": "Telcos, banks, fintechs and platforms.", "verification": "Reviewed by the partnerships team.", "fields": [{"key": "business_name", "label": "Organisation", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "partnership_type", "label": "Partnership type", "required": true, "type": "select", "options": ["Commercial", "Technology", "Distribution"], "placeholder": ""}, {"key": "contact_person", "label": "Contact person", "required": true, "type": "text", "options": [], "placeholder": ""}, {"key": "website", "label": "Website", "required": false, "type": "url", "options": [], "placeholder": ""}, {"key": "country", "label": "Country", "required": true, "type": "text", "options": [], "placeholder": "Nigeria"}]}];
+    const PF_COUNTRY_LIST = ["Nigeria", "Ghana", "Kenya", "South Africa", "Tanzania", "Uganda", "Rwanda", "Ethiopia", "Egypt", "Morocco", "Algeria", "Tunisia", "Senegal", "Cote d'Ivoire", "Cameroon", "Benin", "Togo", "Burkina Faso", "Mali", "Niger", "Sierra Leone", "Liberia", "Gambia", "Guinea", "Zambia", "Zimbabwe", "Malawi", "Mozambique", "Botswana", "Namibia", "Angola", "DR Congo", "Republic of the Congo", "Gabon", "Sudan", "Somalia", "Mauritius", "United Kingdom", "United States", "Canada", "Ireland", "France", "Germany", "Spain", "Italy", "Netherlands", "Portugal", "Belgium", "Switzerland", "United Arab Emirates", "Saudi Arabia", "Qatar", "India", "Pakistan", "Bangladesh", "China", "Philippines", "Brazil", "Australia", "Other"];
+    window.__pfType = window.__pfType || 'individual';
+    async function pfMeta() {
+      if (PF_META) return PF_META;
+      try { const r = await fetch(`${API_BASE}/profile/account-types`); const d = await r.json(); if (d.success && d.types && d.types.length) PF_META = d; } catch (e) {}
+      if (!PF_META) PF_META = { types: PF_FALLBACK, tiers: [{ name: 'Starter', note: 'Basic account.' }, { name: 'Standard', note: 'Expanded transaction capabilities.' }, { name: 'Premium', note: 'Advanced services and higher limits.' }, { name: 'Enterprise', note: 'Customised corporate services.' }] };
+      return PF_META;
+    }
+    function pfTypeOf(k) { const t = (PF_META || { types: PF_FALLBACK }).types; return t.find(x => x.key === k) || t[0]; }
+    function pfTypeButtons(types, sel) {
+      return types.map(t => `<button type="button" class="pf-type${t.key === sel ? ' on' : ''}" role="radio" aria-checked="${t.key === sel}" data-k="${t.key}">
+        <b><i class="fas fa-${t.icon}"></i>${nxEsc(t.label)}</b><small>${nxEsc(t.blurb)}</small></button>`).join('');
+    }
+    function pfBindTypes(box, types, sel, onPick) {
+      box.innerHTML = pfTypeButtons(types, sel);
+      box.querySelectorAll('.pf-type').forEach(b => b.addEventListener('click', () => {
+        box.querySelectorAll('.pf-type').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
+        onPick(b.dataset.k);
+      }));
+    }
+    function pfDetailHtml(t) {
+      return `<b>${nxEsc(t.label)}</b>${t.for ? ' is for ' + nxEsc(t.for.charAt(0).toLowerCase() + t.for.slice(1)) : ''}
+        ${t.benefits && t.benefits.length ? '<ul>' + t.benefits.map(x => '<li>' + nxEsc(x) + '</li>').join('') + '</ul>' : ''}
+        <div><b>Verification:</b> ${nxEsc(t.verification)}</div>`;
+    }
+    function pfFieldsHtml(t, vals, pre, optAttr) {
+      vals = vals || {};
+      return t.fields.map(f => {
+        const id = pre + f.key, v = vals[f.key] || (f.key === 'country' ? 'Nigeria' : ''), req = f.required ? '' : ' <span style="font-weight:400;opacity:.7">(optional)</span>';
+        const opts = f.key === 'country' ? (PF_COUNTRY_LIST.includes(v) || !v ? PF_COUNTRY_LIST : [v].concat(PF_COUNTRY_LIST)) : f.options;
+        const ctl = opts && opts.length
+          ? `<select class="pf-inp" id="${id}"><option value="">Select…</option>${opts.map(o => `<option${o === v ? ' selected' : ''}>${nxEsc(o)}</option>`).join('')}</select>`
+          : `<input class="pf-inp" id="${id}" type="${f.type === 'email' ? 'email' : f.type === 'url' ? 'url' : 'text'}" value="${nxEsc(v)}" placeholder="${nxEsc(f.placeholder || '')}" autocomplete="off">`;
+        return `<label class="pf-lab" for="${id}">${nxEsc(f.label)}${req}</label>${ctl}`;
+      }).join('');
+    }
+    function pfCollect(type, pre) {
+      const t = pfTypeOf(type), details = {};
+      for (const f of t.fields) {
+        const el = document.getElementById(pre + f.key), v = el ? el.value.trim() : '';
+        if (f.required && !v) return { error: f.label + ' is required for a ' + t.label + ' account.' };
+        if (v) details[f.key] = v;
+      }
+      return { details };
+    }
+    async function pfDrawRegTypes() {
+      const box = document.getElementById('pfRegTypes'); if (!box) return;
+      const meta = await pfMeta(), detail = document.getElementById('pfRegDetail'), fields = document.getElementById('pfRegFields');
+      const paint = k => {
+        window.__pfType = k; const t = pfTypeOf(k);
+        detail.style.display = 'block'; detail.innerHTML = pfDetailHtml(t);
+        // Each account type brings its own fields.
+        fields.innerHTML = pfFieldsHtml(t, {}, 'pfR_');
+        sel.value = k;
+        box.querySelectorAll('.pf-type').forEach(x => { x.classList.toggle('on', x.dataset.k === k); x.setAttribute('aria-checked', x.dataset.k === k); });
+      };
+      const sel = document.getElementById('pfRegTypeSel');
+      sel.innerHTML = meta.types.map(t => `<option value="${nxEsc(t.key)}">${nxEsc(t.label)}</option>`).join('');
+      sel.onchange = () => paint(sel.value);
+      pfBindTypes(box, meta.types, window.__pfType, paint); paint(window.__pfType);
+    }
+    async function pfSetup(type, details) {
+      const r = await apiFetch(`${API_BASE}/profile/setup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_type: type, country: (details || {}).country, details: details || {} }) });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error || 'Could not set the account type');
+      pfApplyNav(d.profile); return d.profile;
+    }
+    function pfApplyNav(p) {
+      const nb = document.getElementById('navBusiness'); if (nb && p && p.nav) nb.style.display = p.nav.business ? '' : 'none';
+    }
+    async function pfLoadNav() {
+      const r = await apiFetch(`${API_BASE}/profile`); const d = await r.json(); if (d.success) { pfData = d.profile; pfApplyNav(d.profile); }
+    }
+    let pfData = null;
+    function pfCopy(v) { try { navigator.clipboard.writeText(v); showToast('Copied', 'success'); } catch (e) { showToast(v, 'info'); } }
+    /* Membership: permanent number, Founders rank and badge. The medal is drawn here, so it looks the same on every phone. */
+    function pfMemberHtml(m) {
+      if (!m) return '';
+      if (m.status !== 'issued') return `<div class="pf-mem pending"><div><b>Membership number</b><span>${nxEsc(m.message || '')}</span></div></div>`;
+      const tone = { f100: ['#ffd36b', '#b8860b'], f1000: ['#e6ebf2', '#8b97a8'], f10000: ['#f0b27a', '#9a5b23'] }[m.badge && m.badge.badge] || ['#cfd8e6', '#6b7a90'];
+      const medal = m.badge ? `<svg class="pf-medal" viewBox="0 0 48 56" width="48" height="56" role="img" aria-label="${nxEsc(m.badge.label)}"><path d="M10 0h10l4 14-9 4zM38 0H28l-4 14 9 4z" fill="${tone[1]}"/><circle cx="24" cy="34" r="19" fill="${tone[0]}" stroke="${tone[1]}" stroke-width="3"/><path d="M24 22l3.6 7.4 8.1 1.1-5.9 5.7 1.4 8-7.2-3.9-7.2 3.9 1.4-8-5.9-5.7 8.1-1.1z" fill="${tone[1]}"/></svg>` : '';
+      return `<div class="pf-mem">${medal}<div style="min-width:0"><b>${m.badge ? nxEsc(m.badge.label) : 'Net365 member'}</b>
+        <span class="pf-memno">Membership No: <em style="font-style:normal;font-weight:700">${nxEsc(m.number)}</em><button class="pf-cp" type="button" aria-label="Copy membership number" data-copy="${nxEsc(m.number)}"><i class="fas fa-copy"></i></button></span>
+        <span>${nxEsc(m.message || '')}${m.since ? ' Member since ' + nxEsc(m.since) + '.' : ''}</span></div></div>`;
+    }
+    function pfRender() {
+      const p = pfData, body = document.getElementById('pfBody'); if (!p || !body) return;
+      const initials = (p.customer_name || 'U').split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const vcls = p.verification_status === 'Verified' ? 'ok' : (p.verification_status === 'Rejected' ? 'bad' : 'warn');
+      const row = (label, val, copy) => `<div class="pf-f"><span>${nxEsc(label)}</span><b><em style="font-style:normal">${nxEsc(val || '—')}</em>${copy && val ? `<button class="pf-cp" type="button" aria-label="Copy ${nxEsc(label)}" data-copy="${nxEsc(val)}"><i class="far fa-copy"></i></button>` : ''}</b></div>`;
+      const cur = pfTypeOf(p.account_type), tiers = (PF_META && PF_META.tiers) || [];
+      const have = new Set([p.account_type].concat((p.workspaces || []).map(w => w.kind)));
+      const more = PF_META.types.filter(t => t.key !== 'individual' && !have.has(t.key));
+      const capCount = p.capabilities.filter(c => c.status === 'active').length;
+      body.innerHTML = `
+        <div class="pf-hero">
+          <div class="pf-av" aria-hidden="true">${nxEsc(initials)}</div>
+          <div style="min-width:0"><h2>${nxEsc(p.customer_name)}</h2>
+            <div class="pf-badges">
+              <span class="pf-b"><i class="fas fa-${cur.icon}"></i>${nxEsc(p.account_type_label)}</span>
+              <span class="pf-b ${p.account_status === 'Active' ? 'ok' : 'bad'}"><i class="fas fa-circle" style="font-size:8px"></i>${nxEsc(p.account_status)}</span>
+              <span class="pf-b ${vcls}"><i class="fas fa-shield-halved"></i>${nxEsc(p.verification_status)}</span>
+              <span class="pf-b"><i class="fas fa-layer-group"></i>${nxEsc(p.account_tier)}</span>
+              ${(p.workspaces || []).map(w => `<span class="pf-b ${w.status === 'Verified' ? 'ok' : 'warn'}">${nxEsc(w.label)} · ${nxEsc(w.status)}</span>`).join('')}
+              ${p.affiliate ? '<span class="pf-b ok"><i class="fas fa-bullhorn"></i>Affiliate</span>' : ''}
+            </div></div></div>
+        ${pfMemberHtml(p.membership)}
+        <div class="pf-grid">
+          ${row('Customer name', p.customer_name)}${row('Customer ID', p.customer_id, true)}${row('Account type', p.account_type_label)}
+          ${row('Account status', p.account_status)}${row('Verification status', p.verification_status)}${row('Account tier', p.account_tier)}
+          ${row('Registration date', p.registration_date)}${row('Country', p.country)}${row('Primary currency', p.primary_currency)}
+          ${row('Referral ID', p.referral_id, true)}${p.is_business ? row('Business name', p.business_name) : ''}
+        </div>
+        ${p.is_business && p.verification_status !== 'Verified' ? '<p class="pf-note" style="margin-top:14px">Your business is waiting for review. Features marked Pending switch on once we verify it. Everything else works now.</p>' : ''}
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+          <button class="nxt-btn" type="button" id="pfChange"><i class="fas fa-repeat"></i> Change account type</button>
+          <button class="nxt-btn ghost" type="button" id="pfDetails"><i class="fas fa-pen"></i> Edit details</button>
+        </div>
+        <div id="pfPanel"></div>
+        <div class="pf-sec"><h3>${nxEsc(p.account_type_label)} capabilities</h3><div class="pf-note">${capCount} of ${p.capabilities.length} active. Pending ones unlock after verification.</div>
+          <div class="pf-caps">${p.capabilities.map(c => `<div class="pf-cap ${c.status}"><span>${nxEsc(c.label)}</span><em>${c.status === 'active' ? 'Active' : c.status === 'pending' ? 'Pending' : 'Not available'}</em></div>`).join('')}</div></div>
+        <div class="pf-sec"><h3>Account tier</h3><div class="pf-note">Your type is who you are. Your tier is the level of service and limits you get.</div>
+          <div class="pf-tiers">${tiers.map(t => `<div class="pf-tier${p.tier === t.name ? ' on' : ''}"><b>${nxEsc(t.name)}</b>${nxEsc(t.note)}${p.tier === t.name ? '<div style="margin-top:8px;font-weight:700;color:var(--n-ok)">Your tier</div>' : `<button class="nxt-btn ghost pf-tr" type="button" data-t="${nxEsc(t.name)}">Request ${nxEsc(t.name)}</button>`}</div>`).join('')}</div></div>
+        <div class="pf-sec"><h3>Add more to the same account</h3><div class="pf-note">No new login. Your wallet, history and customer ID stay as they are.</div>
+          <div class="pf-types" style="margin-top:12px" id="pfMore">
+            ${p.affiliate ? '' : '<button type="button" class="pf-type" data-k="affiliate"><b><i class="fas fa-bullhorn"></i>Join the Affiliate programme</b><small>Refer customers and earn commission. Open to every account type.</small></button>'}
+            ${more.map(t => `<button type="button" class="pf-type" data-k="${t.key}"><b><i class="fas fa-${t.icon}"></i>Activate ${nxEsc(t.label)}</b><small>${nxEsc(t.blurb)}</small></button>`).join('')}
+          </div>${(p.affiliate && !more.length) ? '<p class="pf-note">You have everything switched on.</p>' : ''}
+          <div id="pfAct"></div></div>`;
+      body.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => pfCopy(b.dataset.copy)));
+      document.getElementById('pfChange').onclick = pfChangeType;
+      document.getElementById('pfDetails').onclick = pfEditDetails;
+      body.querySelectorAll('.pf-tr').forEach(b => b.onclick = async () => {
+        try { const r = await apiFetch(`${API_BASE}/profile/tier-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tier: b.dataset.t }) }); const d = await r.json(); showToast(d.message || d.error || 'Done', d.success ? 'success' : 'error'); } catch (e) { showToast('No connection. Try again.', 'error'); }
+      });
+      body.querySelectorAll('#pfMore .pf-type').forEach(b => b.onclick = () => pfActivate(b.dataset.k));
+    }
+    function pfFormPanel(host, title, t, vals, saveLabel, onSave) {
+      host.innerHTML = `<div class="pf-edit" style="max-width:560px;margin-top:14px"><h3 style="margin:0 0 6px;font:700 15px var(--n-display);color:var(--n-t0)">${nxEsc(title)}</h3>
+        <div class="pf-note">${nxEsc(t.blurb)} <b>Verification:</b> ${nxEsc(t.verification)}</div>
+        ${pfFieldsHtml(t, vals, 'pfE_')}
+        <div style="display:flex;gap:10px"><button class="nxt-btn" type="button" id="pfOk">${nxEsc(saveLabel)}</button><button class="nxt-btn ghost" type="button" id="pfNo">Cancel</button></div>
+        <div class="pf-note" id="pfErr" role="status"></div></div>`;
+      document.getElementById('pfNo').onclick = () => { host.innerHTML = ''; };
+      document.getElementById('pfOk').onclick = async () => {
+        const col = pfCollect(t.key, 'pfE_'), msg = document.getElementById('pfErr'), btn = document.getElementById('pfOk');
+        if (col.error) { msg.textContent = col.error; return; }
+        btn.disabled = true; msg.textContent = '';
+        try { await onSave(col.details); } catch (e) { msg.textContent = e.message; btn.disabled = false; }
+      };
+    }
+    function pfChangeType() {
+      const p = pfData, host = document.getElementById('pfPanel');
+      if (p.is_business && p.verification_status === 'Verified') { showToast('A verified business account can only be changed by support.', 'info'); return; }
+      let pick = p.account_type;
+      host.innerHTML = `<div class="pf-edit" style="max-width:none;margin-top:14px"><label class="pf-lab">Choose your account type</label><div class="pf-types" id="pfPick" role="radiogroup"></div><div id="pfPickForm"></div></div>`;
+      const draw = () => pfFormPanel(document.getElementById('pfPickForm'), 'Details for ' + pfTypeOf(pick).label, pfTypeOf(pick), Object.assign({ country: p.country }, p.details), 'Save account type', async d => {
+        pfData = await pfSetup(pick, d); pfRender(); showToast('Account type updated', 'success'); });
+      pfBindTypes(document.getElementById('pfPick'), PF_META.types, pick, k => { pick = k; draw(); }); draw();
+    }
+    function pfEditDetails() {
+      const p = pfData, host = document.getElementById('pfPanel'), t = pfTypeOf(p.account_type);
+      pfFormPanel(host, 'Your details', t, Object.assign({ country: p.country }, p.details), 'Save details', async d => {
+        const r = await apiFetch(`${API_BASE}/profile/update`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
+        const j = await r.json(); if (!j.success) throw new Error(j.error || 'Could not save');
+        pfData = j.profile; pfApplyNav(pfData); pfRender(); showToast('Profile updated', 'success'); });
+    }
+    function pfActivate(kind) {
+      const host = document.getElementById('pfAct');
+      const send = async details => {
+        const r = await apiFetch(`${API_BASE}/profile/activate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind, details, country: (details || {}).country }) });
+        const j = await r.json(); if (!j.success) throw new Error(j.error || 'Could not activate');
+        pfData = j.profile; pfApplyNav(pfData); pfRender(); showToast(kind === 'affiliate' ? 'You are in the Affiliate programme' : 'Request sent. We will review it.', 'success');
+      };
+      if (kind === 'affiliate') {
+        host.innerHTML = `<div class="pf-edit" style="margin-top:14px"><div class="pf-note">Share your Referral ID <b>${nxEsc(pfData.referral_id)}</b> and earn commission on qualifying sign-ups and transactions. Referral partners, influencers, marketers, ambassadors and sales reps all join here.</div>
+          <div style="display:flex;gap:10px"><button class="nxt-btn" type="button" id="pfOk">Join Affiliate programme</button><button class="nxt-btn ghost" type="button" id="pfNo">Cancel</button></div><div class="pf-note" id="pfErr"></div></div>`;
+        document.getElementById('pfNo').onclick = () => { host.innerHTML = ''; };
+        document.getElementById('pfOk').onclick = async () => { try { await send({}); } catch (e) { document.getElementById('pfErr').textContent = e.message; } };
+        return;
+      }
+      pfFormPanel(host, 'Activate ' + pfTypeOf(kind).label, pfTypeOf(kind), { country: pfData.country }, 'Send for review', send);
+    }
+
+/* ---------- mobile entry points ---------- */
+async function showProfile() {
+  if (!currentUser) { toast('Sign in to see your profile', 'info'); openSheet('authModal'); return; }
+  var host = document.querySelector('main.app-view'), sec = document.getElementById('view-profile');
+  if (!sec) {
+    sec = document.createElement('section'); sec.className = 'view'; sec.id = 'view-profile';
+    sec.innerHTML = '<div class="page-head"><button class="back-btn" onclick="showView(\'home\')" aria-label="Back"><i class="fas fa-arrow-left"></i></button><h1>My profile</h1></div><div id="pfBody"></div>';
+    host.appendChild(sec);
+  }
+  showView('profile');
+  var body = document.getElementById('pfBody'); body.innerHTML = '<p class="pf-note">Loading your profile…</p>';
+  try {
+    await pfMeta();
+    var r = await apiFetch(API_BASE + '/profile'); var d = await r.json();
+    if (!d.success) throw new Error(d.error || 'failed');
+    pfData = d.profile; pfRender(); mxAcctChip(d.profile);
+  } catch (e) {
+    body.innerHTML = '<p class="pf-note">We could not load your profile. Check your connection and <a href="#" onclick="showProfile();return false">try again</a>.</p>';
+  }
+}
+function mxAcctChip(p) {
+  var c = document.getElementById('mxAcct'); if (!c) return;
+  if (!p) { c.classList.remove('on'); return; }
+  var n = p.membership && p.membership.status === 'issued' ? ' · ' + p.membership.number : '';
+  c.querySelector('span').textContent = p.account_type_label + ' · ' + p.account_tier + n; c.classList.add('on');
+}
+var mxAcctLoaded = false;
+function mxLoadAcct() {
+  if (!currentUser) { mxAcctLoaded = false; mxAcctChip(null); return; }
+  if (mxAcctLoaded) return; mxAcctLoaded = true;
+  apiFetch(API_BASE + '/profile').then(function(r){ return r.json(); }).then(function(d){ if (d && d.success) mxAcctChip(d.profile); }).catch(function(){ mxAcctLoaded = false; });
+}
+</script>
+<script id="mx-share">
+(function () {
+  if (window.Net365Share) return;
+  var G = window.Net365Geo || null;
+  var CUR = { NG: 'NGN', GH: 'GHS', KE: 'KES', ZA: 'ZAR', UG: 'UGX', TZ: 'TZS', US: 'USD', CA: 'CAD', GB: 'GBP', AU: 'AUD', NZ: 'NZD', IN: 'INR', AE: 'AED', FR: 'EUR', DE: 'EUR', IT: 'EUR', ES: 'EUR', NL: 'EUR', BE: 'EUR', AT: 'EUR', IE: 'EUR', PT: 'EUR', FI: 'EUR', GR: 'EUR' };
+  var NG_STATES = ['Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT Abuja', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'];
+  /* Usual electricity distribution company by state. A hint only: the meter's own provider is checked before any payment. */
+  var DISCO = { 'Lagos': 'Eko or Ikeja Electric', 'FCT Abuja': 'Abuja Electricity', 'Nasarawa': 'Abuja Electricity', 'Niger': 'Abuja Electricity', 'Kogi': 'Abuja Electricity', 'Delta': 'Benin Electricity', 'Edo': 'Benin Electricity', 'Ondo': 'Benin Electricity', 'Ekiti': 'Benin Electricity', 'Rivers': 'Port Harcourt Electricity', 'Bayelsa': 'Port Harcourt Electricity', 'Akwa Ibom': 'Port Harcourt Electricity', 'Cross River': 'Port Harcourt Electricity', 'Enugu': 'Enugu Electricity', 'Anambra': 'Enugu Electricity', 'Imo': 'Enugu Electricity', 'Ebonyi': 'Enugu Electricity', 'Oyo': 'Ibadan Electricity', 'Osun': 'Ibadan Electricity', 'Kwara': 'Ibadan Electricity', 'Kano': 'Kano Electricity', 'Katsina': 'Kano Electricity', 'Jigawa': 'Kano Electricity', 'Kaduna': 'Kaduna Electricity', 'Sokoto': 'Kaduna Electricity', 'Kebbi': 'Kaduna Electricity', 'Zamfara': 'Kaduna Electricity', 'Plateau': 'Jos Electricity', 'Bauchi': 'Jos Electricity', 'Gombe': 'Jos Electricity', 'Benue': 'Jos Electricity', 'Adamawa': 'Yola Electricity', 'Taraba': 'Yola Electricity', 'Borno': 'Yola Electricity', 'Yobe': 'Yola Electricity' };
+  var SVC = [['airtime', 'Airtime'], ['data', 'Data'], ['electricity', 'Electricity'], ['tv', 'Cable TV'], ['giftcards', 'Gift cards']];
+  var DIAL = [['+234', 'NG'], ['+233', 'GH'], ['+254', 'KE'], ['+27', 'ZA'], ['+256', 'UG'], ['+255', 'TZ'], ['+237', 'CM'], ['+225', 'CI'], ['+221', 'SN'], ['+250', 'RW'], ['+44', 'GB'], ['+91', 'IN'], ['+61', 'AU'], ['+971', 'AE'], ['+33', 'FR'], ['+49', 'DE'], ['+39', 'IT'], ['+34', 'ES'], ['+31', 'NL'], ['+353', 'IE']];
+  var S = { def: null, tab: 'id', me: null, reqs: [], loaded: false, edit: false, made: null, gift: { q: '', results: null, sel: null, ops: null, msg: '' }, request: null, busy: false };
+  var root = null, lastFocus = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function signedIn() { try { return !!(typeof userId !== 'undefined' && userId); } catch (e) { return false; } }
+  function toast(m, t) { try { if (typeof showToast === 'function') return showToast(m, t || 'info'); } catch (e) { } }
+  function cname(cc) { return (G && G.names[cc]) || cc || ''; }
+  function api(method, url, body) {
+    return fetch(url, { method: method, credentials: 'include', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, data: d || {} }; }); })
+      .catch(function () { return { ok: false, status: 0, data: {} }; });
+  }
+  function origin() { return location.origin; }
+  function shareUrl(code) { return origin() + '/?share=' + encodeURIComponent(code); }
+  function reqUrl(code) { return origin() + '/?request=' + encodeURIComponent(code); }
+  function where(i) { return [i.city, i.state, cname(i.country)].filter(Boolean).join(', '); }
+  function money(a, c) { if (a == null || a === '') return ''; var n = Number(a); try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: c || 'NGN', maximumFractionDigits: 0 }).format(n); } catch (e) { return (c || '') + ' ' + n; } }
+  function pickCode(t) { var m = String(t || '').toUpperCase().match(/NET365-[A-Z0-9]{6}/); return m ? m[0] : ''; }
+  function pickReq(t) { var m = String(t || '').toUpperCase().match(/NSR-[A-Z0-9]{6}/); return m ? m[0] : ''; }
+  function copy(text, ok) { try { navigator.clipboard.writeText(text).then(function () { toast(ok || 'Copied', 'success'); }, function () { toast('Could not copy. Select the text and copy it.', 'error'); }); } catch (e) { toast('Could not copy. Select the text and copy it.', 'error'); } }
+  function qr(text, px) { try { return window.N365QR ? window.N365QR.svg(text, px || 176) : ''; } catch (e) { return ''; } }
+
+  /* ---------- shell ---------- */
+  function build() {
+    if (root) return;
+    root = document.createElement('div'); root.id = 'nss'; root.className = 'nss'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-labelledby', 'nssT'); root.hidden = true;
+    root.innerHTML = '<div class="nss-card"><header class="nss-h"><div><h2 id="nssT">Share &amp; Gift</h2><p>Connect people. Power everyday living.</p></div><button type="button" class="nss-x" data-a="close" aria-label="Close">&times;</button></header>' +
+      '<nav class="nss-tabs" role="tablist" aria-label="Share and gift"><button type="button" role="tab" data-t="id">My identity</button><button type="button" role="tab" data-t="req">Request a recharge</button><button type="button" role="tab" data-t="gift">Gift someone</button></nav><div class="nss-body" id="nssBody"></div></div>';
+    document.body.appendChild(root);
+    root.addEventListener('click', function (e) {
+      if (e.target === root) return close();
+      var t = e.target.closest && e.target.closest('[data-t]'); if (t && t.parentNode.className === 'nss-tabs') { S.tab = t.getAttribute('data-t'); return render(); }
+      var a = e.target.closest && e.target.closest('[data-a]'); if (a) act(a.getAttribute('data-a'), a);
+    });
+    root.addEventListener('submit', function (e) { e.preventDefault(); var f = e.target.getAttribute('data-f'); if (f) act('submit-' + f, e.target); });
+    root.addEventListener('change', function (e) { if (e.target.id === 'nssCountry') { var m = $('nssBody'); S.formCountry = e.target.value; fillNetworks(); stateField(); } });
+    document.addEventListener('keydown', function (e) { if (!root.hidden && e.key === 'Escape') close(); });
+  }
+  function open(tab, opts) {
+    build(); opts = opts || {};
+    if (tab) S.tab = tab;
+    lastFocus = document.activeElement; root.hidden = false; document.documentElement.classList.add('nss-lock');
+    render();
+    if (!S.loaded && signedIn()) loadMe();
+    var f = root.querySelector('.nss-x'); if (f) f.focus();
+    if (opts.code) lookupCode(opts.code);
+    if (opts.request) loadRequest(opts.request);
+  }
+  function close() { if (!root) return; root.hidden = true; document.documentElement.classList.remove('nss-lock'); try { if (lastFocus && lastFocus.focus) lastFocus.focus(); } catch (e) { } }
+
+  function render() {
+    if (!root) return;
+    Array.prototype.forEach.call(root.querySelectorAll('.nss-tabs button'), function (b) { var on = b.getAttribute('data-t') === S.tab; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.className = on ? 'on' : ''; });
+    var b = $('nssBody'); b.innerHTML = S.request && S.tab === 'gift' ? viewRequest() : S.tab === 'id' ? viewId() : S.tab === 'req' ? viewReq() : viewGift();
+    if (S.tab === 'id' && (S.edit || (signedIn() && S.loaded && !S.me))) { fillNetworks(); stateField(); }
+  }
+  function needSignIn(what) {
+    return '<div class="nss-empty"><b>Sign in to ' + esc(what) + '</b><p>Your identity belongs to your Net365 account, so nobody else can change where your services go.</p><button type="button" class="nss-btn" data-a="signin">Sign in</button></div>';
+  }
+  function loadMe() {
+    S.busy = true; render();
+    api('GET', '/api/share/me').then(function (r) {
+      S.busy = false; S.loaded = true;
+      if (r.ok && r.data.success) { S.me = r.data.identity; S.reqs = r.data.requests || []; S.unavailable = false; }
+      else if (r.status === 404 || r.status === 0) { S.unavailable = true; }
+      if (S.me || S.unavailable) return render();
+      loadDefaults().then(render);
+    });
+  }
+  /* What the system already knows (account name and phone, country and city from the connection), so the customer confirms instead of typing. */
+  function dialCountry(phone) {
+    var p = String(phone || '').replace(/[^\d+]/g, '');
+    for (var k = 0; k < DIAL.length; k++) if (p.indexOf(DIAL[k][0]) === 0) return DIAL[k][1];
+    if (/^0(70|71|80|81|90|91)\d{8}$/.test(p) || /^234(70|71|80|81|90|91)\d{8}$/.test(p)) return 'NG';
+    return '';
+  }
+  function loadDefaults() {
+    if (S.def) return Promise.resolve();
+    return api('GET', '/api/share/defaults').then(function (r) {
+      var d = r.ok && r.data.success ? r.data : {}, here = (d.country || (G ? G.country().code : '')) || '';
+      var cc = dialCountry(d.phone) || here || 'NG', st = '', city = '';
+      if (cc === here) {   /* the connection's region and city describe where they are, so use them only when the services are there too */
+        city = d.city || '';
+        if (cc === 'NG') { var rg = String(d.region || '').replace(/\s+State$/i, '').trim(); st = NG_STATES.filter(function (x) { return x.toLowerCase() === rg.toLowerCase() || (x === 'FCT Abuja' && /^(fct|abuja)/i.test(rg)); })[0] || ''; } else st = d.region || '';
+      }
+      S.def = { name: d.name || '', phone: d.phone || '', country: cc, state: st, city: city, network: '', filled: !!(d.name || d.phone || d.country) };
+      if (d.phone && cc) {
+        return api('GET', '/api/operators/auto-detect?phone=' + encodeURIComponent(d.phone) + '&country_code=' + encodeURIComponent(cc)).then(function (x) {
+          /* a sandbox guess is not a detection, so only a real answer is used */
+          var o = x.ok && x.data.success && !x.data.source && x.data.operator; if (o && o.name) S.def.network = String(o.name);
+        });
+      }
+    });
+  }
+  function unavailable() { return '<div class="nss-empty"><b>Share &amp; Gift is not available right now</b><p>Please try again in a few minutes.</p></div>'; }
+
+  /* ---------- My identity ---------- */
+  function viewId() {
+    if (!signedIn()) return needSignIn('create your identity');
+    if (S.busy && !S.loaded) return '<div class="nss-empty"><b>Loading your identity…</b></div>';
+    if (S.unavailable) return unavailable();
+    if (!S.me || S.edit) return idForm();
+    var i = S.me, url = shareUrl(i.code);
+    return '<section class="nss-id"><div class="nss-qr">' + qr(url, 176) + '<span>Scan to recharge or gift ' + esc(i.name) + '</span></div>' +
+      '<div class="nss-idmain"><p class="nss-lab">Recharge code</p><div class="nss-code" id="nssCode">' + esc(i.code) + '</div>' +
+      '<p class="nss-sub">Services for <b>' + esc(i.name) + '</b> in ' + esc(where(i)) + (i.network ? ' · ' + esc(i.network) : '') + '</p>' +
+      '<div class="nss-chipset">' + (i.services.length ? i.services.map(function (s) { return '<span>' + esc(labelOf(s)) + '</span>'; }).join('') : '<span>All services</span>') + '</div>' +
+      '<div class="nss-link"><input readonly aria-label="Your shareable link" value="' + esc(url) + '" onfocus="this.select()"></div>' +
+      '<div class="nss-acts"><button type="button" class="nss-btn" data-a="copy-code">Copy code</button><button type="button" class="nss-btn ghost" data-a="copy-link">Copy link</button>' +
+      '<button type="button" class="nss-btn ghost" data-a="native-share">Share</button><a class="nss-btn ghost" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent('Recharge or gift me on Net365: ' + url) + '">WhatsApp</a>' +
+      '<a class="nss-btn ghost" target="_blank" rel="noopener" href="https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent('Recharge or gift me on Net365') + '">Telegram</a></div></div></section>' +
+      '<section class="nss-note"><b>What people see when they scan this</b><p>' + esc(i.name) + ', ' + esc(where(i)) + (i.network ? ', ' + esc(i.network) : '') + '. ' +
+      (i.share_phone ? 'Your number is hidden as ' + esc(i.phone_hint || 'a masked number') + ' and is filled in for them only after they sign in.' : 'Your number stays hidden. They enter it themselves, or you switch sharing on.') + ' ' + (i.discoverable ? 'People can also find you by name.' : 'Only people with your code or link can find you.') + '</p></section>' +
+      '<div class="nss-acts"><button type="button" class="nss-btn ghost" data-a="edit">Edit identity</button><button type="button" class="nss-btn ghost" data-a="rotate">Get a new code</button></div>';
+  }
+  function labelOf(s) { for (var k = 0; k < SVC.length; k++) if (SVC[k][0] === s) return SVC[k][1]; return s; }
+  function idForm() {
+    var D = (!S.me && S.def) || {}, i = S.me || { name: D.name, phone: D.phone, state: D.state, city: D.city, network: D.network }, cc = S.formCountry || i.country || D.country || (G ? G.country().code : 'NG'), names = G ? G.names : {}, det = G ? G.country() : { code: '', name: '' };
+    var opts = Object.keys(names).sort(function (a, b) { return names[a].localeCompare(names[b]); }).map(function (k) { return '<option value="' + k + '"' + (k === cc ? ' selected' : '') + '>' + esc(names[k]) + '</option>'; }).join('');
+    var sv = i.services && i.services.length ? i.services : ['airtime', 'data'];
+    var boxes = SVC.map(function (s) { return '<label class="nss-ck"><input type="checkbox" name="svc" value="' + s[0] + '"' + (sv.indexOf(s[0]) > -1 ? ' checked' : '') + '><span>' + s[1] + '</span></label>'; }).join('');
+    return '<form class="nss-form" data-f="id" autocomplete="off"><h3>' + (S.me ? 'Edit your identity' : 'Create your recharge identity') + '</h3>' +
+      '<p class="nss-sub">Say where the services for you should happen. People abroad use this to top up your phone or pay your bills without knowing your local providers.</p>' + (!S.me && D.filled ? '<div class="nss-note nss-auto"><b>Filled in for you</b><p>We used your account and connection. Check it, change anything that is wrong, then save. Only name and country are required.</p></div>' : '') +
+      '<div class="nss-grid"><label>Name people see<input name="name" maxlength="40" required value="' + esc(i.name || firstName()) + '" placeholder="Chijioke"></label>' +
+      '<label>Country where services are used<select name="country" id="nssCountry">' + opts + '</select></label></div>' +
+      '<div class="nss-detect"><button type="button" class="nss-btn ghost sm" data-a="detect">Use my current location</button><span id="nssDetect">Approximate: ' + esc(det.name) + ', from your connection. Nothing is saved until you press Save.</span></div>' +
+      '<div class="nss-grid"><label id="nssStateWrap">State or region (optional)<input name="state" maxlength="60" value="' + esc(i.state || '') + '"></label><label>City or town (optional)<input name="city" maxlength="60" value="' + esc(i.city || '') + '" placeholder="Warri"></label></div>' +
+      '<div class="nss-grid"><label>Preferred network<select name="network" id="nssNet" data-cur="' + esc(i.network || '') + '"><option value="">Any network</option></select></label>' +
+      '<label>Phone number for recharges (optional)<input name="phone" type="tel" inputmode="tel" maxlength="16" value="' + esc(i.phone || '') + '" placeholder="08031234567"></label></div>' +
+      '<fieldset class="nss-fs"><legend>Services you want to receive</legend><div class="nss-cks">' + boxes + '</div></fieldset>' +
+      '<label class="nss-sw"><input type="checkbox" name="share_phone"' + (i.share_phone ? ' checked' : '') + '><span><b>Let payers recharge this number</b><small>They see it masked and get the full number only after signing in. Every use is logged.</small></span></label>' +
+      '<label class="nss-sw"><input type="checkbox" name="discoverable"' + (i.discoverable ? ' checked' : '') + '><span><b>Let people find me by name</b><small>Off by default. With it off, only your code or link finds you.</small></span></label>' +
+      '<div class="nss-err" id="nssErr" role="alert"></div>' +
+      '<div class="nss-acts"><button type="submit" class="nss-btn">Save identity</button>' + (S.me ? '<button type="button" class="nss-btn ghost" data-a="cancel-edit">Cancel</button>' : '') + '</div></form>';
+  }
+  function firstName() { try { var n = (typeof currentUser !== 'undefined' && currentUser && (currentUser.full_name || currentUser.name)) || ''; return String(n).split(' ')[0]; } catch (e) { return ''; } }
+  function stateField() {
+    var sel = $('nssCountry'), w = $('nssStateWrap'); if (!sel || !w) return;
+    var cur = (w.querySelector('input,select') || {}).value || '', ng = sel.value === 'NG';
+    w.innerHTML = 'State or region (optional)' + (ng ? '<select name="state"><option value="">Choose state</option>' + NG_STATES.map(function (s) { return '<option' + (s === cur ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<input name="state" maxlength="60" value="' + esc(cur) + '">');
+  }
+  function fillNetworks() {
+    var sel = $('nssCountry'), net = $('nssNet'); if (!sel || !net || !G) return;
+    var cc = sel.value, want = net.getAttribute('data-cur') || net.value;
+    G.operators(cc).then(function (ops) {
+      if ($('nssCountry') && $('nssCountry').value !== cc) return;
+      net.innerHTML = '<option value="">Any network</option>' + ops.map(function (o) { return '<option' + (o.name === want ? ' selected' : '') + '>' + esc(o.name) + '</option>'; }).join('');
+      if (want && ops.every(function (o) { return o.name !== want; })) net.innerHTML += '<option selected>' + esc(want) + '</option>';
+    }, function () { });
+  }
+
+  /* ---------- Request a recharge ---------- */
+  function viewReq() {
+    if (!signedIn()) return needSignIn('request a recharge');
+    if (S.busy && !S.loaded) return '<div class="nss-empty"><b>Loading…</b></div>';
+    if (S.unavailable) return unavailable();
+    if (!S.me) return '<div class="nss-empty"><b>Create your identity first</b><p>A request tells people where and for whom the recharge is.</p><button type="button" class="nss-btn" data-a="go-id">Create identity</button></div>';
+    var cc = S.me.country, c = CUR[cc] || '', made = S.made, out = '';
+    var opts = SVC.filter(function (s) { return (cc === 'NG' || s[0] === 'airtime' || s[0] === 'data' || s[0] === 'giftcards'); }).map(function (s) { return '<option value="' + s[0] + '">' + s[1] + '</option>'; }).join('');
+    out += '<form class="nss-form" data-f="req" autocomplete="off"><h3>Ask for a one-time recharge</h3><p class="nss-sub">Creates a single-use code and QR for <b>' + esc(S.me.name) + '</b> in ' + esc(where(S.me)) + '. It expires in 7 days and you can cancel it any time.</p>' +
+      '<div class="nss-grid"><label>Service<select name="service">' + opts + '</select></label><label>Amount' + (c ? ' (' + c + ')' : '') + '<input name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="2000"></label></div>' +
+      '<label class="nss-wide">Note for the payer (optional)<input name="note" maxlength="140" placeholder="Airtime for this week"></label><div class="nss-err" id="nssErr" role="alert"></div>' +
+      '<div class="nss-acts"><button type="submit" class="nss-btn">Create request</button></div></form>';
+    if (made) out += reqCard(made, true);
+    var open = (S.reqs || []).filter(function (r) { return r.status === 'OPEN' && (!made || r.code !== made.code); });
+    if (open.length) out += '<h3 class="nss-h3">Your open requests</h3>' + open.map(function (r) { return reqCard(r, false); }).join('');
+    return out;
+  }
+  function reqCard(r, fresh) {
+    var url = reqUrl(r.code), amt = r.amount ? money(r.amount, r.currency) + ' ' : '';
+    return '<section class="nss-req' + (fresh ? ' fresh' : '') + '"><div class="nss-qr">' + qr(url, fresh ? 150 : 96) + '</div><div class="nss-reqm"><p class="nss-lab">' + (fresh ? 'Request ready' : 'Open request') + '</p><div class="nss-code sm">' + esc(r.code) + '</div>' +
+      '<p class="nss-sub">' + esc(amt) + esc(labelOf(r.service)) + (r.note ? ' · ' + esc(r.note) : '') + ' · valid until ' + esc(String(r.expires_at).slice(0, 10)) + '</p>' +
+      '<div class="nss-acts"><button type="button" class="nss-btn sm" data-a="copy" data-v="' + esc(url) + '">Copy link</button><a class="nss-btn ghost sm" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent('Please recharge me on Net365: ' + url) + '">WhatsApp</a>' +
+      '<a class="nss-btn ghost sm" target="_blank" rel="noopener" href="https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent('Please recharge me on Net365') + '">Telegram</a><button type="button" class="nss-btn ghost sm" data-a="cancel-req" data-v="' + esc(r.code) + '">Cancel</button></div></div></section>';
+  }
+
+  /* ---------- Gift someone ---------- */
+  function viewGift() {
+    var g = S.gift, out = '<form class="nss-find" data-f="find"><label class="nss-wide">Who are you gifting?<input name="q" id="nssQ" value="' + esc(g.q) + '" maxlength="80" placeholder="Their NET365 code, link or name"></label><button type="submit" class="nss-btn">Find</button></form>';
+    out += locStrip(g.sel);
+    if (g.msg) out += '<div class="nss-note">' + g.msg + '</div>';
+    if (g.sel) return out + giftDetail(g.sel);
+    if (g.results && g.results.length) out += '<div class="nss-results">' + g.results.map(function (r, n) { return '<button type="button" class="nss-person" data-a="pick" data-n="' + n + '"><b>' + esc(r.name) + '</b><span>' + esc(where(r)) + (r.network ? ' · ' + esc(r.network) : '') + '</span><code>' + esc(r.code) + '</code></button>'; }).join('') + '</div>';
+    if (!g.results) out += '<div class="nss-empty slim"><b>Paste a code or scan a link</b><p>Net365 shows what can be bought for them where they live, so you do not need to know the local providers.</p></div>';
+    return out;
+  }
+  function locStrip(sel) {
+    var cur = G ? G.country() : { name: '', source: '' }, reg = '';
+    try { var u = typeof currentUser !== 'undefined' && currentUser; reg = (u && (u.country_name || u.country)) || ''; } catch (e) { }
+    return '<dl class="nss-loc"><div><dt>You are now</dt><dd>' + esc(cur.name || 'Unknown') + '<small>approximate</small></dd></div>' + (reg ? '<div><dt>Registered in</dt><dd>' + esc(reg) + '</dd></div>' : '') +
+      '<div class="' + (sel ? 'hot' : '') + '"><dt>Service happens in</dt><dd>' + (sel ? esc(where(sel)) : 'Choose a person') + '</dd></div></dl>';
+  }
+  function lookupCode(code) {
+    S.tab = 'gift'; S.request = null; S.gift.msg = ''; S.gift.q = code; S.gift.sel = null; render();
+    api('GET', '/api/share/lookup/' + encodeURIComponent(code)).then(function (r) {
+      if (r.ok && r.data.identity) { selectPerson(r.data.identity); }
+      else { S.gift.results = []; S.gift.msg = r.status === 429 ? 'Too many lookups. Wait a few minutes and try again.' : 'No identity matches that code. Check it with the person.'; render(); }
+    });
+  }
+  function selectPerson(p) {
+    S.gift.sel = p; S.gift.ops = null; S.gift.msg = ''; render();
+    if (G) G.operators(p.country).then(function (ops) { S.gift.ops = ops; if (S.gift.sel === p) render(); }, function () { S.gift.ops = []; if (S.gift.sel === p) render(); });
+  }
+  function giftDetail(p) {
+    var cc = p.country, cur = CUR[cc] || '', ops = S.gift.ops, pref = (p.network || '').toLowerCase(), tiles = '';
+    var wanted = p.services && p.services.length ? p.services : null;
+    function want(s) { return !wanted || wanted.indexOf(s) > -1; }
+    if (want('airtime') || want('data')) {
+      var list = (ops || []).slice().sort(function (a, b) { return (b.name.toLowerCase() === pref ? 1 : 0) - (a.name.toLowerCase() === pref ? 1 : 0); });
+      var hit = list.filter(function (o) { return o.name.toLowerCase().indexOf(pref) > -1 && pref; })[0];
+      tiles += '<button type="button" class="nss-svc" data-a="svc" data-s="airtime"><b>Airtime and data</b><span>' + (ops === null ? 'Checking networks in ' + esc(cname(cc)) + '…' : hit ? esc(hit.name) + ' is their network' : p.network ? esc(p.network) + ' is their network' : ops.length ? ops.slice(0, 4).map(function (o) { return esc(o.name); }).join(', ') : 'Open Recharge for ' + esc(cname(cc))) + '</span></button>';
+    }
+    if (cc === 'NG' && want('electricity')) tiles += '<button type="button" class="nss-svc" data-a="svc" data-s="electricity"><b>Electricity</b><span>' + (DISCO[p.state] ? 'Usually ' + esc(DISCO[p.state]) + ' in ' + esc(p.state) : 'Pick the distribution company') + '. The meter is checked before you pay.</span></button>';
+    if (cc === 'NG' && want('tv')) tiles += '<button type="button" class="nss-svc" data-a="svc" data-s="tv"><b>Cable TV</b><span>DStv, GOtv and more</span></button>';
+    if (want('giftcards')) tiles += '<button type="button" class="nss-svc" data-a="svc" data-s="giftcards"><b>Gift cards</b><span>Works from anywhere</span></button>';
+    var hint = cur ? '<p class="nss-sub">Services are in <b>' + esc(cur) + '</b>. The rate from your wallet and the final price are shown before you confirm. Bundles and prices come live from the provider for ' + esc(cname(cc)) + '.</p>' : '<p class="nss-sub">Prices come live from the provider for ' + esc(cname(cc)) + ' and are shown before you confirm.</p>';
+    return '<section class="nss-person-card"><div><h3>' + esc(p.name) + '</h3><p class="nss-sub">' + esc(where(p)) + (p.network ? ' · ' + esc(p.network) : '') + '</p></div><button type="button" class="nss-btn ghost sm" data-a="clear">Change person</button></section>' + hint +
+      '<h3 class="nss-h3">What you can send ' + esc(p.name) + '</h3><div class="nss-svcs">' + tiles + '</div>' +
+      '<div id="nssNumber" class="nss-numwrap"></div>';
+  }
+  function viewRequest() {
+    var r = S.request; if (r === 'loading') return '<div class="nss-empty"><b>Opening the request…</b></div>';
+    if (r === 'missing') return '<div class="nss-empty"><b>This request was not found</b><p>Check the link with the person who sent it.</p><button type="button" class="nss-btn" data-a="clear-req">Gift someone else</button></div>';
+    var p = r.beneficiary, st = r.status, live = st === 'OPEN';
+    var head = '<section class="nss-person-card"><div><p class="nss-lab">Recharge request</p><h3>' + esc(p ? p.name : 'Someone') + ' asks for ' + (r.amount ? esc(money(r.amount, r.currency)) + ' ' : '') + esc(labelOf(r.service).toLowerCase()) + '</h3>' +
+      '<p class="nss-sub">' + (p ? esc(where(p)) + (p.network ? ' · ' + esc(p.network) : '') : '') + (r.note ? ' · “' + esc(r.note) + '”' : '') + '</p></div><span class="nss-status ' + (live ? 'ok' : 'off') + '">' + (live ? 'Open' : st === 'PAID' ? 'Paid' : st === 'CANCELLED' ? 'Cancelled' : 'Expired') + '</span></section>';
+    if (!live) return head + '<div class="nss-empty slim"><p>This request is closed. Ask for a new one if it is still needed.</p></div>';
+    return head + locStrip(p) + '<p class="nss-sub">You review the number, amount and price on the next screen. Nothing is charged until you confirm.</p><div class="nss-acts"><button type="button" class="nss-btn" data-a="svc" data-s="' + esc(r.service) + '">Continue to pay</button><button type="button" class="nss-btn ghost" data-a="clear-req">Gift someone else</button></div><div id="nssNumber" class="nss-numwrap"></div>';
+  }
+  function loadRequest(code) {
+    S.tab = 'gift'; S.request = 'loading'; render();
+    api('GET', '/api/share/requests/' + encodeURIComponent(code)).then(function (r) {
+      if (r.ok && r.data.request) { S.request = r.data.request; S.gift.sel = r.data.request.beneficiary; if (S.gift.sel && G) G.operators(S.gift.sel.country).then(function (o) { S.gift.ops = o; }, function () { }); }
+      else S.request = 'missing';
+      render();
+    });
+  }
+
+  /* ---------- hand over to the normal flows ---------- */
+  function proceed(svc) {
+    var p = S.gift.sel || (S.request && S.request.beneficiary); if (!p && svc !== 'giftcards') return;
+    if (svc === 'giftcards') { close(); window.location.href = '/giftcards'; return; }
+    if (svc === 'electricity' || svc === 'tv' || svc === 'education') {
+      close(); toast('Enter the meter or smartcard number. You confirm the price before paying.', 'info');
+      if (window.Net365Hub && window.Net365Hub.open) window.Net365Hub.open(svc); else window.location.href = '/utilities?svc=' + svc; return;
+    }
+    if (!signedIn()) { needLogin(); return; }
+    var box = $('nssNumber'); if (!box) return;
+    if (p.can_recharge) {
+      box.innerHTML = '<p class="nss-sub">Fetching the number ' + esc(p.name) + ' chose to share…</p>';
+      api('POST', '/api/share/open/' + encodeURIComponent(p.code)).then(function (r) {
+        if (r.ok && r.data.phone) return toRecharge(p, r.data.phone);
+        askNumber(p, box);
+      });
+    } else askNumber(p, box);
+  }
+  function askNumber(p, box) {
+    box.innerHTML = '<form class="nss-find" data-f="num"><label class="nss-wide">' + esc(p.name) + ' has not shared a number. Enter it<input name="phone" id="nssPh" type="tel" inputmode="tel" required maxlength="16" placeholder="08031234567"></label><button type="submit" class="nss-btn">Continue</button></form>';
+    var i = $('nssPh'); if (i) i.focus();
+  }
+  function toRecharge(p, phone) {
+    var amt = S.request && S.request.amount, cc = p.country;
+    close();
+    var sel = null; var go = function () {
+      try { if (cc && typeof setManualCountry === 'function') setManualCountry(cc); } catch (e) { }
+      try { var ph = $('phoneInput'); if (ph) { ph.value = phone; if (typeof onPhoneInput === 'function') onPhoneInput(); } } catch (e) { }
+      try { if (amt) { var a = $('amountInput'); if (a) { a.value = amt; if (typeof updateBreakdown === 'function') updateBreakdown(); } } } catch (e) { }
+      try { if (typeof showView === 'function') showView('recharge'); } catch (e) { }
+      toast('Check the number, choose the amount and confirm. Nothing is charged yet.', 'info');
+    };
+    try {
+      if (sel && Array.prototype.some.call(sel.options, function (o) { return o.value === cc; })) { sel.value = cc; var r = typeof onRechargeCountryChange === 'function' ? onRechargeCountryChange() : null; if (r && r.then) r.then(go, go); else setTimeout(go, 400); }
+      else go();
+    } catch (e) { go(); }
+  }
+  function needLogin() { close(); try { if (typeof showLoginScreen === 'function') return showLoginScreen('Sign in to continue the gift.'); } catch (e) { } toast('Sign in to continue.', 'info'); }
+
+  /* ---------- actions ---------- */
+  function act(a, el) {
+    if (a === 'close') return close();
+    if (a === 'signin') { close(); try { if (typeof showLoginScreen === 'function') showLoginScreen(); } catch (e) { } return; }
+    if (a === 'go-id') { S.tab = 'id'; return render(); }
+    if (a === 'edit') { S.edit = true; return render(); }
+    if (a === 'cancel-edit') { S.edit = false; return render(); }
+    if (a === 'copy-code') return copy(S.me.code, 'Code copied');
+    if (a === 'copy-link') return copy(shareUrl(S.me.code), 'Link copied');
+    if (a === 'copy') return copy(el.getAttribute('data-v'), 'Link copied');
+    if (a === 'native-share') { var u = shareUrl(S.me.code); if (navigator.share) navigator.share({ title: 'Recharge or gift me on Net365', url: u }).catch(function () { }); else copy(u, 'Link copied'); return; }
+    if (a === 'detect') { var c = G && G.country(); var sel = $('nssCountry'); if (c && sel) { sel.value = c.code; S.formCountry = c.code; stateField(); fillNetworks(); var d = $('nssDetect'); if (d) d.textContent = 'Set to ' + c.name + '. Add your state and city, then press Save.'; } return; }
+    if (a === 'rotate') { if (!confirm('Get a new code? Your old code, link and QR stop working straight away.')) return; api('POST', '/api/share/me/rotate').then(function (r) { if (r.ok && r.data.identity) { S.me = r.data.identity; toast('New code ready. Share the new QR.', 'success'); render(); } else toast('Could not change the code. Try again.', 'error'); }); return; }
+    if (a === 'cancel-req') { api('POST', '/api/share/requests/' + encodeURIComponent(el.getAttribute('data-v')) + '/cancel').then(function (r) { if (r.ok) { S.reqs = S.reqs.filter(function (x) { return x.code !== el.getAttribute('data-v'); }); if (S.made && S.made.code === el.getAttribute('data-v')) S.made = null; toast('Request cancelled', 'success'); render(); } else toast('Could not cancel it. Try again.', 'error'); }); return; }
+    if (a === 'pick') { return selectPerson(S.gift.results[+el.getAttribute('data-n')]); }
+    if (a === 'clear') { S.gift.sel = null; S.gift.ops = null; return render(); }
+    if (a === 'clear-req') { S.request = null; S.gift.sel = null; return render(); }
+    if (a === 'svc') return proceed(el.getAttribute('data-s'));
+    if (a === 'submit-id') return saveId(el);
+    if (a === 'submit-req') return makeReq(el);
+    if (a === 'submit-find') return find(el);
+    if (a === 'submit-num') { var ph = (el.elements.phone.value || '').trim(); if (ph.replace(/\D/g, '').length < 7) return; return toRecharge(S.gift.sel || S.request.beneficiary, ph); }
+  }
+  function err(m) { var e = $('nssErr'); if (e) e.textContent = m || ''; }
+  function saveId(f) {
+    var d = { name: f.elements.name.value, country: f.elements.country.value, state: f.elements.state.value, city: f.elements.city.value, network: f.elements.network.value, phone: f.elements.phone.value,
+      share_phone: f.elements.share_phone.checked, discoverable: f.elements.discoverable.checked, services: Array.prototype.filter.call(f.querySelectorAll('input[name=svc]'), function (x) { return x.checked; }).map(function (x) { return x.value; }) };
+    err(''); var b = f.querySelector('button[type=submit]'); b.disabled = true;
+    api('POST', '/api/share/me', d).then(function (r) {
+      b.disabled = false;
+      if (r.ok && r.data.identity) { S.me = r.data.identity; S.edit = false; S.formCountry = null; toast('Identity saved', 'success'); render(); }
+      else err(r.data.message || (r.status === 401 ? 'Sign in again to save.' : 'Could not save. Check the details and try again.'));
+    });
+  }
+  function makeReq(f) {
+    var d = { service: f.elements.service.value, amount: f.elements.amount.value, currency: CUR[S.me.country] || '', note: f.elements.note.value };
+    err(''); var b = f.querySelector('button[type=submit]'); b.disabled = true;
+    api('POST', '/api/share/requests', d).then(function (r) {
+      b.disabled = false;
+      if (r.ok && r.data.request) { S.made = r.data.request; S.reqs.unshift(r.data.request); render(); }
+      else err(r.data.message || 'Could not create the request. Try again.');
+    });
+  }
+  function find(f) {
+    var q = (f.elements.q.value || '').trim(); S.gift.q = q; S.gift.sel = null; S.request = null;
+    var rq = pickReq(q); if (rq) return loadRequest(rq);
+    var code = pickCode(q); if (code) return lookupCode(code);
+    if (q.length < 3) { S.gift.msg = 'Type at least 3 letters of their name, or paste their code.'; S.gift.results = null; return render(); }
+    if (!signedIn()) { S.gift.msg = 'Sign in to search by name. A code or link works without signing in.'; return render(); }
+    api('GET', '/api/share/search?q=' + encodeURIComponent(q)).then(function (r) {
+      S.gift.results = r.ok ? (r.data.results || []) : []; S.gift.msg = !r.ok ? 'Search is busy. Try again shortly.' : S.gift.results.length ? '' : 'No one with that name chose to be found. Ask them for their code or link.'; render();
+    });
+  }
+
+  /* ---------- entry points ---------- */
+  function intent(text) {
+    var t = String(text || '').toLowerCase().replace(/gift ?cards?/g, ''), code = pickCode(text), rq = pickReq(text);
+    if (rq) { open('gift', { request: rq }); return 'Opening that recharge request.'; }
+    if (code) { open('gift', { code: code }); return 'Looking up <b>' + esc(code) + '</b>.'; }
+    if (/\brequest (?:a |an )?(?:recharge|top.?up|airtime|data)|ask (?:for|someone to) (?:a )?(?:recharge|top.?up)|one.?time (?:code|qr|recharge)/.test(t)) { open('req'); return 'Opening <b>Request a recharge</b>.'; }
+    if (/\bgift\b|send (?:airtime|data|credit|a recharge) to|recharge for (?:my|a|someone)|top.?up for (?:my|a|someone)/.test(t)) { open('gift'); return 'Opening <b>Gift someone</b>.'; }
+    if (/digital identity|recharge identity|share (?:my )?(?:code|qr|identity|link)|my (?:recharge )?(?:code|qr)|\bqr\b|smart share|share (?:&|and) (?:gift|recharge)/.test(t)) { open('id'); return 'Opening <b>your recharge identity</b>.'; }
+    return null;
+  }
+  function boot() {
+    var q = new URLSearchParams(location.search), c = pickCode(q.get('share')), r = pickReq(q.get('request'));
+    if (c || r) { setTimeout(function () { open('gift', c ? { code: c } : { request: r }); try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { } }, 600); }
+    if (!$('nssHome')) {
+      var ask = $('pgAsk');
+      if (ask && ask.parentNode) {
+        var s = document.createElement('section'); s.id = 'nssHome'; s.className = 'nss-home'; s.setAttribute('aria-label', 'Share and gift');
+        s.innerHTML = '<div><h3>Share &amp; Gift</h3><p>Your recharge identity, a QR people can scan, and gifts that go to the right network where your person lives.</p></div>' +
+          '<div class="nss-homebtns"><button type="button" data-h="id">My identity</button><button type="button" data-h="req">Request a recharge</button><button type="button" data-h="gift">Gift someone</button></div>';
+        ask.parentNode.insertBefore(s, ask.nextSibling);
+        s.addEventListener('click', function (e) { var b = e.target.closest('[data-h]'); if (b) open(b.getAttribute('data-h')); });
+      }
+    }
+    var nav = $('navSettings');
+    if (nav && !$('navShare')) {
+      var a = document.createElement('a'); a.href = '#'; a.className = 'nav-item'; a.id = 'navShare'; a.innerHTML = '<i class="fas fa-qrcode"></i><span>Share &amp; Gift</span>';
+      a.addEventListener('click', function (e) { e.preventDefault(); open('id'); });
+      nav.parentNode.insertBefore(a, nav);
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.Net365Share = { open: open, close: close, intent: intent };
+})();
+</script>
+<script id="mx-ads">
+var MXV=[
+ {t:'Buy airtime in 3 taps',d:'Pick a number, pick an amount, confirm.',s:[
+  ['me','Airtime'],['bot','Who are we topping up?'],['opt',['📱 My number','🔁 080••••567 · last ₦1,500','✍️ Another number'],1],
+  ['me','🔁 080••••567'],['bot','MTN · How much?'],['opt',['↻ ₦1,500','₦500','₦1,000'],0],
+  ['me','↻ ₦1,500'],['bot','₦1,500 airtime to 080••••567\nPay with card or wallet?'],['opt',['✅ Pay now','Cancel'],0],['bot','✅ Done. Receipt sent.']]},
+ {t:'Buy data without typing',d:'Choose the network, then the bundle.',s:[
+  ['me','Data'],['bot','Which network?'],['opt',['MTN','Airtel','Glo'],1],
+  ['me','Airtel'],['bot','Tap a bundle. Price shown first.'],['opt',['₦500 · 500MB 7d','₦1,000 · 1.5GB 30d','➡️ More plans'],1],
+  ['me','₦1,000 · 1.5GB 30d'],['bot','Airtel 1.5GB · ₦1,000\nSend to 080••••567?'],['opt',['✅ Pay now','Cancel'],0],['bot','✅ Delivered.']]},
+ {t:'Pay your TV or light bill',d:'Smartcards and meters are remembered after the first time.',s:[
+  ['me','Cable TV'],['bot','Which provider?'],['opt',['DStv','GOtv','StarTimes'],0],
+  ['me','DStv'],['bot','Send your smartcard number, or tap one:'],['opt',['701••••678 Ada'],0],
+  ['me','701••••678 Ada'],['bot','✅ Verified: Ada\nPick a bouquet.'],['opt',['₦4,500 Compact','₦9,000 Compact Plus','➡️ More plans'],0],['bot','Confirm and pay. You get a receipt here.']]}
+];
+/* Under Ask Net365: Net365 and partner adverts set in admin (Home Adverts). The chat animation is the default slide. */
+(function(){
+  var host=document.getElementById('pgAsk'); if(!host) return;
+  var box=document.createElement('div'); box.id='rxAd'; box.setAttribute('role','region'); box.setAttribute('aria-roledescription','carousel'); box.setAttribute('aria-label','Net365 highlights');
+  var stage=document.createElement('div'), bar=document.createElement('div'); bar.className='bar';
+  var dots=document.createElement('div'); dots.className='dots'; var pz=document.createElement('button'); pz.type='button'; pz.className='pz'; pz.textContent='Pause';
+  bar.appendChild(dots); bar.appendChild(pz); box.appendChild(stage); box.appendChild(bar); host.appendChild(box);
+  var slides=[{t:'anim'}], idx=0, timers=[], rotate=7, paused=false, hover=false, scene=0, seen={}, reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function safe(u){ u=String(u||''); return (/^https:\/\/[^\s\/]+\.[^\s\/]+/.test(u)||/^\/(?!\/)/.test(u))?u:''; }
+  function clear(){ timers.forEach(clearTimeout); timers=[]; }
+  function later(ms,f){ timers.push(setTimeout(f,ms)); }
+  function el(t,c,x){ var e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; }
+  function ping(id,ev){ try{ fetch('/api/ads/home/'+id+'/event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:ev}),keepalive:true,credentials:'same-origin'}).catch(function(){}); }catch(e){} }
+  function active(){ return !paused&&!hover&&!document.hidden; }
+
+  function drawAnim(){
+    var sc=(MXV.length)?MXV[scene%MXV.length]:null;
+    var sl=el('div','sl'); var left=el('div'); left.appendChild(el('span','tag','Net365 · Pay by chat'));
+    left.appendChild(el('h4','',sc?sc.t:'Pay bills from a chat')); left.appendChild(el('p','',sc?sc.d:'Top up and pay bills from the WhatsApp or Telegram chat you already use.'));
+    var a=el('div','acts'); var l=el('a','go','Pay by chat'); l.href='/bots?src=ask'; a.appendChild(l); left.appendChild(a); sl.appendChild(left);
+    var chat=el('div','chat'); chat.setAttribute('aria-hidden','true'); sl.appendChild(chat); stage.replaceChildren(sl);
+    if(!sc) return 6000;
+    var at=0, last=null;
+    function add(c,t){ var m=el('div','m '+c,t); chat.appendChild(m); while(chat.scrollHeight>chat.clientHeight+2&&chat.children.length>1) chat.removeChild(chat.firstChild); }
+    sc.s.forEach(function(x){
+      if(x[0]==='bot'){ at+=reduce?0:900; (function(t){ later(at,function(){ add('bot',t); }); })(x[1]); }
+      else if(x[0]==='me'){ at+=reduce?0:600; (function(t){ later(at,function(){ add('me',t); }); })(x[1]); }
+      else { at+=reduce?0:500; (function(o,h){ later(at,function(){ var w=el('div','ob'); o.forEach(function(t){ w.appendChild(el('span','',t)); }); chat.appendChild(w); last=w; }); at+=reduce?0:700; later(at,function(){ if(last&&last.children[h]) last.children[h].className='hit'; }); })(x[1],x[2]); }
+    });
+    return reduce?Math.max(rotate*1000,6000):at+2600;
+  }
+  function drawAd(ad){
+    var img=safe(ad.image_url), cta=safe(ad.cta_url), sl=el('div','sl'+(img?'':' noimg')), left=el('div');
+    var tag=el('span','tag'+(ad.kind==='partner'?' sp':''),ad.kind==='partner'?'Sponsored · '+ad.sponsor:'Net365'); left.appendChild(tag);
+    left.appendChild(el('h4','',ad.title)); if(ad.body) left.appendChild(el('p','',ad.body));
+    if(cta){ var a=el('div','acts'), l=el('a','go',ad.cta_label||'Learn more'); l.href=cta; if(/^https:/.test(cta)){ l.target='_blank'; l.rel='noopener noreferrer'+(ad.kind==='partner'?' sponsored':''); } l.addEventListener('click',function(){ ping(ad.id,'click'); }); a.appendChild(l); left.appendChild(a); }
+    sl.appendChild(left);
+    if(img){ var im=el('div','img'), i=document.createElement('img'); i.src=img; i.alt=''; i.loading='lazy'; i.referrerPolicy='no-referrer'; i.onerror=function(){ im.remove(); sl.className='sl noimg'; }; im.appendChild(i); sl.appendChild(im); }
+    stage.replaceChildren(sl);
+    if(!seen[ad.id]){ seen[ad.id]=1; ping(ad.id,'view'); }
+    return rotate*1000;
+  }
+  function paintDots(){
+    dots.replaceChildren(); bar.style.display=slides.length>1?'':'none';
+    slides.forEach(function(s,i){ var b=el('button'); b.type='button'; b.setAttribute('aria-label','Show slide '+(i+1)+' of '+slides.length); if(i===idx) b.setAttribute('aria-current','true'); b.appendChild(el('i')); b.onclick=function(){ show(i); }; dots.appendChild(b); });
+  }
+  function show(i){
+    clear(); idx=((i%slides.length)+slides.length)%slides.length; var s=slides[idx], ms;
+    if(s.t==='anim'){ ms=drawAnim(); } else ms=drawAd(s.ad);
+    paintDots(); box.setAttribute('aria-live',paused?'polite':'off');
+    schedule(ms);
+  }
+  function schedule(ms){
+    clear0=false; later(ms,function(){ if(!active()){ wait=true; return; } step(); });
+  }
+  var wait=false, clear0=false;
+  function step(){ if(slides.length===1){ var s=slides[0]; if(s.t==='anim') scene++; } else if(slides[idx].t==='anim') scene++; show(idx+1); }
+  function resume(){ if(wait&&active()){ wait=false; step(); } }
+  box.addEventListener('mouseenter',function(){ hover=true; }); box.addEventListener('mouseleave',function(){ hover=false; resume(); });
+  box.addEventListener('focusin',function(){ hover=true; }); box.addEventListener('focusout',function(){ hover=false; resume(); });
+  document.addEventListener('visibilitychange',resume);
+  pz.onclick=function(){ paused=!paused; pz.textContent=paused?'Play':'Pause'; if(!paused) resume(); };
+
+  var reqSeq=0;
+  function load(){
+    var cc=''; try{ cc=window.Net365Geo?Net365Geo.country().code:''; }catch(e){} var my=++reqSeq;
+    fetch('/api/ads/home'+(cc?'?country='+encodeURIComponent(cc):''),{credentials:'same-origin',headers:{Accept:'application/json'}}).then(function(r){ return r.ok?r.json():null; }).then(function(d){
+      if(my!==reqSeq) return; var ads=(d&&d.ads)||[], st=(d&&d.settings)||{}; rotate=Math.max(4,Math.min(30,+st.rotate||7));
+      var list=ads.map(function(a){ return {t:'ad',ad:a}; });
+      if(st.animation==='first'||!st.animation) slides=[{t:'anim'}].concat(list); else slides=list.length?list:[{t:'anim'}];
+      wait=false; show(0);
+    }).catch(function(){ if(my!==reqSeq) return; slides=[{t:'anim'}]; show(0); });
+  }
+  show(0); load();
+  if(window.Net365Geo&&Net365Geo.onChange){ var dt; Net365Geo.onChange(function(){ clearTimeout(dt); dt=setTimeout(load,300); }); }
+})();
+</script>
+<script id="rx-qa">
+/* Ask Net365: answers to everyday questions. Every answer points at a real screen and only states what the page itself does. */
+(function(){
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  var A={
+    tx:['See my transactions',function(){ showView('transactions'); }], help:['Contact support',function(){ openSheet('supportSheet'); }], wallet:['Open my wallet',function(){ showView('wallet'); }],
+    profile:['Open my profile',function(){ showProfile(); }], settings:['Open my profile',function(){ showProfile(); }], bulk:['Bulk recharge','@/?full=1'], refer:['Referrals',function(){ openRewards(); }],
+    login:['Sign in',function(){ onAvatarTap(); }], sync:['Refresh my balance',function(){ nxSyncBalance(true).then(function(){ toast('Balance refreshed','success'); }); }],
+    sched:['Scheduled payments','@/scheduler'], bots:['Pay by chat','@/bots?src=qa'], gift:['Gift cards','@/giftcards'], recharge:['Recharge a number',function(){ showView('recharge'); }], util:['Pay bills',function(){ if(window.Net365Hub) Net365Hub.open(); else showView('utilities'); }]
+  };
+  var Q=[
+    ['paid', /(paid|debited|deducted|charged|money (?:gone|left)).*(not|no|never|didn'?t|nothing).*(receiv|arriv|deliver|get|got|credit|show|come|came)|nothing (came|arrived|was received|was delivered)|(paid|debited|deducted|charged).*(but|yet)|(not|never|didn'?t|haven'?t).*(receiv|arriv|deliver|credit).*(airtime|data|token|value|bill|recharge)|(airtime|data|token|recharge).*(not|never|hasn'?t|didn'?t).*(arriv|deliver|come|received|credit)|\bpending\b|still processing/i,
+      'Paid but nothing arrived','Do not pay again yet. Open <b>Transactions</b> and find the order. <b>Pending</b> means it is still being confirmed, and the status updates there when it settles. If it says <b>Failed</b>, or stays pending for a long time, contact support with the order reference so it can be checked.',['tx','help']],
+    ['fail', /fail(ed|ure)?\b|declined|unsuccessful|payment error|went wrong/i,
+      'A payment failed','Open <b>Transactions</b> and check the order status first. A failed order shows the reason there. Keep the order reference and contact support if money left your account and the order does not show a clear result.',['tx','help']],
+    ['refund', /refund|money back|reverse|reversal|chargeback/i,
+      'Refunds','Open the order in <b>Transactions</b> to see whether it was delivered, failed or is still pending. For a refund question, contact support with the order reference. They will see exactly what happened to it.',['tx','help']],
+    ['wrong', /wrong (number|meter|account|smartcard|card|phone|network|amount)|sent (it )?to the wrong|mistake(n|ly)? (number|meter)|typed.*wrong/i,
+      'Sent to the wrong number or meter','Check the order in <b>Transactions</b> to see the number or meter it went to. Once an order is delivered it cannot be undone from here, so contact support quickly with the reference. Next time, the confirm screen shows the name or number again before you pay.',['tx','help']],
+    ['bal', /balance.*(wrong|differ|not (match|tally|update|right|same)|mismatch|different)|(wrong|different|old).*balance|wallet.*(not (updat|show|credit)|empty|zero)|balance (is )?(not|still)/i,
+      'My balance looks wrong','The balance shown on this page is read from your account when the page opens and refreshes after each payment. If you used Net365 on another phone or browser, tap <b>Refresh my balance</b>. If it still looks wrong, open <b>Transactions</b> to see every debit and credit.',['sync','tx','help']],
+    ['fund', /(fund|top ?up|add money|load|put money|deposit).*(wallet|account|balance)|how.*(fund|add money)/i,
+      'Fund your wallet','Open your wallet and choose <b>Add money</b>. You see the amount and the method before you confirm.',['wallet']],
+    ['token', /(electric|power|meter|light|prepaid).*(token|unit)|(token|unit).*(electric|power|meter)|where.*(my )?token|token.*(not|where|lost|missing)/i,
+      'Electricity token','Your token appears on the order in <b>Transactions</b> once the meter is credited, and the receipt shows it too. If the order is still pending, wait for the status to change before you pay again.',['tx','help']],
+    ['receipt', /receipt|proof of payment|invoice|statement/i,
+      'Receipts','Every order has its details in <b>Transactions</b>. Open it to see the reference, amount and status.',['tx']],
+    ['chat', /whatsapp|telegram|bot\b|chat (pay|bot)|pay (by|via|with|through) chat/i,
+      'Pay by chat','You can top up and pay bills from the WhatsApp or Telegram chat you already use. The <b>Watch how it works</b> animation under this box shows an example.',['bots']],
+    ['sched', /recurring|repeat|every (week|month|day)|auto(matic)? (pay|top|recharge)|automatically/i,
+      'Repeat payments','Use <b>Scheduled payments</b> to set a top-up or bill to repeat. You choose the day and the amount.',['sched']],
+    ['bulk', /many numbers|multiple numbers|several numbers|staff|everyone|my team|lots of numbers|bulk/i,
+      'Many numbers at once','<b>Bulk recharge</b> lets you add several numbers and amounts and pay for them together.',['bulk']],
+    ['else', /(for|to) (someone|somebody|my (mum|mom|dad|brother|sister|wife|husband|friend|family|parents))|someone else|another person|abroad|diaspora|send (airtime|data|credit)/i,
+      'Paying for someone else','You can recharge any number or pay any meter or smartcard. Enter their details at the confirm step, and check the name or number shown before you pay. Recharge for another country follows the location shown under this box.',['recharge','gift']],
+    ['acct', /account type|upgrade|business account|sme|corporate|developer|agent account|partner account|affiliate|change my account|my tier|membership/i,
+      'Account type','Your account type and tier are on your <b>profile</b>. You can see what each type unlocks there and request an upgrade.',['profile']],
+    ['profile', /my profile|my details|my (name|email|phone|referral)|account number|customer id/i,
+      'Your profile','Your profile shows your name, account number, account type, status and referral ID.',['profile']],
+    ['safe', /safe|secure|scam|trust|legit|fraud|hack|pci/i,
+      'Is it safe?','You see the full price and the details before every payment, and nothing is charged until you confirm. Card payments use a PCI-compliant payment page. Never share your password or one-time codes with anyone, including anyone claiming to be Net365.',['settings','help']],
+    ['pw', /password|\bpin\b|log ?in|sign ?in|locked|can'?t (get|access)|forgot/i,
+      'Sign-in help','Use <b>Sign in</b> and follow the reset option if you forgot your password. You can change your details later under Settings.',['login','settings']],
+    ['fees', /fee|charge|how much (does|will)|commission|cost to use|price list|hidden/i,
+      'Prices and fees','The price is shown before you pay, and nothing is charged until you confirm. If a price looks different from what you expected, stop at the confirm screen and ask support.',['help']],
+    ['cancel', /cancel|stop (a|the|my) (payment|order)|undo|change my mind/i,
+      'Cancel a payment','Before you tap confirm, nothing has been charged, so you can just close the screen. After you confirm, the order goes to the provider. Open it in <b>Transactions</b> and contact support if you need it checked.',['tx','help']],
+    ['ref', /referr|invite|earn (money|commission)|commission|make money|affiliate programme/i,
+      'Earn by inviting','Share your referral link from <b>Referrals</b>. You can track who joined from there.',['refer']],
+    ['support', /support|human|agent|customer care|speak to|talk to|call you|contact|complain|help me|help centre|help center/i,
+      'Talk to support','Open the <b>Help Centre</b> to reach the team. Have the order reference ready if it is about a payment.',['help']],
+    ['countries', /which countries|what countries|countries do you|where (do|can) you (work|operate)|international|send.*(ghana|kenya|uganda|india|philippines)/i,
+      'Where Net365 works','Net365 tops up mobile networks in many countries. Use the location shown under this box and the list of providers for that country appears when you ask for mobile data or a recharge there.',['recharge','gift']],
+    ['what', /what (is|does) net365|what can (i|you) (do|pay|buy)|what do you (do|sell|offer)|services/i,
+      'What you can do here','Buy <b>airtime and data</b>, pay <b>electricity</b> and <b>cable TV</b>, buy gift cards, set up repeat payments, and recharge many numbers at once. You can also do it all by chat on WhatsApp or Telegram.',['recharge','util','bots']]
+  ];
+  var CHIPS=[['Paid but nothing arrived','my airtime was not received but I was debited'],['Where is my token?','where is my electricity token'],['I used the wrong number','I sent it to the wrong number'],['Refund','how do I get a refund'],['Balance looks wrong','my balance does not match'],['Talk to support','talk to support']];
+  function build(q){
+    var h='<span class="qa-t" data-q="'+q[0]+'"><b>'+esc(q[2])+'</b></span>'+q[3], b=q[4].map(function(k){ return '<button type="button" class="qa-act" data-qa="'+k+'">'+esc(A[k][0])+'</button>'; }).join('');
+    return h+'<div class="qa-acts">'+b+'</div><div class="qa-fb" data-fb-box>Did this answer your question? <button type="button" class="qa-fbb" data-fb="1">Yes</button><button type="button" class="qa-fbb" data-fb="0">No</button></div>';
+  }
+  function find(t){ for(var i=0;i<Q.length;i++) if(Q[i][1].test(t)) return Q[i]; return null; }
+  /* action phrases ("pay electricity", "buy data") are left to the normal Ask logic; only questions and problems come here */
+  var ACTION=/^(pay|buy|recharge|top ?up|send|fund|open|show|go to|take me)\b/i, PROBLEM=/\?|not |n'?t |never|wrong|refund|fail|pending|where|how|why|what|can i|can you|help|support|safe|stuck|missing|problem|issue/i;
+  var LOG={text:'',done:true,id:null,token:0,signed:false}, VK='';
+  try{ VK=localStorage.getItem('n365_ask_vk')||''; if(!VK){ VK=(Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)+Date.now().toString(36)).slice(0,28); localStorage.setItem('n365_ask_vk',VK); } }catch(e){ VK=VK||('s'+Math.random().toString(36).slice(2)+Date.now().toString(36)); }
+  function post(u,b){ return fetch(u,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){ return r.json().catch(function(){return {};}); }); }
+  function postLog(q,outcome,shown,matched,token){
+    var cc=''; try{ cc=window.Net365Geo?Net365Geo.country().code:''; }catch(e){}
+    post('/api/ask/log',{question:q,outcome:outcome,shown:shown,matched:matched,visitor:VK,country:cc}).then(function(d){
+      if(!d||!d.success||token!==LOG.token) return; LOG.id=d.id; LOG.signed=!!d.signed_in;
+      if(outcome==='unanswered') follow(d.id,d.signed_in);
+    }).catch(function(){});
+  }
+  function follow(id,signed){
+    var r=document.getElementById('pgReply'); if(!r||r.querySelector('.qa-follow')) return; var d=document.createElement('div'); d.className='qa-follow';
+    if(signed){ d.innerHTML='<span class="qa-note">You will see the reply here, in your notifications and by email.</span>'; }
+    else { d.innerHTML='<span class="qa-note">Leave an email if you want the reply sent to you. If you stay on this page you will also see it here.</span><form class="qa-mail"><input type="email" required maxlength="254" placeholder="you@example.com" aria-label="Your email"><button type="submit" class="qa-act">Send</button></form>';
+      d.querySelector('form').addEventListener('submit',function(e){ e.preventDefault(); var v=d.querySelector('input').value.trim(); post('/api/ask/contact',{id:id,visitor:VK,email:v}).then(function(x){ d.innerHTML=x&&x.success?'<span class="qa-note">Thanks. We will reply to '+esc(v)+'.</span>':'<span class="qa-note">That email does not look right. Try again.</span>'; }); }); }
+    r.appendChild(d);
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest?e.target.closest('.qa-fbb'):null; if(!b) return; var box=b.closest('[data-fb-box]'), good=b.getAttribute('data-fb')==='1', id=LOG.id;
+    box.innerHTML=good?'Thanks for letting us know.':'Sorry about that. <b>I will get back to you on this.</b>';
+    if(id) post('/api/ask/feedback',{id:id,visitor:VK,helpful:good}).catch(function(){}); if(!good&&id) follow(id,LOG.signed);
+  });
+  /* replies from the team: shown here while the customer is on the page, and again next visit until dismissed */
+  function inbox(){ var h=document.getElementById('qaInbox'); if(h) return h; var r=document.getElementById('pgReply'); if(!r||!r.parentNode) return null; h=document.createElement('div'); h.id='qaInbox'; h.setAttribute('aria-live','polite'); r.parentNode.insertBefore(h,r); return h; }
+  function poll(){
+    if(document.hidden) return; fetch('/api/ask/replies?visitor='+encodeURIComponent(VK),{credentials:'same-origin'}).then(function(r){ return r.ok?r.json():null; }).then(function(d){
+      if(!d||!d.replies||!d.replies.length) return; var h=inbox(); if(!h) return;
+      d.replies.forEach(function(x){ if(h.querySelector('[data-rid="'+x.id+'"]')) return; var c=document.createElement('div'); c.className='qa-reply'; c.setAttribute('data-rid',x.id);
+        c.innerHTML='<b>Reply from the Net365 team</b><span class="qa-note">You asked: '+esc(x.question)+'</span><div class="qa-ans"></div><button type="button" class="qa-act">Got it</button>';
+        c.querySelector('.qa-ans').textContent=x.admin_answer; c.querySelector('button').onclick=function(){ post('/api/ask/replies/seen',{ids:[x.id],visitor:VK}); c.remove(); }; h.appendChild(c); });
+    }).catch(function(){});
+  }
+  setTimeout(poll,1500); setInterval(poll,40000); window.addEventListener('focus',poll);
+  window.Net365QA={
+    answer:function(text){ text=String(text||'').trim(); if(!text) return ''; if(ACTION.test(text)&&!/\b(not|n't|never|wrong|failed|refund|pending)\b/i.test(text)) return ''; var q=find(text); if(!q) return ''; if(q[0]==='what'||q[0]==='fees'||q[0]==='ref'||q[0]==='acct'||q[0]==='profile'||q[0]==='bulk'||q[0]==='chat'||q[0]==='sched'){ if(!PROBLEM.test(text)) return ''; } return build(q); },
+    fallback:function(text){ var q=find(String(text||'')); return q?build(q):''; },
+    unknown:function(){ return '<span class="qa-t" data-q="none"><b>I will get back to you on this</b></span>I do not have a reliable answer to that yet, and I would rather not guess. I have passed your question to the team and they will reply.'; },
+    begin:function(t){ LOG.text=String(t||'').trim(); LOG.done=false; LOG.id=null; LOG.token++; },
+    logReply:function(html){ if(LOG.done||!LOG.text) return; LOG.done=true; var m=/data-q="([a-z]+)"/.exec(html||''), tmp=document.createElement('div'); tmp.innerHTML=html||''; var shown=(tmp.textContent||'').replace(/\s+/g,' ').trim().slice(0,200);
+      var outcome=m?(m[1]==='none'?'unanswered':'answered'):'action'; postLog(LOG.text,outcome,shown,m?m[1]:'',LOG.token); },
+    ask:function(t){ var i=document.getElementById('pgAskInput'), f=document.getElementById('pgAskForm'); if(!i||!f) return; i.value=t; if(f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true})); }
+  };
+  document.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest?e.target.closest('.qa-act[data-qa]'):null; if(!b) return; var a=A[b.getAttribute('data-qa')]; if(!a) return; var f=a[1];
+    if(typeof f==='function'){ try{ f(); }catch(x){} } else if(typeof f==='string'&&f.charAt(0)==='@'){ window.location.href=f.slice(1); }
+  });
+  var chips=document.getElementById('pgChips');
+  if(chips&&chips.parentNode){ var w=document.createElement('div'); w.className='rx-qchips'; w.setAttribute('aria-label','Common questions');
+    CHIPS.forEach(function(c){ var b=document.createElement('button'); b.type='button'; b.textContent=c[0]; b.onclick=function(){ window.Net365QA.ask(c[1]); }; w.appendChild(b); });
+    chips.parentNode.insertBefore(w,chips.nextSibling); }
+})();
+</script>
+<script id="mx-glue">
+(function(){
+  var $ = function(i){ return document.getElementById(i); };
+
+  /* ---- sign-up: account type + its details ---- */
+  var nm = $('authNameField');
+  if (nm && !$('mxRegBox')) { var t = document.createElement('div'); t.innerHTML = "<div id=\"mxRegBox\"><div class=\"mx-h\">Choose your Net365 account</div><div class=\"mx-s\">Pick what fits how you will use Net365. You can add more later without a new login.</div>\n      <select class=\"pf-inp\" id=\"pfRegTypeSel\" aria-label=\"Account type\"></select>\n      <div class=\"pf-types\" id=\"pfRegTypes\" role=\"radiogroup\" aria-label=\"Account type\"></div>\n      <div class=\"pf-detail\" id=\"pfRegDetail\" aria-live=\"polite\"></div><div id=\"pfRegFields\"></div></div>\n    "; nm.parentNode.insertBefore(t.firstElementChild, $('authTermsField')); }
+  var drawn = false;
+  var _tg = window.toggleAuthMode;
+  window.toggleAuthMode = function(){ var r = _tg.apply(this, arguments); var b = $('mxRegBox'); if (b) { b.classList.toggle('on', !!isAuthRegisterMode); if (isAuthRegisterMode && !drawn) { drawn = true; pfDrawRegTypes(); } } return r; };
+  var _sa = window.submitAuth;
+  window.submitAuth = async function(){
+    var reg = !!isAuthRegisterMode, col = null;
+    if (reg) {
+      col = pfCollect(window.__pfType || 'individual', 'pfR_');
+      if (col.error) { var e = $('authError'); e.textContent = col.error; e.style.display = 'block'; return; }
+    }
+    var before = currentUser; await _sa.apply(this, arguments);
+    if (reg && currentUser && !before) { try { await pfSetup(window.__pfType || 'individual', col.details); mxAcctLoaded = false; mxLoadAcct(); } catch (e) { /* the account exists; the type can be set from My profile */ } }
+  };
+
+  /* ---- profile entry points ---- */
+  var ul = document.querySelector('#userMenuModal .user-menu-list');
+  if (ul && !$('umProfile')) { var b = document.createElement('button'); b.className = 'um-item'; b.id = 'umProfile'; b.innerHTML = '<i class="fas fa-id-card"></i> My profile &amp; membership'; b.onclick = function(){ closeSheet('userMenuModal'); showProfile(); }; ul.insertBefore(b, ul.firstChild);
+    var s = document.createElement('button'); s.className = 'um-item'; s.innerHTML = '<i class="fas fa-qrcode"></i> Share &amp; gift'; s.onclick = function(){ closeSheet('userMenuModal'); if (window.Net365Share) Net365Share.open('id'); }; ul.insertBefore(s, b.nextSibling); }
+  window.fromUserMenuAuth = function(){ closeSheet('userMenuModal'); if (currentUser) showProfile(); else openSheet('authModal'); };
+  var gn = $('greetName');
+  if (gn && !$('mxAcct')) { var c = document.createElement('button'); c.type = 'button'; c.id = 'mxAcct'; c.className = 'mx-acct'; c.innerHTML = '<i class="fas fa-id-card"></i><span></span>'; c.onclick = function(){ showProfile(); }; gn.parentNode.insertBefore(c, gn.nextSibling.nextSibling || null); }
+  var _ua = window.updateAuthUI; if (typeof _ua === 'function') window.updateAuthUI = function(){ var r = _ua.apply(this, arguments); mxLoadAcct(); return r; };
+  setTimeout(mxLoadAcct, 1200);
+
+  /* ---- balance stays in step with the server, whichever phone or browser moved the money ---- */
+  var seq = 0, balAt = 0;
+  window.nxSyncBalance = function(force){
+    if (!currentUser || (document.hidden && !force)) return Promise.resolve();
+    var my = ++seq;
+    return fetch(API_BASE + '/dashboard/summary', { credentials: 'include', cache: 'no-store', headers: { Accept: 'application/json' } })
+      .then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+        if (my !== seq || !d || !d.success || !d.summary || !d.summary.wallet) return;
+        Object.keys(walletBalances).forEach(function(k){ delete walletBalances[k]; });
+        (d.summary.wallet.wallets || []).forEach(function(w){ walletBalances[w.currency] = parseFloat(w.balance || 0); });
+        updateWalletChip(); refreshWalletView(); balAt = Date.now();
+      }).catch(function(){});
+  };
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) nxSyncBalance(); });
+  window.addEventListener('focus', function(){ nxSyncBalance(); });
+  window.addEventListener('online', function(){ nxSyncBalance(); });
+  window.addEventListener('pageshow', function(e){ if (e.persisted) nxSyncBalance(); });
+  setInterval(function(){ if (Date.now() - balAt > 20000) nxSyncBalance(); }, 25000);
+  var eye = $('eyeBtn');
+  if (eye && !$('mxRefresh')) { var rb = document.createElement('button'); rb.type = 'button'; rb.id = 'mxRefresh'; rb.className = 'eye-btn mx-refresh'; rb.setAttribute('aria-label', 'Refresh balance'); rb.innerHTML = '<i class="fas fa-rotate"></i>';
+    rb.onclick = function(){ rb.classList.add('spin'); nxSyncBalance(true).then(function(){ setTimeout(function(){ rb.classList.remove('spin'); }, 400); }); }; eye.parentNode.insertBefore(rb, eye); }
+
+  /* ---- deep links: /?go=profile etc. ---- */
+  (function(){
+    var q = new URLSearchParams(location.search), go = q.get('go') || q.get('section') || (q.get('invite') ? 'referrals' : '');
+    var map = { profile: function(){ showProfile(); }, transactions: function(){ showView('transactions'); }, wallet: function(){ showView('wallet'); }, rewards: function(){ openRewards(); }, referrals: function(){ openRewards(); }, invite: function(){ openRewards(); },
+      help: function(){ openSheet('supportSheet'); }, login: function(){ onAvatarTap(); }, recharge: function(){ showView('recharge'); }, share: function(){ if (window.Net365Share) Net365Share.open('id'); } };
+    var fn = map[go]; if (!fn) return; var tries = 0, tm = setInterval(function(){ tries++;
+      if (document.readyState === 'complete' && (go !== 'profile' || currentUser !== null || tries > 12)) { clearInterval(tm); setTimeout(function(){ try { fn(); history.replaceState(null, '', location.pathname); } catch (e) {} }, 700); }
+      else if (tries > 40) clearInterval(tm); }, 250);
+  })();
+
+  /* ---- remember where the customer started, so the payment success page can send them back ---- */
+  function mark(){ try { var p = location.pathname.replace(/\/+$/, '') || '/'; localStorage.setItem('n365_return', JSON.stringify({ to: p, t: Date.now() })); } catch (e) {} }
+  window.addEventListener('beforeunload', mark); window.addEventListener('pagehide', mark);
+})();
+</script>
+
 </body>
 </html>
