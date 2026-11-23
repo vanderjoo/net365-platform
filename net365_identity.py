@@ -493,6 +493,42 @@ def _bind_verified(user_id, e164, source):
     return True, {"verified": True, "masked": mask_phone(e164), "national": national_display(e164)}
 
 
+def save_unverified(user_id, e164, region=None):
+    """Let the customer ADD a number at any time, with or without a verification method available.
+    The number is stored as unverified; proving it is a separate step. Rules:
+      * never replaces a number that is already verified on this account (that needs a fresh proof of the new number)
+      * never takes a number that is verified on another account
+    -> (ok, payload)"""
+    if _is_guest(user_id):
+        return False, {"error": "link_required"}
+    c = _conn()
+    owner = c.execute("SELECT user_id FROM user_phones WHERE phone_e164 = ? AND verified = 1", (e164,)).fetchone()
+    if owner is not None and int(_val(owner, "user_id", 0)) != int(user_id):
+        _event(user_id, "phone_conflict", mask_phone(e164))
+        return False, {"error": "phone_in_use"}
+    now = _iso()
+    cur = get_phone_row(user_id)
+    if cur is not None and _val(cur, "verified", 3):
+        if _val(cur, "phone_e164", 1) == e164:
+            return True, {"verified": True, "masked": mask_phone(e164), "national": national_display(e164)}
+        return False, {"error": "verified_exists"}
+    if cur is None:
+        c.execute("INSERT INTO user_phones (user_id, phone_e164, country, verified, source, created_at, updated_at) VALUES (?,?,?,0,?,?,?)",
+                  (user_id, e164, region, "typed", now, now))
+    else:
+        c.execute("UPDATE user_phones SET phone_e164=?, country=?, verified=0, source=?, updated_at=? WHERE user_id=?",
+                  (e164, region, "typed", now, user_id))
+    c.commit()
+    # keep the older users.phone column useful for receipts and older code (it was never verified, so it may be replaced)
+    try:
+        c.execute("UPDATE users SET phone = ? WHERE id = ?", (e164, user_id))
+        c.commit()
+    except Exception:
+        pass
+    _event(user_id, "phone_saved_unverified", mask_phone(e164))
+    return True, {"verified": False, "masked": mask_phone(e164), "national": national_display(e164)}
+
+
 def adopt_chat_number(user_id, wa_digits):
     """A linked WhatsApp chat already proved this number belongs to the person on it. Adopt it as verified so the
     customer is never asked twice, but only when it is safe: the account has no verified number yet and nobody
@@ -852,6 +888,8 @@ _ERR = {
     "wrong_code": "That code is not right.",
     "whatsapp_unavailable": "WhatsApp verification is not available right now.",
     "telegram_unavailable": "Telegram verification is not available right now.",
+    "verified_exists": "You already have a verified number. To change it, verify the new number with a code or through WhatsApp or Telegram.",
+    "link_required": "Please sign in to your Net365 account first.",
 }
 
 
@@ -896,6 +934,20 @@ def init_identity(app, db, login_required, rate_limit, send_sms=None, send_email
     @login_required
     def identity_status():
         return jsonify(success=True, **profile_status(g.current_user_id))
+
+    @app.post("/api/identity/phone/save")
+    @login_required
+    @rate_limit(max_requests=20, window_seconds=600)
+    def identity_phone_save():
+        d = request.get_json(silent=True) or {}
+        e164, region, err = normalize_phone(d.get("phone"), d.get("country"))
+        if err:
+            return jsonify(success=False, error_code=err, error=_ERR.get(err, "Invalid number")), 400
+        ok, res = save_unverified(g.current_user_id, e164, region)
+        if not ok:
+            code = res.get("error", "invalid")
+            return jsonify(success=False, error_code=code, error=_ERR.get(code, "Could not save the number")), (409 if code in ("phone_in_use", "verified_exists") else 400)
+        return jsonify(success=True, saved=True, **res, status=profile_status(g.current_user_id))
 
     @app.post("/api/identity/phone/start")
     @login_required

@@ -2,329 +2,201 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add your phone number · Net365</title>
 <meta name="robots" content="noindex">
-<title>Secure your Net365 account</title>
 <style>
-:root{
-  --fire:linear-gradient(135deg,#ff3b30 0%,#ff7a00 55%,#ffa640 100%);
-  --orange:#ff7a00; --cyan:#35d9ff; --green:#39e58c; --red:#ff4d42;
-  --bg:#eef2f7; --card:#ffffffd9; --card-b:rgba(15,23,42,.08); --t0:#0f172a; --t1:#334155; --t2:#64748b;
-  --field:#f8fafc; --field-b:rgba(15,23,42,.12); --glow:rgba(255,122,0,.22);
-  --font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#070a12; --card:rgba(17,22,36,.78); --card-b:rgba(255,255,255,.08); --t0:#f1f5f9; --t1:#b6c2d4; --t2:#7f8ca3;
-  --field:rgba(255,255,255,.05); --field-b:rgba(255,255,255,.12); --glow:rgba(255,122,0,.3);}}
-:root[data-theme="dark"]{--bg:#070a12; --card:rgba(17,22,36,.78); --card-b:rgba(255,255,255,.08); --t0:#f1f5f9; --t1:#b6c2d4; --t2:#7f8ca3;
-  --field:rgba(255,255,255,.05); --field-b:rgba(255,255,255,.12); --glow:rgba(255,122,0,.3);}
-*{box-sizing:border-box}
-html,body{margin:0;min-height:100%}
-body{background:var(--bg);color:var(--t0);font-family:var(--font);-webkit-font-smoothing:antialiased;
-  min-height:100dvh;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:20px 16px;overflow-x:hidden;position:relative}
-.aura{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.aura i{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55}
-.aura i:nth-child(1){width:46vmax;height:46vmax;left:-14vmax;top:-18vmax;background:radial-gradient(circle,#ff3b3055,transparent 65%);animation:drift 18s ease-in-out infinite alternate}
-.aura i:nth-child(2){width:40vmax;height:40vmax;right:-12vmax;bottom:-16vmax;background:radial-gradient(circle,#35d9ff40,transparent 65%);animation:drift 22s ease-in-out infinite alternate-reverse}
-@keyframes drift{to{transform:translate3d(4vmax,3vmax,0) scale(1.08)}}
-.shell{position:relative;z-index:1;width:100%;max-width:440px;min-width:0}
-.brand{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:18px;font-weight:800;letter-spacing:.14em;font-size:13px}
-.brand b{width:30px;height:30px;border-radius:9px;background:var(--fire);display:grid;place-items:center;color:#fff;box-shadow:0 8px 24px var(--glow)}
-.card{background:var(--card);border:1px solid var(--card-b);border-radius:24px;padding:26px 22px 22px;
-  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 30px 80px -30px rgba(0,0,0,.45)}
-.steps{display:flex;gap:6px;margin-bottom:22px}
-.steps span{flex:1;height:4px;border-radius:4px;background:var(--field-b);overflow:hidden;position:relative}
-.steps span::after{content:"";position:absolute;inset:0;background:var(--fire);transform:scaleX(0);transform-origin:left;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
-.steps span.on::after{transform:scaleX(1)}
-h1{font-size:24px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em}
-p.sub{margin:0 0 20px;color:var(--t1);font-size:14.5px;line-height:1.55}
-.hi{color:var(--orange);font-weight:700}
-label{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin:0 0 7px}
-.row{display:flex;gap:10px}
-select,input.tel{height:54px;border-radius:14px;border:1px solid var(--field-b);background:var(--field);color:var(--t0);
-  font:inherit;font-size:16px;padding:0 14px;outline:none;transition:border-color .2s,box-shadow .2s;min-width:0}
-select{width:42%;flex:none;appearance:none;-webkit-appearance:none;
-  background-image:linear-gradient(45deg,transparent 50%,var(--t2) 50%),linear-gradient(135deg,var(--t2) 50%,transparent 50%);
-  background-position:calc(100% - 18px) 24px,calc(100% - 13px) 24px;background-size:5px 5px;background-repeat:no-repeat;padding-right:28px}
-input.tel{flex:1;letter-spacing:.02em}
-select:focus,input.tel:focus{border-color:var(--orange);box-shadow:0 0 0 4px var(--glow)}
-.hint{margin:9px 2px 0;font-size:12.5px;color:var(--t2);min-height:18px}
-.err{margin:12px 0 0;padding:10px 12px;border-radius:12px;font-size:13.5px;line-height:1.45;color:var(--red);
-  background:color-mix(in srgb,var(--red) 11%,transparent);border:1px solid color-mix(in srgb,var(--red) 30%,transparent);display:none}
-.err.show{display:block}
-button.go{width:100%;height:54px;margin-top:18px;border:0;border-radius:14px;background:var(--fire);color:#fff;font:inherit;
-  font-weight:800;font-size:16px;letter-spacing:.01em;cursor:pointer;box-shadow:0 14px 34px -10px var(--glow);
-  transition:transform .15s,filter .2s,opacity .2s}
-button.go:hover{filter:brightness(1.06)} button.go:active{transform:scale(.985)} button.go[disabled]{opacity:.55;cursor:not-allowed}
-.link{background:none;border:0;color:var(--t2);font:inherit;font-size:13.5px;cursor:pointer;padding:10px 4px;text-decoration:underline;text-underline-offset:3px}
-.link:hover{color:var(--t0)} .link[disabled]{opacity:.5;cursor:default;text-decoration:none}
-.center{text-align:center}
-.otp{display:flex;gap:8px;justify-content:space-between;margin:4px 0 2px}
-.otp input{flex:1;min-width:0;width:100%;height:58px;text-align:center;font:inherit;font-size:24px;font-weight:700;border-radius:14px;
-  border:1px solid var(--field-b);background:var(--field);color:var(--t0);outline:none;transition:border-color .2s,box-shadow .2s,transform .15s}
-.otp input:focus{border-color:var(--orange);box-shadow:0 0 0 4px var(--glow);transform:translateY(-2px)}
-.otp.bad input{border-color:var(--red);animation:shake .35s}
-@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
-.pane{display:none;animation:in .45s cubic-bezier(.2,.8,.2,1)} .pane.on{display:block}
-@keyframes in{from{opacity:0;transform:translateY(10px)}}
-.trust{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:18px;font-size:12px;color:var(--t2)}
-.trust span::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px;vertical-align:middle}
-.done{text-align:center;padding:6px 0 2px}
-.ring{width:84px;height:84px;margin:4px auto 16px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--green) 14%,transparent);
-  box-shadow:0 0 0 0 color-mix(in srgb,var(--green) 40%,transparent);animation:pulse 1.8s ease-out 1}
-.ring svg{width:40px;height:40px;stroke:var(--green);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:50;stroke-dashoffset:50;animation:draw .6s .2s forwards}
-@keyframes draw{to{stroke-dashoffset:0}} @keyframes pulse{to{box-shadow:0 0 0 26px transparent}}
-.skip{display:block;text-align:center;margin-top:12px}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-a.go{display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;height:56px;margin-top:6px;border-radius:14px;color:#fff;font-weight:800;font-size:16px;
-  background:linear-gradient(135deg,#1fb85a,#39e58c);box-shadow:0 14px 34px -10px rgba(57,229,140,.55);transition:transform .15s,filter .2s}
-a.go.tg{background:linear-gradient(135deg,#1a8fd9,#35b6ff);box-shadow:0 14px 34px -10px rgba(53,182,255,.55);margin-top:10px}
-a.go:hover{filter:brightness(1.05)} a.go:active{transform:scale(.985)} a.go svg{width:22px;height:22px;fill:#fff}
-.codebox{margin:16px 0 4px;padding:14px;border-radius:14px;border:1px dashed var(--field-b);background:var(--field);text-align:center}
-.codebox small{display:block;color:var(--t2);font-size:12.5px;margin-bottom:6px}
-.codebox b{font-size:20px;letter-spacing:.08em;font-variant-numeric:tabular-nums;word-break:break-all}
-.wait{display:flex;align-items:center;justify-content:center;gap:10px;margin:14px 0 2px;color:var(--t1);font-size:14px}
-.wait i{width:9px;height:9px;border-radius:50%;background:var(--green);animation:blink 1.2s ease-in-out infinite}
-@keyframes blink{50%{opacity:.25;transform:scale(.7)}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+:root{--bg:#eef2f7;--card:#fff;--ink:#0f172a;--ink2:#475569;--ink3:#64748b;--line:#dbe3ee;--brand:#ff6a1a;--brand2:#ff8a3d;--ok:#0f9d6b;--okbg:#e6f7f0;--warn:#b45309;--warnbg:#fff4e0;--bad:#c0262d;--badbg:#fdeaea;--soft:#f3f6fb}
+@media (prefers-color-scheme:dark){:root{--bg:#070b14;--card:#0f172a;--ink:#eef2fb;--ink2:#b6c2d6;--ink3:#8a98b0;--line:#26324a;--ok:#34e39a;--okbg:#0c2a20;--warn:#ffb547;--warnbg:#2b2110;--bad:#ff7a7f;--badbg:#2e1417;--soft:#131c31}}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:grid;place-items:start center;padding:24px 16px 48px}
+.wrap{width:100%;max-width:480px}
+.brand{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 18px}
+.brand b{letter-spacing:.16em;font-size:14px}.brand a{color:var(--ink3);font-size:14px;text-decoration:none;padding:10px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;margin-bottom:14px;box-shadow:0 18px 50px -34px rgba(15,23,42,.45)}
+h1{font-size:24px;line-height:1.2;margin:0 0 6px;letter-spacing:-.02em}h2{font-size:17px;margin:0 0 4px}
+p{margin:0 0 12px;color:var(--ink2)}.small{font-size:13.5px;color:var(--ink3)}
+label{display:block;font-size:14px;font-weight:600;margin:14px 0 6px}
+select,input{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;min-height:48px}
+select:focus,input:focus{outline:2px solid var(--brand);outline-offset:1px}
+.row{display:grid;grid-template-columns:132px 1fr;gap:10px}
+@media (max-width:380px){.row{grid-template-columns:1fr}}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:14px 18px;min-height:50px;cursor:pointer;width:100%;margin-top:14px;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand2))}
+button:disabled{opacity:.6;cursor:default}
+button.alt{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+button.wa{background:#1fa855}button.tg{background:#229ed9}
+.msg{border-radius:12px;padding:11px 13px;font-size:14.5px;margin-top:12px;display:none}
+.msg.on{display:block}.msg.err{background:var(--badbg);color:var(--bad)}.msg.ok{background:var(--okbg);color:var(--ok)}.msg.note{background:var(--warnbg);color:var(--warn)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;padding:6px 11px;border-radius:999px}
+.pill.ok{background:var(--okbg);color:var(--ok)}.pill.no{background:var(--warnbg);color:var(--warn)}
+.num{font-size:22px;font-weight:800;letter-spacing:.01em;margin:8px 0}
+.hide{display:none!important}
+.code{letter-spacing:.4em;text-align:center;font-size:22px;font-weight:700}
+.steps{margin:6px 0 0 18px;padding:0;color:var(--ink2);font-size:14.5px}
+.spin{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:r .7s linear infinite;vertical-align:-3px;margin-right:6px}@keyframes r{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
 </style>
 </head>
 <body>
-<div class="aura" aria-hidden="true"><i></i><i></i></div>
-<main class="shell">
-  <div class="brand"><b>◆</b><span>NET365</span></div>
-  <section class="card" aria-live="polite">
-    <div class="steps" aria-hidden="true"><span class="on" id="s1"></span><span id="s2"></span><span id="s3"></span></div>
+<div class="wrap">
+  <div class="brand"><b>NET365</b><a href="/" id="back">Back to Net365</a></div>
 
-    <!-- Step 1 (default): WhatsApp, no SMS needed -->
-    <div class="pane" id="p0">
-      <h1><span id="p0Title">Verify your number</span>, <span class="hi" id="who0">welcome</span></h1>
-      <p class="sub" id="p0Sub">Tap a button to verify.</p>
-      <a class="go" id="waBtn" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.2 14.3c-.2.6-1.3 1.1-1.8 1.2-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5-4.5-.1-.2-1.2-1.6-1.2-3s.8-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.4.5c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.1 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.1.1.6-.1 1.2z"/></svg><span>Open WhatsApp</span></a>
-      <a class="go tg" id="tgBtn" href="#" target="_blank" rel="noopener" style="display:none"><svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.6 20c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L6.1 13.5 1.2 12c-1.1-.3-1.1-1.1.2-1.6L20.5 3c.9-.3 1.7.2 1.4 1.3z"/></svg><span>Verify with Telegram</span></a>
-      <div class="codebox"><small>Or send this message to Net365 on WhatsApp: <span id="waNum"></span></small><b id="waCode">…</b></div>
-      <div class="wait" id="waWait"><i></i><span>Waiting for your message…</span></div>
-      <div class="err" id="e0" role="alert"></div>
-      <div class="center">
-        <button class="link" id="waNew">Get a new code</button>
-        <button class="link" id="toSms" style="display:none">Send me a code instead</button>
-      </div>
-    </div>
-
-    <!-- Step 1 (alternative): SMS -->
-    <div class="pane" id="p1">
-      <h1>One last step, <span class="hi" id="who">welcome</span></h1>
-      <p class="sub">Add your mobile number so we can protect your payments and send receipts and tokens. We will text you a code to confirm it is yours.</p>
-      <label for="cc">Mobile number</label>
-      <div class="row">
-        <select id="cc" aria-label="Country"></select>
-        <input class="tel" id="tel" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="803 123 4567" aria-label="Phone number">
-      </div>
-      <div class="hint" id="preview"></div>
-      <div class="err" id="e1" role="alert"></div>
-      <button class="go" id="send">Send my code</button>
-      <div class="center"><button class="link" id="toWa" style="display:none">Verify with WhatsApp or Telegram instead</button></div>
-      <a class="link skip" href="/" id="skip">Skip for now</a>
-    </div>
-
-    <!-- Step 2: code -->
-    <div class="pane" id="p2">
-      <h1>Enter your code</h1>
-      <p class="sub">We sent a 6-digit code to <span class="hi" id="sentTo"></span>. It expires in 10 minutes. Check your WhatsApp or text messages.</p>
-      <div class="otp" id="otp">
-        <input inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Digit 1">
-        <input inputmode="numeric" maxlength="1" aria-label="Digit 2"><input inputmode="numeric" maxlength="1" aria-label="Digit 3">
-        <input inputmode="numeric" maxlength="1" aria-label="Digit 4"><input inputmode="numeric" maxlength="1" aria-label="Digit 5">
-        <input inputmode="numeric" maxlength="1" aria-label="Digit 6">
-      </div>
-      <div class="err" id="e2" role="alert"></div>
-      <button class="go" id="verify" disabled>Verify and continue</button>
-      <div class="center">
-        <button class="link" id="resend" disabled>Resend code</button>
-        <button class="link" id="change">Change number</button>
-      </div>
-    </div>
-
-    <!-- Step 3: done -->
-    <div class="pane" id="p3">
-      <div class="done">
-        <div class="ring"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-        <h1>You are verified</h1>
-        <p class="sub"><span class="hi" id="okNum"></span> is now linked to your Net365 account. Your wallet, history and referrals are exactly as you left them.</p>
-        <button class="go" id="cont">Continue to Net365</button>
-      </div>
-    </div>
-
-    <div class="trust"><span>Encrypted</span><span>Code never stored in plain text</span><span>Used only for your account</span></div>
+  <section class="card hide" id="needLogin">
+    <h1>Sign in first</h1>
+    <p>Please sign in to your Net365 account, then open this page again to add your phone number.</p>
+    <button type="button" onclick="location.href='/'">Go to sign in</button>
   </section>
-</main>
+
+  <section class="card hide" id="entry">
+    <h1>Add your phone number</h1>
+    <p>Your receipts and electricity tokens can come straight to your phone. It takes about 30 seconds and costs nothing.</p>
+    <form id="saveForm" novalidate>
+      <label for="phone">Mobile number</label>
+      <div class="row">
+        <select id="country" aria-label="Country"></select>
+        <input id="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="0803 123 4567" maxlength="24">
+      </div>
+      <div class="msg err" id="saveErr" role="alert"></div>
+      <button type="submit" id="saveBtn">Save number</button>
+    </form>
+    <p class="small" style="margin-top:12px">You can add your number now and confirm it later. Nothing stops working if you skip it.</p>
+  </section>
+
+  <section class="card hide" id="saved">
+    <span class="pill no" id="vpill">Saved · not confirmed yet</span>
+    <div class="num" id="savedNum"></div>
+    <button type="button" class="alt" id="editBtn" style="margin-top:4px;min-height:44px">Change number</button>
+  </section>
+
+  <section class="card hide" id="verify">
+    <h2>Confirm it is yours</h2>
+    <p class="small" id="vHint">Choose how you would like to confirm. WhatsApp and Telegram need no code.</p>
+    <button type="button" class="wa hide" id="waBtn">Confirm with WhatsApp</button>
+    <button type="button" class="tg hide" id="tgBtn">Confirm with Telegram</button>
+    <button type="button" class="alt hide" id="smsBtn">Text me a code</button>
+    <div id="waGuide" class="hide small" style="margin-top:12px"></div>
+    <form id="codeForm" class="hide" novalidate>
+      <label for="code">6-digit code</label>
+      <input id="code" class="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
+      <button type="submit" id="codeBtn">Confirm</button>
+    </form>
+    <div class="msg err" id="vErr" role="alert"></div>
+    <div class="msg ok" id="vOk" role="status"></div>
+    <div class="msg note hide" id="noMethod">Your number is saved. Confirming it is not switched on yet, so there is nothing more to do right now. We will let you know when it is.</div>
+  </section>
+
+  <section class="card hide" id="done">
+    <span class="pill ok">Number confirmed</span>
+    <div class="num" id="doneNum"></div>
+    <p>Your receipts, token alerts and account recovery can now use this number.</p>
+    <button type="button" onclick="location.href='/'">Back to Net365</button>
+  </section>
+</div>
 
 <script>
-(function(){
-  var $=function(i){return document.getElementById(i)};
-  var next="/";
-  try{var n=new URLSearchParams(location.search).get("next"); if(n&&/^\/(?!\/)/.test(n)) next=n;}catch(e){}
-  $("skip").href=next;
+(function () {
+  var $ = function (i) { return document.getElementById(i); };
+  var methods = { whatsapp: false, sms: false, telegram: false }, state = { saved: null, verified: false, polling: null };
 
-  function api(path,body){
-    return fetch(path,{method:body?"POST":"GET",credentials:"same-origin",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined})
-      .then(function(r){return r.json().catch(function(){return{}}).then(function(j){j._status=r.status;return j;});});
+  function api(method, url, body) {
+    return fetch(url, { method: method, credentials: 'include', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { d._status = r.status; return d; }); })
+      .catch(function () { return { success: false, error: 'We could not reach Net365. Check your connection and try again.', _status: 0 }; });
   }
-  function show(id,msg){var e=$(id); e.textContent=msg||""; e.classList.toggle("show",!!msg);}
-  function step(n,pane){
-    pane=pane||("p"+n);
-    ["p0","p1","p2","p3"].forEach(function(p){$(p).classList.toggle("on",p===pane)});
-    ["s1","s2","s3"].forEach(function(s,i){$(s).classList.toggle("on",i<n)});
+  function show(id, on) { $(id).classList.toggle('hide', !on); }
+  function msg(id, text, kind) { var e = $(id); e.textContent = text || ''; e.classList.toggle('on', !!text); }
+  function stopPoll() { if (state.polling) { clearInterval(state.polling); state.polling = null; } }
+
+  function render() {
+    stopPoll();
+    var verified = state.verified, has = !!state.saved;
+    show('done', verified);
+    show('entry', !has || state.editing);
+    show('saved', has && !verified && !state.editing);
+    var anyMethod = methods.whatsapp || methods.telegram || methods.sms;
+    show('verify', has && !verified && !state.editing);
+    show('waBtn', methods.whatsapp); show('tgBtn', methods.telegram); show('smsBtn', methods.sms);
+    show('noMethod', has && !verified && !anyMethod);
+    $('vHint').classList.toggle('hide', !anyMethod);
+    if (has) { $('savedNum').textContent = state.saved; $('doneNum').textContent = state.saved; }
   }
-  function flag(cc){try{return String.fromCodePoint.apply(null,cc.toUpperCase().split("").map(function(c){return 127397+c.charCodeAt(0)}))}catch(e){return ""}}
 
-  // ---- who is this, and are they already done?
-  api("/api/identity/status").then(function(s){
-    if(s._status===401){location.href="/?signin=1&next="+encodeURIComponent("/complete-profile");return;}
-    if(s.complete && s.phone && s.phone.verified){location.replace(next);return;}
-  });
-  api("/api/auth/me").then(function(m){
-    var u=m&&m.user; if(u&&u.full_name){var f=String(u.full_name).split(" ")[0]; $("who").textContent=f; $("who0").textContent=f;}
-  });
-
-  // ---- how can this customer verify? WhatsApp first, SMS only when a provider is configured
-  var M={whatsapp:false,sms:false}, pollT=null, pollEnd=0;
-  function stopPoll(){clearInterval(pollT);pollT=null;}
-  function success(masked){stopPoll();$("okNum").textContent=masked||phoneSent;step(3);step.cur=3;setTimeout(function(){if(next)location.href=next;},2600);}
-  function startWa(){
-    show("e0","");stopPoll();
-    var waOn=!!M.whatsapp, tgOn=!!M.telegram;
-    $("waBtn").style.display=waOn?"":"none"; document.querySelector("#p0 .codebox").style.display=waOn?"":"none";
-    $("tgBtn").style.display=tgOn?"":"none";
-    $("waWait").style.display="";
-    $("p0Title").textContent=(waOn&&tgOn)?"Verify your number":(waOn?"Verify with WhatsApp":"Verify with Telegram");
-    $("p0Sub").textContent=(waOn&&tgOn)
-      ?"Pick WhatsApp or Telegram. Your chat app opens with everything ready: just press send (WhatsApp) or tap Share my number (Telegram). No code to type, and nothing to pay."
-      :(waOn?"Tap the button. WhatsApp opens with a message ready to go. Just press send and your number is confirmed instantly. No code to type, and nothing to pay."
-        :"Tap the button. Telegram opens our bot. Tap Share my number and it is confirmed instantly. No code to type, and nothing to pay.");
-    $("waCode").textContent="…";
-    var jobs=[], failed=null, ttl=900;
-    if(waOn) jobs.push(api("/api/identity/whatsapp/start",{}).then(function(r){
-      if(r._status===401){location.href="/?signin=1";return;}
-      if(!r.success){failed=failed||r.error;return;}
-      $("waBtn").href=r.link;$("waCode").textContent=r.text;$("waNum").textContent=r.number;ttl=r.expires_in||ttl;}));
-    if(tgOn) jobs.push(api("/api/identity/telegram/start",{}).then(function(r){
-      if(r._status===401){location.href="/?signin=1";return;}
-      if(!r.success){failed=failed||r.error;$("tgBtn").style.display="none";return;}
-      $("tgBtn").href=r.link;ttl=r.expires_in||ttl;}));
-    Promise.all(jobs).then(function(){
-      if(failed&&jobs.length===1){show("e0",failed);$("waWait").style.display="none";return;}
-      pollEnd=Date.now()+ttl*1000;
-      pollT=setInterval(function(){
-        if(Date.now()>pollEnd){stopPoll();$("waWait").style.display="none";show("e0","That code expired. Tap Get a new code.");return;}
-        api("/api/identity/status").then(function(st){ if(st&&st.phone&&st.phone.verified) success(st.phone.masked); });
-      },3000);
-    }).catch(function(){show("e0","Network problem. Check your connection and try again.");});
+  function applyStatus(d) {
+    if (d && d.phone) { state.saved = d.phone.national || d.phone.masked; state.verified = !!d.phone.verified; }
+    else { state.saved = null; state.verified = false; }
   }
-  function showWa(){step(1,"p0");step.cur=1;startWa();}
-  function showSms(){stopPoll();step(1);step.cur=1;}
-  $("waNew").addEventListener("click",startWa);
-  $("toSms").addEventListener("click",showSms);
-  $("toWa").addEventListener("click",showWa);
-  document.addEventListener("visibilitychange",function(){ if(!document.hidden&&pollT){api("/api/identity/status").then(function(st){ if(st&&st.phone&&st.phone.verified) success(st.phone.masked); });} });
-  api("/api/identity/methods").then(function(r){
-    M=(r&&r.methods)||M;
-    var free=(M.whatsapp||M.telegram);
-    $("toSms").style.display=(free&&M.sms)?"":"none";
-    $("toWa").style.display=(free&&M.sms)?"":"none";
-    if(M.whatsapp||M.telegram) showWa();
-    else if(M.sms) showSms();
-    else {step(1);$("send").disabled=true;show("e1","Phone verification is temporarily unavailable. Please contact support and we will verify you right away.");}
-  }).catch(function(){showSms();});
 
-  // ---- countries (named by the browser, so every region is covered in the customer's language)
-  var dn=null; try{dn=new Intl.DisplayNames([navigator.language||"en"],{type:"region"});}catch(e){}
-  var dialOf={};
-  api("/api/identity/countries").then(function(r){
-    var list=(r.countries||[]).map(function(c){dialOf[c.cc]=c.dial;return{cc:c.cc,dial:c.dial,name:(dn&&dn.of(c.cc))||c.cc}});
-    list.sort(function(a,b){return a.name.localeCompare(b.name)});
-    var pri=["NG","GH","KE","ZA","GB","US","CA"], top=[];
-    pri.forEach(function(p){var f=list.filter(function(c){return c.cc===p})[0]; if(f) top.push(f)});
-    var sel=$("cc"), html="";
-    function opt(c){return '<option value="'+c.cc+'">'+flag(c.cc)+" +"+c.dial+" "+c.name+"</option>";}
-    html+=top.map(opt).join("")+'<option disabled>──────────</option>'+list.filter(function(c){return pri.indexOf(c.cc)<0}).map(opt).join("");
-    sel.innerHTML=html;
-    var guess=(r.detected||"NG").toUpperCase(); if(!dialOf[guess]) guess="NG";
-    sel.value=guess; preview();
-  });
-
-  function digits(v){return String(v||"").replace(/[^\d+]/g,"")}
-  function preview(){
-    var cc=$("cc").value, v=digits($("tel").value), d=dialOf[cc]||"";
-    if(!v){$("preview").textContent=d?"We will send it to +"+d+" …":"";return;}
-    var intl=v.charAt(0)==="+"? v : "+"+d+v.replace(/^0+/,"");
-    $("preview").textContent="We will text: "+intl;
+  function startPolling() {
+    stopPoll(); var until = Date.now() + 15 * 60 * 1000;
+    state.polling = setInterval(function () {
+      if (Date.now() > until) return stopPoll();
+      api('GET', '/api/identity/status').then(function (d) { if (d.success && d.phone && d.phone.verified) { applyStatus(d); state.editing = false; render(); } });
+    }, 4000);
   }
-  $("cc").addEventListener("change",preview); $("tel").addEventListener("input",function(){
-    // typing a full international number switches the country automatically
-    var v=digits(this.value);
-    if(v.charAt(0)==="+"){var best=null;Object.keys(dialOf).forEach(function(cc){var d=dialOf[cc]; if(v.indexOf("+"+d)===0&&(!best||d.length>dialOf[best].length)) best=cc;}); if(best) $("cc").value=best;}
-    preview();
-  });
 
-  // ---- send
-  var phoneSent="", timer=null;
-  function startTimer(sec){
-    var b=$("resend"); clearInterval(timer); var left=sec; b.disabled=true;
-    function t(){b.textContent=left>0?"Resend code in "+left+"s":"Resend code"; if(left<=0){b.disabled=false;clearInterval(timer);} left--;}
-    t(); timer=setInterval(t,1000);
+  // ---- country list
+  function fillCountries(list, detected) {
+    var names; try { names = new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }); } catch (e) { names = null; }
+    var rows = (list || []).map(function (c) { var n = c.cc; try { if (names) n = names.of(c.cc) || c.cc; } catch (e) {} return { cc: c.cc, dial: c.dial, name: n }; })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var sel = $('country'); sel.innerHTML = '';
+    rows.forEach(function (r) { var o = document.createElement('option'); o.value = r.cc; o.textContent = r.name + ' (+' + r.dial + ')'; sel.appendChild(o); });
+    sel.value = rows.some(function (r) { return r.cc === detected; }) ? detected : (rows.some(function (r) { return r.cc === 'NG'; }) ? 'NG' : (rows[0] && rows[0].cc));
   }
-  function send(){
-    show("e1","");show("e2","");
-    var b=$("send"); b.disabled=true; b.textContent="Sending…";
-    return api("/api/identity/phone/start",{phone:$("tel").value,country:$("cc").value}).then(function(r){
-      b.disabled=false;b.textContent="Send my code";
-      if(r._status===401){location.href="/?signin=1";return false;}
-      if(!r.success){var m=r.error||"Something went wrong."; if(r.retry_after&&r.error_code==="cooldown") m+=" ("+r.retry_after+"s)"; show(step.cur===2?"e2":"e1",m); if(r.error_code==="cooldown"&&step.cur===2) startTimer(r.retry_after||45); return false;}
-      phoneSent=r.masked; $("sentTo").textContent=r.masked; step(2); step.cur=2;
-      var boxes=$("otp").children; for(var i=0;i<boxes.length;i++) boxes[i].value=""; boxes[0].focus();
-      $("verify").disabled=true; startTimer(r.resend_in||45); return true;
-    }).catch(function(){b.disabled=false;b.textContent="Send my code";show("e1","Network problem. Check your connection and try again.");});
-  }
-  step.cur=1;
-  $("send").addEventListener("click",send);
-  $("tel").addEventListener("keydown",function(e){if(e.key==="Enter")send();});
-  $("resend").addEventListener("click",function(){send();});
-  $("change").addEventListener("click",function(){clearInterval(timer);step(1);step.cur=1;$("tel").focus();});
 
-  // ---- code boxes: typing, backspace, paste, SMS autofill
-  var boxes=[].slice.call($("otp").children);
-  function code(){return boxes.map(function(b){return b.value}).join("")}
-  function sync(){$("verify").disabled=code().length!==6; $("otp").classList.remove("bad");}
-  boxes.forEach(function(b,i){
-    b.addEventListener("input",function(){
-      var v=b.value.replace(/\D/g,"");
-      if(v.length>1){fill(v);return;}
-      b.value=v; if(v&&i<5) boxes[i+1].focus(); sync(); if(code().length===6) verify();
+  // ---- save
+  $('saveForm').addEventListener('submit', function (e) {
+    e.preventDefault(); msg('saveErr', '');
+    var phone = $('phone').value.trim(); if (!phone) return msg('saveErr', 'Enter your mobile number.');
+    var b = $('saveBtn'); b.disabled = true; b.textContent = 'Saving…';
+    api('POST', '/api/identity/phone/save', { phone: phone, country: $('country').value }).then(function (d) {
+      b.disabled = false; b.textContent = 'Save number';
+      if (d._status === 401) { show('entry', false); show('needLogin', true); return; }
+      if (!d.success) return msg('saveErr', d.error || 'We could not save that number. Please try again.');
+      state.editing = false; applyStatus(d.status || { phone: { national: d.national, verified: d.verified } }); $('phone').value = ''; render();
     });
-    b.addEventListener("keydown",function(e){if(e.key==="Backspace"&&!b.value&&i>0){boxes[i-1].focus();boxes[i-1].value="";sync();}
-      if(e.key==="ArrowLeft"&&i>0)boxes[i-1].focus(); if(e.key==="ArrowRight"&&i<5)boxes[i+1].focus(); if(e.key==="Enter")verify();});
-    b.addEventListener("paste",function(e){var t=(e.clipboardData||window.clipboardData).getData("text");if(t){e.preventDefault();fill(t.replace(/\D/g,""));}});
   });
-  function fill(v){v=v.slice(0,6);boxes.forEach(function(b,i){b.value=v[i]||""});(boxes[Math.min(v.length,5)]).focus();sync();if(v.length===6)verify();}
+  $('editBtn').addEventListener('click', function () { state.editing = true; msg('saveErr', ''); render(); $('phone').focus(); });
 
-  var verifying=false;
-  function verify(){
-    if(verifying||code().length!==6) return; verifying=true; show("e2","");
-    var b=$("verify"); b.disabled=true; b.textContent="Checking…";
-    api("/api/identity/phone/verify",{code:code()}).then(function(r){
-      verifying=false; b.textContent="Verify and continue";
-      if(!r.success){
-        $("otp").classList.add("bad"); b.disabled=false;
-        var m=r.error||"That code is not right."; if(r.attempts_left!=null&&r.error_code==="wrong_code") m+=" "+r.attempts_left+" "+(r.attempts_left===1?"try":"tries")+" left.";
-        show("e2",m); if(r.error_code==="expired"||r.error_code==="too_many_attempts"||r.error_code==="no_pending"){b.disabled=true;}
-        return;
-      }
-      success(r.masked);
-    }).catch(function(){verifying=false;b.disabled=false;b.textContent="Verify and continue";show("e2","Network problem. Try again.");});
+  // ---- confirm: WhatsApp / Telegram (no code) and SMS
+  function claim(kind) {
+    msg('vErr', ''); msg('vOk', '');
+    api('POST', '/api/identity/' + kind + '/start').then(function (d) {
+      if (!d.success) return msg('vErr', d.error || 'That did not work. Please try again.');
+      var g = $('waGuide'); g.classList.remove('hide');
+      g.innerHTML = '<span class="spin"></span>Waiting for you in ' + (kind === 'whatsapp' ? 'WhatsApp' : 'Telegram') + '. ' +
+        (kind === 'whatsapp' ? 'Send the message that opens, exactly as it is.' : 'Tap Start, then Share my number.') + ' This page updates by itself.';
+      window.open(d.link, '_blank', 'noopener');
+      startPolling();
+    });
   }
-  $("verify").addEventListener("click",verify);
-  $("cont").addEventListener("click",function(){location.href=next;});
+  $('waBtn').addEventListener('click', function () { claim('whatsapp'); });
+  $('tgBtn').addEventListener('click', function () { claim('telegram'); });
+  $('smsBtn').addEventListener('click', function () {
+    msg('vErr', ''); msg('vOk', ''); var b = $('smsBtn'); b.disabled = true;
+    api('POST', '/api/identity/phone/start', { phone: state.saved || '', country: $('country').value }).then(function (d) {
+      b.disabled = false;
+      if (!d.success) return msg('vErr', d.error || 'We could not send the code. Please try again in a minute.');
+      show('codeForm', true); msg('vOk', 'Code sent to ' + d.masked + '. It expires in 10 minutes.'); $('code').focus();
+    });
+  });
+  $('codeForm').addEventListener('submit', function (e) {
+    e.preventDefault(); msg('vErr', ''); var c = $('code').value.replace(/\D/g, ''); if (c.length !== 6) return msg('vErr', 'Enter the 6-digit code.');
+    var b = $('codeBtn'); b.disabled = true;
+    api('POST', '/api/identity/phone/verify', { code: c }).then(function (d) {
+      b.disabled = false; if (!d.success) return msg('vErr', d.error || 'That code is not right.');
+      state.verified = true; if (d.national) state.saved = d.national; render();
+    });
+  });
+
+  // ---- start
+  Promise.all([api('GET', '/api/identity/status'), api('GET', '/api/identity/methods'), api('GET', '/api/identity/countries')]).then(function (r) {
+    var st = r[0], m = r[1], c = r[2];
+    if (m && m.success) methods = m.methods || methods;
+    fillCountries(c && c.countries, c && c.detected);
+    if (st._status === 401 || (!st.success && st._status !== 200)) { show('needLogin', true); return; }
+    applyStatus(st); render();
+  });
 })();
 </script>
 </body>
