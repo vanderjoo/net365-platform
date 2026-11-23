@@ -465,22 +465,13 @@ def init_accounts(app, db, login_required, admin_required, rate_limit, send_emai
             me = _user_row(c, uid)
             if me["phone_verified"] and me["phone"] == e164:
                 return jsonify({"success": False, "error": "That number is already verified on your account."}), 409
-            # The number is SAVED NOW, as unverified, whether or not the SMS goes out.
-            # It only becomes verified when the customer enters the code (see phone_confirm).
-            if me["phone"] != e164:
-                c.execute("UPDATE users SET phone=?, phone_verified=0 WHERE id=?", (e164, uid))
-                c.commit()
-                saved_change = [me["phone"], e164]
-            else:
-                saved_change = None
         finally:
             c.close()
-        if saved_change:
-            log_event(user_id=uid, event_type="phone_added_unverified", details={"phone_tail": e164[-4:], "replaced": bool(saved_change[0])}, status="success")
-        ok, err, _status = _send_phone_code(uid, e164, "self")
-        log_event(user_id=uid, event_type="phone_code_requested", details={"phone_tail": e164[-4:], "sms_sent": ok}, status="success" if ok else "failed")
-        return jsonify({"success": True, "saved": True, "phone": e164, "phone_verified": False,
-                        "sms_sent": ok, "sms_error": err, "expires_in": CODE_TTL_SECONDS})
+        ok, err, status = _send_phone_code(uid, e164, "self")
+        if not ok:
+            return jsonify({"success": False, "error": err}), status
+        log_event(user_id=uid, event_type="phone_code_requested", details={"phone_tail": e164[-4:]}, status="success")
+        return jsonify({"success": True, "phone": e164, "expires_in": CODE_TTL_SECONDS})
 
     @app.route("/api/account/phone/confirm", methods=["POST"], endpoint="acct_phone_confirm")
     @login_required

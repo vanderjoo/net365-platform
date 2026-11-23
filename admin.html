@@ -693,17 +693,6 @@
                         Modes: <b>Default</b> = Net365's standard order. <b>Auto</b> = best 7-day score first. <b>VTpass / Reloadly</b> = force that processor first (the other stays on standby). Score = share of orders that succeeded in the last 7 days (starts at 50 until there is evidence).
                     </p>
                 </div>
-                <div class="panel">
-                    <h3><i class="fas fa-earth-africa"></i> Overseas Airtime: who serves each country</h3>
-                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:14px;">
-                        Each foreign country has exactly one processor, so the two never clash. <b>Reloadly</b> (default) is paid by card through Stripe in the destination currency. <b>VTpass</b> is paid in naira through Paystack and sells VTpass's own bundles and top-ups. Nigeria is not listed here: it follows the Airtime routing above. Countries not listed stay with Reloadly.
-                    </p>
-                    <div id="intlRoutesNote" style="font-size:12px;color:#b45309;margin-bottom:8px;"></div>
-                    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
-                        <thead><tr style="text-align:left;border-bottom:1px solid var(--border-color,#e2e8f0);"><th style="padding:8px;">Country</th><th style="padding:8px;">Currency</th><th style="padding:8px;">Served by</th></tr></thead>
-                        <tbody id="intlRoutesRows"><tr><td colspan="3" style="padding:12px;">Loading...</td></tr></tbody>
-                    </table></div>
-                </div>
             </div>
 
             <!-- TAB: ASK NET365 QUESTIONS -->
@@ -852,7 +841,6 @@
                                 <tr>
                                     <th>Visited</th>
                                     <th>Visitor</th>
-                                    <th>IP</th>
                                     <th>Path</th>
                                     <th>Organization</th>
                                     <th>Kind</th>
@@ -862,6 +850,7 @@
                                     <th>Browser</th>
                                     <th>Country</th>
                                     <th>City</th>
+                                    <th>IP</th>
                                     <th>Referrer</th>
                                 </tr>
                             </thead>
@@ -2167,13 +2156,7 @@
             };
             const res = await fetch(path, opts);
             if (res.status === 401) throw new Error('unauthorized');
-            const raw = await res.text();
-            try { return JSON.parse(raw); }
-            catch (e) {
-                // A web page came back instead of data: the route does not exist on the server (404/405), or a security rule answered.
-                throw new Error(`The server answered with a web page, not data (HTTP ${res.status}) for ${(opts.method || 'GET')} ${path.split('?')[0]}. `
-                    + (res.status === 404 || res.status === 405 ? 'That endpoint is not deployed: upload net365_accounts.py and the new app.py, then redeploy.' : 'A security rule may have blocked the request.'));
-            }
+            return res.json();
         }
 
         // ============================================
@@ -2538,34 +2521,9 @@
                         <td style="padding:8px;">${cell('vtpass')}</td><td style="padding:8px;">${cell('reloadly')}</td>
                         <td style="padding:8px;"><select onchange="setRoutingMode('${r.service}', this.value)" style="padding:6px;border-radius:8px;">${opts}</select></td></tr>`;
                 }).join('');
-                loadIntlRoutes();
             } catch (e) {
                 document.getElementById('routingRows').innerHTML = '<tr><td colspan="5" style="padding:12px;color:#c93434;">Could not load routing. Make sure net365_routing.py is on the server, then reload.</td></tr>';
             }
-        }
-        async function loadIntlRoutes() {
-            const body = document.getElementById('intlRoutesRows'), note = document.getElementById('intlRoutesNote');
-            if (!body) return;
-            try {
-                const d = await adminFetch('/api/admin/intl-routes');
-                if (!d.success) throw new Error('failed');
-                note.textContent = d.ready ? '' : 'VTpass is not ready (VTpass keys, or PROVIDER_ROUTER_ENABLED is not true), so countries cannot be switched to it yet.';
-                body.innerHTML = d.countries.map(c => `<tr style="border-bottom:1px solid var(--border-color,#e2e8f0);">
-                    <td style="padding:8px;font-weight:600;">${escapeHtml(c.name)} (${escapeHtml(c.country)})</td><td style="padding:8px;">${escapeHtml(c.currency || '')}</td>
-                    <td style="padding:8px;"><select onchange="setIntlRoute('${c.country}', this.value)" style="padding:6px;border-radius:8px;">
-                        <option value="reloadly" ${c.owner === 'reloadly' ? 'selected' : ''}>Reloadly (card, Stripe)</option>
-                        ${c.vtpass_capable ? `<option value="vtpass" ${c.owner === 'vtpass' ? 'selected' : ''}>VTpass (naira, Paystack)</option>` : ''}
-                    </select></td></tr>`).join('') || '<tr><td colspan="3" style="padding:12px;color:var(--text-secondary);">VTpass countries are not available yet. Check the VTpass keys.</td></tr>';
-            } catch (e) {
-                body.innerHTML = '<tr><td colspan="3" style="padding:12px;color:#c93434;">Could not load. Make sure net365_vtpass_intl.py is on the server, then reload.</td></tr>';
-            }
-        }
-        async function setIntlRoute(country, provider) {
-            try {
-                const d = await adminFetch('/api/admin/intl-routes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ country, provider }) });
-                showToast(d.success ? `${country} is now served by ${provider === 'vtpass' ? 'VTpass' : 'Reloadly'}` : (d.error || 'Could not save'), d.success ? 'success' : 'error');
-            } catch (e) { showToast(e.message || 'Could not save', 'error'); }
-            loadIntlRoutes();
         }
         async function setRoutingMode(service, mode) {
             try {
@@ -2994,7 +2952,6 @@
                 <tr>
                     <td>${formatDate(v.visited_at)}</td>
                     <td>${v.visitor_name ? escapeHtml(v.visitor_name) : '<span style="color:var(--text-secondary)">Guest</span>'}</td>
-                    <td style="font-family:monospace;white-space:nowrap;">${v.ip_address ? escapeHtml(v.ip_address) : '<span style="color:var(--text-secondary)">—</span>'}</td>
                     <td>${escapeHtml(v.path || '')}</td>
                     <td>${orgCell}</td>
                     <td>${kindCell}</td>
@@ -3004,6 +2961,7 @@
                     <td>${escapeHtml(v.browser || '')}</td>
                     <td>${countryCell}</td>
                     <td>${cityCell}</td>
+                    <td style="color:var(--text-secondary);">${escapeHtml(v.ip_address || '')}</td>
                     <td style="color:var(--text-secondary);max-width:180px;overflow:hidden;text-overflow:ellipsis;">${v.referrer ? escapeHtml(v.referrer) : '—'}</td>
                 </tr>`;
             }).join('');
