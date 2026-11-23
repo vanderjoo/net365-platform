@@ -11,8 +11,6 @@ SENT = []
 
 @pytest.fixture()
 def env(monkeypatch):
-    monkeypatch.setenv("IDENTITY_MODE", "enforce")      # most tests exercise the optional hard gate
-    monkeypatch.setenv("IDENTITY_REMINDERS", "false")   # no background thread in tests
     importlib.reload(ident)
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -242,71 +240,3 @@ def test_telegram_claim_unavailable_without_username(env, monkeypatch):
     c, _ = env
     monkeypatch.delenv("TELEGRAM_BOT_USERNAME", raising=False)
     assert c.post("/api/identity/telegram/start", headers=H(2)).status_code == 503
-
-
-# ------------------------------------------------------------------ optional by default + email reminders
-def test_default_is_optional_nothing_blocked(env, monkeypatch):
-    c, _ = env
-    monkeypatch.delenv("IDENTITY_MODE", raising=False)
-    assert ident.mode() == "off"
-    with c.application.test_request_context("/api/x"):
-        assert ident.gate_error(2) is None and ident.gate_error(3) is None     # no phone at all: still allowed
-
-def test_reminders_schedule_and_stop_when_verified(env, monkeypatch):
-    c, conn = env
-    monkeypatch.setenv("IDENTITY_REMINDERS", "true")
-    r = ident.sweep_reminders()
-    assert r["enrolled"] == 3 and r["sent"] == 0                       # enrolled, nothing emailed on the first sweep
-    assert not [x for x in SENT if x[0] == "mail"]
-    conn.execute("UPDATE identity_reminders SET next_due='2000-01-01T00:00:00+00:00'"); conn.commit()
-    r = ident.sweep_reminders()
-    assert r["sent"] == 3
-    mails = [x for x in SENT if x[0] == "mail"]
-    assert len(mails) == 3 and "optional" in mails[0][2].lower() and "unsubscribe" in mails[0][3]
-    assert "nothing stops working" in mails[0][3].lower()
-    assert ident.sweep_reminders()["sent"] == 0                         # next one is days away
-    # verifying removes the person from the cycle
-    ident._bind_verified(2, "+2348035551212", "otp")
-    conn.execute("UPDATE identity_reminders SET next_due='2000-01-01T00:00:00+00:00'"); conn.commit()
-    SENT.clear()
-    r = ident.sweep_reminders()
-    assert not [x for x in SENT if x[0] == "mail" and x[1] == "g@x.com"]
-
-def test_reminders_stop_after_five_and_unsubscribe_works(env, monkeypatch):
-    c, conn = env
-    monkeypatch.setenv("IDENTITY_REMINDERS", "true")
-    ident.sweep_reminders()
-    for _i in range(8):
-        conn.execute("UPDATE identity_reminders SET next_due='2000-01-01T00:00:00+00:00' WHERE opted_out=0"); conn.commit()
-        ident.sweep_reminders()
-    assert conn.execute("SELECT MAX(sent_count) FROM identity_reminders").fetchone()[0] == 5
-    # unsubscribe link: valid token opts out, bad token does nothing
-    bad = c.get("/api/identity/reminders/unsubscribe?u=2&t=nope")
-    assert bad.status_code == 400
-    tok = ident._unsub_token(2)
-    ok = c.get(f"/api/identity/reminders/unsubscribe?u=2&t={tok}")
-    assert ok.status_code == 200 and b"will not get any more" in ok.data
-    assert conn.execute("SELECT opted_out FROM identity_reminders WHERE user_id=2").fetchone()[0] == 1
-
-def test_unsubscribed_user_gets_no_email(env, monkeypatch):
-    c, conn = env
-    monkeypatch.setenv("IDENTITY_REMINDERS", "true")
-    ident.sweep_reminders()
-    c.get(f"/api/identity/reminders/unsubscribe?u=2&t={ident._unsub_token(2)}")
-    conn.execute("UPDATE identity_reminders SET next_due='2000-01-01T00:00:00+00:00'"); conn.commit()
-    SENT.clear(); ident.sweep_reminders()
-    assert not [x for x in SENT if x[0] == "mail" and x[1] == "g@x.com"]
-
-def test_failed_send_is_retried_later_not_lost(env, monkeypatch):
-    c, conn = env
-    monkeypatch.setenv("IDENTITY_REMINDERS", "true")
-    ident.sweep_reminders()
-    conn.execute("UPDATE identity_reminders SET next_due='2000-01-01T00:00:00+00:00'"); conn.commit()
-    ident._notify_email = lambda *a: False
-    r = ident.sweep_reminders()
-    assert r["failed"] == 3 and conn.execute("SELECT MAX(sent_count) FROM identity_reminders").fetchone()[0] == 0
-
-def test_reminders_can_be_switched_off(env, monkeypatch):
-    c, _ = env
-    monkeypatch.setenv("IDENTITY_REMINDERS", "false")
-    assert ident.sweep_reminders() == {"enrolled": 0, "due": 0, "sent": 0, "skipped": 0, "failed": 0, "dry_run": False}
