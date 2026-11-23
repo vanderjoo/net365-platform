@@ -5191,7 +5191,7 @@ from typing import Dict, Optional
 logger = logging.getLogger(__name__)
 
 # Make sure this is defined somewhere in your app config
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://net365co.com")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://net365co.com").rstrip("/")
 
 
 def _send_via_mailgun_api(mg_domain, mg_api_key, from_addr, to_email, subject, html_body, attachment, attachment_name, _result, text_body=None, reply_to=None):
