@@ -346,6 +346,89 @@ def wa_interest():
         return jsonify({"success": False, "error": "server"}), 500
 
 
+@wa_bp.route("/api/whatsapp/contact", methods=["POST"])
+@bot_required
+def wa_contact():
+    """The customer's own phone for pre-filling receipts and "my number" top-ups, so the chat never has to ask.
+    Order: verified number on the Net365 account, then the number they gave at sign-up, then the WhatsApp number itself.
+    A linked WhatsApp number is adopted as the account's verified number when that is safe (see net365_identity)."""
+    wa = _wa(_body())
+    if not wa:
+        return jsonify({"success": False, "error": "bad_number"}), 400
+    phone, verified, source, email = "", False, "", ""
+    link = _get_link(wa)
+    if link and link.get("is_guest") and link.get("receipt_email"):
+        email = str(link["receipt_email"])
+    if link and not link.get("is_guest"):
+        try:
+            email = str((_db.get_user(link["user_id"]) or {}).get("email") or "")
+        except Exception:
+            email = ""
+        try:
+            import net365_identity as ident
+            if chat_source_for_link({"wa_number": wa}) == "whatsapp":
+                ident.adopt_chat_number(link["user_id"], wa)
+            ep = ident.effective_phone(link["user_id"])
+            if ep:
+                phone, verified, source = ep["national"], ep["verified"], ep["source"] or ""
+        except Exception:
+            logger.warning("contact lookup failed", exc_info=True)
+    if not phone and chat_source_for_link({"wa_number": wa}) == "whatsapp":
+        phone, verified, source = ("0" + wa[3:] if wa.startswith("234") and len(wa) == 13 else "+" + wa), True, "whatsapp"
+    return jsonify({"success": True, "phone": phone, "verified": verified, "source": source,
+                    "email": email, "email_masked": _mask_email(email) if email else ""})
+
+
+@wa_bp.route("/api/whatsapp/identity/claim", methods=["POST"])
+@bot_required
+def wa_identity_claim():
+    """Someone sent "VERIFY N365-XXXXXX" to the WhatsApp number. The sender's number is the proof."""
+    data = _body()
+    wa = _wa(data)
+    if not wa:
+        return jsonify({"success": False, "error": "bad_number"}), 400
+    import net365_identity as ident
+    ok, res = ident.complete_claim(data.get("code"), wa)
+    if ok:
+        return jsonify({"success": True, "masked": res.get("masked")})
+    return jsonify({"success": False, "error": res.get("error", "invalid_code")}), (409 if res.get("error") == "phone_in_use" else 400)
+
+
+@wa_bp.route("/api/whatsapp/identity/telegram_claim", methods=["POST"])
+@bot_required
+def wa_identity_telegram_claim():
+    """Telegram 'Share my number' (own contact, verified by Telegram) plus the code from the web page. The number is bound
+    to the web account that started the claim, so the Telegram chat does not need to be linked first."""
+    data = _body()
+    wa = _wa(data)
+    if not wa or not wa.startswith("999"):
+        return jsonify({"success": False, "error": "bad_chat"}), 400
+    import net365_identity as ident
+    ok, res = ident.complete_claim_with_contact(data.get("code"), data.get("phone"), wa)
+    if ok:
+        return jsonify({"success": True, "masked": res.get("masked")})
+    return jsonify({"success": False, "error": res.get("error", "invalid_code")}), (409 if res.get("error") == "phone_in_use" else 400)
+
+
+@wa_bp.route("/api/whatsapp/identity/telegram_contact", methods=["POST"])
+@bot_required
+def wa_identity_telegram_contact():
+    """The Telegram bot received a shared contact that Telegram itself verified AND that belongs to the sender.
+    It is bound to the Net365 account this chat is linked to."""
+    data = _body()
+    wa = _wa(data)
+    if not wa or not wa.startswith("999"):
+        return jsonify({"success": False, "error": "bad_chat"}), 400
+    link = _get_link(wa)
+    if not link or link.get("is_guest"):
+        return jsonify({"success": False, "error": "link_required"}), 403
+    import net365_identity as ident
+    ok, res = ident.bind_telegram_contact(link["user_id"], data.get("phone"))
+    if ok:
+        return jsonify({"success": True, "masked": res.get("masked")})
+    return jsonify({"success": False, "error": res.get("error", "invalid")}), (409 if res.get("error") == "phone_in_use" else 400)
+
+
 @wa_bp.route("/api/whatsapp/commands", methods=["GET"])
 @bot_required
 def wa_commands():
@@ -383,6 +466,12 @@ def wa_status():
                         "has_email": bool(link.get("receipt_email")),
                         "masked_email": _mask_email(link["receipt_email"]) if link.get("receipt_email") else None,
                         "ads_opt_out": bool(link.get("ads_opt_out"))})
+    try:  # a linked WhatsApp chat already proved its number: make it the account's verified number, once
+        if chat_source_for_link({"wa_number": wa}) == "whatsapp":
+            import net365_identity as _ident
+            _ident.adopt_chat_number(link["user_id"], wa)
+    except Exception:
+        logger.warning("identity adoption at status failed", exc_info=True)
     first = str(user.get("full_name") or "").strip().split(" ")[0] or "there"
     others = []
     try:
@@ -551,7 +640,6 @@ def _complete_link(wa, user, email, pin, via="email"):
                         "Reply link to connect an account again."},), daemon=True).start()
         except Exception:
             pass
-    _apply_pending_referral(wa, user)
     first = str(user.get("full_name") or "").strip().split(" ")[0] or "there"
     return {"success": True, "first_name": first, "masked_email": _mask_email(email),
             "moved_from_other_chat": bool(displaced), "switched_account": bool(prev and int(prev[0]) != int(user["id"]))}
@@ -1972,486 +2060,6 @@ def wa_utility_resend():
     return jsonify({"success": True, "found": True, "reference": row["reference"],
                     "biller": pl.get("biller_name") or "Bill payment", "meter": _mask_account(pl.get("subscriber_account")),
                     "amount": float(row["amount"] or 0), "token": _find_token(res)})
-
-
-# --------------------------------------------------------------------------- contact memory (receipt number + email)
-# A linked customer should never be asked for their number or email again. The bot asks this endpoint first and only
-# prompts when nothing is on file. Order of trust for the number: one the customer saved in chat > the one on the account >
-# the WhatsApp number of this very chat (Telegram has none). The email comes from the account; a customer may save a
-# different one for receipts. Changing it here never changes the sign-in email of the account.
-_contact_ready = False
-_NG_LOCAL = re.compile(r"^0[789][01]\d{8}$")
-
-
-def _ng_local(p):
-    d = re.sub(r"\D", "", str(p or ""))
-    if re.match(r"^234[789][01]\d{8}$", d):
-        d = "0" + d[3:]
-    return d if _NG_LOCAL.match(d) else ""
-
-
-def _contact_schema():
-    global _contact_ready
-    if _contact_ready:
-        return
-    c = _conn()
-    c.execute("CREATE TABLE IF NOT EXISTS chat_contact_prefs (user_id INTEGER PRIMARY KEY, phone TEXT, email TEXT, updated_at TEXT)")
-    c.commit()
-    _contact_ready = True
-
-
-def _user_contact_row(uid):
-    try:
-        cols = {r[1] for r in _conn().execute("PRAGMA table_info(users)").fetchall()}
-        want = [x for x in ("phone", "email", "full_name") if x in cols]
-        if not want:
-            return {}
-        row = _conn().execute("SELECT %s FROM users WHERE id = ?" % ", ".join(want), (uid,)).fetchone()
-        return dict(row) if row else {}
-    except Exception:
-        logger.exception("contact memory: could not read the account")
-        return {}
-
-
-def _usable_email(e):
-    e = str(e or "").strip()
-    return e if _EMAIL_RE.match(e) and len(e) <= 160 and not e.lower().endswith(("@chat.invalid", "@guest.invalid", ".invalid")) else ""
-
-
-def _contact_for(wa, link):
-    prefs = _conn().execute("SELECT phone, email FROM chat_contact_prefs WHERE user_id = ?", (link["user_id"],)).fetchone()
-    prefs = dict(prefs) if prefs else {}
-    acct = _user_contact_row(link["user_id"])
-    phone, psrc = "", ""
-    if _ng_local(prefs.get("phone")):
-        phone, psrc = _ng_local(prefs.get("phone")), "saved"
-    elif _ng_local(acct.get("phone")):
-        phone, psrc = _ng_local(acct.get("phone")), "account"
-    elif not str(wa).startswith("999") and _ng_local(wa):
-        phone, psrc = _ng_local(wa), "chat"
-    email, esrc = "", ""
-    if _usable_email(prefs.get("email")):
-        email, esrc = _usable_email(prefs.get("email")), "saved"
-    elif _usable_email(acct.get("email")):
-        email, esrc = _usable_email(acct.get("email")), "account"
-    first = str(acct.get("full_name") or "").strip().split(" ")[0]
-    return {"phone": phone, "phone_source": psrc, "phone_masked": _mask_phone(phone),
-            "email": email, "email_source": esrc, "email_masked": _mask_email(email) if email else "", "first_name": first}
-
-
-@wa_bp.route("/api/chat/contact/get", methods=["POST"])
-@bot_required
-def chat_contact_get():
-    wa = _wa(_body())
-    link = _get_link(wa) if wa else None
-    if not link:
-        return jsonify({"success": True, "linked": False})
-    if link.get("is_guest"):
-        return jsonify({"success": True, "linked": False, "guest": True})
-    _contact_schema()
-    d = _contact_for(wa, link)
-    d.update({"success": True, "linked": True})
-    return jsonify(d)
-
-
-@wa_bp.route("/api/chat/contact/set", methods=["POST"])
-@bot_required
-def chat_contact_set():
-    body = _body()
-    wa = _wa(body)
-    link = _get_link(wa) if wa else None
-    if not link or link.get("is_guest"):
-        return jsonify({"success": False, "error": "account_required"}), 403
-    _contact_schema()
-    c = _conn()
-    uid = link["user_id"]
-    cur = c.execute("SELECT phone, email FROM chat_contact_prefs WHERE user_id = ?", (uid,)).fetchone()
-    phone = cur["phone"] if cur else None
-    email = cur["email"] if cur else None
-    if "phone" in body:
-        if body.get("phone") in (None, ""):
-            phone = None
-        else:
-            p = _ng_local(body.get("phone"))
-            if not p:
-                return jsonify({"success": False, "error": "bad_phone"}), 400
-            phone = p
-    if "email" in body:
-        if body.get("email") in (None, ""):
-            email = None
-        else:
-            e = _usable_email(body.get("email"))
-            if not e:
-                return jsonify({"success": False, "error": "bad_email"}), 400
-            email = e
-    c.execute("INSERT INTO chat_contact_prefs (user_id, phone, email, updated_at) VALUES (?,?,?,?) "
-              "ON CONFLICT(user_id) DO UPDATE SET phone = excluded.phone, email = excluded.email, updated_at = excluded.updated_at",
-              (uid, phone, email, _fmt(_now())))
-    c.commit()
-    d = _contact_for(wa, link)
-    d.update({"success": True, "linked": True})
-    return jsonify(d)
-
-
-# --------------------------------------------------------------------------- invites, contacts and joining from chat
-# A member can invite people from WhatsApp or Telegram. The bot never cold-messages anyone (that breaks WhatsApp and Telegram rules):
-# it hands the member a ready-to-send message and link. A friend who opens the bot with a code is remembered, and the referral
-# is recorded when that chat links an account, using the same rules as POST /api/referral/apply.
-_INVITE_CODE_RE = re.compile(r"^[A-Za-z0-9-]{4,24}$")
-
-
-def _invite_schema():
-    c = _conn()
-    c.execute("CREATE TABLE IF NOT EXISTS chat_referral_pending (wa_number TEXT PRIMARY KEY, code TEXT NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
-    c.execute("CREATE TABLE IF NOT EXISTS chat_invites (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, name TEXT, phone TEXT NOT NULL, "
-              "channel TEXT, joined_user_id INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, phone))")
-    c.commit()
-
-
-def _digits(p):
-    return re.sub(r"\D", "", str(p or ""))
-
-
-def _intl_phone(raw):
-    """Nigerian numbers become 234XXXXXXXXXX; any other number must be written with its country code (+1..., 44...). Returns digits or ''."""
-    ng = _ng_local(raw)
-    if ng:
-        return "234" + ng[1:]
-    d = _digits(raw)
-    return d if str(raw or "").strip().startswith("+") and 8 <= len(d) <= 15 else ""
-
-
-def _referrer_by_code(code):
-    code = str(code or "").strip().upper()
-    if not _INVITE_CODE_RE.match(code):
-        return None
-    row = _conn().execute("SELECT id, full_name FROM users WHERE UPPER(TRIM(referral_code)) = ?", (code,)).fetchone()
-    return dict(row) if row else None
-
-
-def _member_by_phone(intl):
-    """Is this number already a Net365 member? Compared on the last 10 digits."""
-    tail = _digits(intl)[-10:]
-    if len(tail) < 10:
-        return None
-    try:
-        for r in _conn().execute("SELECT id, phone FROM users WHERE phone IS NOT NULL AND phone != ''").fetchall():
-            if _digits(r["phone"])[-10:] == tail:
-                return int(r["id"])
-    except Exception:
-        logger.exception("invite: member lookup failed")
-    return None
-
-
-def _apply_pending_referral(wa, user):
-    """Called once a chat has linked a real account. Records the referral the friend arrived with; never raises."""
-    try:
-        _invite_schema()
-        c = _conn()
-        p = c.execute("SELECT code FROM chat_referral_pending WHERE wa_number = ?", (wa,)).fetchone()
-        if not p:
-            return
-        c.execute("DELETE FROM chat_referral_pending WHERE wa_number = ?", (wa,))
-        ref = _referrer_by_code(p["code"])
-        uid = int(user["id"])
-        if ref and int(ref["id"]) != uid and not c.execute(
-                "SELECT id FROM referrals WHERE referred_id = ? AND status IN ('pending', 'completed')", (uid,)).fetchone():
-            c.execute("INSERT INTO referrals (referrer_id, referred_id, status, created_at) VALUES (?, ?, 'pending', CURRENT_TIMESTAMP)", (int(ref["id"]), uid))
-            me = _user_contact_row(uid)
-            if me.get("phone"):
-                c.execute("UPDATE chat_invites SET joined_user_id = ? WHERE user_id = ? AND joined_user_id IS NULL AND substr(phone, -10) = ?",
-                          (uid, int(ref["id"]), _digits(me["phone"])[-10:]))
-        c.commit()
-    except Exception:
-        logger.exception("could not apply the pending chat referral")
-
-
-@wa_bp.route("/api/chat/invite/info", methods=["POST"])
-@bot_required
-def chat_invite_info():
-    wa = _wa(_body())
-    link = _get_link(wa) if wa else None
-    if not link:
-        return jsonify({"success": False, "error": "unknown_chat"}), 404
-    if link.get("is_guest"):
-        return jsonify({"success": True, "guest": True})
-    _invite_schema()
-    c = _conn()
-    uid = int(link["user_id"])
-    code = (c.execute("SELECT referral_code FROM users WHERE id = ?", (uid,)).fetchone() or [None])[0] if "referral_code" in {r[1] for r in c.execute("PRAGMA table_info(users)").fetchall()} else None
-    base = os.getenv("NET365_PUBLIC_URL", "").rstrip("/")
-    ref = c.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ?", (uid,)).fetchone()[0]
-    done = c.execute("SELECT COUNT(*) FROM referrals WHERE referrer_id = ? AND status = 'completed'", (uid,)).fetchone()[0]
-    invited = c.execute("SELECT COUNT(*) FROM chat_invites WHERE user_id = ?", (uid,)).fetchone()[0]
-    first = str(_user_contact_row(uid).get("full_name") or "").strip().split(" ")[0]
-    return jsonify({"success": True, "guest": False, "available": bool(code and base), "code": code, "url": f"{base}/?ref={code}" if code and base else "",
-                    "first_name": first, "joined": int(ref), "rewarded": int(done), "invited": int(invited)})
-
-
-@wa_bp.route("/api/chat/invite/contact", methods=["POST"])
-@bot_required
-def chat_invite_contact():
-    body = _body()
-    wa = _wa(body)
-    link = _get_link(wa) if wa else None
-    if not link or link.get("is_guest"):
-        return jsonify({"success": False, "error": "account_required"}), 403
-    name = re.sub(r"\s+", " ", str(body.get("name") or "")).strip()[:40]
-    intl = _intl_phone(body.get("phone"))
-    if not intl:
-        return jsonify({"success": False, "error": "bad_phone"}), 400
-    _invite_schema()
-    c = _conn()
-    uid = int(link["user_id"])
-    mine = _digits(_user_contact_row(uid).get("phone"))[-10:]
-    if mine and intl[-10:] == mine:
-        return jsonify({"success": False, "error": "own_number"}), 400
-    member = _member_by_phone(intl)
-    cnt = c.execute("SELECT COUNT(*) FROM chat_invites WHERE user_id = ?", (uid,)).fetchone()[0]
-    ex = c.execute("SELECT id FROM chat_invites WHERE user_id = ? AND phone = ?", (uid, intl)).fetchone()
-    if not ex and cnt >= 200:
-        return jsonify({"success": False, "error": "limit"}), 429
-    if ex:
-        c.execute("UPDATE chat_invites SET name = COALESCE(NULLIF(?, ''), name), channel = ? WHERE id = ?", (name, chat_source_for_link({"wa_number": wa}), ex["id"]))
-    else:
-        c.execute("INSERT INTO chat_invites (user_id, name, phone, channel) VALUES (?, ?, ?, ?)", (uid, name, intl, chat_source_for_link({"wa_number": wa})))
-    c.commit()
-    return jsonify({"success": True, "phone": intl, "name": name, "already_member": member is not None, "repeat": bool(ex)})
-
-
-@wa_bp.route("/api/chat/invite/list", methods=["POST"])
-@bot_required
-def chat_invite_list():
-    wa = _wa(_body())
-    link = _get_link(wa) if wa else None
-    if not link or link.get("is_guest"):
-        return jsonify({"success": False, "error": "account_required"}), 403
-    _invite_schema()
-    uid = int(link["user_id"])
-    items = []
-    for r in _conn().execute("SELECT name, phone, joined_user_id FROM chat_invites WHERE user_id = ? ORDER BY id DESC LIMIT 30", (uid,)).fetchall():
-        joined = bool(r["joined_user_id"]) or _member_by_phone(r["phone"]) is not None
-        items.append({"name": r["name"] or "", "masked": _mask_phone(_ng_local("0" + r["phone"][3:]) if r["phone"].startswith("234") else "+" + r["phone"][:3] + "•••" + r["phone"][-3:]),
-                      "phone": r["phone"], "joined": joined})
-    return jsonify({"success": True, "items": items})
-
-
-@wa_bp.route("/api/chat/referral/claim", methods=["POST"])
-@bot_required
-def chat_referral_claim():
-    """A friend opened the bot with someone's invite code. Remember it until they link an account."""
-    body = _body()
-    wa = _wa(body)
-    link = _get_link(wa) if wa else None
-    if not wa:
-        return jsonify({"success": False, "error": "unknown_chat"}), 404
-    if link and not link.get("is_guest"):
-        return jsonify({"success": True, "member": True})
-    ref = _referrer_by_code(body.get("code"))
-    if not ref:
-        return jsonify({"success": False, "error": "invalid_code"}), 404
-    _invite_schema()
-    c = _conn()
-    c.execute("INSERT INTO chat_referral_pending (wa_number, code) VALUES (?, ?) ON CONFLICT(wa_number) DO UPDATE SET code = excluded.code, created_at = CURRENT_TIMESTAMP",
-              (wa, str(body.get("code")).strip().upper()))
-    c.commit()
-    return jsonify({"success": True, "member": False, "referrer_first_name": str(ref.get("full_name") or "").strip().split(" ")[0]})
-
-
-# --------------------------------------------------------------------------- public bot insights (aggregate only)
-# Feeds the public /bots page. Only totals and breakdowns: no names, numbers, emails, references or single transactions.
-# Small groups (under 5) are folded into "Other" so nobody can be picked out. Cached for five minutes.
-_INSIGHTS = {"at": 0.0, "data": None}
-_OK_STATUS = ("success", "successful", "completed", "complete", "delivered", "paid")
-
-
-def _insights_compute():
-    c = _conn()
-    out = {"success": True, "generated_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), "window_days": 30}
-    out["links"] = {"telegram": os.getenv("TELEGRAM_BOT_USERNAME", "").strip().lstrip("@"), "whatsapp": re.sub(r"\D", "", os.getenv("WHATSAPP_BOT_NUMBER", ""))}
-    try:
-        links = c.execute("SELECT wa_number, COALESCE(is_guest, 0) AS g FROM whatsapp_links").fetchall()
-    except Exception:
-        links = []
-    m = {"whatsapp": 0, "telegram": 0, "guests": 0}
-    for r in links:
-        if r["g"]:
-            m["guests"] += 1
-        else:
-            m["telegram" if str(r["wa_number"]).startswith("999") else "whatsapp"] += 1
-    out["members"] = {**m, "total": m["whatsapp"] + m["telegram"]}
-    cols = {r[1] for r in c.execute("PRAGMA table_info(transactions)").fetchall()}
-    src = next((x for x in ("source", "channel") if x in cols), None)
-    when = next((x for x in ("created_at", "timestamp", "date") if x in cols), None)
-    if not (src and when):
-        out["orders"] = None
-        return out
-    status = "status" if "status" in cols else None
-    kind = next((x for x in ("type", "service_type", "category") if x in cols), None)
-    amt = next((x for x in ("amount", "total_amount") if x in cols), None)
-    sel = f"{src} AS s, {when} AS w" + (f", {status} AS st" if status else "") + (f", {kind} AS k" if kind else "") + (f", {amt} AS a" if amt else "")
-    rows = c.execute(f"SELECT {sel} FROM transactions WHERE LOWER({src}) IN ('whatsapp','telegram') AND {when} >= datetime('now', '-30 days')").fetchall()
-    ch = {"whatsapp": 0, "telegram": 0}
-    ok = vol = 0
-    by_kind, by_hour, by_day = {}, [0] * 24, {}
-    for r in rows:
-        s = str(r["s"]).lower()
-        ch[s] = ch.get(s, 0) + 1
-        good = (str(r["st"]).lower() in _OK_STATUS) if status else True
-        ok += 1 if good else 0
-        if good and amt:
-            try:
-                vol += float(r["a"] or 0)
-            except Exception:
-                pass
-        if kind:
-            k = str(r["k"] or "other").lower()[:24]
-            by_kind[k] = by_kind.get(k, 0) + 1
-        w = str(r["w"] or "")
-        try:
-            by_hour[int(w[11:13])] += 1
-        except Exception:
-            pass
-        by_day[w[:10]] = by_day.get(w[:10], 0) + 1
-    total = len(rows)
-    big = sorted(((k, v) for k, v in by_kind.items() if v >= 5), key=lambda x: -x[1])[:6]
-    rest = sum(v for k, v in by_kind.items()) - sum(v for _, v in big)
-    mix = [{"type": k, "count": v} for k, v in big] + ([{"type": "other", "count": rest}] if rest else [])
-    days = []
-    for i in range(13, -1, -1):
-        d = (datetime.utcnow() - timedelta(days=i)).strftime("%Y-%m-%d")
-        days.append({"d": d, "n": by_day.get(d, 0)})
-    out["orders"] = {"total": total, "success": ok, "success_rate": round(100.0 * ok / total, 1) if total else None, "volume_ngn": round(vol) if amt else None,
-                     "by_channel": ch, "mix": mix, "by_hour_utc": by_hour, "daily": days}
-    try:
-        out["invites"] = {"saved": c.execute("SELECT COUNT(*) FROM chat_invites").fetchone()[0]}
-    except Exception:
-        out["invites"] = {"saved": 0}
-    return out
-
-
-@wa_bp.route("/api/bots/insights", methods=["GET"])
-def bots_insights():
-    now = time.time()
-    if not _INSIGHTS["data"] or now - _INSIGHTS["at"] > 300:
-        try:
-            _INSIGHTS["data"] = _insights_compute()
-            _INSIGHTS["at"] = now
-        except Exception:
-            logger.exception("bot insights failed")
-            return jsonify({"success": False}), 503
-    resp = make_response(jsonify(_INSIGHTS["data"]))
-    resp.headers["Cache-Control"] = "public, max-age=120"
-    return resp
-
-
-# --------------------------------------------------------------------------- /bots page funnel (counts only)
-# Answers "is the page bringing people to the bots?". Stores an event name, a source tag and a day. No IP, cookie, number or account.
-# A chat that starts from a Telegram link is counted once, using a one-way hash that cannot be turned back into the chat id.
-_EVENTS = ("view", "click_wa", "click_tg", "qr_view")
-_SRC_RE = re.compile(r"^[a-z0-9_]{1,20}$")
-_EV_HITS = {}
-
-
-def _funnel_schema():
-    c = _conn()
-    c.execute("CREATE TABLE IF NOT EXISTS bot_page_events (id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT NOT NULL, event TEXT NOT NULL, src TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 1, "
-              "UNIQUE(day, event, src))")
-    c.execute("CREATE TABLE IF NOT EXISTS bot_start_seen (h TEXT PRIMARY KEY, day TEXT NOT NULL, src TEXT NOT NULL)")
-    c.commit()
-
-
-def _bump(event, src):
-    _funnel_schema()
-    c = _conn()
-    day = datetime.utcnow().strftime("%Y-%m-%d")
-    c.execute("INSERT INTO bot_page_events (day, event, src, n) VALUES (?, ?, ?, 1) ON CONFLICT(day, event, src) DO UPDATE SET n = n + 1", (day, event, src))
-    c.commit()
-
-
-def _clean_src(v):
-    v = str(v or "direct").strip().lower()
-    return v if _SRC_RE.match(v) else "other"
-
-
-@wa_bp.route("/api/bots/event", methods=["POST"])
-def bots_event():
-    """Public and anonymous. Whitelisted event names only, and a small per-visitor rate limit."""
-    key = (request.headers.get("CF-Connecting-IP") or request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or request.remote_addr or "?")
-    now = time.time()
-    hits = [x for x in _EV_HITS.get(key, []) if now - x < 60]
-    if len(hits) >= 30:
-        return jsonify({"success": False}), 429
-    hits.append(now)
-    _EV_HITS[key] = hits
-    if len(_EV_HITS) > 5000:
-        _EV_HITS.clear()
-    body = request.get_json(silent=True) or {}
-    ev = str(body.get("event") or "")
-    if ev not in _EVENTS:
-        return jsonify({"success": False, "error": "bad_event"}), 400
-    try:
-        _bump(ev, _clean_src(body.get("src")))
-    except Exception:
-        logger.exception("bot page event failed")
-        return jsonify({"success": False}), 503
-    return jsonify({"success": True})
-
-
-@wa_bp.route("/api/chat/attribution", methods=["POST"])
-@bot_required
-def chat_attribution():
-    """The bot saw a Telegram /start with a source tag from the website. Counted once per chat."""
-    body = _body()
-    wa = _wa(body)
-    if not wa:
-        return jsonify({"success": False}), 400
-    src = _clean_src(body.get("src"))
-    h = hashlib.sha256(("bot-start:" + wa + ":" + os.getenv("WHATSAPP_BOT_SECRET", "")).encode()).hexdigest()[:24]
-    _funnel_schema()
-    c = _conn()
-    if c.execute("SELECT 1 FROM bot_start_seen WHERE h = ?", (h,)).fetchone():
-        return jsonify({"success": True, "new": False})
-    c.execute("INSERT INTO bot_start_seen (h, day, src) VALUES (?, ?, ?)", (h, datetime.utcnow().strftime("%Y-%m-%d"), src))
-    c.commit()
-    _bump("bot_start", src)
-    return jsonify({"success": True, "new": True})
-
-
-@wa_bp.route("/api/admin/chatbots/funnel", methods=["GET"])
-def bots_funnel_admin():
-    """Owner view: page visits, taps, Telegram starts by source, and new chats per day. Needs X-Admin-Secret (denied when unset)."""
-    sec = os.getenv("ADMIN_SECRET", "")
-    if not sec or not secrets.compare_digest(request.headers.get("X-Admin-Secret", ""), sec):
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
-    _funnel_schema()
-    c = _conn()
-    days = 30
-    rows = c.execute("SELECT day, event, src, n FROM bot_page_events WHERE day >= date('now', ?)", (f"-{days} days",)).fetchall()
-    by_src, tot, daily = {}, {}, {}
-    for r in rows:
-        s = by_src.setdefault(r["src"], {})
-        s[r["event"]] = s.get(r["event"], 0) + r["n"]
-        tot[r["event"]] = tot.get(r["event"], 0) + r["n"]
-        if r["event"] == "view":
-            daily[r["day"]] = daily.get(r["day"], 0) + r["n"]
-    views = tot.get("view", 0)
-    taps = tot.get("click_wa", 0) + tot.get("click_tg", 0)
-    series = [{"d": (datetime.utcnow() - timedelta(days=i)).strftime("%Y-%m-%d")} for i in range(days - 1, -1, -1)]
-    for x in series:
-        x["views"] = daily.get(x["d"], 0)
-    # new chats per day: the number that shows whether the bots are actually growing
-    cols = {r[1] for r in c.execute("PRAGMA table_info(whatsapp_links)").fetchall()}
-    created = next((x for x in ("created_at", "linked_at", "updated_at") if x in cols), None)
-    new_chats = None
-    if created:
-        new_chats = {}
-        for r in c.execute(f"SELECT substr({created}, 1, 10) AS d, wa_number, COALESCE(is_guest, 0) AS g FROM whatsapp_links WHERE {created} >= date('now', ?)", (f"-{days} days",)).fetchall():
-            e = new_chats.setdefault(r["d"], {"whatsapp": 0, "telegram": 0})
-            e["telegram" if str(r["wa_number"]).startswith("999") else "whatsapp"] += 1
-    return jsonify({"success": True, "window_days": days, "totals": {**tot, "tap_rate": round(100.0 * taps / views, 1) if views else None},
-                    "by_source": by_src, "daily_views": series, "new_chats_by_day": new_chats,
-                    "note": "bot_start counts Telegram chats that arrived from a tagged link. WhatsApp starts cannot be tied to the page."})
 
 
 # --------------------------------------------------------------------------- app.py registration
