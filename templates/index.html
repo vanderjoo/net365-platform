@@ -1291,6 +1291,25 @@ body.pg:not(.dark-mode) .sidebar .nav-item.active i{color:#ea580c}
 </style>
 
 
+<script id="net365-url-tidy">
+/* Keep the address bar clean: collapse "//" to "/" and never leave a bare "#" behind from menu links. */
+(function () {
+  function tidy() {
+    try {
+      var p = location.pathname, fixed = p.replace(/^\/{2,}/, '/');
+      var hash = location.hash === '#' ? '' : location.hash;
+      if (fixed !== p || hash !== location.hash) history.replaceState(null, '', fixed + location.search + hash);
+    } catch (_) {}
+  }
+  tidy();
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href="#"]') : null;
+    if (a) e.preventDefault();
+  }, true);
+  window.addEventListener('hashchange', tidy);
+  window.addEventListener('pageshow', tidy);
+})();
+</script>
 <script id="net365-storage-guard">
 /* Fail-safe storage wrapper: storage being blocked must never prevent the dashboard booting. */
 (function () {
