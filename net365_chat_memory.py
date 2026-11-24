@@ -104,29 +104,12 @@ def _local_ng(e164):
     return "0" + e[4:] if e.startswith("+234") and len(e) == 14 else ""
 
 
-def _ng_local(raw):
-    """Any way of writing a Nigerian mobile number -> 08031234567, or '' when it is not one."""
-    d = re.sub(r"\D", "", str(raw or ""))
-    if d.startswith("234") and len(d) == 13:
-        d = "0" + d[3:]
-    elif len(d) == 10 and d[0] in "789":
-        d = "0" + d
-    return d if re.fullmatch(r"0[789][01]\d{8}", d) else ""
-
-
 def _account_phone(uid):
-    """The best Nigerian number on the account. The website profile shows users.phone, the identity page shows user_phones:
-    try BOTH, so a number that exists in either place is found (a foreign number in one never hides a good one in the other)."""
-    verified_ng, other = "", []
     try:
         import net365_identity as ident
         ep = ident.effective_phone(uid)
         if ep:
-            loc = _local_ng(ep["e164"]) or _ng_local(ep.get("national"))
-            if loc:
-                if ep.get("verified"):
-                    return loc, True
-                other.append(loc)
+            return _local_ng(ep["e164"]), bool(ep.get("verified"))
     except Exception:
         log.debug("chat memory: identity lookup failed", exc_info=True)
     try:
@@ -135,12 +118,15 @@ def _account_phone(uid):
             r = c.execute("SELECT phone FROM users WHERE id = ?", (uid,)).fetchone()
         finally:
             c.close()
-        loc = _ng_local(r[0] if r else "")
-        if loc:
-            other.append(loc)
+        raw = str((r[0] if r else "") or "").strip()
+        d = re.sub(r"\D", "", raw)
+        if d.startswith("234") and len(d) == 13:
+            d = "0" + d[3:]
+        if re.fullmatch(r"0[789][01]\d{8}", d):
+            return d, False
     except Exception:
-        log.debug("chat memory: users.phone lookup failed", exc_info=True)
-    return (other[0], False) if other else ("", False)
+        pass
+    return "", False
 
 
 def _payload(uid, wa="", guest=False):
