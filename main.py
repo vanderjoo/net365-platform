@@ -1360,105 +1360,6 @@ def decrypt_pii(data: str) -> str:
         return data
 
 
-# ============ CUSTOMER-FACING TRANSACTION DESCRIPTION ============
-_TX_NETWORKS = {"mtn": "MTN", "airtel": "Airtel", "glo": "Glo", "9mobile": "9mobile", "etisalat": "9mobile"}
-_TX_TV = {"dstv": "DStv", "gotv": "GOtv", "startimes": "StarTimes", "showmax": "Showmax"}
-_TX_EDU = {"waec": "WAEC result checker", "waec-registration": "WAEC registration", "jamb": "JAMB"}
-_TX_PLAIN = {"wallet_funding": ("Wallet top-up", "wallet", "credit"), "wallet_deposit": ("Wallet top-up", "wallet", "credit"),
-             "transfer": ("Wallet transfer", "transfer", "debit"), "referral": ("Referral reward", "referral", "credit"),
-             "reward": ("Reward", "reward", "credit"), "cart": ("Marketplace order", "marketplace", "debit"),
-             "bulk_recharge": ("Bulk recharge", "airtime", "debit")}
-
-
-def _tx_mask(value):
-    v = re.sub(r"\s+", "", str(value or ""))
-    return (v[:3] + "***" + v[-4:]) if len(v) >= 9 else (("***" + v[-3:]) if len(v) > 3 else "")
-
-
-def _tx_describe(tx):
-    """Fields the customer sees on Transactions: who was paid, prepaid or postpaid, a readable description.
-    Adds description, subtype, vendor, plan_type, recipient_masked, direction, token. Never raises."""
-    try:
-        p = tx.get("payload") if isinstance(tx.get("payload"), dict) else {}
-        res = tx.get("reloadly_result") if isinstance(tx.get("reloadly_result"), dict) else {}
-        full = res.get("full_result") if isinstance(res.get("full_result"), dict) else {}
-        ttype = str(tx.get("tx_type") or "").lower()
-        if ttype in _TX_PLAIN:
-            label, sub, direction = _TX_PLAIN[ttype]
-            out = {"description": label, "subtype": sub, "vendor": "Net365", "plan_type": "", "direction": direction}
-            if ttype == "bulk_recharge":
-                out["description"] = "Bulk airtime recharge"
-            return out
-        def plain(v):
-            try:
-                return decrypt_pii(v) if v else ""
-            except Exception:
-                return str(v or "")
-        phone = plain(p.get("phone"))
-        account = plain(p.get("subscriber_account"))
-        opname = str(p.get("operator_name") or res.get("operatorName") or full.get("operatorName") or "")
-        net = ""
-        for key in (p.get("network"), p.get("product"), opname):
-            k = str(key or "").lower()
-            for name in _TX_NETWORKS:
-                if name in k:
-                    net = _TX_NETWORKS[name]
-                    break
-            if net:
-                break
-        if not net and phone:
-            try:
-                import net365_providers as _np
-                net = _TX_NETWORKS.get(_np.network_for("", phone), "")
-            except Exception:
-                net = ""
-        out = {"direction": "debit", "plan_type": "", "vendor": "", "subtype": "airtime", "description": ""}
-        biller = str(p.get("biller_name") or "").strip()
-        if ttype == "electricity" or (ttype == "utility" and (p.get("meter_type") or p.get("disco"))):
-            meter = "Postpaid" if str(p.get("meter_type") or "").lower().startswith("post") else "Prepaid"
-            vendor = biller or "Electricity"
-            out.update(subtype="electricity", vendor=vendor, plan_type=meter, description=f"{vendor} - {meter} meter")
-            out["recipient_masked"] = _tx_mask(account)
-        elif ttype == "data":
-            vendor = net or "Data"
-            plan = biller or ""
-            if plan.lower().startswith(vendor.lower()):
-                plan = plan[len(vendor):].lstrip(" -:")
-            out.update(subtype="data", vendor=vendor, plan_type="Prepaid data", description=f"{vendor} data" + (f" - {plan}" if plan else ""))
-            out["recipient_masked"] = _tx_mask(phone)
-        elif ttype in ("tv", "subscription") or str(p.get("product") or "").lower() in _TX_TV:
-            vendor = _TX_TV.get(str(p.get("product") or "").lower(), biller or "TV subscription")
-            kind = "Renewal" if str(p.get("subscription_type") or "").lower() == "renew" else "Subscription"
-            out.update(subtype="subscription", vendor=vendor, plan_type=kind, description=f"{vendor} {kind.lower()}" + (f" - {biller}" if biller and biller != vendor else ""))
-            out["recipient_masked"] = _tx_mask(account)
-        elif ttype == "education":
-            vendor = _TX_EDU.get(str(p.get("product") or "").lower(), biller or "Education")
-            out.update(subtype="education", vendor=vendor, description=vendor)
-        elif ttype == "insurance":
-            out.update(subtype="insurance", vendor=biller or "Insurance", description=biller or "Motor insurance")
-        elif ttype == "utility":
-            out.update(subtype="utility", vendor=biller or "Utility bill", description=biller or "Utility bill payment")
-            out["recipient_masked"] = _tx_mask(account)
-        else:  # topup / airtime
-            vendor = net or opname or "Airtime"
-            ng = str(tx.get("currency") or "").upper() == "NGN" or str(p.get("country_code") or "NG").upper() == "NG"
-            out.update(subtype="airtime", vendor=vendor, plan_type="Prepaid airtime (VTU)" if ng else "Prepaid airtime",
-                       description=f"{vendor} airtime" + (" (VTU)" if ng else " top-up"))
-            out["recipient_masked"] = _tx_mask(phone)
-        tok = res.get("token") or full.get("token") or ""
-        if tok:
-            out["token"] = str(tok)[:60]
-        for k in ("service_amount", "fee_amount"):
-            if p.get(k) is not None:
-                out[k] = p.get(k)
-        out["customer_name"] = str(p.get("customer_name") or "")[:80]
-        return out
-    except Exception:
-        logger.exception("tx description failed")
-        return {}
-
-
-
 def decrypt_payload(payload: Dict) -> Dict:
     if not payload:
         return payload
@@ -5290,7 +5191,7 @@ from typing import Dict, Optional
 logger = logging.getLogger(__name__)
 
 # Make sure this is defined somewhere in your app config
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://net365co.com")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://net365co.com").rstrip("/")
 
 
 def _send_via_mailgun_api(mg_domain, mg_api_key, from_addr, to_email, subject, html_body, attachment, attachment_name, _result, text_body=None, reply_to=None):
@@ -7162,6 +7063,24 @@ def _schedule_send_pay_link(schedule: Dict, user_id: int, platform) -> Dict:
     return {"success": True, "reminder_sent": True, "chat": bool(sent), "reference": res["reference"]}
 
 
+def _reloadly_topup_or_failed(platform, **kw):
+    """Run a Reloadly top-up. Reloadly refusing the order (HTTP 4xx, 502/503, or never reachable) comes back as a FAILED
+    result so the caller can move to the standby processor (VTpass). An UNKNOWN outcome (timeout after sending, a dropped
+    connection, 500/504) is re-raised: the order may have been accepted, so nobody orders a second time."""
+    try:
+        return platform.make_topup(**kw)
+    except Exception as e:
+        code = getattr(getattr(e, "response", None), "status_code", None)
+        txt = str(e)
+        never_sent = isinstance(e, requests.exceptions.ConnectTimeout) or any(
+            m in txt for m in ("Failed to establish a new connection", "Name or service not known", "Temporary failure in name resolution"))
+        if (code is not None and (code < 500 or code in (502, 503))) or never_sent:
+            logger.warning(f"Reloadly did not accept the top-up ({code or type(e).__name__}): {e}")
+            return {"status": "FAILED", "error": "Reloadly unavailable",
+                    "message": f"Reloadly could not take the order ({code or 'unreachable'})."}
+        raise
+
+
 def _wallet_airtime_via_router(reference, data, phone, service_amount, rt):
     """Nigerian airtime paid from the Net365 Wallet, offered to the provider router (VTpass / Flutterwave ...) in naira.
     Same rule as card-paid airtime: returns a Reloadly-shaped result when the router accepted the order, None when it is
@@ -8246,9 +8165,41 @@ class ReloadlyWebApp:
             logger.warning("net365_askqa.py not found: Ask Net365 questions are not logged")
         except Exception as _aq_err:
             logger.error(f"Ask Net365 log failed to start: {_aq_err}")
+        # Reliable admin email: every alert is stored, sent at once, and retried for 24h (see net365_alerts.py).
+        _mail_fn = send_email_notification
+        _admin_alert_fn = None
+        try:
+            from net365_alerts import init_alerts
+            _al = init_alerts(self.app, db.get_db_connection, send_email_notification, admin_required)
+            _mail_fn = _al["send_email"]
+            _admin_alert_fn = _al["send_admin_alert"]
+            self.app.config["NET365_SEND_ADMIN_ALERT"] = _admin_alert_fn
+            self.app.extensions["net365_send_email"] = _mail_fn
+        except Exception as _al_err:
+            logger.error(f"Admin alerts outbox NOT loaded (emails stay fire-and-forget): {_al_err}", exc_info=True)
+
+        # Account admin (soft-delete audit, admin edit, SMS-confirmed phone numbers).
+        try:
+            from net365_accounts import init_accounts
+
+            def _acct_send_sms(e164, text):
+                num = e164 if SMS_PROVIDER_NAME == "twilio" else e164.lstrip("+")
+                res = send_sms_via_provider([num], text, os.getenv("SMS_SENDER_ID", "Net365"))
+                return bool(res and res.get("sent"))
+
+            self._accounts = init_accounts(
+                self.app, db, login_required, admin_required, rate_limit,
+                send_email=send_email_notification, send_sms=_acct_send_sms,
+                sms_ready=lambda: bool(SMS_PROVIDER_CONFIGURED),
+                log_event=log_event, admin_identity=lambda: get_client_ip(),
+            )
+            logger.info("Account admin module loaded (edit user, deleted audit, phone verification routes are live)")
+        except Exception as _acct_err:
+            logger.error(f"Account admin module NOT loaded: {_acct_err}", exc_info=True)
+
         try:
             from net365_shield import init_shield
-            init_shield(self.app, db, admin_required, get_client_ip, send_email_notification)
+            init_shield(self.app, db, admin_required, get_client_ip, _mail_fn)
         except ImportError:
             logger.warning("net365_shield.py not found: the shield is not active")
         except Exception as _shield_err:
@@ -8334,6 +8285,23 @@ class ReloadlyWebApp:
                 except Exception as _rt_e:
                     logger.warning(f"Provider routing policy not loaded: {_rt_e}")
                 try:
+                    from net365_vtpass_intl import init_vtpass_intl
+
+                    def _vi_chat_err(_uid, _amt):
+                        try:
+                            from net365_whatsapp import chat_purchase_error
+                            return chat_purchase_error(_uid, _amt, "NGN")
+                        except ImportError:
+                            return None
+
+                    init_vtpass_intl(self.app, db, admin_required, login_required, email_verified_required,
+                                     platform_fn=lambda: self.platform, fee_fn=lambda _a: server_fee_for(_a, "NGN"),
+                                     encrypt_pii=encrypt_pii, return_url_fn=_safe_payment_return_url,
+                                     limit_error_fn=lambda _uid, _amt: _purchase_limit_error(_uid, _amt, "NGN"),
+                                     chat_error_fn=_vi_chat_err)
+                except Exception as _vi_e:
+                    logger.warning(f"VTpass international airtime not loaded: {_vi_e}")
+                try:
                     from net365_identity import init_identity
 
                     _WA_OTP = os.getenv("IDENTITY_WHATSAPP_OTP", "").lower() == "true" and bool(os.getenv("WHATSAPP_BOT_SECRET"))
@@ -8373,8 +8341,51 @@ class ReloadlyWebApp:
                         page_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "complete_profile.html"),
                         sms_ready=lambda: SMS_PROVIDER_CONFIGURED or _WA_OTP,
                     )
+
+                    # Chat side of "confirm your number, no code to type". Only the bot may call these (X-Bot-Secret).
+                    #   WhatsApp: the customer sends  VERIFY N365-XXXXXX  and the sender's own number is verified.
+                    #   Telegram: the customer opens the bot from the page and taps "Share my number"; the bot checks it is
+                    #             their OWN contact, then reports it here.
+                    from net365_whatsapp import bot_required as _id_bot_required
+                    from net365_identity import complete_claim as _id_claim, complete_claim_with_contact as _id_claim_contact
+
+                    def _id_claim_reply(ok, res):
+                        res = res or {}
+                        if ok:
+                            return jsonify({"success": True, "masked": res.get("masked"), "national": res.get("national")}), 200
+                        _code = res.get("error") or "invalid_code"
+                        _http = 429 if _code == "rate_limited" else 409 if _code == "phone_in_use" else 400
+                        return jsonify({"success": False, "error_code": _code}), _http
+
+                    @self.app.post("/api/bot/identity/claim")
+                    @_id_bot_required
+                    def bot_identity_claim():
+                        d = request.get_json(silent=True) or {}
+                        return _id_claim_reply(*_id_claim(d.get("code"), d.get("wa")))
+
+                    @self.app.post("/api/bot/identity/claim-contact")
+                    @_id_bot_required
+                    def bot_identity_claim_contact():
+                        d = request.get_json(silent=True) or {}
+                        if d.get("own") is not True:      # the bot must have checked that this is the sender's own contact
+                            return jsonify({"success": False, "error_code": "not_own_contact"}), 400
+                        return _id_claim_reply(*_id_claim_contact(d.get("code"), d.get("phone"), d.get("chat")))
                 except Exception as _id_e:
                     logger.warning(f"Identity engine not loaded: {_id_e}")
+                try:
+                    # Receipt number / email memory for the WhatsApp and Telegram bots (one place, shared with website and admin).
+                    from net365_chat_memory import init_chat_memory
+                    from net365_whatsapp import bot_required as _cm_bot_required
+                    init_chat_memory(self.app, db, _cm_bot_required)
+                except Exception as _cm_e:
+                    logger.warning(f"Chat contact memory not loaded: {_cm_e}")
+                try:
+                    # NET365 NEURAL NAVIGATION: per-customer ranking of the bot menus. If it fails to load the bots show the default menu.
+                    from net365_adaptive_navigation import init_adaptive_navigation
+                    from net365_whatsapp import bot_required as _nav_bot_required
+                    init_adaptive_navigation(self.app, db, _nav_bot_required, admin_required)
+                except Exception as _nav_e:
+                    logger.warning(f"Neural Navigation not loaded: {_nav_e}")
                 try:
                     from net365_recovery import init_recovery
                     init_recovery(self.app, db, admin_required)
@@ -8485,8 +8496,21 @@ class ReloadlyWebApp:
         # NET365 SENTINEL: threat detection + automated defence. Starts in OBSERVATION mode (detects and logs,
         # never auto-blocks) until you switch it in the Security tab. Fails open: an error here never blocks traffic.
         try:
+            import inspect as _inspect
             from net365_sentinel import init_sentinel
-            init_sentinel(self.app, db, admin_required, get_client_ip, admin_secret=lambda: ADMIN_SECRET)
+            _sk = {"admin_secret": lambda: ADMIN_SECRET}
+            _sparams = _inspect.signature(init_sentinel).parameters
+            _hooked = next((n for n in ("send_email", "email_sender", "send_mail", "mailer", "notify_email") if n in _sparams), None)
+            if _hooked:
+                _sk[_hooked] = _mail_fn
+                logger.info(f"Sentinel mail hook: connected through '{_hooked}' (queued, retried for 24h)")
+            else:
+                logger.warning(
+                    "Sentinel mail hook: init_sentinel accepts no mail function (parameters: %s). "
+                    "Block alerts depend on Sentinel's own code. Test delivery with POST /api/admin/alerts/test.",
+                    ", ".join(_sparams),
+                )
+            init_sentinel(self.app, db, admin_required, get_client_ip, **_sk)
         except Exception as e:
             logger.error(f"SENTINEL NOT loaded (site is running without it): {e}", exc_info=True)
 
@@ -9189,7 +9213,8 @@ class ReloadlyWebApp:
                             raise Exception(f"Unable to convert {service_amount} {currency} to USD")
 
                         # Execute Reloadly top‑up
-                        topup_result = self.platform.make_topup(
+                        topup_result = _reloadly_topup_or_failed(
+                            self.platform,
                             operator_id=str(operator_id),
                             amount=str(round(usd_amount, 2)),
                             recipient_phone={"countryCode": country_code, "number": formatted_phone},
@@ -9648,6 +9673,39 @@ class ReloadlyWebApp:
                             tx_type, reference, paid_amount)
 
                 # -----------------------------------------------------------------
+                # 3a-3. OVERSEAS AIRTIME / DATA / PIN SERVED BY VTPASS (country owned by VTpass, paid in naira by Paystack).
+                #       Reloadly-owned countries never come here; they stay on the "topup" branch above.
+                # -----------------------------------------------------------------
+                elif tx_type == "intl_vtpass":
+                    import net365_vtpass_intl as _vi
+                    paid_amount = float(tx.get("amount", 0))
+                    ires = _vi.fulfil(reference, tx, payload)
+                    pending_i = bool(ires.get("pending"))
+                    result = {k: v for k, v in ires.items() if k != "pending"}
+                    try:
+                        db.create_reloadly_transaction(
+                            reference=reference, user_id=user_id, transaction_type="airtime", amount=paid_amount,
+                            status="processing" if pending_i else "completed",
+                            provider_transaction_id=result["transactionId"], result=ires.get("full_result") or {}, currency="NGN")
+                    except Exception as e:
+                        logger.critical(f"Overseas top-up DELIVERED for {reference} but reloadly_transactions insert failed: {e}")
+                    _i_to = _vi.country_info(payload.get("country_code")) or {}
+                    _i_what = payload.get("plan") or "International top-up"
+                    if user_id:
+                        try:
+                            db.create_notification(user_id, "International Top-up Successful ✅",
+                                                   f"{_i_what} sent to +{payload.get('phone')} ({_i_to.get('name', payload.get('country_code'))}).", "success")
+                        except Exception as e:
+                            logger.warning(f"International notification failed for {reference}: {e}")
+                        send_service_receipt(
+                            user_id, payload, f"✅ International Top-up Receipt — {reference}",
+                            f"Your international top-up was successful.\n\n{payload.get('biller_name') or ''}\nProduct: {_i_what}\n"
+                            f"Number: +{payload.get('phone')}\nAmount: ₦{float(payload.get('service_amount') or paid_amount):,.2f}\n"
+                            + (f"PIN / instructions: {result.get('token')}\n" if result.get("token") else "")
+                            + ("Status: processing, it will reflect shortly.\n" if pending_i else "") + f"Reference: {reference}",
+                            "airtime", reference, paid_amount)
+
+                # -----------------------------------------------------------------
                 # 3b. GIFT CARD (gateway-paid). Codes are fetched at delivery, never stored.
                 # -----------------------------------------------------------------
                 elif tx_type == "giftcard":
@@ -9774,7 +9832,7 @@ class ReloadlyWebApp:
                         threading.Thread(target=notify_merchant_paid, args=(reference,), daemon=True).start()
                     except Exception:
                         pass
-                if tx_type in ("topup", "utility", "giftcard", "merchant", "data", "tv", "education", "electricity", "insurance"):
+                if tx_type in ("topup", "utility", "giftcard", "merchant", "data", "tv", "education", "electricity", "insurance", "intl_vtpass"):
                     try:
                         from net365_whatsapp import notify_after_fulfillment
                         threading.Thread(target=notify_after_fulfillment, args=(reference,), daemon=True).start()
@@ -9806,7 +9864,7 @@ class ReloadlyWebApp:
                 if tx_type == "utility":
                     _utility_trip(str(e))
                 try:
-                    if tx_type in ("topup", "utility", "giftcard", "data", "tv", "education", "electricity", "insurance"):
+                    if tx_type in ("topup", "utility", "giftcard", "data", "tv", "education", "electricity", "insurance", "intl_vtpass"):
                         from net365_whatsapp import notify_delay
                         threading.Thread(target=notify_delay, args=(reference,), daemon=True).start()
                 except Exception:
@@ -12903,6 +12961,15 @@ class ReloadlyWebApp:
                 return jsonify({"success": False, "code": "LIMIT_EXCEEDED", "error": _limit_err}), 400
 
             if data.get("type") != "wallet_funding":
+                _vi_cc = str(data.get("country_code") or "NG").upper()
+                if _vi_cc != "NG":
+                    try:
+                        import net365_vtpass_intl as _vi_guard
+                        if _vi_guard.vtpass_owns(_vi_cc):      # one owner per country: a VTpass country is never sent to Reloadly
+                            return jsonify({"success": False, "code": "USE_VTPASS_INTL",
+                                            "error": "This country is served through our international bundles. Please use that option."}), 409
+                    except ImportError:
+                        pass
                 if not data.get("operator_id") or not data.get("phone"):
                     return (
                         jsonify(
@@ -13090,7 +13157,6 @@ class ReloadlyWebApp:
                         currency=currency,
                         payload={
                             "operator_id": data.get("operator_id"),
-                            "operator_name": str(data.get("operator_name") or "")[:40],
                             "phone": phone,
                             "country_code": country_code,
                             "service_amount": service_amount,
@@ -13166,7 +13232,8 @@ class ReloadlyWebApp:
 
                         provider_called = True
                         result = (
-                            self.platform.make_topup(
+                            _reloadly_topup_or_failed(
+                                self.platform,
                                 operator_id=str(data.get("operator_id")),
                                 amount=str(round(usd_amount, 2)),
                                 recipient_phone={
@@ -13422,9 +13489,9 @@ class ReloadlyWebApp:
                         "country_code": data.get("country_code", "NG"),
                         "email": _payer_email,
                     }
-                    payload["operator_name"] = str(data.get("operator_name") or "")[:40]
                     if str(data.get("source") or "") in ("telegram", "whatsapp"):
                         payload["source"] = data["source"]
+                        payload["operator_name"] = str(data.get("operator_name") or "")[:40]
                     if data.get("save_card") and not _is_guest:
                         payload["save_card"] = True
                     if tx_type == "topup":
@@ -13502,6 +13569,14 @@ class ReloadlyWebApp:
 
             if amount <= 0 or not phone or not operator_id:
                 return jsonify({"success": False, "error": "Phone, network and amount are required"}), 400
+            if country_code != "NG":
+                try:
+                    import net365_vtpass_intl as _vi_guard
+                    if _vi_guard.vtpass_owns(country_code):
+                        return jsonify({"success": False, "code": "USE_VTPASS_INTL",
+                                        "error": "This country is served through our international bundles. Please use that option."}), 409
+                except ImportError:
+                    pass
             if country_code == "NG":
                 try:
                     import net365_recovery as _rc
@@ -13923,8 +13998,6 @@ class ReloadlyWebApp:
             offset = max(request.args.get("offset", 0, type=int), 0)
 
             transactions = db.get_transactions(user_id, limit, offset)
-            for _t in transactions:
-                _t.update(_tx_describe(_t))
             return jsonify({"success": True, "transactions": transactions})
 
         # ============ CUSTOMER-SAFE TRANSACTION RECEIPT ============
@@ -13938,13 +14011,12 @@ class ReloadlyWebApp:
             """
             user_id = g.current_user_id
             try:
+                transactions = db.get_transactions(user_id, 100, 0) or []
                 wanted = str(reference).strip()
-                tx = db.get_transaction(wanted)
-                if tx and tx.get("user_id") != user_id:
-                    tx = None  # never reveal another customer's transaction
+                tx = next((item for item in transactions
+                           if str(item.get("reference") or item.get("id") or "") == wanted), None)
                 if not tx:
                     return jsonify({"success": False, "error": "Transaction not found in your account"}), 404
-                tx.update(_tx_describe(tx))
                 return jsonify({"success": True, "transaction": tx})
             except Exception as e:
                 logger.exception("Customer receipt lookup failed for user %s", user_id)
@@ -19045,12 +19117,14 @@ class ReloadlyWebApp:
         @admin_required
         def admin_search_users():
             query = (request.args.get("q") or "").strip()
+            include_deleted = request.args.get("include_deleted") in ("1", "true", "yes")
+            _not_deleted = "" if include_deleted else " AND COALESCE(account_status,'active') != 'deleted'"
             conn = db.get_db_connection()
             c = conn.cursor()
 
             if not query:
-                # Return total count and empty list when no query
-                total = c.execute("SELECT COUNT(*) FROM users").fetchone()[0] or 0
+                # Return total count and empty list when no query (deleted accounts are audited separately)
+                total = c.execute("SELECT COUNT(*) FROM users WHERE 1=1" + _not_deleted).fetchone()[0] or 0
                 conn.close()
                 return jsonify({"success": True, "users": [], "total": total})
 
@@ -19058,7 +19132,7 @@ class ReloadlyWebApp:
                 """
                 SELECT id, email, phone, full_name, account_status, status_reason, status_changed_at,
                        email_verified, phone_verified, created_at
-                FROM users WHERE email LIKE ? OR phone LIKE ? OR full_name LIKE ?
+                FROM users WHERE (email LIKE ? OR phone LIKE ? OR full_name LIKE ?)""" + _not_deleted + """
                 LIMIT 25
                 """,
                 (f"%{query}%", f"%{query}%", f"%{query}%"),
@@ -19506,7 +19580,16 @@ class ReloadlyWebApp:
             email = (data.get("email") or "").strip().lower()
             password = data.get("password")
             full_name = data.get("full_name")
-            phone = data.get("phone")
+            phone = (data.get("phone") or "").strip() or None
+            if phone:
+                try:
+                    from net365_accounts import normalize_phone as _np_norm
+                    _e164 = _np_norm(phone)
+                except Exception:
+                    _e164 = None
+                if not _e164:
+                    return jsonify({"success": False, "error": "That phone number does not look valid. Use 0803... or +234803..."}), 400
+                phone = _e164
             if not email or not password:
                 return (
                     jsonify({"success": False, "error": "Email and password required"}),
@@ -19551,22 +19634,57 @@ class ReloadlyWebApp:
             log_event(
                 user_id=user_id,
                 event_type="account_created_by_admin",
-                details={"admin": _admin_identity()},
+                details={"admin": _admin_identity(), "phone_added": bool(phone)},
                 status="success",
             )
+            # A phone typed in by an admin is stored UNverified: it only becomes usable for transactions after the
+            # customer enters the SMS code. The admin can send that code now (or later from the user's Edit dialog).
+            try:
+                if phone:
+                    _c2 = db.get_db_connection()
+                    _c2.execute("UPDATE users SET phone_verified=0 WHERE id=?", (user_id,))
+                    _c2.commit()
+                    _c2.close()
+            except Exception as _pe:
+                logger.warning(f"Could not flag phone as unverified for {user_id}: {_pe}")
+            _sent = {}
+            try:
+                _acct = getattr(self, "_accounts", None)
+                _u = db.get_user(user_id) or {}
+                if _acct and data.get("send_email_verification"):
+                    _sent["email"] = _acct["send_email_code"](_u)
+                if _acct and data.get("send_phone_verification") and phone:
+                    _sent["phone"] = _acct["send_phone_code"](_u, _admin_identity())
+            except Exception as _se:
+                logger.warning(f"Verification sends after admin create failed: {_se}")
             return jsonify(
-                {"success": True, "user": sanitize_user(db.get_user(user_id))}
+                {"success": True, "user": sanitize_user(db.get_user(user_id)), "verification_sent": _sent}
             )
 
         @self.app.route("/api/admin/users/<int:target_user_id>", methods=["DELETE"])
         @admin_required
         def admin_delete_user(target_user_id):
-            data = request.json or {}
-            reason = (data.get("reason") or "Deleted by admin").strip()
+            data = request.get_json(silent=True) or {}
+            try:
+                from net365_accounts import clean_remarks as _cr, record_user_deletion as _rud
+            except Exception as _imp:
+                logger.error(f"Deletion audit module missing: {_imp}")
+                return jsonify({"success": False, "error": "Deletion audit is unavailable, so nothing was deleted."}), 500
+            reason = _cr(data.get("remarks") or data.get("reason"))
+            if not reason:
+                return jsonify({"success": False, "error": "Remarks are required to delete an account (at least 5 characters)."}), 400
             user = db.get_user(target_user_id)
             if not user:
                 return jsonify({"success": False, "error": "User not found"}), 404
+            if (user.get("account_status") or "active") == "deleted":
+                return jsonify({"success": False, "error": "This account is already deleted."}), 409
 
+            # Audit first: if this fails, nothing is deleted.
+            try:
+                _rud(db, user, reason, _admin_identity())
+            except Exception as _ae:
+                logger.error(f"Could not write deletion audit for {target_user_id}: {_ae}", exc_info=True)
+                return jsonify({"success": False, "error": "Could not record the audit entry, so nothing was deleted."}), 500
             db.set_account_status(target_user_id, "deleted", reason)
             killed = db.kill_user_sessions(target_user_id)
             log_event(
@@ -19711,7 +19829,7 @@ class ReloadlyWebApp:
             return jsonify({"success": True, "campaigns": campaigns})
 
         @self.app.route("/api/notifications/send", methods=["POST"])
-        @admin_required  # was login_required: any customer could notify and email any other customer with text of their choice
+        @login_required
         def send_notification_route():
             data = request.json
             user_id = data.get("user_id")
