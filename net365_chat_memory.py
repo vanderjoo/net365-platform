@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 
 _EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$")
 _db = None
+BUILD = "2026-11-24-both-places"
 
 
 def _conn():
@@ -277,7 +278,7 @@ def init_chat_memory(app, db, bot_required):
             return jsonify(success=True, module=True, error="links_table: " + str(e)[:80])
         finally:
             c.close()
-        out = {"success": True, "module": True, "links": [{"guest": r["guest"], "active": r["active"]} for r in rows]}
+        out = {"success": True, "module": True, "build": BUILD, "links": [{"guest": r["guest"], "active": r["active"]} for r in rows]}
         uid, guest = _chat_link(wa)
         out["linked"] = bool(uid and not guest)
         out["guest"] = bool(uid and guest)
