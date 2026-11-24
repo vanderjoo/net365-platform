@@ -45,11 +45,12 @@ def _ensure_schema():
         c.close()
 
 
-def _user_for_chat(wa):
-    """The real (non-guest) account linked to this chat, or None."""
+def _chat_link(wa):
+    """(user_id, is_guest) of the ACTIVE link for this chat, or (None, False). Guests are real rows too, so a Telegram
+    customer who never linked an account still gets remembered."""
     wa = str(wa or "").strip()
     if not wa:
-        return None
+        return None, False
     digits = re.sub(r"\D", "", wa)
     c = _conn()
     try:
@@ -58,10 +59,38 @@ def _user_for_chat(wa):
                 continue
             r = c.execute("SELECT user_id, is_guest FROM whatsapp_links WHERE wa_number = ? AND active = 1 ORDER BY rowid DESC LIMIT 1", (key,)).fetchone()
             if r is not None:
-                return None if r[1] else int(r[0])
+                return int(r[0]), bool(r[1])
     finally:
         c.close()
-    return None
+    return None, False
+
+
+def _user_for_chat(wa):
+    """The real (non-guest) account linked to this chat, or None."""
+    uid, guest = _chat_link(wa)
+    return None if guest else uid
+
+
+def _wa_number_local(wa):
+    """The WhatsApp chat id IS the customer's phone number (Telegram ids start 999 and are not numbers)."""
+    d = re.sub(r"\D", "", str(wa or ""))
+    if not d or d.startswith("999"):
+        return ""
+    if d.startswith("234") and len(d) == 13:
+        d = "0" + d[3:]
+    return d if re.fullmatch(r"0[789][01]\d{8}", d) else ""
+
+
+def _guest_email(uid):
+    try:
+        c = _conn()
+        try:
+            r = c.execute("SELECT receipt_email FROM whatsapp_links WHERE user_id = ? AND is_guest = 1 AND active = 1", (uid,)).fetchone()
+        finally:
+            c.close()
+        return str((r[0] if r else "") or "")
+    except Exception:
+        return ""
 
 
 def _mask_email(e):
@@ -100,22 +129,24 @@ def _account_phone(uid):
     return "", False
 
 
-def _payload(uid):
+def _payload(uid, wa="", guest=False):
     c = _conn()
     try:
         pref = c.execute("SELECT phone, email FROM chat_contact_prefs WHERE user_id = ?", (uid,)).fetchone()
         u = c.execute("SELECT email FROM users WHERE id = ?", (uid,)).fetchone()
     finally:
         c.close()
-    acc_phone, verified = _account_phone(uid)
+    acc_phone, verified = ("", False) if guest else _account_phone(uid)
     pref_phone = str((pref[0] if pref else "") or "")
     pref_email = str((pref[1] if pref else "") or "")
-    acc_email = str((u[0] if u else "") or "")
-    phone = pref_phone or acc_phone
+    acc_email = _guest_email(uid) if guest else str((u[0] if u else "") or "")
+    chat_phone = _wa_number_local(wa)
+    phone = pref_phone or acc_phone or chat_phone
     email = pref_email or acc_email
-    return {"success": True, "linked": True,
-            "phone": phone, "phone_source": ("saved" if pref_phone else "account") if phone else "",
-            "phone_verified": bool(verified and phone and phone == acc_phone),
+    psrc = "saved" if pref_phone else ("account" if acc_phone else ("chat" if chat_phone else ""))
+    return {"success": True, "linked": True, "guest": bool(guest),
+            "phone": phone, "phone_source": psrc if phone else "",
+            "phone_verified": bool((verified and phone and phone == acc_phone) or (psrc == "chat" and not guest)),
             "email": email, "email_masked": _mask_email(email), "email_source": ("saved" if pref_email else "account") if email else ""}
 
 
@@ -140,16 +171,25 @@ def init_chat_memory(app, db, bot_required):
     @app.post("/api/bot/contact/get")
     @bot_required
     def bot_contact_get():
-        uid = _user_for_chat((request.get_json(silent=True) or {}).get("wa"))
+        wa = (request.get_json(silent=True) or {}).get("wa")
+        uid, guest = _chat_link(wa)
         if not uid:
-            return jsonify(success=True, linked=False)
-        return jsonify(_payload(uid))
+            ph = _wa_number_local(wa)           # no record yet: a WhatsApp chat still knows its own number
+            return jsonify(success=True, linked=False, **({"phone": ph, "phone_source": "chat"} if ph else {}))
+        if not guest:
+            try:                                # a linked WhatsApp chat proved its number: adopt it once (never overwrites)
+                import net365_identity as ident
+                if _wa_number_local(wa):
+                    ident.adopt_chat_number(uid, re.sub(r"\D", "", str(wa)))
+            except Exception:
+                log.debug("chat memory: adopt failed", exc_info=True)
+        return jsonify(_payload(uid, wa, guest))
 
     @app.post("/api/bot/contact/set")
     @bot_required
     def bot_contact_set():
         d = request.get_json(silent=True) or {}
-        uid = _user_for_chat(d.get("wa"))
+        uid, guest = _chat_link(d.get("wa"))
         if not uid:
             return jsonify(success=False, linked=False, error_code="link_required"), 200
         if d.get("phone") is not None:
@@ -157,21 +197,31 @@ def init_chat_memory(app, db, bot_required):
                 import net365_identity as ident
                 e164, region, err = ident.normalize_phone(d.get("phone"), "NG")
             except Exception:
-                e164, region, err = None, None, "invalid"
+                ident, e164, region, err = None, None, None, "invalid"
             local = _local_ng(e164)
             if err or not local:
                 return jsonify(success=False, error_code="invalid_phone", error="Send a Nigerian number like 08012345678."), 400
             _save_pref(uid, phone=local)
-            try:                                  # also put it on the account, so the website and admin show the same number
-                ident.save_unverified(uid, e164, region)
-            except Exception:
-                log.debug("chat memory: could not mirror the number to the account", exc_info=True)
+            if not guest and ident:               # also put it on the account, so the website and admin show the same number
+                try:
+                    ident.save_unverified(uid, e164, region)
+                except Exception:
+                    log.debug("chat memory: could not mirror the number to the account", exc_info=True)
         if d.get("email") is not None:
             em = str(d.get("email") or "").strip()
             if not _EMAIL_RE.match(em):
                 return jsonify(success=False, error_code="invalid_email", error="That does not look like an email address."), 400
             _save_pref(uid, email=em)
-        return jsonify(_payload(uid))
+            if guest:                             # guests keep one receipt email on their chat link
+                try:
+                    c = _conn()
+                    try:
+                        c.execute("UPDATE whatsapp_links SET receipt_email = ? WHERE user_id = ? AND is_guest = 1", (em.lower(), uid)); c.commit()
+                    finally:
+                        c.close()
+                except Exception:
+                    log.debug("chat memory: guest receipt email not mirrored", exc_info=True)
+        return jsonify(_payload(uid, d.get("wa"), guest))
 
     @app.post("/api/bot/contact/share")
     @bot_required
@@ -214,11 +264,12 @@ def init_chat_memory(app, db, bot_required):
         finally:
             c.close()
         out = {"success": True, "module": True, "links": [{"guest": r["guest"], "active": r["active"]} for r in rows]}
-        uid = _user_for_chat(wa)
-        out["linked"] = bool(uid)
+        uid, guest = _chat_link(wa)
+        out["linked"] = bool(uid and not guest)
+        out["guest"] = bool(uid and guest)
         if uid:
-            p = _payload(uid)
-            acc_phone, verified = _account_phone(uid)
+            p = _payload(uid, wa, guest)
+            acc_phone, verified = ("", False) if guest else _account_phone(uid)
             out.update(phone=bool(p["phone"]), phone_source=p["phone_source"], phone_on_account=bool(acc_phone), phone_verified=bool(verified),
                        email=bool(p["email"]), email_source=p["email_source"])
         return jsonify(out)
