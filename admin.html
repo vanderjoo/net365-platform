@@ -1389,6 +1389,12 @@
                     <button type="button" class="btn btn-outline" style="flex:1;" onclick="sendVerification('email')"><i class="fas fa-envelope"></i> Send email verification</button>
                     <button type="button" class="btn btn-outline" style="flex:1;" onclick="sendVerification('phone')"><i class="fas fa-message"></i> Send SMS verification</button>
                 </div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                    <button type="button" class="btn btn-outline" style="flex:1;" onclick="adminPhoneAction('verify')"><i class="fas fa-check-circle"></i> Mark phone verified</button>
+                    <button type="button" class="btn btn-outline" style="flex:1;" onclick="adminPhoneAction('unverify')"><i class="fas fa-rotate-left"></i> Mark not verified</button>
+                    <button type="button" class="btn btn-outline" style="flex:1;" onclick="adminPhoneAction('where')"><i class="fas fa-magnifying-glass"></i> Where is the number?</button>
+                </div>
+                <small style="color:var(--text-secondary);font-size:11px;">One number everywhere: what you set here is what the website profile, the Telegram bot, the WhatsApp bot and the payment check all use. "Mark phone verified" is your override (use it after you have confirmed the customer is the owner).</small>
                 <div id="editUserStatus" style="margin-top:12px;"></div>
             </form>
         </div>
@@ -4905,6 +4911,32 @@ Completed: ${r.completed_at ? formatDate(r.completed_at) : 'N/A'}
                 showToast('Saved' + (notes.length ? ' (' + notes.join('; ') + ')' : ''), notes.some(n => n.includes('NOT')) ? 'error' : 'success');
                 closeModal('editUserModal');
                 searchUsers();
+            } catch (e) {
+                st.innerHTML = `<span style="color:#ef4444;">${escapeHtml(e.message)}</span>`;
+            }
+        }
+
+        async function adminPhoneAction(kind) {
+            const st = document.getElementById('editUserStatus');
+            if (!editingUserId) return;
+            st.innerHTML = '<span style="color:var(--text-secondary);">Working...</span>';
+            try {
+                if (kind === 'where') {
+                    const d = await adminFetch(`/api/admin/users/${editingUserId}/phone`);
+                    const f = (x) => x ? `${escapeHtml(x.phone || 'none')} (${x.verified ? 'verified' : 'not verified'})` : 'nothing';
+                    st.innerHTML = `<div style="font-size:12px;line-height:1.6;">Profile / admin list: <b>${f(d.profile)}</b><br>Master (payments and bots): <b>${f(d.master)}</b></div>`;
+                    return;
+                }
+                const typed = document.getElementById('editUserPhone').value.trim();
+                const d = await adminFetch(`/api/admin/users/${editingUserId}/phone`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: typed || undefined, verified: kind === 'verify' })
+                });
+                if (!d.success) throw new Error(d.error || 'Could not update');
+                st.innerHTML = `<span style="color:#22c55e;">${escapeHtml(d.phone)} is now ${d.verified ? 'verified' : 'not verified'} everywhere.</span>`;
+                document.getElementById('editUserPhone').value = d.phone;
+                document.getElementById('editPhoneBadge').innerHTML = d.verified ? '<span class="user-status-badge active">verified</span>' : '<span class="user-status-badge suspended">unverified</span>';
+                if (typeof searchUsers === 'function') searchUsers();
             } catch (e) {
                 st.innerHTML = `<span style="color:#ef4444;">${escapeHtml(e.message)}</span>`;
             }

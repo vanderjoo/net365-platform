@@ -19,7 +19,13 @@ Design rules (what this module will never do)
     they keep working, and are only nudged to verify. Accounts with no phone at all (for example Google
     sign-ups) must add and verify one before money moves.
 
-Modes (env IDENTITY_MODE): enforce (default) | log (record what would be blocked, block nothing) | off.
+Policy: verification is OPTIONAL. By default (IDENTITY_MODE=off) nothing is ever blocked and nobody is redirected: every
+service works with or without a verified number. Customers without one get gentle reminder EMAILS only (a few over
+about three months, each with a one-tap opt-out), and a verified number simply makes receipts, token alerts and account
+recovery work better. IDENTITY_MODE=enforce remains available if the business ever wants to require it; log records what
+enforce would have blocked.
+
+Modes (env IDENTITY_MODE): off (default, optional) | log | enforce.
 """
 from __future__ import annotations
 
@@ -71,8 +77,8 @@ def _iso(dt=None):
 
 
 def mode():
-    m = os.getenv("IDENTITY_MODE", "enforce").strip().lower()
-    return m if m in ("enforce", "log", "off") else "enforce"
+    m = os.getenv("IDENTITY_MODE", "off").strip().lower()
+    return m if m in ("enforce", "log", "off") else "off"
 
 
 def _conn():
@@ -225,6 +231,10 @@ def ensure_schema():
         id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, code_hash TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL, expires_at TEXT NOT NULL)""")
     c.execute("CREATE INDEX IF NOT EXISTS ix_phone_claims_hash ON phone_claims(code_hash, status)")
+    c.execute("""CREATE TABLE IF NOT EXISTS identity_reminders (
+        user_id INTEGER PRIMARY KEY, first_seen TEXT NOT NULL, next_due TEXT NOT NULL,
+        sent_count INTEGER NOT NULL DEFAULT 0, last_sent_at TEXT, opted_out INTEGER NOT NULL DEFAULT 0)""")
+    c.execute("CREATE INDEX IF NOT EXISTS ix_identity_reminders_due ON identity_reminders(opted_out, next_due)")
     c.execute("CREATE TABLE IF NOT EXISTS identity_meta (k TEXT PRIMARY KEY, v TEXT)")
     # Everyone who exists today is grandfathered if they already had a phone. Recorded once, never moved.
     if not c.execute("SELECT 1 FROM identity_meta WHERE k='grandfather_max_user_id'").fetchone():
@@ -441,6 +451,22 @@ def check_code(user_id, code):
     return ok, res
 
 
+def _mirror_to_users(c, user_id, e164, verified, when):
+    """Copy the master number onto users.phone / phone_verified (the profile and the admin list read those)."""
+    try:
+        cols = {str(_val(r, "name", 1)) for r in c.execute("PRAGMA table_info(users)").fetchall()}
+        sets, args = ["phone = ?"], [e164]
+        if "phone_verified" in cols:
+            sets.append("phone_verified = ?"); args.append(int(verified))
+        if "phone_verified_at" in cols:
+            sets.append("phone_verified_at = ?"); args.append(when if verified else None)
+        args.append(user_id)
+        c.execute("UPDATE users SET " + ", ".join(sets) + " WHERE id = ?", args)
+        c.commit()
+    except Exception:
+        logger.warning("identity: could not mirror the number to users", exc_info=True)
+
+
 def _bind_verified(user_id, e164, source):
     """Attach a PROVEN number to the account. The unique index is the final word on duplicates."""
     c = _conn()
@@ -464,12 +490,9 @@ def _bind_verified(user_id, e164, source):
             pass
         _event(user_id, "phone_conflict", mask_phone(e164))
         return False, {"error": "phone_in_use"}
-    # Keep the old users.phone column useful for older code, but only fill it when it is empty. Never overwrite.
-    try:
-        c.execute("UPDATE users SET phone = ? WHERE id = ? AND (phone IS NULL OR TRIM(phone) = '')", (e164, user_id))
-        c.commit()
-    except Exception:
-        pass
+    # One number everywhere: the website profile and the admin screen read users.phone / users.phone_verified,
+    # so mirror the master row onto them (verified).
+    _mirror_to_users(c, user_id, e164, 1, now)
     _event(user_id, "phone_changed" if changed else "phone_verified", f"{source} {mask_phone(e164)}")
     if changed and _notify_email:
         try:
@@ -481,6 +504,38 @@ def _bind_verified(user_id, e164, source):
         except Exception:
             logger.warning("identity: change notice failed", exc_info=True)
     return True, {"verified": True, "masked": mask_phone(e164), "national": national_display(e164)}
+
+
+def save_unverified(user_id, e164, region=None):
+    """Let the customer ADD a number at any time, with or without a verification method available.
+    The number is stored as unverified; proving it is a separate step. Rules:
+      * never replaces a number that is already verified on this account (that needs a fresh proof of the new number)
+      * never takes a number that is verified on another account
+    -> (ok, payload)"""
+    if _is_guest(user_id):
+        return False, {"error": "link_required"}
+    c = _conn()
+    owner = c.execute("SELECT user_id FROM user_phones WHERE phone_e164 = ? AND verified = 1", (e164,)).fetchone()
+    if owner is not None and int(_val(owner, "user_id", 0)) != int(user_id):
+        _event(user_id, "phone_conflict", mask_phone(e164))
+        return False, {"error": "phone_in_use"}
+    now = _iso()
+    cur = get_phone_row(user_id)
+    if cur is not None and _val(cur, "verified", 3):
+        if _val(cur, "phone_e164", 1) == e164:
+            return True, {"verified": True, "masked": mask_phone(e164), "national": national_display(e164)}
+        return False, {"error": "verified_exists"}
+    if cur is None:
+        c.execute("INSERT INTO user_phones (user_id, phone_e164, country, verified, source, created_at, updated_at) VALUES (?,?,?,0,?,?,?)",
+                  (user_id, e164, region, "typed", now, now))
+    else:
+        c.execute("UPDATE user_phones SET phone_e164=?, country=?, verified=0, source=?, updated_at=? WHERE user_id=?",
+                  (e164, region, "typed", now, user_id))
+    c.commit()
+    # keep the older users.phone column useful for receipts and older code (it was never verified, so it may be replaced)
+    _mirror_to_users(c, user_id, e164, 0, None)
+    _event(user_id, "phone_saved_unverified", mask_phone(e164))
+    return True, {"verified": False, "masked": mask_phone(e164), "national": national_display(e164)}
 
 
 def adopt_chat_number(user_id, wa_digits):
@@ -667,6 +722,143 @@ def bind_telegram_contact(user_id, phone_raw):
     return _bind_verified(user_id, e164, source="telegram")
 
 
+# ----------------------------------------------------------------------------- email reminders (the only nudge)
+# Days after the customer is first seen without a verified number. Five emails in about three months, then silence.
+REMINDER_OFFSET_DAYS = (1, 4, 10, 40, 100)
+REMINDER_BATCH = 50                     # per sweep, so a big first run never floods the mail provider
+_reminder_thread = None
+
+
+def _public_base():
+    return (os.getenv("NET365_PUBLIC_URL") or os.getenv("FRONTEND_URL") or "").rstrip("/")
+
+
+def _unsub_token(user_id):
+    return hmac.new(_secret(), f"unsub:{user_id}".encode(), hashlib.sha256).hexdigest()[:24]
+
+
+def reminders_enabled():
+    return os.getenv("IDENTITY_REMINDERS", "true").strip().lower() not in ("false", "0", "off", "no")
+
+
+def _has_verified(user_id):
+    r = get_phone_row(user_id)
+    return bool(r is not None and _val(r, "verified", 3))
+
+
+def _reminder_email(name, user_id):
+    base = _public_base()
+    first = (str(name or "").strip().split(" ")[0] or "there")
+    subject = "Add your phone number to Net365 (optional, 30 seconds)"
+    body = (
+        f"Hi {first},\n\n"
+        "Everything on Net365 works as it is. If you like, you can confirm your mobile number to get more out of your account:\n\n"
+        "  - receipts and electricity tokens delivered straight to your phone\n"
+        "  - a faster way back into your account if you ever lose access\n"
+        "  - extra protection on your payments\n\n"
+        "It takes about 30 seconds and costs nothing. Confirm it through WhatsApp or Telegram, no code to type:\n"
+        f"{base}/complete-profile\n\n"
+        "No pressure, and nothing stops working if you skip it.\n\n"
+        "Do not want these reminders? One tap and they stop for good:\n"
+        f"{base}/api/identity/reminders/unsubscribe?u={user_id}&t={_unsub_token(user_id)}\n\n"
+        "The Net365 team"
+    )
+    return subject, body
+
+
+def sweep_reminders(limit=REMINDER_BATCH, dry_run=False):
+    """Find customers without a verified number whose next reminder is due and email them. Safe to run from several
+    workers at once (each reminder is claimed atomically) and safe to run often. -> counts."""
+    out = {"enrolled": 0, "due": 0, "sent": 0, "skipped": 0, "failed": 0, "dry_run": bool(dry_run)}
+    if not (reminders_enabled() or dry_run) or _db is None:
+        return out
+    c = _conn()
+    now = _now()
+    # 1. enrol everyone who has an email, no verified number and is not blocked. Existing customers get their first
+    #    reminder a day after the first sweep, never all at once on deploy.
+    base_sql = ("INSERT OR IGNORE INTO identity_reminders (user_id, first_seen, next_due) "
+                "SELECT u.id, ?, ? FROM users u WHERE TRIM(COALESCE(u.email,'')) <> '' "
+                "AND NOT EXISTS (SELECT 1 FROM user_phones p WHERE p.user_id = u.id AND p.verified = 1) "
+                "AND NOT EXISTS (SELECT 1 FROM identity_reminders r WHERE r.user_id = u.id)")
+    args = (_iso(now), _iso(now + timedelta(days=REMINDER_OFFSET_DAYS[0])))
+    if not dry_run:
+        try:
+            cur = c.execute(base_sql + " AND COALESCE(u.account_status,'active') NOT IN ('suspended','blocked','deleted')", args)
+        except sqlite3.OperationalError:   # no account_status column
+            cur = c.execute(base_sql, args)
+        out["enrolled"] = max(0, cur.rowcount or 0)
+        c.commit()
+    rows = c.execute("SELECT * FROM identity_reminders WHERE opted_out=0 AND sent_count < ? AND next_due <= ? ORDER BY next_due LIMIT ?",
+                     (len(REMINDER_OFFSET_DAYS), _iso(now), int(limit))).fetchall()
+    out["due"] = len(rows)
+    if dry_run:
+        return out
+    for r in rows:
+        uid = int(_val(r, "user_id", 0))
+        due = _val(r, "next_due", 2)
+        sent_count = int(_val(r, "sent_count", 3) or 0)
+        if _has_verified(uid) or _is_guest(uid):
+            c.execute("UPDATE identity_reminders SET opted_out=1 WHERE user_id=?", (uid,)); c.commit()
+            out["skipped"] += 1
+            continue
+        # claim: only one worker wins this row; if the send fails it is retried in 6 hours
+        claim = c.execute("UPDATE identity_reminders SET next_due=? WHERE user_id=? AND next_due=?",
+                          (_iso(now + timedelta(hours=6)), uid, due))
+        c.commit()
+        if (claim.rowcount or 0) != 1:
+            continue
+        u = {}
+        try:
+            u = _db.get_user(uid) or {}
+        except Exception:
+            pass
+        email = str(u.get("email") or "").strip()
+        if not email or (u.get("account_status") or "active") in ("suspended", "blocked", "deleted"):
+            c.execute("UPDATE identity_reminders SET opted_out=1 WHERE user_id=?", (uid,)); c.commit()
+            out["skipped"] += 1
+            continue
+        try:
+            subject, body = _reminder_email(u.get("full_name"), uid)
+            ok = _notify_email(email, subject, body) if _notify_email else False
+            ok = ok is not False
+        except Exception:
+            logger.exception("identity: reminder email failed for user %s", uid)
+            ok = False
+        if ok:
+            n = sent_count + 1
+            first_seen = datetime.fromisoformat(_val(r, "first_seen", 1))
+            nxt = first_seen + timedelta(days=REMINDER_OFFSET_DAYS[n]) if n < len(REMINDER_OFFSET_DAYS) else now + timedelta(days=3650)
+            if nxt <= now:
+                nxt = now + timedelta(days=7)
+            c.execute("UPDATE identity_reminders SET sent_count=?, last_sent_at=?, next_due=? WHERE user_id=?", (n, _iso(now), _iso(nxt), uid))
+            c.commit()
+            _event(uid, "reminder_sent", f"#{n}")
+            out["sent"] += 1
+        else:
+            out["failed"] += 1
+    return out
+
+
+def _reminder_loop(interval):
+    import time as _t
+    _t.sleep(300)   # let the app finish starting
+    while True:
+        try:
+            sweep_reminders()
+        except Exception:
+            logger.warning("identity: reminder sweep failed", exc_info=True)
+        _t.sleep(interval)
+
+
+def start_reminder_thread(interval_seconds=3600):
+    global _reminder_thread
+    if _reminder_thread is not None or not reminders_enabled():
+        return False
+    _reminder_thread = threading.Thread(target=_reminder_loop, args=(interval_seconds,), daemon=True, name="identity-reminders")
+    _reminder_thread.start()
+    return True
+
+
 def audit():
     """Read-only health report for the admin."""
     c = _conn()
@@ -681,6 +873,10 @@ def audit():
     out["duplicate_phone_numbers"] = [{"phone": mask_phone(_val(r, "phone_e164", 0)), "accounts": _val(r, "n", 1)} for r in dups]
     out["grandfather_max_user_id"] = _grandfather_max()
     out["mode"] = mode()
+    out["reminders"] = {"enabled": reminders_enabled(),
+                        "enrolled": _count("SELECT COUNT(*) AS n FROM identity_reminders", ()),
+                        "opted_out": _count("SELECT COUNT(*) AS n FROM identity_reminders WHERE opted_out=1", ()),
+                        "emails_sent": _count("SELECT COALESCE(SUM(sent_count),0) AS n FROM identity_reminders", ())}
     return out
 
 
@@ -701,6 +897,8 @@ _ERR = {
     "wrong_code": "That code is not right.",
     "whatsapp_unavailable": "WhatsApp verification is not available right now.",
     "telegram_unavailable": "Telegram verification is not available right now.",
+    "verified_exists": "You already have a verified number. To change it, verify the new number with a code or through WhatsApp or Telegram.",
+    "link_required": "Please sign in to your Net365 account first.",
 }
 
 
@@ -746,6 +944,20 @@ def init_identity(app, db, login_required, rate_limit, send_sms=None, send_email
     def identity_status():
         return jsonify(success=True, **profile_status(g.current_user_id))
 
+    @app.post("/api/identity/phone/save")
+    @login_required
+    @rate_limit(max_requests=20, window_seconds=600)
+    def identity_phone_save():
+        d = request.get_json(silent=True) or {}
+        e164, region, err = normalize_phone(d.get("phone"), d.get("country"))
+        if err:
+            return jsonify(success=False, error_code=err, error=_ERR.get(err, "Invalid number")), 400
+        ok, res = save_unverified(g.current_user_id, e164, region)
+        if not ok:
+            code = res.get("error", "invalid")
+            return jsonify(success=False, error_code=code, error=_ERR.get(code, "Could not save the number")), (409 if code in ("phone_in_use", "verified_exists") else 400)
+        return jsonify(success=True, saved=True, **res, status=profile_status(g.current_user_id))
+
     @app.post("/api/identity/phone/start")
     @login_required
     @rate_limit(max_requests=12, window_seconds=600)
@@ -773,7 +985,36 @@ def init_identity(app, db, login_required, rate_limit, send_sms=None, send_email
             return jsonify(success=False, error_code=code, error=_ERR.get(code, "Could not verify"), attempts_left=res.get("attempts_left")), http
         return jsonify(success=True, **res, status=profile_status(g.current_user_id))
 
+    @app.get("/api/identity/reminders/unsubscribe")
+    def identity_unsubscribe():
+        try:
+            uid = int(request.args.get("u", "0"))
+        except ValueError:
+            uid = 0
+        tok = str(request.args.get("t", ""))
+        if uid and hmac.compare_digest(tok, _unsub_token(uid)):
+            c = _conn()
+            now = _iso()
+            c.execute("INSERT INTO identity_reminders (user_id, first_seen, next_due, opted_out) VALUES (?,?,?,1) "
+                      "ON CONFLICT(user_id) DO UPDATE SET opted_out=1", (uid, now, now))
+            c.commit()
+            _event(uid, "reminder_opt_out", "")
+            msg, code = "You will not get any more phone-number reminders from Net365. Everything on your account keeps working as before.", 200
+        else:
+            msg, code = "This link is not valid. Please use the link from your latest email.", 400
+        html = ("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+                "<title>Net365</title><body style=\"font-family:system-ui,sans-serif;background:#eef2f7;display:grid;place-items:center;min-height:100vh;margin:0\">"
+                f"<div style=\"background:#fff;border-radius:20px;padding:28px;max-width:420px;margin:16px;box-shadow:0 20px 60px -30px rgba(0,0,0,.4)\"><b style=\"letter-spacing:.14em\">NET365</b>"
+                f"<p style=\"color:#334155;line-height:1.6\">{msg}</p></div>")
+        return html, code, {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"}
+
     if admin_required:
+        @app.post("/api/admin/identity/reminders/run")
+        @admin_required
+        def identity_reminders_run():
+            d = request.get_json(silent=True) or {}
+            return jsonify(success=True, result=sweep_reminders(limit=int(d.get("limit") or REMINDER_BATCH), dry_run=bool(d.get("dry_run"))))
+
         @app.get("/api/admin/identity/audit")
         @admin_required
         def identity_audit():
@@ -788,6 +1029,7 @@ def init_identity(app, db, login_required, rate_limit, send_sms=None, send_email
             resp.headers["Cache-Control"] = "no-store"
             return resp
 
+    start_reminder_thread()
     logger.info("identity engine ready (mode=%s, validator=%s)", mode(), "phonenumbers" if phonenumbers else "basic")
 
 

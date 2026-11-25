@@ -8380,6 +8380,13 @@ class ReloadlyWebApp:
                 except Exception as _cm_e:
                     logger.warning(f"Chat contact memory not loaded: {_cm_e}")
                 try:
+                    # ONE PHONE NUMBER: user_phones is the master; the website profile, admin edit and both bots all end up in it.
+                    import net365_identity as _pu_ident
+                    from net365_phone_unify import init_phone_unify
+                    init_phone_unify(self.app, db, admin_required, _pu_ident, admin_identity=lambda: get_client_ip())
+                except Exception as _pu_e:
+                    logger.warning(f"Phone unify not loaded: {_pu_e}")
+                try:
                     # NET365 NEURAL NAVIGATION: per-customer ranking of the bot menus. If it fails to load the bots show the default menu.
                     from net365_adaptive_navigation import init_adaptive_navigation
                     from net365_whatsapp import bot_required as _nav_bot_required

@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 _EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$")
 _db = None
-BUILD = "2026-11-24-both-places"
+BUILD = "2026-11-25-one-number"
 
 
 def _conn():
@@ -156,9 +156,15 @@ def _payload(uid, wa="", guest=False):
     pref_email = str((pref[1] if pref else "") or "")
     acc_email = _guest_email(uid) if guest else str((u[0] if u else "") or "")
     chat_phone = _wa_number_local(wa)
-    phone = pref_phone or acc_phone or chat_phone
+    # ONE NUMBER: for a real account the account's number (table user_phones, mirrored on users.phone) is the answer.
+    # A number saved only in this chat is used just when the account has none (and always for guests).
+    if guest:
+        phone = pref_phone or chat_phone
+        psrc = "saved" if pref_phone else ("chat" if chat_phone else "")
+    else:
+        phone = acc_phone or pref_phone or chat_phone
+        psrc = "account" if acc_phone else ("saved" if pref_phone else ("chat" if chat_phone else ""))
     email = pref_email or acc_email
-    psrc = "saved" if pref_phone else ("account" if acc_phone else ("chat" if chat_phone else ""))
     return {"success": True, "linked": True, "guest": bool(guest),
             "phone": phone, "phone_source": psrc if phone else "",
             "phone_verified": bool((verified and phone and phone == acc_phone) or (psrc == "chat" and not guest)),
@@ -216,12 +222,23 @@ def init_chat_memory(app, db, bot_required):
             local = _local_ng(e164)
             if err or not local:
                 return jsonify(success=False, error_code="invalid_phone", error="Send a Nigerian number like 08012345678."), 400
-            _save_pref(uid, phone=local)
-            if not guest and ident:               # also put it on the account, so the website and admin show the same number
+            if guest or not ident:
+                _save_pref(uid, phone=local)
+            else:                                 # a real account: the number goes into the master table (user_phones) only
                 try:
-                    ident.save_unverified(uid, e164, region)
+                    ok, res = ident.save_unverified(uid, e164, region)
                 except Exception:
-                    log.debug("chat memory: could not mirror the number to the account", exc_info=True)
+                    log.warning("chat memory: could not save the number on the account", exc_info=True)
+                    return jsonify(success=False, error_code="unavailable", error="I could not save that right now. Please try again."), 503
+                if not ok:
+                    code = (res or {}).get("error") or "invalid"
+                    msgs = {"verified_exists": "Your verified number can only be replaced by proving the new one. "
+                                               "Use the Share my number button (Telegram), message from the new number (WhatsApp) "
+                                               "or change it in your profile on the website.",
+                            "phone_in_use": "That number is already verified on another Net365 account.",
+                            "link_required": "Link your Net365 account first."}
+                    return jsonify(success=False, error_code=code, error=msgs.get(code, "Could not save that number.")), (409 if code in ("verified_exists", "phone_in_use") else 400)
+                _save_pref(uid, phone="")         # no second copy that could disagree with the account
         if d.get("email") is not None:
             em = str(d.get("email") or "").strip()
             if not _EMAIL_RE.match(em):
@@ -256,9 +273,7 @@ def init_chat_memory(app, db, bot_required):
         if not ok:
             code = (res or {}).get("error") or "invalid"
             return jsonify(success=False, error_code=code), (409 if code == "phone_in_use" else 400)
-        local = _local_ng(ident.normalize_phone("+" + re.sub(r"\D", "", str(d.get("phone") or "")))[0])
-        if local:
-            _save_pref(uid, phone=local)
+        _save_pref(uid, phone="")             # the verified number now lives on the account; no separate chat copy
         return jsonify(_payload(uid))
 
     @app.post("/api/bot/contact/debug")
