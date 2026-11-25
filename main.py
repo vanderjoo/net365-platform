@@ -8069,6 +8069,12 @@ class ReloadlyWebApp:
         self.app.config["SESSION_COOKIE_PATH"] = "/"
 
         db.init_db()
+        # Activity logs (admin "Logs" tab): every sign-up, login, code sent/entered, admin action. Never breaks a request.
+        try:
+            from net365_audit import init_audit
+            init_audit(self.app, db, admin_required, get_client_ip, get_authenticated_user)
+        except Exception as e:
+            logger.error(f"Activity log (net365_audit) NOT loaded: {e}", exc_info=True)
         db.ensure_success_page_ads_schema()
         # ---- IP intelligence (org / ASN / bot detection) ----
         IPIntel.ensure_schema(db.get_db_connection)

@@ -18,6 +18,7 @@
  */
 const fs = require('fs');
 const nodePath = require('path');
+const { askLLM } = require('./net365_llm');
 
 module.exports = function createAsk(d) {
   const { bot, net365Get, sendText, sendButtons, isTg, getSession, reset, log, COUNTRIES, regionName } = d;
@@ -263,6 +264,11 @@ module.exports = function createAsk(d) {
         const c = w.country || NG;
         await interest(wa, 'other', c.cc, t);
         reset(wa);
+        const ai = await askLLM(t, (d.getLang && d.getLang(wa)) || 'en', String(wa));
+        if (ai) {
+          await sendText(wa, `${ai}\n\n_AI-generated answer. I have also noted your question for the team._`);
+          return sendButtons(wa, 'What would you like to do?', [{ id: 'ASK_PROMPT', title: 'Ask another' }, { id: 'MENU', title: 'Menu' }]);
+        }
         await sendText(wa, `I could not match *"${t.slice(0, 80)}"* to something Net365 does today, so I have noted it for the team.\n\nHere is what I can do in ${c.flag} ${c.name}:`);
         return capabilities(wa);
       }

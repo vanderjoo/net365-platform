@@ -508,6 +508,9 @@
                 <button class="admin-tab" data-tab="chat" onclick="switchTab('chat')">
                     <i class="fas fa-comments"></i> Live Support <span class="badge" id="chatUnreadBadge">0</span>
                 </button>
+                <button class="admin-tab" data-tab="audit" onclick="switchTab('audit')">
+                    <i class="fas fa-clipboard-list"></i> Logs
+                </button>
             </div>
 
             <!-- TAB: REFUNDS & RECOVERY (admin only) -->
@@ -770,6 +773,8 @@
             <div class="tab-panel" id="tab-security"></div>
             <!-- TAB: INTERNATIONAL INTELLIGENCE (admin_intl.js) -->
             <div class="tab-panel" id="tab-intl"></div>
+            <!-- TAB: LOGS (admin_audit.js) -->
+            <div class="tab-panel" id="tab-audit"></div>
 
             <!-- TAB: LIVE SUPPORT -->
             <div class="tab-panel" id="tab-chat">
@@ -2509,6 +2514,7 @@
             if (tab === 'insights') { if (typeof loadInsights === 'function') loadInsights(); else _missing('tab-insights', 'loadInsights', 'admin_insights.js'); }
             if (tab === 'intel') { if (typeof loadIntel === 'function') loadIntel(); else _missing('tab-intel', 'loadIntel', 'admin_insights.js'); }
             if (tab === 'security') { if (typeof loadSecurity === 'function') loadSecurity(); else _missing('tab-security', 'loadSecurity', 'admin_sentinel.js'); }
+            if (tab === 'audit') { if (typeof loadAudit === 'function') loadAudit(); else _missing('tab-audit', 'loadAudit', 'admin_audit.js'); }
             if (tab === 'intl') { if (typeof loadIntl === 'function') loadIntl(); else _missing('tab-intl', 'loadIntl', 'admin_intl.js'); }
         }
 
@@ -5635,5 +5641,6 @@ function showCreateSuccessAdModal() {
     <script src="/admin_insights.js"></script>
     <script src="/admin_sentinel.js"></script>
     <script src="/admin_intl.js"></script>
+    <script src="/admin_audit.js"></script>
 </body>
 </html>
